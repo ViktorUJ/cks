@@ -73,7 +73,7 @@ NOTBEFORE=notBefore=Jan  1 00:00:00 2026 GMT
 NOTAFTER=notAfter=Apr  6 00:00:00 2028 GMT
 ```
 
-この証明書は認証には決して使用されません - `cluster9-admin` はクラスター内で権限を持たず、
+この証明書は認証には決して使用されません。`cluster9-admin` はクラスター内で権限を持たず、
 課題は証明書の読み取りと解析だけを扱います。
 
 ## 3. Baseline: NodePort exposure
@@ -91,13 +91,13 @@ kubectl -n cks-114 wait --for=condition=Ready pod -l app=backend --timeout=90s
 
 ```bash
 node_ip=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
-# kube-proxy は NodePort のルールを 1-2 秒遅れてプログラムします - ポートが応答するまで待ちます
+# kube-proxy は NodePort のルールを 1-2 秒遅れて設定します - ポートが応答するまで待ちます
 for i in $(seq 1 15); do curl -s -o /dev/null -m2 "http://$node_ip:30114/" && break; sleep 2; done
 curl -sS -o /dev/null -w 'external HTTP:%{http_code}\n' -m5 "http://$node_ip:30114/"
 kubectl -n cks-114 run probe --image=curlimages/curl:8.10.1 --restart=Never --command -- sleep 300
 kubectl -n cks-114 wait --for=condition=Ready pod/probe --timeout=60s
 kubectl -n cks-114 exec probe -- curl -sS -o /dev/null -w 'in-cluster HTTP:%{http_code}\n' -m5 http://kubernetes-public.cks-114.svc.cluster.local/
-# Task 4 の前に、monitor が NodePort と DNS のプローブを独立して記録するのを待ちます。
+# 課題 4 の前に、monitor が NodePort と DNS のプローブを独立して記録するのを待ちます。
 for i in $(seq 1 60); do
   test -s /var/lib/cks-lab114-checker/nodeport-phase-seen && break
   sleep 3
@@ -112,8 +112,8 @@ in-cluster HTTP:200
 
 ## 4. Reduce exposure: NodePort -> ClusterIP
 
-配列 `ports` に対する `kubectl patch` は、それだけでは `nodePort` を**削除しません** - このフィールドのない
-配列全体を置き換える必要があります (または `kubectl edit` で手動で行を削除します)：
+`nodePort` を明示的に取り除きます：1 回の JSON patch で、タイプを変更し、`/spec/ports/0/nodePort` を削除します
+(または `kubectl edit` で手動で行を削除します)：
 
 ```bash
 kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
@@ -137,8 +137,8 @@ external HTTP:000
 in-cluster HTTP:200
 ```
 
-`kubernetes-public:30114` は、ノード上の kube-proxy でもう listen されていません (transport deny)；Service DNS 経由の
-クラスター内部の経路はリグレッションしていません。
+`kubernetes-public:30114` は、ノード上の kube-proxy でもう listen されていません (transport deny)。Service DNS 経由の
+クラスター内部の経路は影響を受けず、引き続き動作しています。
 
 ```bash
 kubectl -n cks-114 delete pod probe --ignore-not-found

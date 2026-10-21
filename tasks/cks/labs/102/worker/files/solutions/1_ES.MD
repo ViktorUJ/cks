@@ -132,7 +132,7 @@ POST es rechazado por el Envoy proxy de Cilium en L7 (`403`), no por un transpor
 network namespace aparte en el nodo control-plane, y NO un ClusterIP: `toFQDNs` en Cilium no aplica
 la regla allow a una IP dentro del clúster), levantado e inscrito en CoreDNS ya durante el bootstrap:
 a diferencia de `example.com`, estos nombres siempre están disponibles y no dependen de Internet. Comprobamos ANTES de la
-policy: DNS y ambos endpoint de control deben ser realmente accesibles (`-k` - certificado
+policy: DNS y los tres endpoint de control (`allowed:443`, `allowed:80`, `blocked:443`) deben ser realmente accesibles (`-k` - certificado
 autofirmado del fixture):
 
 ```bash
@@ -190,7 +190,7 @@ spec:
 EOF
 ```
 
-Comprobamos DESPUÉS (espera un par de segundos, el FQDN-mapping no es instantáneo) y nos aseguramos de que backend de las tareas 2-3 no ha sufrido una regresión:
+Comprobamos DESPUÉS (espera un par de segundos, el FQDN-mapping no es instantáneo) y nos aseguramos de que el backend de las tareas 2-3 no ha sufrido una regresión:
 
 ```bash
 k -n cks-102 exec frontend -- curl -sSk -o /dev/null -w 'allowed:443 HTTP:%{http_code}\n' -m10 https://allowed.cks102.test/
@@ -208,7 +208,7 @@ GET HTTP:200
 POST HTTP:403
 ```
 
-`allowed.cks102.test` HTTPS sigue dando `200`; `allowed.cks102.test:80` y `blocked.cks102.test:443` se quedan colgados/dan timeout (`000`); backend GET/POST - como en las tareas 2-3, no hay regresión.
+`allowed.cks102.test` HTTPS sigue dando `200`; `allowed.cks102.test:80` y `blocked.cks102.test:443` se quedan colgados/dan timeout (`000`); backend GET/POST: como en las tareas 2-3, no hay regresión.
 
 ## 5. Observación mediante Hubble
 
@@ -300,8 +300,8 @@ Policy: dos reglas ingress en el mismo puerto. **Una trampa importante de Cilium
 [{}]` (selector vacío) en una `CiliumNetworkPolicy` namespaced NO significa "cualquier identity en
 todo el clúster": Cilium añade implícitamente la restricción por el namespace de LA PROPIA policy a cualquier
 selector de `fromEndpoints` sin un namespace-label explícito, incluido un `{}` vacío. Es decir, `{}`
-aquí, en la práctica, hace match solo con endpoints del namespace `production`, y no con `finance`/`cks-102`
-- la comprobación en vivo lo confirma: con un `{}` literal el client externo recibe un transport
+aquí, en la práctica, hace match solo con endpoints del namespace `production`, y no con `finance`/`cks-102`;
+la comprobación en vivo lo confirma: con un `{}` literal el client externo recibe un transport
 timeout en AMBOS path (la regla no se aplica en absoluto a su namespace), y `finance` recibe
 `403` en `/public/*` (hace match solo con la regla 2, que permite únicamente `/private/*`).
 Para hacer match realmente con cualquier identity con independencia del namespace, hace falta `matchExpressions` con
@@ -370,7 +370,7 @@ private:403
 ```
 
 `finance-client` -> ambos path `200`. `cks-102/client` (cualquier otro namespace) -> `/public/*`
-sigue dando `200`, y `/private/*` - `403` (Envoy L7 deny, no un transport-level `000`: la regla 1
+sigue dando `200`, y `/private/*`, `403` (Envoy L7 deny, no un transport-level `000`: la regla 1
 ya permitió la propia conexión TCP para todas las identity).
 
 ---

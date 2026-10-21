@@ -167,14 +167,14 @@ k auth can-i get secrets -n security-104 \
 
 ## 5. anonymous-auth-ის გამორთვა
 
-მარტივი `--anonymous-auth=false` აქ არ ვარგა: kubeadm `release-1.36` აგენერირებს
+მარტივი `--anonymous-auth=false` აქ არ გამოდგება: kubeadm `release-1.36` აგენერირებს
 kube-apiserver static Pod-ს HTTPS liveness/readiness/startup probes-ით `/livez`-სა და
 `/readyz`-ზე, ხოლო kubelet HTTP probes client credentials-ს არ გადასცემენ - anonymous access-ის სრული გამორთვისას
 ეს მოთხოვნები მიიღებენ `401`-ს, და kubelet kube-apiserver-ს არაჯანსაღად მიიჩნევს
 (რაც თავის მხრივ არღვევს დავალება 9-საც, რომელიც სტაბილურად მომუშავე API
 server-ზეა დამოკიდებული). ამის ნაცვლად ვიყენებთ `AuthenticationConfiguration`-ს `anonymous.conditions`-ით,
 რომელიც anonymous access-ს მხოლოდ სამი health-გზით ზღუდავს. გამოცდაზე ყოველ
-ბრძანებას `sudo`-თი ნუ დაუწყებთ პრეფიქსს - ერთხელ გახდით root (`sudo -i`), ეს უფრო სწრაფია:
+ბრძანებას `sudo` პრეფიქსს ნუ დაუმატებთ - ერთხელ გახდით root (`sudo -i`), ეს უფრო სწრაფია:
 
 ```bash
 ssh control-plane
@@ -229,8 +229,8 @@ k get po -n kube-system -l component=kube-apiserver
 # STATUS უნდა გახდეს Running - თუ ჯერ არა, დაელოდეთ რამდენიმე წამს და გაიმეორეთ
 ```
 
-შეამოწმეთ სამივე ქცევა: `/version` უარყოფს ანონიმურ მოთხოვნებს, ხოლო `/livez`/`/readyz`
-- იღებს:
+შეამოწმეთ სამივე ქცევა: `/version` უარყოფს ანონიმურ მოთხოვნებს, ხოლო `/livez`/`/readyz` -
+იღებს:
 
 ```bash
 SERVER=$(k config view --minify -o jsonpath='{.clusters[0].cluster.server}')
@@ -288,7 +288,7 @@ k delete clusterrole lab104-anonymous-debug-access
 
 გაუქმებას ვადასტურებთ negative control-ით სწორედ არაავტენტიფიცირებული identity-ის სახელით
 (`system:anonymous` + ჯგუფი `system:unauthenticated`, და მეტი არაფერი) `SubjectAccessReview`-ის
-გავლით - მას admin-კონტექსტი ქმნის, ამიტომ ჯგუფების სია
+გავლით - მას admin-კონტექსტი ქმნის, ამიტომ ჯგუფების სიის
 ხელოვნურად გაფართოება არ გვიწევს:
 
 ```bash
@@ -316,7 +316,7 @@ done
 არაავტენტიფიცირებული მოთხოვნა ამ ჯგუფში არ შედის, და შემოწმება აღარ ასახავს
 ნამდვილ anonymous-identity-ს. თითოეულ namespace-ს ცალ-ცალკე ვამოწმებთ, რადგან
 RoleBinding მოქმედებს მხოლოდ თავის namespace-ში: cluster-wide მიბმის არარსებობა
-არ ამტკიცებს ლოკალურის არარსებობას, ხოლო მიღების კრიტერიუმი კრძალავს წვდომას არც ერთ namespace-ში.
+არ ამტკიცებს ლოკალურის არარსებობას, ხოლო მიღების კრიტერიუმი მოითხოვს, რომ წვდომა არც ერთ namespace-ში არ იყოს.
 
 ბოლოს გაუშვით `check_result`.
 
@@ -324,8 +324,8 @@ RoleBinding მოქმედებს მხოლოდ თავის names
 
 `app-vulnerable` იღებს `db-creds`-ს `envFrom`-ით, ამიტომ მნიშვნელობა ხვდება
 კონტეინერის PID 1 პროცესის environment-ში. ნებისმიერს, ვისაც ამ Pod-ში `kubectl exec`-ის უფლება აქვს,
-შეუძლია secret პირდაპირ `/proc`-იდან წაიკითხოს, Kubernetes API-სთან მიმართვისა და RBAC-ის
-`get secrets`-ზე გარეშე:
+შეუძლია secret პირდაპირ `/proc`-იდან წაიკითხოს, Kubernetes API-სთან მიმართვისა და
+`get secrets`-ზე RBAC-უფლების გარეშე:
 
 ```bash
 mkdir -p /var/work/tests/artifacts/6
@@ -343,7 +343,7 @@ Pod-ს ხელახლა ვქმნით იმავე სახელ
 კონტეინერის შიგნით; აპლიკაციის პროცესი მაინც ამ UID-ით უნდა გაეშვას, წინააღმდეგ შემთხვევაში
 ის ფაილს ვერ წაიკითხავს.
 
-ველი უცვლელია; Pod უნდა წაიშალოს და ხელახლა შეიქმნას იმავე სახელით. ისევ უფრო იაფია
+ველი შეუცვლელია (immutable); Pod უნდა წაიშალოს და ხელახლა შეიქმნას იმავე სახელით. ისევ უფრო იაფია
 ჩონჩხის `--dry-run`-ით გენერირება და volume-ის `vim`-ში მიწერა, ვიდრე მთელი YAML-ის წერა:
 
 ```bash
@@ -412,10 +412,10 @@ CSR-approval - სახიფათო verbs-ის ცალკე კატ�
 არამედ იძლევიან **სხვისი სახელით მოქმედების** ან **საკუთარი თავისთვის
 დამატებითი უფლებების გაცემის** საშუალებას. fixture-ის ამ ვერსიაში ClusterRole ასევე შეიცავს საბაზისო
 `create`/`update` `clusterroles`/`clusterrolebindings`-ზე - მათ გარეშე `bind`/`escalate`
-არასრული escalation primitives იქნებოდა (RBAC მოითხოვს ან უკვე გქონდეთ უფლებები როლიდან, ან
+არასრული escalation primitives იქნებოდა (RBAC მოითხოვს, რომ ან უკვე გქონდეთ უფლებები როლიდან, ან
 აშკარად გქონდეთ `escalate`/`bind` Role/Binding-ის რეალურად შექმნის/განახლების მცდელობის ფონზე).
 ვპოულობთ ყველა ClusterRoleBinding-ს, რომელთა ClusterRole-ები უშვებს სახიფათო verbs-იდან ნებისმიერს. ვიწყებთ არა
-ClusterRole-იდან (მათი კლასტერში ათობითაა, სტანდარტული `system:*`-ის ჩათვლით), არამედ
+ClusterRole-იდან (კლასტერში ისინი ათობითაა, სტანდარტული `system:*`-ის ჩათვლით), არამედ
 ClusterRoleBinding-იდან - `kubectl get clusterrolebinding` ნაგულისხმევად უკვე აჩვენებს სვეტს
 `ROLE` (ფორმატი `ClusterRole/<სახელი>`), ხოლო `-o wide` ამატებს ასევე `USERS`/`GROUPS`/
 `SERVICEACCOUNTS`-ს - არც custom-columns, არც YAML არ არის საჭირო:
@@ -460,7 +460,7 @@ fixture იძლევა `impersonate`-ს ერთდროულად რ�
 can-i`-ში - ეს resourceName-ია, და არა subresource (`kubectl auth can-i --help` პირდაპირ აჩვენებს
 მაგალითს "jobs.batch/bar" - ობიექტის შემოწმება, რომელსაც სიტყვასიტყვით `bar` ჰქვია), ამიტომ
 `certificatesigningrequests/approval`-ისთვის საჭიროა ცალკე ფლაგი `--subresource=approval`, და არა
-slash:
+დახრილი ხაზი (/):
 
 ```bash
 k auth can-i impersonate users --as=system:serviceaccount:security-104:build-agent
@@ -479,7 +479,7 @@ k auth can-i approve signers/kubernetes.io/kube-apiserver-client --as=system:ser
 
 დავალება 3 automount-ს თიშავდა წერტილოვნად, კონკრეტულ Pod-სა და მის საკუთარ SA-ზე. აქ
 საჭიროა სისტემური baseline: namespace-ის `default` SA-ს ვასწორებთ მასში რაიმე
-Pod-ის შექმნამდე, რათა არც ერთმა ახალმა workload-მა ნაგულისხმევად token არ მიიღოს, თუნდაც დეველოპერმა
+Pod-ის **შექმნამდე**, რათა არც ერთმა ახალმა workload-მა ნაგულისხმევად token არ მიიღოს, თუნდაც დეველოპერმა
 manifest-ში აშკარა ველი დაივიწყოს.
 
 ServiceAccount `default` იქმნება ცალკე controller-ის მიერ ასინქრონულად Namespace-ის გამოჩენის შემდეგ -
@@ -497,11 +497,11 @@ k -n security-104-baseline get sa default \
 # false
 ```
 
-ვქმნით Pod-ს, რომელიც არ ადგენს არც `serviceAccountName`-ს, არც `automountServiceAccountToken`-ს -
+ვქმნით Pod-ს, რომელიც **არ** ადგენს არც `serviceAccountName`-ს, არც `automountServiceAccountToken`-ს -
 ეს რეალობაში ყველაზე ხშირი შემთხვევაა, როცა დეველოპერი უბრალოდ SA-ზე არ ფიქრობს. ველი
 `automountServiceAccountToken` უნდა **არ** იყოს Pod-ის spec-ში - აშკარა `false`-ის მითითება
 დაამტკიცებდა მხოლოდ თავად Pod-ის წერტილოვან პარამეტრს (როგორც დავალება 3-ში), და არა იმას, რომ
-namespace-level baseline რეალურად მუშაობს:
+namespace-level baseline რეალურად მუშაობს.
 
 აქ `--dry-run`-იც კი არ არის საჭირო - რადგან Pod-ში არ ემატება არც ერთი ველი SA/automount-ის შესახებ,
 `kubectl run` ფლაგების გარეშე ქმნის ზუსტად იმას, რაც საჭიროა, პირდაპირ:
@@ -563,7 +563,7 @@ EOF
 RBAC-წესი პირველია - უფრო სპეციფიკური წესი ზოგად catch-all-ს უნდა უსწრებდეს,
 წინააღმდეგ შემთხვევაში `Metadata` მოვლენას ადრე ჩაიგდებს ხელში. `omitStages: [RequestReceived]`
 მთელი policy-ის დონეზე აქრობს ზედმეტ ჩანაწერს მოთხოვნის დამუშავებამდე - მას არ აქვს
-`requestObject`/`responseStatus`, რომლებსაც checker მაინც ფილტრავს (`stage ==
+`requestObject`/`responseStatus`, checker კი ასეთ ჩანაწერებს მაინც უგულებელყოფს (`stage ==
 "ResponseComplete"`), ხოლო catch-all `Metadata`-წესით კლასტერის ყველა დანარჩენ მოთხოვნაზე
 ეს სტადია audit.log-ის მოცულობას სარგებლის გარეშე გააორმაგებდა.
 
@@ -597,8 +597,8 @@ exit
 exit
 ```
 
-`systemctl restart kubelet` აიძულებს static Pod-ის დაუყოვნებლივ ხელახლა აწყობას - ისევე, როგორც
-დავალება 5-ში, ლოდინი საჭირო აღარ არის:
+`systemctl restart kubelet` აიძულებს static Pod-ის დაუყოვნებლივ ხელახლა აწყობას - როგორც
+დავალება 5-ში, ეს უფრო სწრაფია, ვიდრე ლოდინი, სანამ kubelet თავად შეამჩნევს ფაილის ცვლილებას:
 
 ```bash
 k get po -n kube-system -l component=kube-apiserver
@@ -632,7 +632,7 @@ exit
 `requestObject.subjects` თვალით, სპეციალური jq-სინტაქსის გარეშე.
 
 რეალური გამოცდისთვის ეს საკმარისია, მაგრამ ეს ლაბი დამატებით მოითხოვს artifact-ფაილს
-მოვლენით - არა იმიტომ, რომ checker-ს არ ჰყოფნის იცოდეს, რომ წესი მუშაობს (ის თავად, დამოუკიდებლად,
+მოვლენით - არა იმიტომ, რომ checker-ს არ ჰყოფნის იმის ცოდნა, რომ წესი მუშაობს (ის თავად, დამოუკიდებლად,
 კითხულობს `audit.log`-ს control-plane-ზე SSH-ით), არამედ ცალკე უნარის შესამოწმებლად:
 სწორედ რეალური ჩანაწერის ამოღება და შენახვა როგორც forensic evidence, და არა მისი
 საკუთარი სიტყვებით გადმოცემა (checker ადარებს თქვენი ფაილის `auditID`-ს ლოგში რეალური ჩანაწერის `auditID`-თან).
@@ -654,7 +654,7 @@ ssh control-plane "sudo cat /var/log/kubernetes/audit/audit.log" \
 
 Containment: ვშლით მიბმას და ვადასტურებთ, რომ წვდომა რეალურად გაუქმებულია, და არა უბრალოდ
 ობიექტი გახდა წაკითხვისთვის მიუწვდომელი. `can-i` `-n`/`-A`-ის გარეშე ამოწმებს მხოლოდ მიმდინარე namespace-ს
-kubeconfig-კონტექსტისას, და არა მთელ კლასტერს - `security-104`-ში namespaced RoleBinding-ისთვის
+kubeconfig-კონტექსტის მიხედვით, და არა მთელ კლასტერს - `security-104`-ში namespaced RoleBinding-ისთვის
 (უკვე წაშლილი cluster-wide ClusterRoleBinding-ისგან განსხვავებით) ეს შედეგს ცვლის,
 ამიტომ namespace-ს აშკარად ვუთითებთ:
 
@@ -666,7 +666,7 @@ k auth can-i '*' '*' -n security-104 --as=system:serviceaccount:security-104:bui
 ```
 
 განსხვავება დავალება 7-თან: იქ ჩვენ ვპოულობდით და ვაუქმებდით **უკვე არსებულ** ფარულ გზას RBAC-ობიექტების
-სტატიკური ანალიზით, რომელიც თავად workload-ს (`build-agent`) ეკუთვნოდა. აქ
+სტატიკური ანალიზით - გზას, რომელიც თავად workload-ს (`build-agent`) ეკუთვნოდა. აქ
 source of truth - **მოვლენაა დროში** (audit log), რომელიც ამტკიცებს, ვინ ზუსტად
 (ველი `user.username` - მოთხოვნის რეალური ინიციატორი, ამ შემთხვევაში ადმინისტრატორი, და არა
 `build-agent`) გასცა სახიფათო უფლებები და ვის ზუსტად - ეს არის ის, რაც რეალური
@@ -675,7 +675,7 @@ source of truth - **მოვლენაა დროში** (audit log), რ�
 
 ბოლოს გაუშვით `check_result`.
 
-## 10. Decode, create and mount a Secret
+## 10. Secret-ის დეკოდირება, შექმნა და მიმაგრება
 
 `legacy-config` უკვე არსებობს. ორივე მნიშვნელობას ვკითხულობთ API-ს გავლით, და არ ვხვდებით:
 
@@ -731,7 +731,7 @@ k exec -n security-104 secret-workflow -- cat /etc/rehydrated/SERVICE_TOKEN
 
 ბოლოს გაუშვით `check_result`.
 
-## 11. Repair existing Role and bind it to an SA from another namespace
+## 11. არსებული Role-ის გასწორება და მისი მიბმა სხვა namespace-ის SA-სთან
 
 არსებული Role `pod-role` `rbac-a`-ში უშვებს `get`, `list`, `delete` - ზედმეტ `delete`-ს ვშლით,
 საჭირო `watch`-ს ვამატებთ:
@@ -766,10 +766,10 @@ k run rbac-a-workload -n rbac-a --image=busybox:1.36 \
 
 ბოლოს გაუშვით `check_result`.
 
-## 12. Client certificate user via CSR + namespaced RBAC
+## 12. მომხმარებელი კლიენტის სერტიფიკატით CSR-ის გავლით + namespaced RBAC
 
 ვაგენერირებთ private key-სა და CSR-ს `CN=john`-ით - RBAC სერტიფიკატზე დაფუძნებული მომხმარებლისთვის
-ბმება `kind: User`-ით, და არა `ServiceAccount`-ით, და `User`-ს საკუთარი API
+უკავშირდება `kind: User`-ით, და არა `ServiceAccount`-ით, და `User`-ს საკუთარი API
 ობიექტი არ აქვს: მისი identity მთლიანად განისაზღვრება იმით, რომ CN client-სერტიფიკატში
 ემთხვევა `name`-ს binding-ში.
 

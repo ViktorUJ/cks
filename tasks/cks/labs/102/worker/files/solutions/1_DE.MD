@@ -132,7 +132,7 @@ POST wird vom Envoy proxy von Cilium auf L7 abgelehnt (`403`), nicht durch ein t
 network namespace auf dem control-plane Node, und KEINE ClusterIP: `toFQDNs` in Cilium wendet die
 allow-Regel nicht auf IPs innerhalb des Clusters an), die bereits während des bootstrap hochgefahren und in CoreDNS eingetragen wurden:
 Anders als `example.com` sind diese Namen immer verfügbar und hängen nicht vom Internet ab. Prüfung VOR der
-policy - DNS und beide Kontroll-Endpoints müssen tatsächlich erreichbar sein (`-k` - selbstsigniertes
+policy - DNS und alle drei Kontroll-Endpoints (`allowed:443`, `allowed:80`, `blocked:443`) müssen tatsächlich erreichbar sein (`-k` - selbstsigniertes
 Zertifikat der fixture):
 
 ```bash
@@ -149,7 +149,7 @@ allowed:80 HTTP:200
 blocked:443 HTTP:200
 ```
 
-Drei egress-Regeln in einem Objekt: (1) DNS zu `kube-dns` über `rules.dns` - ohne dies baut Cilium kein FQDN-to-IP mapping auf; (2) intern `backend` auf TCP/80 - ohne dies blockiert default-deny egress den bereits erlaubten Flow aus den Aufgaben 2-3; (3) `toFQDNs` nur auf `allowed.cks102.test:443`.
+Drei egress-Regeln in einem Objekt: (1) DNS zu `kube-dns` über `rules.dns` - ohne dies baut Cilium kein FQDN-to-IP mapping auf; (2) das interne `backend` auf TCP/80 - ohne dies blockiert default-deny egress den bereits erlaubten Flow aus den Aufgaben 2-3; (3) `toFQDNs` nur auf `allowed.cks102.test:443`.
 
 ```bash
 k apply -f - <<EOF
@@ -230,7 +230,7 @@ cks-102/frontend:xxxxx -> cks-102/backend:80 http-request FORWARDED (HTTP/1.1 GE
 cks-102/frontend:xxxxx -> cks-102/backend:80 http-request DROPPED (HTTP/1.1 POST http://backend/)
 ```
 
-Du solltest genau zwei flows sehen: `GET /` mit verdict `FORWARDED` und `POST /` mit verdict `DROPPED`. Wenn sie fehlen - wurde `hubble observe` nicht während der Anfragen gestartet; wiederhole es.
+Du solltest genau zwei flows sehen: `GET /` mit verdict `FORWARDED` und `POST /` mit verdict `DROPPED`. Wenn sie fehlen, wurde `hubble observe` nicht während der Anfragen gestartet; wiederhole es.
 
 ## 6. Zusammengesetzte L7 policy: public/private path scopes
 
@@ -300,13 +300,13 @@ Policy: zwei ingress-Regeln auf demselben Port. **Wichtige Falle von Cilium**: `
 [{}]` (leerer selector) in einer namespaced `CiliumNetworkPolicy` bedeutet NICHT "jede identity im
 gesamten Cluster" - Cilium fügt implizit die Namespace-Einschränkung der policy SELBST zu jedem
 `fromEndpoints`-selector ohne explizites Namespace-Label hinzu, einschließlich des leeren `{}`. Das heißt, `{}`
-matcht hier in der Praxis nur Endpoints im Namespace `production` und nicht `finance`/`cks-102`
-- die Live-Prüfung bestätigt das: Mit dem buchstäblichen `{}` erhält der externe client einen transport
+matcht hier in der Praxis nur Endpoints im Namespace `production` und nicht `finance`/`cks-102` -
+die Live-Prüfung bestätigt das: Mit dem buchstäblichen `{}` erhält der externe client einen transport
 timeout auf BEIDEN paths (die Regel wird auf seinen Namespace gar nicht angewendet), und `finance` erhält
 `403` auf `/public/*` (matcht nur Regel 2, die lediglich `/private/*` erlaubt).
 Um tatsächlich jede identity unabhängig vom Namespace zu matchen, braucht es `matchExpressions` mit
 `operator: Exists` auf das reserved-label `k8s:io.kubernetes.pod.namespace` (das Vorhandensein
-dieses Labels gilt für absolut jeden Pod, unabhängig vom Wert) - das, und nicht das leere
+dieses Labels trifft auf absolut jeden Pod zu, unabhängig vom Wert) - das, und nicht das leere
 `{}`, liefert die Cross-Namespace-acceptance für Regel 1:
 
 ```bash

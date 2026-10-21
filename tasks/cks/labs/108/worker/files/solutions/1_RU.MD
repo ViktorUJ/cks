@@ -91,7 +91,7 @@ spec:
   - name: app
     image: registry.k8s.io/pause@sha256:5a92cb1de40c9c50e1c72e83bf35b9b32ce88e0d1b93f5e2727d97a44c176f56
 EOF
-# ожидается: успех (никакая ошибка admission)
+# ожидается: успех (никакой ошибки admission)
 ```
 
 Убедитесь, что обработка тега учитывает двоеточие в registry-порту: `registry.example:5000/app`
@@ -190,13 +190,13 @@ kubectl apply -f allow-approved-registries.yaml
 
 Проверка без создания Pod и без image pull. `docker.io` - лишь ОДНО конкретное
 untrusted-значение; проверьте, что policy действительно ALLOWLIST (запрещает ЛЮБОЙ
-registry, кроме двух разрешённых), а не просто денылист `docker.io` буквальной строкой -
+registry, кроме двух разрешённых), а не просто denylist `docker.io` буквальной строкой -
 иначе unqualified image, другой сторонний registry или похожий по написанию host легко
-пройдут мимо:
+пройдут мимо.
 
 Positive controls должны покрывать оба разрешённых prefix (`registry.k8s.io/` и
 `ghcr.io/cks-lab/`) в `containers`, `initContainers` и `ephemeralContainers`; не
-ограничивайте один из registry только обычными контейнерами.
+ограничивайте один из registry только обычными контейнерами:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -373,8 +373,8 @@ EOF
 # ожидается: external (mutation НЕ перезаписывает уже заданное значение)
 ```
 
-Выполните `check_result`. Этап 5 показан в проверке, но он опционален: отсутствие
-mutation policy не должно отменять зачёт первых четырёх этапов.
+Выполните `check_result`. Задание 5 показано в проверке, но оно опционально: отсутствие
+mutation policy не влияет на зачёт заданий 1–4, 6 и 7.
 
 ## 6. ImagePolicyWebhook: внешний backend
 
@@ -628,7 +628,7 @@ kubectl get endpoints image-policy-backend -n image-policy -w
 # пересборки/пересоздания не потребовалось
 ```
 
-Это то же принципиальное fail-closed решение, что описано в главе 26 для
+Это то же принципиальное fail-closed решение, что описано в [главе 26 курса](../../../../../course/26/ru.md) для
 production-конфигурации ImagePolicyWebhook.
 
 ## 7. Gatekeeper: дописать Rego blocklist в ConstraintTemplate
@@ -713,7 +713,7 @@ EOF
 
 Убедитесь, что отказ действительно пришёл от Gatekeeper (`validation.gatekeeper.sh`), а
 не от одной из Kyverno `ValidatingPolicy` из заданий 2-4 - сообщение об ошибке явно
-называет webhook и имя вашего Constraint. Не решайте задание через `Constraint.spec.parameters`
-- в этой версии policy Constraint их вообще не использует.
+называет webhook и имя вашего Constraint. Не решайте задание через `Constraint.spec.parameters` -
+в этой версии policy Constraint их вообще не использует.
 
 Выполните `check_result`.

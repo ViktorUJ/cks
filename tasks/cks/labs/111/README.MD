@@ -33,13 +33,13 @@ a tag, a different, malicious image can be substituted. This is exactly why dige
 tasks 3–5: it pins the specific content of the image, and not only its name and tag.
 
 The signature verification in task 7 proves that a specific digest is signed by a trusted
-key/identity (signature integrity), whereas the Trivy scan in task 1 does not detect
+key/identity (signature integrity), whereas the Trivy scan in task 1 only shows that it found no
 known vulnerabilities that fall within its detection coverage under the current vulnerability DB
 (Trivy itself documents a trade-off in favor of precision, under which false
 negatives are possible - "0 findings" is not a formal proof of the absence of vulnerabilities). These are different axes of
 protection: neither replaces the other, since vulnerability != signature. A signature is
 NOT the same as provenance/attestation
-(for example SLSA-style build metadata about what and how the artifact was built from): `cosign
+(for example SLSA-style build metadata about what the artifact was built from and how): `cosign
 verify` confirms the authenticity of the signature, and not the full history of the build - for attestation
 Sigstore provides separate commands `cosign attest`/`cosign verify-attestation`, which are not
 used in this lab.
@@ -117,7 +117,7 @@ official support - remove this exception when updating Kyverno.
 
 ## Prerequisites and limitations
 
-**podman and the registry are already configured on the bench.** For building and publishing images use `podman`
+**podman and the registry are already configured in the lab environment.** For building and publishing images use `podman`
 (a tool from the exam list; rootless, as the user `ubuntu`). Tasks 3 and 9c require building and
 **publishing** an image to a registry that is reachable both from the worker and from the cluster (the immutable reference
 `repo@sha256:...` is taken from the registry, a local image ID does not work). Such a registry -
@@ -138,11 +138,11 @@ So that `check_result` does not run into it, the bootstrap downloads the lab ima
 (`nginx:1.27.3-alpine` and the candidates for tasks 1b/1c), and Trivy and Syft on repeated scans take the
 image from this cache by the same reference `name@sha256:...`, without calling Docker Hub. `bom` can
 read an image only from a registry, so it still makes several requests per run.
-If Docker Hub still returned `TOOMANYREQUESTS`, wait (the limit window is sliding) or run
+If Docker Hub still returns `TOOMANYREQUESTS`, wait (the limit window is sliding) or run
 `podman login docker.io` under your own account.
 
 **Cosign and the key password.** `cosign generate-key-pair` and `cosign sign --key` ask for the key
-password; for a training pair you can leave it empty (`export COSIGN_PASSWORD=""`), so that the commands
+password; for a lab key pair you can leave it empty (`export COSIGN_PASSWORD=""`), so that the commands
 do not wait for input.
 
 **`trivy sbom` and an SBOM without an OS (task 8).** The SPDX from `bom` for a multi-arch image contains no
@@ -210,7 +210,7 @@ Get the image references with a command like `kubectl -n cks-111 get deployment 
 ---
 | **2** | **The initial static analysis reports** |
 | :---: | :--- |
-| What to do | • BEFORE the fixes (without touching any of these three files after the start of task 3) save the results: Hadolint in `2/hadolint-before.txt`, kubesec JSON in `2/kubesec-before.json`, kube-linter JSON in `2/kube-linter-before.json`.<br/>• Run them directly against the ORIGINAL starting `Dockerfile`/`deployment.yaml`.<br/>• Do not hide errors via `|| true` in the report files: a non-zero exit code of the linter is expected. |
+| What to do | • BEFORE the fixes (without touching any of these three files after the start of task 3) save the results: Hadolint in `2/hadolint-before.txt`, kubesec JSON in `2/kubesec-before.json`, kube-linter JSON in `2/kube-linter-before.json`.<br/>• Run them directly against the ORIGINAL starting `Dockerfile`/`deployment.yaml`.<br/>• Do not hide errors via `\|\| true` in the report files: a non-zero exit code of the linter is expected. |
 | Acceptance criteria | • **Artifacts:** all three exist; Hadolint contains findings, kubesec contains `scoring`, kube-linter is a valid KubeLinter JSON object with the fields `Reports` and `Summary`; before the fixes `Reports` contains findings.<br/>• **Comparison with the baseline:** the checker compares the content of all three artifacts with its own baseline, taken during provisioning against the original starting files BEFORE they were handed to the student.<br/>• A hand-written but syntactically valid report does not pass. |
 
 <details>
@@ -235,7 +235,7 @@ The `ARG`/`LABEL` for `CKS_SIGNATURE_TEST` may seem unrelated to the current Had
 | **4** | **Fix the workload YAML according to kubesec and kube-linter** |
 | :---: | :--- |
 | What to do | • First build and publish the hardened image from task 3, then specify in `deployment.yaml` its immutable manifest reference `registry/.../catalog@sha256:<manifest-digest>` (not the upstream nginx).<br/>• At the Pod level add `automountServiceAccountToken: false`, `runAsNonRoot: true`, `seccompProfile: RuntimeDefault`.<br/>• In the container set `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`, CPU and memory requests/limits.<br/>• For nginx mount a writable `emptyDir`/tmpfs at the temp, pid/run, cache, and config paths and prepare the config before startup.<br/>• Remove `privileged`, apply the Deployment, confirm Ready/Available and a successful HTTP request.<br/>• Save the new reports `4/kubesec-after.json` and `4/kube-linter-after.json`. |
-| Acceptance criteria | • **The image:** the YAML uses a digest-pinned hardened image with `USER 101`, and not the upstream nginx.<br/>• **The manifest:** the required fields and writable mounts are present; `privileged` is absent.<br/>• **Operability:** the Deployment is Available and the HTTP request succeeds.<br/>• **Reports:** both final reports are valid JSON. |
+| Acceptance criteria | • **The image:** the YAML uses a digest-pinned hardened image with `USER 101`, and not the upstream nginx.<br/>• **The manifest:** the required fields, the init container `prepare-nginx-config`, and writable mounts are present; `privileged` is absent.<br/>• **Operability:** the Deployment is Available and the HTTP request succeeds.<br/>• **Reports:** both final reports are valid JSON. |
 
 <details>
 <summary>💡 Hint for task 4</summary>
@@ -276,14 +276,14 @@ The command is `bom generate --format json --output <file> --image <ref>` for EA
 <details>
 <summary>💡 Hint for task 6</summary>
 
-The command `bom generate -o <output.json> -i <image>` - with the flag `-o` to specify the output file, otherwise the output goes to stdout. The output format of `bom` is its OWN SPDX JSON, which differs in details from the SPDX that Syft can generate - do not confuse these two different tools when generating the same standard format.
+The command is `bom generate -o <output.json> -i <image>` - always include the `-o` flag to specify the output file, otherwise the output goes to stdout. The output format of `bom` is its OWN SPDX JSON, which differs in details from the SPDX that Syft can generate - do not confuse these two different tools when generating the same standard format.
 </details>
 
 ---
 | **7** | **CycloneDX SBOM via Syft and a Cosign verification** |
 | :---: | :--- |
 | What to do | • Generate a CycloneDX JSON SBOM with Syft for the same immutable `$IMAGE` (`nginx:1.27.3-alpine@sha256:<manifest-digest>`) from task 1 and save it in `7/syft.cdx.json`.<br/>• Then verify the signature of the public image `gcr.io/distroless/static-debian13:nonroot` via keyless Cosign and save the full successful output in `7/cosign-verify.txt`.<br/>• For Distroless use the issuer `https://accounts.google.com` and the identity `keyless@distroless.iam.gserviceaccount.com`. |
-| Acceptance criteria | • **The Syft SBOM:** `bomFormat: CycloneDX`, a non-empty `components`, `metadata.component.type == "container"` and `metadata.component.version` equal to the manifest digest of the same `$IMAGE` from task 1 - an SBOM for another image (a bare tag, alpine, busybox, etc.) does not pass.<br/>• **Cosign:** a real `cosign verify` command for `gcr.io/distroless/static-debian13:nonroot` (the currently supported tag - `gcr.io/distroless/static:nonroot` without the suffix `-debian13` is considered deprecated according to the official Distroless README and is no longer updated) with the specified issuer/identity ends with exit code `0`, and the full output is saved in `7/cosign-verify.txt`.<br/>• **A fresh check:** the checker additionally regenerates the SBOM itself with the same Syft for the same image and requires that the set of components (`name`/`version`) in your SBOM match this fresh run - a minimal hand-written CycloneDX document with one top-level component does not pass. |
+| Acceptance criteria | • **The Syft SBOM:** `bomFormat: CycloneDX`, a non-empty `components`, `metadata.component.type == "container"` and `metadata.component.version` equal to the manifest digest of the same `$IMAGE` from task 1 - an SBOM for another image (a bare tag, alpine, busybox, etc.) does not pass.<br/>• **Cosign:** a real `cosign verify` command for `gcr.io/distroless/static-debian13:nonroot` (this is the currently supported tag; `gcr.io/distroless/static:nonroot` without the `-debian13` suffix is considered deprecated according to the official Distroless README and is no longer updated) with the specified issuer/identity ends with exit code `0`, and the full output is saved in `7/cosign-verify.txt`.<br/>• **A fresh check:** the checker additionally regenerates the SBOM itself with the same Syft for the same image and requires that the set of components (`name`/`version`) in your SBOM match this fresh run - a minimal hand-written CycloneDX document with one top-level component does not pass. |
 
 <details>
 <summary>💡 Hint for task 7</summary>
@@ -294,13 +294,13 @@ Syft generates CycloneDX through the flag `-o cyclonedx-json` (not to be confuse
 ---
 | **8** | **`trivy sbom`: scanning a ready SBOM file for vulnerabilities** |
 | :---: | :--- |
-| What to do | • The CycloneDX SBOM from task 7 (`7/syft.cdx.json`) describes the composition of the image and its OS, but by itself contains no conclusion about vulnerabilities.<br/>• Scan exactly this SBOM file (not the image directly) with the tool `trivy sbom` and save the structured JSON in `/var/work/tests/artifacts/8/sbom-scan.json`.<br/>• The command must explicitly take the SBOM file as input, and not rescan `$IMAGE`. |
+| What to do | • The CycloneDX SBOM from task 7 (`7/syft.cdx.json`) describes the composition of the image and its OS, but by itself contains no conclusion about vulnerabilities.<br/>• Scan exactly this SBOM file (not the image directly) with the tool `trivy sbom` and save the structured JSON in `/var/work/tests/artifacts/8/sbom-scan.json`.<br/>• The command must explicitly take the SBOM file as input, and not rescan `$IMAGE`; save its text in `/var/work/tests/artifacts/8/sbom-scan-command.txt`. |
 | Acceptance criteria | • **The file:** non-empty, the JSON is parsed by `jq`, `ArtifactType` = `cyclonedx`, `Results` is non-empty and contains the found vulnerabilities.<br/>• **The command:** `sbom-scan-command.txt` contains the command `trivy sbom` with the path to `7/syft.cdx.json`.<br/>• **A fresh check:** the checker itself repeats `trivy sbom` on this file. |
 
 <details>
 <summary>💡 Hint for task 8</summary>
 
-The command is `trivy sbom <path-to-the-sbom-file>`, and NOT `trivy image <path-to-the-file>` - these are different subcommands with different input logic. If you accidentally pass the path of an SBOM file to `trivy image`, Trivy will try to interpret it as an image reference name and end with an error or unexpected behavior.
+The command is `trivy sbom <path-to-the-sbom-file>`, and NOT `trivy image <path-to-the-file>` - these are different subcommands with different input logic. If you accidentally pass the path of an SBOM file to `trivy image`, Trivy will try to interpret it as an image reference name and fail with an error or behave unexpectedly.
 </details>
 
 ---
@@ -318,8 +318,8 @@ The command is `trivy sbom <path-to-the-sbom-file>`, and NOT `trivy image <path-
 ---
 | **9b** | **Fresh signed ALLOW: a new Pod after the policy is created** |
 | :---: | :--- |
-| What to do | • The policy from task 9a must admit the signed `$HARDENED_IMAGE` - but a repeated `kubectl apply` of an already existing Deployment **does not prove** this: if the template has not changed, a new ReplicaSet/Pod may not be created, and `Running` turns out to be just the old Pod created before the policy.<br/>• Create a **new**, previously non-existent object: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 300`.<br/>• Save the `creationTimestamp` of this Pod, the `creationTimestamp` of the policy from 9a, and the final `status.phase`/`Ready` condition in `9b/signed-admission-check.json`. |
-| Acceptance criteria | • **The Pod:** `signed-admission-check` exists, uses exactly `$HARDENED_IMAGE`; `cosign verify --key cosign.pub "$HARDENED_IMAGE"` completes successfully for it, `status.phase` is not `Failed`, and the `Ready` condition reaches `True`.<br/>• **The artifact:** `9b/signed-admission-check.json` contains this image and the Pod `creationTimestamp` **later** than the `creationTimestamp` of the `ImageValidatingPolicy require-signed-catalog-images`.<br/>• This proves a fresh post-policy admission of a verifiably signed image, and not an old Pod that survived the policy. |
+| What to do | • The policy from task 9a must admit the signed `$HARDENED_IMAGE` - but a repeated `kubectl apply` of an already existing Deployment **does not prove** this: if the template has not changed, a new ReplicaSet/Pod may not be created, and `Running` turns out to be just the old Pod created before the policy.<br/>• Create a **new**, previously non-existent object: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`.<br/>• Save the `creationTimestamp` of this Pod, the `creationTimestamp` of the policy from 9a, and the final `status.phase`/`Ready` condition in `9b/signed-admission-check.json`. |
+| Acceptance criteria | • **The Pod:** `signed-admission-check` exists, uses exactly `$HARDENED_IMAGE`; `cosign verify --key cosign.pub "$HARDENED_IMAGE"` completes successfully for it, `status.phase` is not `Failed`, and the `Ready` condition reaches `True`.<br/>• **The artifact:** `9b/signed-admission-check.json` contains this image and a Pod `creationTimestamp` that is **later** than the `creationTimestamp` of the `ImageValidatingPolicy require-signed-catalog-images`.<br/>• This proves a fresh post-policy admission of a verifiably signed image, and not an old Pod that survived the policy. |
 
 <details>
 <summary>💡 Hint for task 9b</summary>
@@ -331,7 +331,7 @@ Do not reuse the Deployment `catalog` from task 4 for this check - use a literal
 | **9c** | **Signature-specific DENY: an unsigned digest that really exists in the same repository** |
 | :---: | :--- |
 | What to do | • Build and publish a **second** tag in the same repository as `$HARDENED_IMAGE` (for example, `${HARDENED_TAG%:*}:unsigned-1.0`), without signing it.<br/>• This image must be a **physically different artifact**, and not the same digest as the already signed `$HARDENED_IMAGE`: if you build the same `Dockerfile`/context unchanged, a reproducible/cached build may give an identical digest, and then the "unsigned" tag will in fact point to the already signed artifact, and `cosign verify` will unexpectedly pass.<br/>• Introduce a controlled difference via a build-arg (for example `--build-arg CKS_SIGNATURE_TEST=unsigned-1` with the corresponding `ARG`/`LABEL` in the Dockerfile) and explicitly save the proof `$UNSIGNED_DIGEST != $HARDENED_DIGEST` in `9c/digest-comparison.txt`.<br/>• Obtain the registry manifest digest in the same way as in task 3 (`podman push --digestfile`), form `$UNSIGNED_IMAGE` in the same repository.<br/>• Explicitly prove that this digest **exists and is pullable** (a request `GET /v2/catalog/manifests/<digest>` to the registry succeeds) and **does not have** a valid signature by your key (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` ends with an error) - save both outputs in `9c/unsigned-exists.txt` and `9c/unsigned-not-signed.txt`.<br/>• Then create a Pod `catalog-unsigned-probe` with this `$UNSIGNED_IMAGE` and save the admission denial in `9c/admission-deny.txt`. |
-| Acceptance criteria | • **The artifact:** `9c/digest-comparison.txt` contains `hardened_digest=`, `unsigned_digest=`, and `unsigned_image=` (a full `tag@digest` reference in the same repository as `$HARDENED_IMAGE`, with a genuinely different digest).<br/>• **The checker's check:** it itself resolves `unsigned_image` in the registry, confirms the absence of a valid signature via its own `cosign verify`, creates ITS OWN new Pod with this image, and requires the unique validation message of its own policy: `catalog image must have a valid release signature`.<br/>• A generic admission/signature error from another policy does not count as PASS, nor does just any admission error (`manifest unknown`/registry lookup are insufficient).<br/>• Hand-written evidence files without real admission control do not give PASS - the checker trusts no text files, except `unsigned_image=` as a pointer to the real image for checking. |
+| Acceptance criteria | • **The artifact:** `9c/digest-comparison.txt` contains `hardened_digest=`, `unsigned_digest=`, and `unsigned_image=` (a full `tag@digest` reference in the same repository as `$HARDENED_IMAGE`, with a genuinely different digest).<br/>• **The checker's check:** it itself resolves `unsigned_image` in the registry, confirms the absence of a valid signature via its own `cosign verify`, creates ITS OWN new Pod with this image, and requires the unique validation message of its own policy: `catalog image must have a valid release signature`.<br/>• Only this message counts, not just any admission error: a generic admission/signature error from another policy does not give PASS, and `manifest unknown`/registry lookup errors are also insufficient.<br/>• Hand-written evidence files without real admission control do not give PASS - the checker trusts no text files, except `unsigned_image=` as a pointer to the real image for checking. |
 
 <details>
 <summary>💡 Hint for task 9c</summary>

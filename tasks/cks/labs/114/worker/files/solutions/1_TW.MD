@@ -18,7 +18,7 @@ CURRENT   NAME                        CLUSTER     AUTHINFO         NAMESPACE
 staging-admin@staging
 ```
 
-`staging`/`legacy` - decoy,伺服器無法解析/沒有回應。切換到真實的:
+`staging`/`legacy` - decoy，伺服器無法解析/沒有回應。切換到真實的：
 
 ```bash
 kubectl config use-context cluster1-admin@cluster1
@@ -46,7 +46,7 @@ notBefore=Jan  1 00:00:00 2026 GMT
 notAfter=Apr  6 00:00:00 2028 GMT
 ```
 
-把恰好這些值(fingerprint - 不帶冒號的 hex)寫入 artifact:
+把這些值原樣(fingerprint - 不帶冒號的 hex)寫入 artifact:
 
 ```bash
 mkdir -p /var/work/tests/artifacts
@@ -73,10 +73,10 @@ NOTBEFORE=notBefore=Jan  1 00:00:00 2026 GMT
 NOTAFTER=notAfter=Apr  6 00:00:00 2028 GMT
 ```
 
-這個憑證絕不會用於驗證 - `cluster9-admin` 在叢集中沒有權限,
+這個憑證絕不會用於驗證 - `cluster9-admin` 在叢集中沒有權限，
 這個任務只是關於憑證的讀取與解析。
 
-## 3. Baseline:NodePort exposure
+## 3. Baseline: NodePort exposure
 
 ```bash
 kubectl create ns cks-114
@@ -87,7 +87,7 @@ kubectl -n cks-114 patch svc kubernetes-public -p '{"spec":{"ports":[{"port":80,
 kubectl -n cks-114 wait --for=condition=Ready pod -l app=backend --timeout=90s
 ```
 
-從外部(在 worker 上)與叢集內部檢查:
+從外部(在 worker 上)與叢集內部檢查：
 
 ```bash
 node_ip=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
@@ -110,10 +110,10 @@ external HTTP:200
 in-cluster HTTP:200
 ```
 
-## 4. Reduce exposure:NodePort -> ClusterIP
+## 4. Reduce exposure: NodePort -> ClusterIP
 
-對 `ports` 陣列執行 `kubectl patch` **本身不會移除** `nodePort` - 需要把整個陣列
-替換成不含這個欄位的版本(或手動 `kubectl edit` 並刪除這一行):
+明確移除 `nodePort`：用一個 JSON patch 同時變更類型並刪除 `/spec/ports/0/nodePort`
+(或手動 `kubectl edit` 並刪除這一行)：
 
 ```bash
 kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
@@ -122,7 +122,7 @@ kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
 ]'
 ```
 
-檢查同樣的兩項檢查(kube-proxy 移除 NodePort 規則同樣不是瞬間完成的,因此先
+執行同樣的兩項檢查(kube-proxy 移除 NodePort 規則同樣不是瞬間完成的，因此先
 等待埠不再有回應):
 
 ```bash
@@ -137,7 +137,7 @@ external HTTP:000
 in-cluster HTTP:200
 ```
 
-`kubernetes-public:30114` 不再被節點上的 kube-proxy 監聽(transport deny);透過 Service DNS 的
+`kubernetes-public:30114` 不再被節點上的 kube-proxy 監聽(transport deny)；透過 Service DNS 的
 叢集內部路徑沒有退化。
 
 ```bash

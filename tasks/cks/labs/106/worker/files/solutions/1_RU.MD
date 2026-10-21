@@ -135,8 +135,8 @@ kubectl exec -n security-106 apparmor-writer -- \
 # ожидается ненулевой код: Permission denied / Operation not permitted
 ```
 
-Ненулевой exit code и текст 'permission denied' сами по себе НЕ доказывают, что именно
-AppArmor это правило сработало - обычная DAC/filesystem ошибка выглядела бы идентично с
+Ненулевой exit code и текст 'permission denied' сами по себе НЕ доказывают, что сработало
+именно это правило AppArmor - обычная DAC/filesystem ошибка выглядела бы идентично с
 точки зрения shell. Свяжите отказ именно с этим profile через kernel audit log; смотрим его
 на ноде сразу после попытки выше:
 

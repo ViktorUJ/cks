@@ -30,7 +30,7 @@ frontend HTTP:200
 client HTTP:200
 ```
 
-Policy:選取 `backend`,只允許來自 `role=frontend`、對 TCP/80 的 ingress。
+Policy：選取 `backend`，只允許來自 `role=frontend`、對 TCP/80 的 ingress。
 
 ```bash
 k apply -f - <<EOF
@@ -54,7 +54,7 @@ spec:
 EOF
 ```
 
-在 policy「之後」檢查:
+在 policy「之後」檢查：
 
 ```bash
 k -n cks-102 exec frontend -- curl -sS -o /dev/null -w 'frontend HTTP:%{http_code}\n' -m5 http://backend/
@@ -67,9 +67,9 @@ client HTTP:000
 curl: (28) Connection timed out after 5000 milliseconds
 ```
 
-`client` -> transport-level deny(`000` 與逾時),而不只是「不是 200」。
+`client` -> transport-level deny(`000` 與逾時)，而不只是「不是 200」。
 
-## 3. L7 限制:只允許 GET /
+## 3. L7 限制：只允許 GET /
 
 在「之前」檢查(此時僅 L4 的 policy 仍然有效)- GET 與 POST 都必須確實能到達 backend:
 
@@ -111,7 +111,7 @@ spec:
 EOF
 ```
 
-在「之後」檢查:
+在「之後」檢查：
 
 ```bash
 k -n cks-102 exec frontend -- curl -sS -o /dev/null -w 'GET HTTP:%{http_code}\n' -m5 http://backend/
@@ -123,16 +123,16 @@ GET HTTP:200
 POST HTTP:403
 ```
 
-POST 是被 Cilium 的 Envoy proxy 在 L7 拒絕的(`403`),而不是 transport deny。
+POST 是被 Cilium 的 Envoy proxy 在 L7 拒絕的(`403`)，而不是 transport deny。
 
 ## 4. 透過 toFQDNs 的 DNS-aware egress
 
-`allowed.cks102.test`/`blocked.cks102.test` 是由實驗自行提供的 fixture,會解析為
-`198.18.0.10`/`198.18.0.20`(位於 Kubernetes address space 之外的合成 IP,是 control-plane 節點上獨立的
-network namespace,而「不是」ClusterIP:Cilium 的 `toFQDNs` 不會對叢集內部的 IP
-套用 allow 規則),在 bootstrap 期間就已經啟動並寫入 CoreDNS:
-和 `example.com` 不同,這些名稱始終可用,而且不依賴 Internet。在 policy「之前」檢查 -
-DNS 與兩個測試 endpoint 都必須確實可存取(`-k` - fixture 使用自簽憑證):
+`allowed.cks102.test`/`blocked.cks102.test` 是由實驗自行提供的 fixture，會解析為
+`198.18.0.10`/`198.18.0.20`(位於 Kubernetes address space 之外的合成 IP，是 control-plane 節點上獨立的
+network namespace，而「不是」ClusterIP:Cilium 的 `toFQDNs` 不會對叢集內部的 IP
+套用 allow 規則)，在 bootstrap 期間就已經啟動並寫入 CoreDNS:
+和 `example.com` 不同，這些名稱始終可用，而且不依賴 Internet。在 policy「之前」檢查 -
+DNS 與三個測試 endpoint(`allowed:443`、`allowed:80`、`blocked:443`)都必須確實可存取(`-k` - fixture 使用自簽憑證):
 
 ```bash
 k -n cks-102 exec frontend -- nslookup allowed.cks102.test
@@ -148,7 +148,7 @@ allowed:80 HTTP:200
 blocked:443 HTTP:200
 ```
 
-同一個物件中的三條 egress 規則:(1) 透過 `rules.dns` 對 `kube-dns` 的 DNS - 沒有它 Cilium 無法建立 FQDN-to-IP mapping;(2) 內部的 `backend`,TCP/80 - 沒有它,default-deny egress 會封鎖任務 2-3 中已被允許的流量;(3) `toFQDNs` 只限 `allowed.cks102.test:443`。
+同一個物件中的三條 egress 規則：(1) 透過 `rules.dns` 對 `kube-dns` 的 DNS - 沒有它 Cilium 無法建立 FQDN-to-IP mapping;(2) 內部的 `backend`,TCP/80 - 沒有它，default-deny egress 會封鎖任務 2-3 中已被允許的流量；(3) `toFQDNs` 只限 `allowed.cks102.test:443`。
 
 ```bash
 k apply -f - <<EOF
@@ -189,7 +189,7 @@ spec:
 EOF
 ```
 
-在「之後」檢查(請等待幾秒鐘,FQDN-mapping 不是瞬間完成的),並確認任務 2-3 中的 backend 沒有退化:
+在「之後」檢查(請等待幾秒鐘，FQDN-mapping 不是瞬間完成的)，並確認任務 2-3 中的 backend 沒有退化：
 
 ```bash
 k -n cks-102 exec frontend -- curl -sSk -o /dev/null -w 'allowed:443 HTTP:%{http_code}\n' -m10 https://allowed.cks102.test/
@@ -207,11 +207,11 @@ GET HTTP:200
 POST HTTP:403
 ```
 
-`allowed.cks102.test` 的 HTTPS 仍然是 `200`;`allowed.cks102.test:80` 與 `blocked.cks102.test:443` 會卡住/逾時(`000`);backend 的 GET/POST - 與任務 2-3 相同,沒有退化。
+`allowed.cks102.test` 的 HTTPS 仍然是 `200`;`allowed.cks102.test:80` 與 `blocked.cks102.test:443` 會卡住/逾時(`000`);backend 的 GET/POST - 與任務 2-3 相同，沒有退化。
 
 ## 5. 透過 Hubble 觀察
 
-Relay 已經由 worker.sh 啟用。開啟 port-forward 與觀察,並產生 GET 與 POST:
+Relay 已經由 worker.sh 啟用。開啟 port-forward 與觀察，並產生 GET 與 POST:
 
 ```bash
 cilium hubble port-forward &
@@ -229,13 +229,13 @@ cks-102/frontend:xxxxx -> cks-102/backend:80 http-request FORWARDED (HTTP/1.1 GE
 cks-102/frontend:xxxxx -> cks-102/backend:80 http-request DROPPED (HTTP/1.1 POST http://backend/)
 ```
 
-應該恰好看到兩個 flow:`GET /` 的 verdict 為 `FORWARDED`,`POST /` 的 verdict 為 `DROPPED`。如果沒有看到 - 表示 `hubble observe` 不是在發出請求期間啟動的;請重做一次。
+應該恰好看到兩個 flow:`GET /` 的 verdict 為 `FORWARDED`,`POST /` 的 verdict 為 `DROPPED`。如果沒有看到 - 表示 `hubble observe` 不是在發出請求期間啟動的；請重做一次。
 
 ## 6. 複合 L7 policy:public/private path scopes
 
-第二個、獨立的 backend,具有兩個 path-scope。nginx 設定整個取代
-(`default.conf`),讓 `location` 對特定 prefix 回傳 `200`,而對其他所有 path 回傳 `404` -
-沒有它,就無法從 HTTP 狀態碼區分「被允許」與「被禁止」。
+第二個、獨立的 backend，具有兩個 path-scope。nginx 設定整個取代
+(`default.conf`)，讓 `location` 對特定 prefix 回傳 `200`，而對其他所有 path 回傳 `404` -
+沒有它，就無法從 HTTP 狀態碼區分「被允許」與「被禁止」。
 
 ```bash
 k create ns production
@@ -295,17 +295,17 @@ public:200
 private:200
 ```
 
-Policy:同一個埠上的兩條 ingress 規則。**Cilium 的重要陷阱**:在 namespaced `CiliumNetworkPolicy` 中,
+Policy：同一個埠上的兩條 ingress 規則。**Cilium 的重要陷阱**：在 namespaced `CiliumNetworkPolicy` 中，
 `fromEndpoints: [{}]`(空的 selector)「並不」代表「整個叢集中的任何 identity」-
 Cilium 會對任何沒有明確 namespace-label 的 `fromEndpoints` selector(包括空的 `{}`),
-隱含地加上 policy「自己」所在 namespace 的限制。也就是說,`{}`
-在這裡實際上只比對 namespace `production` 中的 endpoints,而不比對 `finance`/`cks-102`
-- 實際測試證實了這一點:使用字面上的 `{}` 時,外部 client 在「兩個」path 上都會得到 transport
-timeout(規則根本不會套用到它的 namespace),而 `finance` 在 `/public/*` 上會得到
-`403`(只符合規則 2,而規則 2 只允許 `/private/*`)。
-要真正比對任何 namespace 的任何 identity,需要對 reserved-label `k8s:io.kubernetes.pod.namespace`
-使用帶有 `operator: Exists` 的 `matchExpressions`(這個 label 的存在,對絕對任何 Pod 都成立,與其值無關)-
-是這個,而不是空的 `{}`,為規則 1 帶來跨 namespace 的 acceptance:
+隱含地加上 policy「自己」所在 namespace 的限制。也就是說，`{}`
+在這裡實際上只比對 namespace `production` 中的 endpoints，而不比對 `finance`/`cks-102` -
+實際測試證實了這一點：使用字面上的 `{}` 時，外部 client 在「兩個」path 上都會得到 transport
+timeout(規則根本不會套用到它的 namespace)，而 `finance` 在 `/public/*` 上會得到
+`403`(只符合規則 2，而規則 2 只允許 `/private/*`)。
+要真正比對任何 namespace 的任何 identity，需要對 reserved-label `k8s:io.kubernetes.pod.namespace`
+使用帶有 `operator: Exists` 的 `matchExpressions`(無論其值為何，這個 label 的存在對任何 Pod 都必然成立)-
+是這個，而不是空的 `{}`，為規則 1 帶來跨 namespace 的 acceptance:
 
 ```bash
 k apply -f - <<EOF
@@ -346,12 +346,12 @@ EOF
 sleep 3
 ```
 
-有了這個 selector,規則 1 確實會比對「絕對任何」identity(包括
-`finance`),因此 `finance` 最終的 allow-set 是 `/public/*`(規則 1)
-與 `/private/*`(規則 2,只比對 `finance`)的聯集。對於任何其他 namespace,
+有了這個 selector，規則 1 確實會比對「絕對任何」identity(包括
+`finance`)，因此 `finance` 最終的 allow-set 是 `/public/*`(規則 1)
+與 `/private/*`(規則 2，只比對 `finance`)的聯集。對於任何其他 namespace,
 只有規則 1 生效。
 
-在 policy「之後」檢查:
+在 policy「之後」檢查：
 
 ```bash
 k -n finance exec finance-client -- curl -sS -o /dev/null -w 'public:%{http_code}\n' -m5 http://portal.production/public/
@@ -368,7 +368,7 @@ private:403
 ```
 
 `finance-client` -> 兩個 path 都是 `200`。`cks-102/client`(任何其他 namespace)-> `/public/*`
-仍然是 `200`,而 `/private/*` 是 `403`(Envoy L7 deny,不是 transport-level 的 `000`:規則 1
+仍然是 `200`，而 `/private/*` 是 `403`(Envoy L7 deny，不是 transport-level 的 `000`：規則 1
 已經對所有 identity 允許了 TCP 連線本身)。
 
 ---

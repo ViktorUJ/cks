@@ -422,7 +422,7 @@ order 與強制重寫 objects 已足夠；上述 `kubectl replace` 仍是簡單�
 
 > 🏭 **Upstream v1.37。** 在 Kubernetes v1.37 中，內建 `StorageVersionMigration` API/controller 已成為 GA 且
 > 預設啟用。這會改變 production-current status，但不改變本章仍連結到 exam/training context 的 CKS Core workflow。
-> 請見 [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_TW.md)。
+> 請見 [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
 
 `kubectl replace` 需要目前的 `resourceVersion`；高度競爭時可能產生 conflicts。在 production 中請執行帶有 retry、
 API latency monitoring 與協調 maintenance window 的 controlled script，不要不加思索地把 command 放進 CI。不要將
@@ -616,7 +616,7 @@ backend 會形成 trust boundaries。請在完成 threat model 後選擇 pattern
 > 🏭 **Kubernetes v1.37 recovery edge case。** 對於 unreadable/corrupt API object，存在 Beta 的 unsafe force-delete
 > path（`AllowUnsafeMalformedObjectDeletion`）。這是具有 cluster-breaking potential 的操作，也是最後的 recovery
 > mechanism，並非修正 encryption rotation 的一般方式。詳細資訊與限制請見
-> [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_TW.md)。
+> [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
 
 考試時先判定 cluster type。對 kubeadm，尋找 API server manifest 與 etcd TLS paths。對 managed control plane，settings
 可能被封閉：不要嘗試編輯不存在的 `/etc/kubernetes/manifests`；使用 provider-supported KMS encryption，並確認其 status。

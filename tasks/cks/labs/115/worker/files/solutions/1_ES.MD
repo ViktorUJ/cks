@@ -3,8 +3,8 @@
 # Lab 115 - solución breve
 
 > Advanced/production track. Las versiones/flags exactos del CLI pueden diferir entre
-> releases de Cilium: comprueba `cilium install --help`/`cilium upgrade --help`,
-> si algo de lo de abajo no funciona literalmente.
+> releases de Cilium: comprueba `cilium install --help`/`cilium upgrade --help`
+> si algo de lo indicado abajo no funciona tal cual.
 
 ## 1. Baseline
 
@@ -52,7 +52,7 @@ api HTTP:403
 ```
 
 `403` (no `000`) significa que el TCP/TLS hasta la API a través del Service ClusterIP realmente funciona sin
-kube-proxy; `403` aquí es lo esperado, ya que la petición es sin token, basta con el propio hecho de la respuesta.
+kube-proxy; `403` aquí es lo esperado, ya que la petición se hace sin token; basta con que haya respuesta.
 
 ## 3. WireGuard encryption
 
@@ -70,7 +70,7 @@ kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status | gre
 ```
 
 > `cilium upgrade` cambia solo el ConfigMap: el agente aplica `encryption.*` tras el reinicio
-> (antes de él `Encryption: Disabled`).
+> (hasta entonces, `Encryption: Disabled`).
 
 ```
 Encryption:             Wireguard       [NodeEncryption: Disabled, cilium_wg0 (Pubkey: ..., Port: 51871, Peers: 0)]
@@ -88,7 +88,7 @@ No hay regresión: el mismo resultado que en la tarea 2.
 
 ## 4. Cilium Mutual Authentication (SPIRE)
 
-Tres parámetros por encima de los mínimos de la tarea hacen falta precisamente en este banco de pruebas:
+Además de los parámetros mínimos de la tarea, este banco de pruebas requiere precisamente tres más:
 
 - `authentication.enabled=true`: sin él el chart rechaza `spire.enabled=true`
   (`SPIRE integration requires .Values.authentication.enabled=true ...`).
@@ -96,8 +96,8 @@ Tres parámetros por encima de los mínimos de la tarea hacen falta precisamente
   `spire-data-spire-server-0` se queda para siempre en `Pending`, y `spire-server-0` en `Pending`
   (para el laboratorio basta con un almacenamiento efímero).
 - `install.server.securityContext.runAsUser=0`: la imagen `spire-server` arranca con uid 1000 y
-  no puede crear `api.sock` en el directorio hostPath `root:755`; el servidor termina silenciosamente los
-  endpoints y lo mata el liveness-probe (`Waiting for spire-server to start...` en `cilium-init`).
+  no puede crear `api.sock` en el directorio hostPath `root:755`; el servidor cierra silenciosamente sus
+  endpoints y la liveness probe lo mata (`Waiting for spire-server to start...` en `cilium-init`).
 
 ```bash
 cilium upgrade --version 1.20.1 \
@@ -121,8 +121,8 @@ cilium-spire   spire-agent-xxxxx    1/1     Running   0    2m
 cilium-spire   spire-server-0       2/2     Running   0    2m
 ```
 
-Los Pods de SPIRE viven en el namespace `cilium-spire`. Justo después de la instalación reinicia Cilium,
-para que el agente y el operator vuelvan a registrar las identities en el SPIRE ya en funcionamiento:
+Los Pods de SPIRE viven en el namespace `cilium-spire`. Justo después de la instalación, reinicia Cilium
+para que el agente y el operador vuelvan a registrar las identities en el SPIRE ya en funcionamiento:
 
 ```bash
 kubectl -n kube-system rollout restart deploy/cilium-operator ds/cilium
@@ -200,7 +200,7 @@ SRC IDENTITY   DST IDENTITY   REMOTE NODE ID   AUTH TYPE   EXPIRATION
 `client` de `ingress-115` pasa la mutual authentication (la entrada `spire` en `auth list`) y
 recibe `200`; `intruder` de `app-115`: transport deny (no hay allow para su identity).
 La primera petición de un nuevo cliente puede tardar unos segundos: el SYN se descarta mientras dura el
-SPIFFE-handshake, luego la retransmisión pasa.
+handshake SPIFFE, y luego la retransmisión pasa.
 
 ---
 

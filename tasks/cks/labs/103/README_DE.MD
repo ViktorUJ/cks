@@ -5,9 +5,9 @@
 ## Beschreibung
 
 In dieser Übung konfigurierst du als Security Engineer einen Zwei-Node-Kubernetes-Cluster (control-plane +
-worker): Du installierst `kube-bench` und behebst anhand seiner Findings
+worker): Du führst `kube-bench` aus (auf dem worker-Node installierst du es selbst) und behebst anhand seiner Findings
 (nicht aus dem Gedächtnis) unsichere Parameter der control-plane-Komponenten und des kubelet
-auf dem worker-Node, veröffentlichst einen Ingress nur über TLS, schränkst das TLS der control plane ein und
+auf beiden Nodes, veröffentlichst einen Ingress nur über TLS, schränkst das TLS der control plane ein und
 bestätigst die Integrität der installierten Kubernetes-Binärdateien.
 
 Das ist keine Wiederholung der grundlegenden Kubernetes-Konfiguration aus CKA. Hier zählen die Stellen, an denen
@@ -28,13 +28,13 @@ Den Stoff der Kurskapitel festigen:
 <details>
 <summary>1. Warum kann ein Lauf von kube-bench mit dem Profil `cis-1.12` auf Kubernetes 1.36 nicht als authoritative CIS compliance bezeichnet werden?</summary>
 
-Die in dieser Lab festgelegte Version `kube-bench 0.16.0` enthält überhaupt kein Profil für 1.36 - ihr eingebautes version mapping reicht nur bis `"1.34": "cis-1.12"` (das neueste verfügbare Profil). Indem wir `--benchmark cis-1.12` auf einem 1.36-Cluster explizit angeben, verwenden wir erzwungen das nächstliegende vorhandene Profil als Approximation: Ein Teil der Prüfungen kann für die neuere Version nicht mehr aktuell sein, und neue security-relevante Parameter speziell für 1.36 deckt dieses Profil noch nicht ab. Das ist ein wertvolles praktisches Signal, aber keine formal compliance statement für Version 1.36.
+Die in dieser Lab festgelegte Version `kube-bench 0.16.0` enthält überhaupt kein Profil für 1.36 - ihr eingebautes version mapping reicht nur bis `"1.34": "cis-1.12"` (das neueste verfügbare Profil). Indem wir `--benchmark cis-1.12` auf einem 1.36-Cluster explizit angeben, erzwingen wir die Verwendung des nächstliegenden vorhandenen Profils als Approximation: Ein Teil der Prüfungen kann für die neuere Version nicht mehr aktuell sein, und neue security-relevante Parameter speziell für 1.36 deckt dieses Profil noch nicht ab. Das ist ein wertvolles praktisches Signal, aber kein formales compliance statement für Version 1.36.
 </details>
 
 <details>
 <summary>2. Warum konfiguriert `--tls-cipher-suites` am kube-apiserver nicht die Chiffren speziell für TLS 1.3?</summary>
 
-In Go (in dem kube-apiserver geschrieben ist) steuert das Flag `--tls-cipher-suites` nur die cipher suites für TLS-Versionen ≤ 1.2. Für TLS 1.3 wählt Go den Chiffrensatz selbst aus einer fixed, hardcoded Liste - sie lassen sich über dieses Flag nicht konfigurieren. Deshalb bietet hier `--tls-min-version=VersionTLS13` den tatsächlichen Schutz (verbietet ältere Protokolle vollständig), und `--tls-cipher-suites` ist dort relevant, wo TLS 1.2 weiterhin zulässig ist (zum Beispiel etcd in dieser Lab).
+In Go (in dem kube-apiserver geschrieben ist) steuert das Flag `--tls-cipher-suites` nur die cipher suites für TLS-Versionen ≤ 1.2. Für TLS 1.3 wählt Go den Chiffrensatz selbst aus einer fixed, hardcoded Liste - diese Chiffren lassen sich über dieses Flag nicht konfigurieren. Deshalb bietet hier `--tls-min-version=VersionTLS13` den tatsächlichen Schutz (verbietet ältere Protokolle vollständig), und `--tls-cipher-suites` ist dort relevant, wo TLS 1.2 weiterhin zulässig ist (zum Beispiel etcd in dieser Lab).
 </details>
 
 <details>
@@ -52,7 +52,7 @@ Wenn du den SHA-256 einer Datei berechnest und mit sich selbst vergleichst, best
 | Static Pod manifest apiserver | Deklaration des kube-apiserver | deaktiviert profiling und setzt striktes TLS |
 | TLS Secret und Ingress | TLS termination für die Anwendung | Der Ingress terminiert TLS für HTTPS auf `secure.cks.local`, und ingress-nginx leitet normale HTTP-Anfragen über `ssl-redirect` auf HTTPS um |
 | Static Pod manifest etcd | Deklaration des lokalen etcd | begrenzt die zulässigen TLS cipher suites |
-| SHA-256 artifact | Ergebnis des Abgleichs von `kubelet` und `kubectl` | bestätigt die Integrität der Binärdateien gegenüber den Release-Hashes |
+| SHA-256-Artefakt | Ergebnis des Abgleichs von `kubelet` und `kubectl` | bestätigt die Integrität der Binärdateien gegenüber den Release-Hashes |
 
 ```mermaid
 flowchart TB
@@ -84,8 +84,8 @@ Die Umgebung wird in AWS (`eu-central-1`) über Terragrunt ausgerollt.
 > **Version und Prüfung.** Stand 2026-09-06 geht das offizielle CKS exam von Kubernetes `v1.35` aus. Diese Lab verwendet `1.36.0`, daher ist alles, was sich auf diese Version bezieht, ein forward-looking Lernszenario und keine Aussage über die aktuelle Prüfungsversion.
 
 Von der control-plane wurde der taint entfernt, daher kann bei Bedarf ein Lern-Pod darauf gestartet werden.
-Für die Aufgaben 2, 3 und 5 werden static Pods nach dem Speichern des
-geänderten Manifests oder der Konfiguration automatisch vom kubelet neu erstellt. Lösche die Pods der control-plane nicht manuell.
+Für die Aufgaben 3, 5 und 9 werden static Pods nach dem Speichern des
+geänderten Manifests automatisch vom kubelet neu erstellt; in den Aufgaben 2 und 10 muss das kubelet nach einer Änderung der `KubeletConfiguration` manuell neu gestartet werden (`systemctl restart kubelet`). Lösche die Pods der control-plane nicht manuell.
 
 ## Bereitstellung
 
@@ -114,7 +114,7 @@ ssh control-plane hostname
 
 | **1** | **CIS Benchmark Bericht** |
 | :---: | :--- |
-| Was wir tun | Führe auf dem Node `control-plane` `kube-bench` für Kubernetes `1.36.0` aus. Speichere die vollständige evidence in `/var/work/tests/artifacts/1/kube-bench.txt`: `kubernetes_version`, `kube_bench_version`, den gewählten `benchmark`, `mapping_status`, danach den Bericht selbst. `kube-bench` ist auf der `control-plane` bereits installiert (wie in der echten Prüfung, wo das CIS-Benchmark-Tooling auf den Nodes schon vorhanden ist) - du musst ihn weder installieren noch kopieren, geprüft werden soll gerade der Node. Das in der festgelegten Version `kube-bench 0.16.0` eingebaute version mapping endet mit dem Eintrag `"1.34": "cis-1.12"` - neuere Profile (einschließlich irgendeines Profils für 1.35/1.36) gibt es in dieser Version gar nicht. Starte daher `--benchmark cis-1.12` explizit und markiere das Ergebnis auf `1.36` als `forced-approximate`, nicht als authoritative compliance. **Starte das vollständige Set an targets für `cis-1.12`:** `--targets master,node,controlplane,etcd,policies` - das ist die Karte der targets, die kube-bench dem Profil `cis-1.12` zuordnet; das Auslassen eines davon ergibt einen unvollständigen Bericht. Ohne explizites `--targets` bestimmt kube-bench den Typ des aktuellen Nodes selbst und nimmt dafür nicht diese ganze Liste, sondern ein engeres Set - `etcd` und `policies` gelangen in einen solchen auto-detected Lauf nicht, daher wird ein Bericht ohne explizites `--targets` unvollständig sein. |
+| Was wir tun | Führe auf dem Node `control-plane` `kube-bench` für Kubernetes `1.36.0` aus. Speichere die vollständige evidence in `/var/work/tests/artifacts/1/kube-bench.txt`: `kubernetes_version`, `kube_bench_version`, den gewählten `benchmark`, `mapping_status`, danach den Bericht selbst. `kube-bench` ist auf der `control-plane` bereits installiert (wie in der echten Prüfung, wo das CIS-Benchmark-Tooling auf den Nodes schon vorhanden ist) - du musst ihn weder installieren noch kopieren, geprüft werden soll genau dieser Node. Das in der festgelegten Version `kube-bench 0.16.0` eingebaute version mapping endet mit dem Eintrag `"1.34": "cis-1.12"` - neuere Profile (einschließlich irgendeines Profils für 1.35/1.36) gibt es in dieser Version gar nicht. Starte daher `--benchmark cis-1.12` explizit und markiere das Ergebnis auf `1.36` als `forced-approximate`, nicht als authoritative compliance. **Starte das vollständige Set an targets für `cis-1.12`:** `--targets master,node,controlplane,etcd,policies` - das ist die Karte der targets, die kube-bench dem Profil `cis-1.12` zuordnet; das Auslassen eines davon ergibt einen unvollständigen Bericht. Ohne explizites `--targets` bestimmt kube-bench den Typ des aktuellen Nodes selbst und nimmt dafür nicht diese ganze Liste, sondern ein engeres Set - `etcd` und `policies` gelangen in einen solchen auto-detected Lauf nicht, daher wird ein Bericht ohne explizites `--targets` unvollständig sein. |
 | Abnahmekriterien | - die evidence enthält alle vier version/mapping-Felder;<br/>- `mapping_status=forced-approximate` erklärt die fehlende offizielle Abdeckung von `1.36` explizit;<br/>- im Bericht gibt es Ergebnisse aller Abschnitte `master`, `node`, `controlplane`, `etcd`, `policies` (nicht nur eine beliebige Zeile `[PASS]`/`[WARN]`/`[FAIL]`);<br/>- der Text gibt das Ergebnis nicht als authoritative CIS compliance für Kubernetes `1.36` aus. |
 
 <details>
@@ -127,7 +127,7 @@ Die Prüfung erwartet am Anfang der Datei vier konkrete Marker-Zeilen: `kubernet
 
 | **2** | **Hardening kubelet: read-only port und anonymous auth** |
 | :---: | :--- |
-| Was wir tun | Finde und behebe auf der control-plane zwei unsichere kubelet-Einstellungen: Er bedient noch den read-only Port ohne Authentifizierung und akzeptiert anonyme Anfragen (siehe das Kapitel über kubelet hardening). Verwende den `kube-bench`-Bericht aus Aufgabe 1 als Quelle der Wahrheit: Er hat beide Probleme im Abschnitt `node` für denselben Node bereits markiert - finde dort das `[FAIL]` neben diesen beiden Themen und orientiere dich daran. Korrigiere die `kubelet configuration`, starte kubelet neu und warte auf die Bereitschaft des Nodes. Ersetze die Prüfung nicht durch ein Text-artifact: Die Einstellungen müssen auf dem Node angewendet sein. |
+| Was wir tun | Finde und behebe auf der control-plane zwei unsichere kubelet-Einstellungen: Das kubelet bedient noch den read-only Port ohne Authentifizierung und akzeptiert anonyme Anfragen (siehe das Kapitel über kubelet hardening). Verwende den `kube-bench`-Bericht aus Aufgabe 1 als Quelle der Wahrheit: Er hat beide Probleme im Abschnitt `node` für denselben Node bereits markiert - finde dort das `[FAIL]` neben diesen beiden Themen und orientiere dich daran. Korrigiere die `kubelet configuration`, starte kubelet neu und warte auf die Bereitschaft des Nodes. Ersetze die Prüfung nicht durch ein Text-Artefakt: Die Einstellungen müssen auf dem Node angewendet sein. |
 | Abnahmekriterien | - in der geltenden kubelet configuration ist der read-only Port deaktiviert;<br/>- anonymous authentication des kubelet ist deaktiviert;<br/>- der Node ist nach dem Neustart `Ready`. |
 
 <details>
@@ -153,7 +153,7 @@ Suche im Bericht aus Aufgabe 1 den check `1.2.15` (`--profiling`) im Abschnitt `
 
 | **4** | **Secure Ingress mit TLS** |
 | :---: | :--- |
-| Was wir tun | • Erzeuge ein selbstsigniertes Zertifikat für `secure.cks.local`, mit diesem Namen gerade im Subject Alternative Name, nicht nur im CN (der Befehl steht im Hinweis).<br/>• Erstelle den Namespace `cks-103` und aus diesem Zertifikat das TLS-Secret `secure-ingress-tls` vom Typ `kubernetes.io/tls`.<br/>• Rolle das Deployment `secure-app` aus (`viktoruj/ping_pong:alpine`, `SERVER_NAME=secure-app` und `SRV_PORT=80` über `kubectl set env`) und den Service `secure-app`.<br/>• Erstelle den Ingress `secure-ingress` mit `ingressClassName: nginx`, einer TLS-Sektion für diesen Host mit Verweis auf `secure-ingress-tls` und der Annotation `nginx.ingress.kubernetes.io/ssl-redirect: "true"`.<br/>• Der Controller `ingress-nginx` ist in dieser Lab bereits installiert und Ready als lab-owned fixture (siehe [Kapitel 08](../../course/08/de.md) zu seinem retirement) - stelle sicher, dass er deinen Ingress tatsächlich verarbeitet (siehe Abnahmekriterien). |
+| Was wir tun | • Erzeuge ein selbstsigniertes Zertifikat für `secure.cks.local`, mit diesem Namen ausdrücklich im Subject Alternative Name, nicht nur im CN (der Befehl steht im Hinweis).<br/>• Erstelle den Namespace `cks-103` und aus diesem Zertifikat das TLS-Secret `secure-ingress-tls` vom Typ `kubernetes.io/tls`.<br/>• Rolle das Deployment `secure-app` (`viktoruj/ping_pong:alpine`, `SERVER_NAME=secure-app` und `SRV_PORT=80` über `kubectl set env`) und den Service `secure-app` aus.<br/>• Erstelle den Ingress `secure-ingress` mit `ingressClassName: nginx`, einer TLS-Sektion für diesen Host mit Verweis auf `secure-ingress-tls` und der Annotation `nginx.ingress.kubernetes.io/ssl-redirect: "true"`.<br/>• Der Controller `ingress-nginx` ist in dieser Lab bereits installiert und Ready als lab-owned fixture (siehe [Kapitel 08](../../course/08/de.md) zu seinem retirement) - stelle sicher, dass er deinen Ingress tatsächlich verarbeitet (siehe Abnahmekriterien). |
 | Abnahmekriterien | - das Secret `secure-ingress-tls` in `cks-103` hat den Typ `kubernetes.io/tls` und die Felder `tls.crt`, `tls.key`; die Zugehörigkeit des Paares wird anhand des public key geprüft (algorithmenunabhängig, ohne Bindung an RSA/modulus);<br/>- das Zertifikat enthält `secure.cks.local` im SAN;<br/>- der Ingress `secure-ingress` enthält `ingressClassName: nginx`, die Annotation `ssl-redirect: "true"`, `spec.tls` mit dem Host `secure.cks.local` und Verweis auf `secure-ingress-tls`, backend `secure-app:80`;<br/>- der Service `secure-app` hat einen echten Endpoint;<br/>- der Controller `ingress-nginx` ist Ready;<br/>- eine HTTPS-Anfrage über den Controller liefert tatsächlich `200` mit einem Body, der `Server Name: secure-app` enthält (nicht irgendein `2xx`/`3xx`, das der Controller selbst ohne Zugriff auf das backend zurückgeben kann);<br/>- eine HTTP-Anfrage über den Controller erhält einen redirect mit dem Header `Location`, der auf den HTTPS-Host `https://secure.cks.local` zeigt (nicht irgendein `3xx`; der Pfad nach dem Host ist optional). |
 
 <details>
@@ -179,7 +179,7 @@ key_pub=$(kubectl -n cks-103 get secret secure-ingress-tls -o jsonpath='{.data.t
 [[ -n "$cert_pub" && "$cert_pub" == "$key_pub" ]]
 ```
 
-Verwende für die end-to-end-Prüfung nicht die Pod-IP aus den `Endpoints` des Controllers - sie ist von einer separaten worker-VM aus nicht garantiert routbar. `secure.cks.local` wird bereits zu einer echten Node-IP aufgelöst (der Eintrag wurde beim bootstrap in die `/etc/hosts` dieser Maschine eingetragen), und `ingress-nginx-controller` ist ein Service vom Typ `NodePort`, der auf jedem Node offen ist; daher kann die Anfrage direkt vom worker ausgeführt werden, ohne SSH zum Cluster:
+Verwende für die end-to-end-Prüfung nicht die Pod-IP aus den `Endpoints` des Controllers - sie ist von einer separaten worker-VM aus nicht garantiert routbar. `secure.cks.local` wird bereits zu einer echten Node-IP aufgelöst (der Eintrag wurde beim bootstrap zur `/etc/hosts` dieser Maschine hinzugefügt), und `ingress-nginx-controller` ist ein Service vom Typ `NodePort`, der auf jedem Node offen ist; daher kann die Anfrage direkt vom worker ausgeführt werden, ohne SSH zum Cluster:
 
 ```bash
 HTTPS_NODEPORT=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.port==443)].nodePort}')
@@ -194,7 +194,7 @@ Die Prüfung des HTTP→HTTPS redirect ist keine künstliche Anforderung dieser 
 | **5** | **TLS hardening der control plane** |
 | :---: | :--- |
 | Was wir tun | Setze in `/etc/kubernetes/manifests/kube-apiserver.yaml` `--tls-min-version=VersionTLS13` und `--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`. Setze in `/etc/kubernetes/manifests/etcd.yaml` `--cipher-suites` mit demselben Set. Bestätige nach der Neuerstellung der Komponenten, dass `TLSv1.3` ausgehandelt wird (`openssl s_client -tls1_3`) und dass `TLSv1.2` abgelehnt wird (`openssl s_client -tls1_2` endet mit einem handshake-Fehler), und speichere die Ausgabe in `/var/work/tests/artifacts/5/tls13.txt`. Wichtig ist, die Semantik zu verstehen: In Go gilt das Flag `--tls-cipher-suites` nur für TLS ≤ 1.2, und bei `--tls-min-version=VersionTLS13` werden die konkreten TLS 1.3 cipher suites über dieses Flag nicht konfiguriert (Go wählt sie selbst). Daher bietet beim kube-apiserver hier gerade min-version 1.3 den tatsächlichen Schutz; cipher-suites sind dort relevant, wo TLS 1.2 zulässig ist (z. B. bei etcd). |
-| Abnahmekriterien | - beide erforderlichen TLS-Flags stehen im Manifest des kube-apiserver;<br/>- die cipher suites stehen im Manifest von etcd;<br/>- kube-apiserver und etcd sind gesund;<br/>- das TLS-artifact enthält die Bestätigung von `TLSv1.3` und die festgehaltene Ablehnung von TLS 1.2 (non-zero exit/handshake failure). |
+| Abnahmekriterien | - beide erforderlichen TLS-Flags stehen im Manifest des kube-apiserver;<br/>- die cipher suites stehen im Manifest von etcd;<br/>- kube-apiserver und etcd sind gesund;<br/>- das TLS-Artefakt enthält die Bestätigung von `TLSv1.3` und die festgehaltene Ablehnung von TLS 1.2 (non-zero exit/handshake failure). |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 5</summary>
@@ -206,26 +206,26 @@ Das Flag bei etcd heißt `--cipher-suites` (ohne `tls-` am Anfang) - das ist ein
 
 | **6** | **Integritätsprüfung von kubelet und kubectl** |
 | :---: | :--- |
-| Was wir tun | Gleiche das SHA-256 der installierten `kubelet` auf der control-plane und `kubectl` auf dem worker mit den veröffentlichten checksums von Kubernetes `v1.36.0` ab. Speichere die Befehle und das Ergebnis von `sha256sum -c` in `/var/work/tests/artifacts/6/binaries.sha256.txt`. Verwende keine aus der zu prüfenden Datei berechneten Hashes als Referenz. |
-| Abnahmekriterien | - das artifact existiert;<br/>- darin gibt es getrennte erfolgreiche Ergebnisse für `kubelet` und `kubectl` (`OK`);<br/>- die Referenzsummen stammen aus dem offiziellen Release `v1.36.0`. |
+| Was wir tun | Gleiche die SHA-256-Summen des installierten `kubelet` auf der control-plane und des installierten `kubectl` auf dem worker mit den veröffentlichten checksums von Kubernetes `v1.36.0` ab. Speichere die Befehle und das Ergebnis von `sha256sum -c` in `/var/work/tests/artifacts/6/binaries.sha256.txt`. Verwende keine aus der zu prüfenden Datei berechneten Hashes als Referenz. |
+| Abnahmekriterien | - das Artefakt existiert;<br/>- darin gibt es getrennte erfolgreiche Ergebnisse für `kubelet` und `kubectl` (`OK`);<br/>- die Referenzsummen stammen aus dem offiziellen Release `v1.36.0`. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 6</summary>
 
-Lade die offizielle Datei `kubelet.sha256`/`kubectl.sha256` von `https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/` (oder der entsprechenden Plattform) herunter und verwende `sha256sum -c` mit dieser Datei gegen die tatsächlich installierte Binärdatei - gerade die Ausgabe dieses Befehls (`kubelet: OK`, `kubectl: OK`) wird im artifact benötigt und nicht nur der Hash selbst.
+Lade die offizielle Datei `kubelet.sha256`/`kubectl.sha256` von `https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/` (oder der entsprechenden Plattform) herunter und verwende `sha256sum -c` mit dieser Datei gegen die tatsächlich installierte Binärdatei - gerade die Ausgabe dieses Befehls (`kubelet: OK`, `kubectl: OK`) wird im Artefakt benötigt und nicht nur der Hash selbst.
 </details>
 
 ---
 
 | **7** | **Remediation cycle: von einem konkreten kube-bench FAIL zu PASS** |
 | :---: | :--- |
-| Was wir tun | Der Bericht aus Aufgabe 1 ist ein Snapshot des aktuellen Zustands; hier musst du einen konkreten fehlgeschlagenen Test mit seiner Behebung verbinden. Starte auf der control-plane `kube-bench` gerade mit `--check 1.1.1` (Rechte des static Pod manifest des kube-apiserver; die Lab-Infrastruktur setzt absichtlich mode `0644`, `cis-1.12` verlangt `600` oder strenger) und speichere die Ausgabe **vor** der Korrektur in `/var/work/tests/artifacts/7/before.txt` - sie muss `[FAIL]` für diesen Test enthalten. Korrigiere das Zugriffsrecht der Datei `/etc/kubernetes/manifests/kube-apiserver.yaml` (`chmod 600`), starte dann denselben `--check 1.1.1` erneut und speichere die Ausgabe in `/var/work/tests/artifacts/7/after.txt` - sie muss `[PASS]` ohne ein einziges `[FAIL]` für diesen check enthalten. |
+| Was wir tun | Der Bericht aus Aufgabe 1 ist ein Snapshot des aktuellen Zustands; hier musst du einen konkreten fehlgeschlagenen Test mit seiner Behebung verbinden. Starte auf der control-plane `kube-bench` gezielt mit `--check 1.1.1` (Rechte des static Pod manifest des kube-apiserver; die Lab-Infrastruktur setzt absichtlich mode `0644`, `cis-1.12` verlangt `600` oder strenger) und speichere die Ausgabe **vor** der Korrektur in `/var/work/tests/artifacts/7/before.txt` - sie muss `[FAIL]` für diesen Test enthalten. Korrigiere das Zugriffsrecht der Datei `/etc/kubernetes/manifests/kube-apiserver.yaml` (`chmod 600`), starte dann denselben `--check 1.1.1` erneut und speichere die Ausgabe in `/var/work/tests/artifacts/7/after.txt` - sie muss `[PASS]` ohne ein einziges `[FAIL]` für diesen check enthalten. |
 | Abnahmekriterien | `before.txt` enthält die Zeile `[FAIL]` für den check `1.1.1`; die tatsächlichen Rechte der Datei auf dem Node sind nach der Korrektur genau `600`; `after.txt` enthält `[PASS]` für den check `1.1.1` und kein `[FAIL]` dafür; der kube-apiserver bleibt nach der Änderung gesund (fs-only-Änderung, die Komponente wird nicht neu erstellt). |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 7</summary>
 
-Bei dieser Aufgabe geht es um die Reihenfolge der Aktionen und nicht nur um den Endzustand: Halte zuerst `[FAIL]` fest (before.txt), führe erst danach `chmod 600` aus, dann lasse die Prüfung erneut laufen (after.txt). Wenn du `chmod` vor dem Speichern von before.txt ausführst, erhältst du das benötigte `[FAIL]` im ersten artifact nicht. Die Änderung der Dateirechte ist eine fs-only-Operation, das kubelet erstellt den static Pod wegen einer Änderung der Rechte der Manifest-Datei selbst nicht neu (anders als bei einer Änderung ihres Inhalts).
+Bei dieser Aufgabe geht es um die Reihenfolge der Aktionen und nicht nur um den Endzustand: Halte zuerst `[FAIL]` fest (before.txt), führe erst danach `chmod 600` aus, dann lasse die Prüfung erneut laufen (after.txt). Wenn du `chmod` vor dem Speichern von before.txt ausführst, erhältst du das benötigte `[FAIL]` im ersten Artefakt nicht. Die Änderung der Dateirechte ist eine fs-only-Operation, das kubelet erstellt den static Pod wegen einer Änderung der Rechte der Manifest-Datei selbst nicht neu (anders als bei einer Änderung ihres Inhalts).
 </details>
 
 ---
@@ -238,7 +238,7 @@ Bei dieser Aufgabe geht es um die Reihenfolge der Aktionen und nicht nur um den 
 <details>
 <summary>💡 Hinweis zu Aufgabe 8</summary>
 
-Dieselbe Reihenfolge der Aktionen wie in Aufgabe 7: zuerst `before.txt` mit `[FAIL]`, dann `chmod`, dann `after.txt` mit `[PASS]`. Übernimm alte CIS check IDs nicht "aus dem Gedächtnis" - `1.1.3` in der festgelegten Version `kube-bench 0.16.0`/dem Profil `cis-1.12` sind gerade die kube-controller-manager pod specification file permissions; prüfe das über `--check 1.1.3`, bevor du korrigierst.
+Dieselbe Reihenfolge der Aktionen wie in Aufgabe 7: zuerst `before.txt` mit `[FAIL]`, dann `chmod`, dann `after.txt` mit `[PASS]`. Übernimm alte CIS check IDs nicht "aus dem Gedächtnis" - `1.1.3` in der festgelegten Version `kube-bench 0.16.0`/dem Profil `cis-1.12` sind genau die kube-controller-manager pod specification file permissions; prüfe das über `--check 1.1.3`, bevor du korrigierst.
 </details>
 
 ---
@@ -264,7 +264,7 @@ Dieselbe Reihenfolge der Aktionen wie in den Aufgaben 7-8: zuerst `before.txt` m
 <details>
 <summary>💡 Hinweis zu Aufgabe 10</summary>
 
-Finde den Namen des worker-Nodes über `kubectl get nodes -l '!node-role.kubernetes.io/control-plane'` - das ist NICHT die control-plane und NICHT die Arbeitsmaschine (bastion), von der aus du die Befehle ausführst. Installiere `kube-bench` darauf mit einem echten Befehl (`curl` + `tar` + `install`), nicht durch Kopieren von der control-plane oder dem worker PC - anders als auf der control-plane fehlt er hier absichtlich, damit du den Installationsprozess selbst einmal durchläufst. Vergiss nicht `--benchmark cis-1.24` (nicht `cis-1.12`, das in den übrigen Aufgaben überall verwendet wird) - sonst findet `--check 4.2.6` einen anderen, bereits bestehenden check und die Aufgabe beweist nichts. Das Feld `protectKernelDefaults` fehlt in der von kubeadm erzeugten `config.yaml` physisch, daher hänge es einfach an und suche keine vorhandene Zeile zum Ersetzen (anders als bei `readOnlyPort` in Aufgabe 2). Warte nach `systemctl restart kubelet` auf dem worker-Node, bis er zu `Ready` zurückkehrt, bevor du den check erneut startest.
+Finde den Namen des worker-Nodes über `kubectl get nodes -l '!node-role.kubernetes.io/control-plane'` - das ist NICHT die control-plane und NICHT die Arbeitsmaschine (bastion), von der aus du die Befehle ausführst. Installiere `kube-bench` darauf mit einem echten Befehl (`curl` + `tar` + `install`), nicht durch Kopieren von der control-plane oder dem worker PC - anders als auf der control-plane fehlt er hier absichtlich, damit du den Installationsprozess selbst einmal durchläufst. Vergiss nicht `--benchmark cis-1.24` (nicht `cis-1.12`, das in den übrigen Aufgaben überall verwendet wird) - sonst findet `--check 4.2.6` einen anderen check, der bereits PASS liefert, und die Aufgabe beweist nichts. Das Feld `protectKernelDefaults` fehlt in der von kubeadm erzeugten `config.yaml` physisch, daher hänge es einfach an und suche keine vorhandene Zeile zum Ersetzen (anders als bei `readOnlyPort` in Aufgabe 2). Warte nach `systemctl restart kubelet` auf dem worker-Node, bis er zu `Ready` zurückkehrt, bevor du den check erneut startest.
 </details>
 
 ---
@@ -278,7 +278,7 @@ check_result
 ```
 
 Die Prüfung enthält Init und zehn unabhängige Aufgaben. Die Systemaufgaben werden anhand des
-Zustands der Nodes von control plane/worker über SSH und anhand von artifacts geprüft, nicht nur anhand von API-Objekten.
+Zustands der Nodes von control plane/worker über SSH und anhand von Artefakten geprüft, nicht nur anhand von API-Objekten.
 
 ## Lösung
 

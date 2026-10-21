@@ -22,7 +22,7 @@
 En los nodos Ubuntu `needrestart` está configurado en modo «solo lista» (sin diálogo OK/Cancel), por lo que
 `apt-get install` no se detiene en preguntas.
 
-En lugar de `1.36.x` en los comandos sustituye el patch real de `apt-cache madison kubeadm` y de la
+En los comandos sustituye `1.36.x` por el patch real de `apt-cache madison kubeadm` y de la
 salida de `kubeadm upgrade plan`.
 
 ```bash
@@ -35,7 +35,7 @@ kubectl get no
 En `kubectl get no` recuerda los nombres de los nodos (`ip-10-...`): harán falta para `drain` y `uncordon`. Más abajo
 `<nombre-cp>` es el nombre del control-plane, `<nombre-worker>` es el nombre del nodo worker.
 
-## Paso 0. En paralelo, lanza el availability-polling (tarea 4)
+## Paso 0. En paralelo, lanza el sondeo de disponibilidad (tarea 4)
 
 Antes del upgrade abre una sesión aparte (`tmux`) en la máquina de trabajo y deja el bucle de sondeo del
 Deployment `canary` funcionando durante todos los pasos siguientes:
@@ -201,7 +201,7 @@ kubectl get nodes
 ## 3. Comprobación del orden del upgrade
 
 La tarea 3 no requiere comandos aparte: el orden lo demuestra el monitor propiedad del checker
-(`/var/lib/cks-lab113-checker/upgrade-monitor.log` en la máquina de trabajo), que se escribía todo el tiempo
+(`/var/lib/cks-lab113-checker/upgrade-monitor.log` en la máquina de trabajo), que ha estado registrando todo el tiempo
 desde el bootstrap. Si seguiste los pasos por orden (primero por completo la sección 1, luego la sección 2), en el
 log hay una línea en la que el control-plane ya está en `v1.36.x`, `Ready` y schedulable, y el worker todavía en
 `v1.35.x`.
@@ -211,7 +211,7 @@ log hay una línea en la que el control-plane ya está en `v1.36.x`, `Ready` y s
 > Durante `kubeadm upgrade apply` en el único control-plane el API server se reinicia durante unos segundos,
 > y `kubectl` en el bucle de sondeo no responde. Esas líneas se anotan como
 > `available=api-unreachable` y no entran en el cómputo del mínimo: la indisponibilidad de la API no es una interrupción de
-> `canary`. El downtime lo demuestra el monitor independiente del checker (Pod Ready y contenedores mediante `crictl`).
+> `canary`. La presencia o ausencia de downtime la registra el monitor independiente del checker (Pod Ready y contenedores mediante `crictl`).
 
 Detén el bucle de sondeo del Paso 0 (`Ctrl+C` en su sesión) y comprueba que el mínimo de `available`
 durante la ejecución no bajó a 0:
@@ -223,7 +223,7 @@ kubectl get deployment canary -n upgrade-113
 
 Ambas réplicas de `canary` están repartidas en distintos nodos (required `podAntiAffinity`) y protegidas
 por un `PodDisruptionBudget` con `minAvailable: 1`, por lo que un drain secuencial correcto (primero
-un nodo, luego otro, tras el uncordon) no hace bajar `available` por debajo de `1`.
+un nodo, luego el otro, tras el uncordon) no hace bajar `available` por debajo de `1`.
 
 ## Comprobación final
 

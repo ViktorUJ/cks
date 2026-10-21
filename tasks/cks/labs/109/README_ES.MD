@@ -41,7 +41,7 @@ Los providers en `EncryptionConfiguration` se prueban en orden para LEER los reg
 <details>
 <summary>3. ¿Por qué no se puede simplemente eliminar la clave de cifrado antigua inmediatamente después de añadir la nueva?</summary>
 
-Los registros existentes en etcd siguen cifrados con la clave ANTIGUA hasta que se reescriban explícitamente (re-encryption). Si quitas la clave antigua del `EncryptionConfiguration` activo antes de que todos los registros se hayan reescrito con la nueva, el API server no podrá descifrar los registros antiguos restantes mediante la provider chain actual: quedarán ilegibles hasta que la clave antigua se devuelva a la configuración. Eliminar la clave de la configuración no destruye físicamente el key material: si la clave antigua guardada se vuelve a añadir a la provider chain, el acceso se restablece. La pérdida irreversible de datos solo se produce si el propio key material realmente se pierde o se destruye (por ejemplo, la clave no se guardó en ningún sitio antes de eliminarla). El orden: añadir la nueva clave la primera → reescribir todos los Secret → confirmar que todos los registros usan la nueva clave → guardar la clave antigua en un lugar fiable para el rollback → solo después quitarla de la configuración.
+Los registros existentes en etcd siguen cifrados con la clave ANTIGUA hasta que se reescriban explícitamente (re-encryption). Si quitas la clave antigua del `EncryptionConfiguration` activo antes de que todos los registros se hayan reescrito con la nueva, el API server no podrá descifrar los registros antiguos restantes mediante la provider chain actual: quedarán ilegibles hasta que la clave antigua se devuelva a la configuración. Eliminar la clave de la configuración no destruye físicamente el key material: si la clave antigua guardada se vuelve a añadir a la provider chain, el acceso se restablece. La pérdida irreversible de datos solo se produce si el propio key material realmente se pierde o se destruye (por ejemplo, la clave no se guardó en ningún sitio antes de eliminarla). El orden: añadir la nueva clave como primera → reescribir todos los Secret → confirmar que todos los registros usan la nueva clave → guardar la clave antigua en un lugar fiable para el rollback → solo después quitarla de la configuración.
 </details>
 
 ## Infraestructura
@@ -97,7 +97,7 @@ Esta tarea hay que hacerla PRIMERO, antes de la tarea 2: en cuanto habilites Enc
 | **2** | **Crear la EncryptionConfiguration para Secret** |
 | :---: | :--- |
 | Qué hacemos | • En el control-plane crea `/etc/kubernetes/enc/encryption-config.yaml`, owner `root:root`, mode `0600`<br/>• Formato: `apiserver.config.k8s.io/v1`, `EncryptionConfiguration`<br/>• Para `secrets` establece como primer provider `aescbc` con una clave base64 con nombre de **32 bytes aleatorios**, y después `identity: {}` |
-| Criterios de aceptación | • Archivo `root:root` mode `0600` en un directorio `root:root` mode `0700`<br/>• El provider activo principal para `secrets` — el **primer** `aescbc` con una named base64 key correcta de 32 bytes<br/>• `identity` es admisible solo como último fallback temporal para el plaintext legacy<br/>• Un symlink al archivo/directorio está prohibido |
+| Criterios de aceptación | • Archivo `root:root` mode `0600` en un directorio `root:root` mode `0700`<br/>• El provider activo principal para `secrets` es el **primer** `aescbc`, con una named base64 key correcta de 32 bytes<br/>• `identity` es admisible solo como último fallback temporal para el plaintext legacy<br/>• Un symlink al archivo/directorio está prohibido |
 
 <details>
 <summary>💡 Pista para la tarea 2</summary>
@@ -120,7 +120,7 @@ Hacen falta tres cambios separados a la vez: el propio flag `--encryption-provid
 ---
 | **4** | **Re-encrypt y demostrar el ciphertext** |
 | :---: | :--- |
-| Qué hacemos | • Cuando el API server esté listo, crea en `encryption-109` el Secret `encrypted-secret` con el literal `token=cks-109-fresh-ciphertext`<br/>• Reescribe todos los Secret existentes anteriormente mediante la API (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`)<br/>• Comprueba ambos Secret mediante la API y raw etcd<br/>• Solo después de esta comprobación elimina el fallback temporal `identity`, reinicia el kube-apiserver static y vuelve a comprobar `/readyz` y la lectura de ambos Secret |
+| Qué hacemos | • Cuando el API server esté listo, crea en `encryption-109` el Secret `encrypted-secret` con el literal `token=cks-109-fresh-ciphertext`<br/>• Reescribe todos los Secret existentes anteriormente mediante la API (`kubectl get secrets --all-namespaces -o json \| kubectl replace -f -`)<br/>• Comprueba ambos Secret mediante la API y raw etcd<br/>• Solo después de esta comprobación elimina el fallback temporal `identity`, reinicia el kube-apiserver static y vuelve a comprobar `/readyz` y la lectura de ambos Secret |
 | Criterios de aceptación | • `legacy-secret` y `encrypted-secret` se leen mediante la API con los valores originales<br/>• El raw value de cada uno empieza por `k8s:enc:aescbc:v1:`<br/>• El legacy marker ya no se ve en raw etcd<br/>• Los payload/UID originales de todo el bootstrap Secret corpus se conservan, todos los registros están cifrados con la primera clave activa<br/>• La clave del archivo final es capaz de descifrar el ciphertext de ambos canary Secret<br/>• En la configuración final no hay `identity`, API healthy |
 
 <details>
@@ -183,7 +183,7 @@ resources:
       endpoint: unix:///var/run/kms-plugin/socket.sock
 ```
 
-Añade el provider el primero para los registros nuevos, monta el socket en el `kube-apiserver` static
+Añade el provider en primera posición para los registros nuevos, monta el socket en el `kube-apiserver` static
 y espera a la health del plugin antes del re-encryption. Para una configuración real usa
 un plugin soportado y el formato actual de `kms` v2 de la documentación de la versión
 de Kubernetes que uses; este laboratorio no levanta un KMS-plugin ni entrega un socket operativo.
@@ -191,7 +191,7 @@ de Kubernetes que uses; este laboratorio no levanta un KMS-plugin ni entrega un 
 **Rotación completa de la clave del provider.** La migración de plaintext a la primera clave
 `aescbc` realizada en la tarea 4 no es una rotación completa de la clave. Para ella: (1) haz un snapshot protegido de etcd y
 comprueba que la clave antigua está guardada y disponible para el rollback; (2) añade la nueva clave
-la primera en `aescbc.keys`, dejando la antigua la segunda, y luego reinicia el API server; (3)
+como primera en `aescbc.keys`, dejando la antigua como segunda, y luego reinicia el API server; (3)
 reescribe los Secret existentes mediante la API, para que se cifren con la nueva primera clave;
 (4) para los registros raw de etcd, primero seleccionados y luego todos, confirma el prefijo
 `k8s:enc:aescbc:v1:<nombre-de-la-nueva-clave>:`; (5) solo después de la migración completa, del backup y de

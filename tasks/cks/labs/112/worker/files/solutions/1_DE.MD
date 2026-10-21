@@ -8,7 +8,7 @@ Wir arbeiten wie in der Prüfung. Öffne **zwei Terminals** und lass beide bis z
   als root ausgeführt, ohne `sudo`). Der einzige Node der control plane führt auch die workloads aus.
 - **Terminal 2 - Arbeitsmaschine:** hier `kubectl`, `scp` und Prüfungen.
 
-Artifacts, die auf dem Node gewonnen wurden, werden in `/tmp/art/<Nummer der Aufgabe>/` auf der control-plane gespeichert und
+Artefakte, die auf dem Node gewonnen wurden, werden in `/tmp/art/<Nummer der Aufgabe>/` auf der control-plane gespeichert und
 per `scp` auf die Arbeitsmaschine nach `/var/work/tests/artifacts/<Nummer>/` kopiert.
 
 ## Wo du Beispiele in der Dokumentation findest
@@ -78,7 +78,7 @@ geöffnet ist, erfasst Falco keine Ereignisse, und die shell aus Aufgabe 2 kann 
 kein alert erscheint, wiederhole das `exec` nach einigen Sekunden.
 
 Wenn der Dienst nicht startet, sieh dir zuerst `journalctl -u falco-modern-bpf -b --no-pager` an.
-Ersetze die engine nicht durch ein kernel module: In dieser Lab wird gerade `modern_ebpf` verlangt.
+Ersetze die engine nicht durch ein kernel module: In dieser Lab wird genau `modern_ebpf` verlangt.
 
 ## 2. Standardregel für eine shell im Container
 
@@ -105,7 +105,7 @@ kubectl exec -it -n "$NS" falco-shell -- /bin/sh
 ```
 
 Speichere das echte Falco-Ereignis: Es stammt aus dem journal auf der control-plane. Falco schreibt das Ereignis mit
-einer kleinen Verzögerung, warte daher nach dem Verlassen der shell ein paar Sekunden. Erstelle das artifact nicht
+einer kleinen Verzögerung, warte daher nach dem Verlassen der shell ein paar Sekunden. Erstelle das Artefakt nicht
 von Hand:
 
 ```bash
@@ -121,7 +121,7 @@ scp control-plane:/tmp/art/2/falco-shell.log /var/work/tests/artifacts/2/
 
 ## 3. Lokale Regel und kontrollierter marker
 
-Falco lädt `/etc/falco/falco_rules.local.yaml` bereits; wir fügen die Regel gerade dort hinzu.
+Falco lädt `/etc/falco/falco_rules.local.yaml` bereits; wir fügen die Regel genau dort hinzu.
 `spawned_process` erhält die Kompatibilität mit den Falco-Regeln, und `container` erlaubt es nicht,
 denselben marker zu matchen, der auf dem Host gestartet wurde.
 
@@ -160,8 +160,8 @@ Container etwa 5 Sekunden lang, und Ereignisse, die früher stattgefunden haben,
 ## 4. Audit: RequestResponse für ConfigMap, Metadata für Secret
 
 Wir erstellen die policy nach der Regel aus Kapitel 32: Vollständiges request/response schreiben wir nur für die
-nicht sensiblen `configmaps` in `runtime-112`; für `secrets` nehmen wir `Metadata`, damit der Körper des Secret
-(Tokens, Passwörter) nicht ins Journal gelangt. `None` und `omitStages` reduzieren tatsächlich das high-volume
+nicht sensiblen `configmaps` in `runtime-112`; für `secrets` nehmen wir `Metadata`, damit der Body des Secrets
+(Tokens, Passwörter) nicht ins Log gelangt. `None` und `omitStages` reduzieren tatsächlich das high-volume
 noise; das abschließende catch-all `Metadata` ist fallback logging und keine Rauschunterdrückung. Die Reihenfolge der Regeln ist wichtig:
 spezifische Regeln stehen vor dem catch-all. Die Struktur der Datei stammt aus dem Beispiel in der Dokumentation (Abschnitt Audit
 policy).
@@ -244,12 +244,12 @@ kubectl get --raw=/readyz
 ```
 
 ```bash
-# Terminal 1: die Flags sind im Arbeits-manifest gelandet
+# Terminal 1: die Flags sind im aktiven manifest gelandet
 grep -E -- '--audit-(policy-file|log-path|log-max)' /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
 Erstelle die ConfigMap und erzeuge beide Anfragen, speichere dann je ein passendes JSON event
-als artifacts:
+als Artefakte:
 
 ```bash
 # Terminal 2
@@ -263,7 +263,7 @@ kubectl get secret audit-secret -n "$NS" -o json >/dev/null
 # ConfigMap: vollständiges RequestResponse event (nicht sensible Daten).
 jq -c 'select(.level == "RequestResponse" and .objectRef.resource == "configmaps" and .objectRef.namespace == "runtime-112" and .objectRef.name == "audit-config")' /var/log/kubernetes/audit/audit.log | tail -1 > /tmp/art/4/configmap-request-response.json
 
-# Secret: nur Metadata, ohne Körper.
+# Secret: nur Metadata, ohne Body.
 jq -c 'select(.objectRef.resource == "secrets" and .objectRef.namespace == "runtime-112" and .objectRef.name == "audit-secret")' /var/log/kubernetes/audit/audit.log | tail -1 > /tmp/art/4/secret-metadata.json
 ```
 
@@ -272,7 +272,7 @@ jq -c 'select(.objectRef.resource == "secrets" and .objectRef.namespace == "runt
 scp control-plane:/tmp/art/4/*.json /var/work/tests/artifacts/4/
 ```
 
-Prüfe, dass die ConfigMap mit Körper protokolliert ist und das Secret nur auf der Stufe `Metadata` und
+Prüfe, dass die ConfigMap mit Body protokolliert ist und das Secret nur auf der Stufe `Metadata` und
 **ohne** `requestObject`/`responseObject`:
 
 ```bash
@@ -326,7 +326,7 @@ kubectl exec -n "$NS" immutable-app -- sh -c 'touch /tmp/allowed && test -f /tmp
 
 ## 6. Minimale containment-Kette vom Alert bis zur Isolation
 
-Der audit backend läuft bereits, daher hinterlässt ein neues `kubectl exec` API evidence. Wir starten
+Das audit backend läuft bereits, daher hinterlässt ein neues `kubectl exec` API evidence. Wir starten
 einen kontrollierten langlebigen Prozess: Der marker bleibt in der command line lange genug für
 die Prüfung von `/proc`. In production startet man einen verdächtigen Prozess nicht erneut; hier ist das
 safe planted evidence einer einmaligen Lab.
@@ -372,7 +372,7 @@ ps -eo pid,ppid,user,lstart,args --forest > process-tree.txt
 
 Jetzt korrelieren wir das API event. Das moderne `kubectl exec` arbeitet über WebSocket, daher ist es im audit
 als `get` zu sehen (bei SPDY-fallback - `create`), beide Varianten sind passend. Für `pods/exec` genügt
-`Metadata`: Das command aus dem request body kann ein Secret enthalten, daher wird `RequestResponse` hier nicht gebraucht.
+`Metadata`: Das command aus dem request body kann geheime Daten enthalten, daher wird `RequestResponse` hier nicht gebraucht.
 
 ```bash
 # Terminal 1 (control-plane, root)
@@ -439,7 +439,7 @@ cat "$DIR/containment.txt"
 # exec_exit=1 (nicht 0)
 ```
 
-## Aufgabe 7. Override des upstream-Macros und Ausgabe in JSON/Datei
+## 7. Override des upstream-Macros und Ausgabe in JSON/Datei
 
 Die Standardregel **Terminal shell in container** löst auch bei einem legitimen
 Werkzeug aus. Der richtige Ort für eine environment-specific Ausnahme ist nicht das Bearbeiten
@@ -554,7 +554,7 @@ tail -n 20 /var/log/falco/events.log \
 # {"pod": "immutable-app", "ns": "runtime-112"}
 ```
 
-## Aufgabe 8. Audit webhook backend
+## 8. Audit webhook backend
 
 `audit-receiver` ist vom Startskript bereits bereitgestellt. Erstelle eine webhook kubeconfig, die auf
 seinen Service zeigt; für die Lab ist HTTP zulässig, in production erfordert der webhook HTTPS und ein client
@@ -623,7 +623,7 @@ Zwischenprüfung:
 check_result
 ```
 
-## Aufgabe 9. Integrationsaufgabe: admission über containerd umgehen und über Falco erkennen
+## 9. Integrationsaufgabe: admission über containerd umgehen und über Falco erkennen
 
 Diese Aufgabe verbindet Supply Chain Security (Lab 111, Kapitel 26) mit der Runtime Security dieser
 Lab: Die admission-Prüfung (Kyverno) sieht einen Container nicht, wenn er direkt über
@@ -631,7 +631,7 @@ containerd erstellt wurde und kube-apiserver umgeht. Falco arbeitet im Unterschi
 der Ebene der kernel syscalls und sieht **alle** Container auf dem Node, unabhängig davon, wie sie
 gestartet wurden.
 
-**Wichtig: Verwechsle das nicht mit Lab 111**: Dort prüft die policy die kryptografische Signatur
+**Wichtig: Verwechsle das nicht mit Lab 111.** Dort prüft die policy die kryptografische Signatur
 (Cosign). Hier prüft die policy nur die registry/repository allowlist - eine einfachere
 admission control ohne signature/attestor. Das gemeinsame Prinzip ist für beide dasselbe: admission arbeitet
 nur auf dem API admission path.
@@ -719,7 +719,7 @@ cat /var/work/tests/artifacts/9/admission-deny.txt
 ```
 
 Jetzt modellieren wir den Pfad, den der admission controller nicht sieht: Der Container wird direkt
-im container runtime über CRI erstellt und umgeht kube-apiserver vollständig. Dafür gibt es auf der control-plane
+in der container runtime über CRI erstellt und umgeht kube-apiserver vollständig. Dafür gibt es auf der control-plane
 den Helper `cks112-run <Image> <id> '<Befehl>'` (ein Wrapper um `crictl runp/create/start`) und
 `cks112-rm <id>` zum Aufräumen. Warum nicht `ctr run`: Container, die über `ctr` erstellt wurden, sind
 CRI nicht bekannt, und Falco schreibt für sie immer `container.image.repository = <NA>` - trusted und
@@ -742,7 +742,7 @@ cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_1 'echo CKS112_CTR_BYPASS; sleep 5'
 
 > `container.id != host` ist zwingend: Der Befehl `cks112-run ... 'echo CKS112_CTR_BYPASS'` wird selbst
 > auf dem Host gestartet, und seine command line enthält den marker. Ohne diese Bedingung würde die Regel
-> auf den Host-Startprozess auslösen (sein repository ist leer, also nicht gleich trusted),
+> beim Host-Startprozess auslösen (sein repository ist leer, also nicht gleich trusted),
 > und selbst ein vertrauenswürdiges Image würde einen falschen alert erzeugen.
 >
 > Falco zeigt für das Image nicht das Tag, mit dem der Container gestartet wurde, sondern den alphabetisch ersten
@@ -803,7 +803,7 @@ als security control nicht äquivalent:
 cat >> /etc/falco/falco_rules.local.yaml <<EOF
 
 - rule: CKS112 Runtime Bypass of Admission
-  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via ctr/crictl directly)
+  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via crictl/CRI directly)
   condition: >
     spawned_process and
     container.id != host and
@@ -821,8 +821,8 @@ systemctl restart falco && sleep 10
 ```
 
 Bevor wir den bypass mit dem untrusted-Image wiederholen, prüfen wir beide kontrollierten Fälle, um
-zu belegen, dass der Vergleich tatsächlich exakt und nicht prefix-basiert ist. Zuerst das vertrauenswürdige Image - für
-es darf es keinen alert geben (negative control):
+zu belegen, dass der Vergleich tatsächlich exakt und nicht prefix-basiert ist. Zuerst das vertrauenswürdige Image - bei ihm
+darf es keinen alert geben (negative control):
 
 ```bash
 # Terminal 1 (control-plane, root)
@@ -843,13 +843,13 @@ cks112-rm $BYPASS_1
 cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_2 'echo CKS112_CTR_BYPASS; sleep 5'
 sleep 3
 journalctl -u falco-modern-bpf --since "$START_TS" --no-pager | grep 'CKS112 runtime bypass of admission' > /tmp/art/9/falco-bypass-attempt.log
-cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-alpine.log
+cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-untrusted.log
 cks112-rm $BYPASS_2
 ```
 
 Schließlich belegen wir den prefix-trap selbst: Ein repository, das als `${TRUSTED_REPO}-evil` aufgebaut ist,
 BEGINNT mit demselben Teilstring wie das erlaubte `$TRUSTED_REPO`, ist ihm aber nicht exakt gleich.
-Würde die Falco condition `startswith` verwenden (wie in einer früheren, falschen Version
+Würde die Falco condition `startswith` verwenden (wie in der naiven Variante
 dieser Regel), würde dieses Image UNBEMERKT durchgehen - gerade deshalb muss die korrigierte Bedingung
 `!=` es erkennen. Das Image des prefix-trap ist vom bootstrap vorbereitet (`$CKS112_PREFIX_IMAGE`,
 ein separater digest):
@@ -872,11 +872,11 @@ scp 'control-plane:/tmp/art/9/*' /var/work/tests/artifacts/9/
 > zusammengeführte artifact, das die automatische Abnahme prüft (es enthält beide alerts:
 > untrusted und prefix-trap, darf aber keinen alert für das trusted repo enthalten). Zusätzlich
 > schreibt jede probe eine eigene Datei für die manuelle Diagnose: `probe-trusted.log` (muss
-> leer sein - das ist gerade die negative control), `probe-alpine.log` und `probe-prefix.log`.
+> leer sein - das ist gerade die negative control), `probe-untrusted.log` und `probe-prefix.log`.
 
 Die zentrale Erkenntnis dieser Aufgabe: Die registry allowlist bei admission und Falco zur runtime sind keine
 austauschbaren, sondern sich ergänzende Schichten. Admission stoppt den Pfad über die Kubernetes
-API, weiß aber nichts über Prozesse, die direkt über das container runtime auf dem Node gestartet wurden;
+API, weiß aber nichts über Prozesse, die direkt über die container runtime auf dem Node gestartet wurden;
 Falco kann die Erstellung eines solchen Containers nicht im Voraus **blockieren**, sieht ihn aber nach dem
 Start unabhängig davon, welche API (oder deren Fehlen) verwendet wurde. Dasselbe Prinzip
 gilt für die signature verification in Lab 111 - der Unterschied ist nur, dass dort die policy
@@ -888,7 +888,7 @@ Vergleichssemantik verwenden (`==`/`!=` und nicht `startsWith`/prefix), sonst si
 ## 10. Zugriff auf `/dev/mem` über eine file/device-open condition erkennen
 
 Die Aufgaben 3, 7 und 9 bauten die condition um `spawned_process`/`proc.cmdline` auf - Erkennung
-anhand des START eines Prozesses und seiner Argumente. Hier wird eine grundsätzlich andere Klasse
+anhand des STARTS eines Prozesses und seiner Argumente. Hier wird eine grundsätzlich andere Klasse
 von Falco-Bedingung verwendet: Erkennung anhand des ÖFFNENS einer konkreten Datei/eines Geräts, unabhängig davon,
 welcher Prozess das tut und mit welchen Argumenten der Kommandozeile.
 

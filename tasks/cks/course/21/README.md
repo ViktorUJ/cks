@@ -456,7 +456,7 @@ storage path. This is suitable, in particular, for re-encryption after changing
 forced object rewriting; the `kubectl replace` above remains a simple exam route, while Storage Version
 Migration requires a separate operational rollout, observability, and a tested rollback/recovery process.
 
-> 🏭 **Upstream v1.37.** In Kubernetes v1.37, the built-in `StorageVersionMigration` API/controller became GA and enabled by default. This changes production-current status, but not this chapter's CKS Core workflow, which remains tied to the exam/training context. See [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA.md).
+> 🏭 **Upstream v1.37.** In Kubernetes v1.37, the built-in `StorageVersionMigration` API/controller became GA and enabled by default. This changes production-current status, but not this chapter's CKS Core workflow, which remains tied to the exam/training context. See [Kubernetes v1.37 Security Delta (Russian original)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 `kubectl replace` requires a current `resourceVersion`; high contention can cause conflicts.
 In production, run a controlled script with retries, API-latency observation, and a coordinated window,
@@ -663,7 +663,7 @@ Pod identity, and external backend. Choose a pattern after a threat model, not j
 | An API write hangs/fails | KMS plugin or external KMS unavailable/slow | check socket, TLS, KMS health, timeout, and HA; do not weaken security blindly |
 | A Secret is found in Git/log | encryption at rest cannot help | rotate the original credential immediately, restrict access, and remove the artifact following the IR procedure |
 
-> 🏭 **Kubernetes v1.37 recovery edge case.** A Beta unsafe force-delete path (`AllowUnsafeMalformedObjectDeletion`) exists for an unreadable/corrupt API object. It is an operation with cluster-breaking potential and a last recovery mechanism, not a normal way to correct encryption rotation. For details and limitations, see [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA.md).
+> 🏭 **Kubernetes v1.37 recovery edge case.** A Beta unsafe force-delete path (`AllowUnsafeMalformedObjectDeletion`) exists for an unreadable/corrupt API object. It is an operation with cluster-breaking potential and a last recovery mechanism, not a normal way to correct encryption rotation. For details and limitations, see [Kubernetes v1.37 Security Delta (Russian original)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 On the exam, first identify the cluster type. For kubeadm, look for the API server manifest and etcd TLS paths.
 For a managed control plane, settings can be unavailable: do not try to edit nonexistent

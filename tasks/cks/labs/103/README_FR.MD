@@ -5,9 +5,9 @@
 ## Description
 
 Dans ce lab, vous configurez un cluster Kubernetes à deux nœuds (control-plane +
-worker) en tant qu'ingénieur sécurité : vous installez `kube-bench` et, d'après ses constats
+worker) en tant qu'ingénieur sécurité : vous exécutez `kube-bench` (sur le nœud worker, vous l'installez vous-même) et, d'après ses constats
 (et non de mémoire), vous corrigez les paramètres non sûrs des composants du control-plane et du kubelet
-du nœud worker, vous publiez un Ingress uniquement en TLS, vous restreignez le TLS du control plane et
+sur les deux nœuds, vous publiez un Ingress uniquement en TLS, vous restreignez le TLS du control plane et
 vous confirmez l'intégrité des binaires Kubernetes installés.
 
 Ce n'est pas une répétition de la configuration de base de Kubernetes vue dans CKA. Ce qui compte ici, ce sont les endroits
@@ -49,7 +49,7 @@ Si vous calculez le SHA-256 d'un fichier et le comparez à lui-même, la vérifi
 |---|---|---|
 | Rapport `kube-bench` | instantané des vérifications CIS du control-plane | consigne les recommandations initiales et sert de base au hardening |
 | Kubelet configuration | paramètres du kubelet sur le nœud | désactive le read-only endpoint et l'anonymous access |
-| Static Pod manifest d'apiserver | déclaration de kube-apiserver | désactive profiling et impose un TLS strict |
+| Static Pod manifest d'apiserver | déclaration de kube-apiserver | désactive le profiling et impose un TLS strict |
 | TLS Secret et Ingress | TLS termination pour l'application | l'Ingress termine le TLS pour HTTPS sur `secure.cks.local`, et ingress-nginx redirige les requêtes HTTP ordinaires vers HTTPS via `ssl-redirect` |
 | Static Pod manifest d'etcd | déclaration de l'etcd local | limite les TLS cipher suites autorisées |
 | Artefact SHA-256 | résultat de la comparaison de `kubelet` et `kubectl` | confirme l'intégrité des binaires par rapport aux hashes de la release |
@@ -81,11 +81,12 @@ L'environnement est déployé dans AWS (`eu-central-1`) via Terragrunt.
 | `k8s-1` | Kubernetes `1.36.0` (kubeadm), containerd et Calico : control-plane + un nœud worker |
 | `worker` | Machine de travail (bastion) avec `kubectl`, accès SSH et `check_result` (`kube-bench` lui-même n'est pas nécessaire ici - il est déjà sur `control-plane` et s'installe sur le nœud worker au cours du lab) |
 
-> **Version et examen.** Au 2026-09-06, le CKS exam officiel part de Kubernetes `v1.35`. Ce lab utilise `1.36.0`, donc tout ce qui concerne cette version est un scénario pédagogique forward-looking, et non une affirmation sur la version actuelle de l'examen.
+> **Version et examen.** Au 2026-09-06, le CKS exam officiel est basé sur Kubernetes `v1.35`. Ce lab utilise `1.36.0`, donc tout ce qui concerne cette version est un scénario pédagogique forward-looking, et non une affirmation sur la version actuelle de l'examen.
 
 Le taint a été retiré du control-plane, on peut donc y lancer un Pod de lab si nécessaire.
-Pour les tâches 2, 3 et 5, les static Pods sont recréés automatiquement par le kubelet après l'enregistrement
-du manifest ou de la configuration modifiés. Ne supprimez pas manuellement les Pods du control-plane.
+Pour les tâches 3, 5 et 9, les static Pods sont recréés automatiquement par le kubelet après l'enregistrement
+du manifest modifié ; dans les tâches 2 et 10, après modification de la `KubeletConfiguration`, il faut
+redémarrer le kubelet manuellement (`systemctl restart kubelet`). Ne supprimez pas manuellement les Pods du control-plane.
 
 ## Déploiement
 
@@ -138,7 +139,7 @@ Cherchez dans le rapport de la tâche 1 les checks `4.2.1` (`--anonymous-auth`) 
 
 ---
 
-| **3** | **Hardening de kube-apiserver : désactiver profiling** |
+| **3** | **Hardening de kube-apiserver : désactiver le profiling** |
 | :---: | :--- |
 | Ce qu'on fait | kube-apiserver sert encore le pprof HTTP endpoint de profiling du processus. Utilisez le rapport `kube-bench` de la tâche 1 comme source de vérité : il a déjà signalé ce problème dans la section `master` pour le même nœud - trouvez-y le `[FAIL]` à côté de ce sujet et guidez-vous d'après lui. Corrigez le static Pod manifest de kube-apiserver, attendez la recréation et assurez-vous que l'API est prête. |
 | Critères d'acceptation | - le Pod kube-apiserver réellement en cours d'exécution contient `--profiling=false` dans son `command` (vérifié via l'API, et non par le texte du fichier sur disque) ;<br/>- `kubectl get --raw='/readyz'` renvoie un résultat réussi ;<br/>- le static Pod kube-apiserver est en cours d'exécution. |
@@ -206,7 +207,7 @@ Le flag sur etcd s'appelle `--cipher-suites` (sans `tls-` au début) - c'est un 
 
 | **6** | **Vérification de l'intégrité de kubelet et kubectl** |
 | :---: | :--- |
-| Ce qu'on fait | Comparez le SHA-256 des `kubelet` installés sur le control-plane et de `kubectl` sur le worker avec les checksum publiées de Kubernetes `v1.36.0`. Enregistrez les commandes et le résultat de `sha256sum -c` dans `/var/work/tests/artifacts/6/binaries.sha256.txt`. N'utilisez pas comme référence des hashes calculés à partir du fichier vérifié lui-même. |
+| Ce qu'on fait | Comparez le SHA-256 du `kubelet` installé sur le control-plane et du `kubectl` installé sur le worker avec les checksums publiées de Kubernetes `v1.36.0`. Enregistrez les commandes et le résultat de `sha256sum -c` dans `/var/work/tests/artifacts/6/binaries.sha256.txt`. N'utilisez pas comme référence des hashes calculés à partir du fichier vérifié lui-même. |
 | Critères d'acceptation | - l'artefact existe ;<br/>- il contient des résultats réussis distincts pour `kubelet` et `kubectl` (`OK`) ;<br/>- les sommes de référence ont été obtenues de la release officielle `v1.36.0`. |
 
 <details>
@@ -245,8 +246,8 @@ Le même ordre d'actions que dans la tâche 7 : d'abord `before.txt` avec `[FAIL
 
 | **9** | **Remediation cycle : profiling sur kube-controller-manager et kube-scheduler** |
 | :---: | :--- |
-| Ce qu'on fait | La même technique que dans les tâches 7-8, pour les checks `1.3.2` (kube-controller-manager profiling) et `1.4.1` (kube-scheduler profiling) - tous deux sous le même profil `cis-1.12`, un `--targets` explicite n'est pas nécessaire. Exécutez `kube-bench --check 1.3.2` et `--check 1.4.1` sur `control-plane` et enregistrez la sortie **avant** la correction dans `/var/work/tests/artifacts/9/controller-manager-before.txt` et `.../scheduler-before.txt` - les deux doivent contenir `[FAIL]`. La tâche 3 a déjà désactivé profiling sur kube-apiserver ; par défaut, kubeadm n'ajoute pas du tout `--profiling=false` aux manifests de `kube-controller-manager`/`kube-scheduler`. Ajoutez `--profiling=false` au `command` des deux static Pod manifests, attendez la recréation et relancez les mêmes check, en enregistrant la sortie dans `.../controller-manager-after.txt` et `.../scheduler-after.txt` - les deux doivent contenir `[PASS]` sans un seul `[FAIL]`. |
-| Critères d'acceptation | les fichiers `before` contiennent `[FAIL]` pour `1.3.2`/`1.4.1` respectivement ; les Pods réellement en cours d'exécution `kube-controller-manager`/`kube-scheduler` contiennent `--profiling=false` dans leur `command` (vérifié via l'API) ; les fichiers `after` contiennent `[PASS]` sans `[FAIL]` pour les mêmes check ; les deux Pod en phase `Running`. |
+| Ce qu'on fait | La même technique que dans les tâches 7-8, pour les checks `1.3.2` (kube-controller-manager profiling) et `1.4.1` (kube-scheduler profiling) - tous deux sous le même profil `cis-1.12`, un `--targets` explicite n'est pas nécessaire. Exécutez `kube-bench --check 1.3.2` et `--check 1.4.1` sur `control-plane` et enregistrez la sortie **avant** la correction dans `/var/work/tests/artifacts/9/controller-manager-before.txt` et `.../scheduler-before.txt` - les deux doivent contenir `[FAIL]`. La tâche 3 a déjà désactivé le profiling sur kube-apiserver ; par défaut, kubeadm n'ajoute pas du tout `--profiling=false` aux manifests de `kube-controller-manager`/`kube-scheduler`. Ajoutez `--profiling=false` au `command` des deux static Pod manifests, attendez la recréation et relancez les mêmes checks, en enregistrant la sortie dans `.../controller-manager-after.txt` et `.../scheduler-after.txt` - les deux doivent contenir `[PASS]` sans un seul `[FAIL]`. |
+| Critères d'acceptation | les fichiers `before` contiennent `[FAIL]` pour `1.3.2`/`1.4.1` respectivement ; les Pods réellement en cours d'exécution `kube-controller-manager`/`kube-scheduler` contiennent `--profiling=false` dans leur `command` (vérifié via l'API) ; les fichiers `after` contiennent `[PASS]` sans `[FAIL]` pour les mêmes checks ; les deux Pods sont en phase `Running`. |
 
 <details>
 <summary>💡 Indice pour la tâche 9</summary>

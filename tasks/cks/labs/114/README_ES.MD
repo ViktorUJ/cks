@@ -63,7 +63,7 @@ mediante el cambio `NodePort` -> `ClusterIP`.
 |           **1**           | **Kubeconfig context inventory** |
 | :-----------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |       Qué hacemos       | • Ejecuta `kubectl config get-contexts`, determina el `current-context` actual (inoperativo).<br/>• Encuentra el context realmente operativo y cambia a él: `kubectl config use-context <name>`. |
-| Criterios de aceptación | • `current-context` == `cluster1-admin@cluster1`.<br/>• Desde este context realmente pasa una petición al API server (no que simplemente exista en el archivo). |
+| Criterios de aceptación | • `current-context` == `cluster1-admin@cluster1`.<br/>• Una petición al API server desde este context realmente se completa (no basta con que el context exista en el archivo). |
 |        Comprobación        | `kubectl config current-context`, luego `kubectl get nodes`: debe devolver una lista real de nodos, y no un connection error. |
 
 ---
@@ -71,7 +71,7 @@ mediante el cambio `NodePort` -> `ClusterIP`.
 |           **2**           | **Client certificate extraction** |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |       Qué hacemos       | • Extrae el `client-certificate-data` del usuario `cluster9-admin` del kubeconfig, decodifica el base64 y analiza el certificado mediante `openssl x509`.<br/>• Guarda el resultado en `/var/work/tests/artifacts/task2-cert.txt` en formato `KEY=VALUE`, un valor por línea: `SHA256_FP`, `SUBJECT`, `ISSUER`, `NOTBEFORE`, `NOTAFTER`. |
-| Criterios de aceptación | • Los cinco valores del artefacto coinciden con lo que se extrae del certificado bootstrap original de `cluster9-admin`.<br/>• El Checker contrasta el fingerprint original, la inmutabilidad del certificado en el kubeconfig y los cinco campos. |
+| Criterios de aceptación | • Los cinco valores del artefacto coinciden con lo que se extrae del certificado bootstrap original de `cluster9-admin`.<br/>• El checker contrasta el fingerprint original, la inmutabilidad del certificado en el kubeconfig y los cinco campos. |
 |        Comprobación        | ```bash<br/>cert=$(kubectl config view --raw -o jsonpath='{.users[?(@.name=="cluster9-admin")].user.client-certificate-data}' \| base64 -d)<br/>echo "$cert" \| openssl x509 -noout -fingerprint -sha256 -subject -issuer -startdate -enddate<br/>```<br/>`-fingerprint -sha256` imprime `sha256 Fingerprint=AA:BB:...`: en el artefacto escribe el hex sin dos puntos (las mayúsculas/minúsculas no importan). |
 
 ---
@@ -79,15 +79,15 @@ mediante el cambio `NodePort` -> `ClusterIP`.
 |           **3**           | **Baseline: NodePort exposure** |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |       Qué hacemos       | • Crea el namespace `cks-114`.<br/>• Crea un Deployment `backend` (por ejemplo `viktoruj/ping_pong:alpine` con `SRV_PORT=80`, label `app=backend`).<br/>• Crea un Service `kubernetes-public` de tipo `NodePort` en el puerto 80, con un `nodePort: 30114` explícito.<br/>• **No toques** el Service `default/kubernetes`. |
-| Criterios de aceptación | • El backend es realmente alcanzable tanto desde el propio nodo por `<node-internal-ip>:30114`, como dentro del clúster por `kubernetes-public.cks-114.svc.cluster.local`.<br/>• `default/kubernetes` sigue siendo `ClusterIP`.<br/>• La tarea 4 después convierte este mismo Service en `ClusterIP`, por lo que al final del laboratorio el estado NodePort ya no se observa: la fase histórica de NodePort se confirma con dos probes HTTP 200 (desde el worker y por DNS desde un Pod), con la comprobación del backend/EndpointSlice y con un monitor que conserva el UID del Service y del Deployment.<br/>• Primero completa la tarea 3 por completo y espera al archivo `/var/lib/cks-lab114-checker/nodeport-phase-seen`, que crea el monitor tras ambos live-probes exitosos; solo después realiza la tarea 4. El archivo es la confirmación de la fase histórica para el mismo Service/Deployment. |
+| Criterios de aceptación | • El backend es realmente alcanzable tanto desde el worker (fuera del clúster) por `<node-internal-ip>:30114` como desde dentro del clúster por `kubernetes-public.cks-114.svc.cluster.local`.<br/>• `default/kubernetes` sigue siendo `ClusterIP`.<br/>• La tarea 4 después convierte este mismo Service en `ClusterIP`, por lo que al final del laboratorio el estado NodePort ya no se observa: la fase histórica de NodePort se confirma con dos probes HTTP 200 (desde el worker y por DNS desde un Pod), con la comprobación del backend/EndpointSlice y con un monitor que conserva el UID del Service y del Deployment.<br/>• Primero realiza la tarea 3 por completo y espera a que aparezca el archivo `/var/lib/cks-lab114-checker/nodeport-phase-seen`, que crea el monitor tras ambos live-probes exitosos; solo después realiza la tarea 4. El archivo es la confirmación de la fase histórica para el mismo Service/Deployment. |
 |        Comprobación        | Desde el worker (fuera del clúster): `curl http://<node-internal-ip>:30114/` -> HTTP 200.<br/>Desde dentro del clúster (un Pod temporal con curl): `curl http://kubernetes-public.cks-114.svc.cluster.local/` -> HTTP 200. La IP del nodo: `kubectl get nodes -o wide`. |
 
 ---
 
 |           **4**           | **Reduce exposure: NodePort -> ClusterIP** |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|       Qué hacemos       | • Cambia `kubernetes-public` al tipo `ClusterIP`.<br/>• Recuerda: el API server no permitirá dejar `nodePort` con el tipo `ClusterIP`: el campo hay que quitarlo explícitamente (`kubectl edit svc kubernetes-public` y elimina la línea `nodePort`, o `kubectl patch` con `$patch: replace` sobre el array `ports`). |
-| Criterios de aceptación | • La ruta externa `<node-internal-ip>:30114` ahora está bloqueada a nivel de transporte (connection refused/timeout).<br/>• La ruta dentro del clúster sigue funcionando.<br/>• El Backend Pod sigue Ready. |
+|       Qué hacemos       | • Cambia `kubernetes-public` al tipo `ClusterIP`.<br/>• Recuerda: el API server no admite un `nodePort` indicado explícitamente con el tipo `ClusterIP`: es más seguro quitar el campo explícitamente (`kubectl edit svc kubernetes-public` y elimina la línea `nodePort`, o un JSON patch con `op: remove` para `/spec/ports/0/nodePort`). |
+| Criterios de aceptación | • La ruta externa `<node-internal-ip>:30114` ahora está bloqueada a nivel de transporte (connection refused/timeout).<br/>• La ruta dentro del clúster sigue funcionando.<br/>• El Pod del backend sigue Ready. |
 |        Comprobación        | Desde el worker: `curl -m5 http://<node-internal-ip>:30114/` -> error de conexión (no un código HTTP).<br/>Desde dentro del clúster: `curl http://kubernetes-public.cks-114.svc.cluster.local/` -> HTTP 200 como antes.<br/>`kubectl -n cks-114 get svc kubernetes-public -o yaml` -> `type: ClusterIP`, ningún puerto tiene `nodePort`. |
 
 ## Comprobación
@@ -96,8 +96,8 @@ mediante el cambio `NodePort` -> `ClusterIP`.
 check_result
 ```
 
-El Checker comprueba `current-context` y una petición en vivo a la API a través de él, extrae y analiza de forma independiente
-el certificado `cluster9-admin`, lo comprueba respecto del fingerprint bootstrap original y lo compara con tu artefacto, y también ejecuta un probe HTTP 200 externo y dentro del clúster, comprueba el Deployment, el EndpointSlice y la inmutabilidad de `default/kubernetes`. La fase histórica de NodePort la confirma un monitor root-owned con dos live-probes antes del cambio del Service; en el estado ClusterIP el checker comprueba el DNS en vivo y la denegación de transporte de NodePort.
+El checker comprueba `current-context` y una petición en vivo a la API a través de él, extrae y analiza de forma independiente
+el certificado `cluster9-admin`, lo comprueba respecto del fingerprint bootstrap original y lo compara con tu artefacto, y también ejecuta un probe HTTP 200 dentro del clúster mediante el DNS del Service, comprueba el Deployment, el EndpointSlice y la inmutabilidad de `default/kubernetes`. La fase histórica de NodePort la confirma un monitor root-owned con dos live-probes antes del cambio del Service; en el estado ClusterIP el checker comprueba el DNS en vivo y el rechazo del NodePort a nivel de transporte.
 
 Solución de referencia: [worker/files/solutions/1_ES.MD](worker/files/solutions/1_ES.MD).
 

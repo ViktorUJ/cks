@@ -23,7 +23,7 @@ las herramientas de CIS Benchmark ya están en los nodos): no hace falta copiarl
 `1.36` todavía no figura en la support table oficial de kube-bench; el version mapping integrado
 de esta versión termina con la entrada `"1.34": "cis-1.12"`: no hay perfiles más nuevos (incluido
 cualquier perfil para 1.35/1.36) en `0.16.0`, por lo que usamos precisamente `cis-1.12`
-como el más cercano existente. Por eso lo lanzamos por la fuerza como approximate
+como el más cercano existente. Lo lanzamos de forma forzada como approximate
 hardening signal, y no como authoritative CIS compliance assessment.
 
 ```bash
@@ -44,12 +44,12 @@ grep '== Summary' /var/work/tests/artifacts/1/kube-bench.txt
 # == Summary policies ==
 ```
 
-Asegúrate a simple vista de que están presentes las cinco `== Summary <target> ==`: sin un
+Asegúrate a simple vista de que están presentes las cinco líneas `== Summary <target> ==`: sin un
 `--targets` explícito, parte de ellas (`etcd`, `policies`) no entrará en el informe.
 
 ## Tarea 2. Hardening del kubelet
 
-No recuerdes los nombres de los campos de memoria: en el examen es más rápido sacarlos directamente del informe
+No intentes recordar de memoria los nombres de los campos: en el examen es más rápido sacarlos directamente del informe
 de kube-bench ya generado (tarea 1). Cada check tiene allí una sección `== Remediations <target> ==`
 con el texto de la corrección ya listo: `grep -A1` por el número del check da de inmediato el campo necesario:
 
@@ -86,7 +86,7 @@ exit   # salir del shell de root
 exit   # salir de control-plane
 ```
 
-Comprobamos no el texto estático del archivo, sino la configuración en vigor que el kubelet
+No comprobamos el texto estático del archivo, sino la configuración en vigor que el kubelet
 realmente aplicó, a través de la API `configz` (el parseo de texto del YAML se engaña fácilmente con campos parecidos
 como `webhook.enabled`, mientras que `configz` refleja lo que el propio kubelet considera su
 configuración):
@@ -107,7 +107,7 @@ k wait --for=condition=Ready "node/${NODE}" --timeout=120s
 ## Tarea 3. Desactivar profiling de kube-apiserver
 
 La misma técnica que en la tarea 2: usa el informe de kube-bench de la tarea 1 como fuente de
-verdad, no recuerdes el flag de memoria:
+verdad, no intentes recordar el flag de memoria:
 
 ```bash
 grep -A2 '^1.2.15 ' /var/work/tests/artifacts/1/kube-bench.txt
@@ -234,7 +234,7 @@ k exec -n kube-system $(k get po -n kube-system -l component=etcd -o name) -- et
 En ambos static Pod manifests añade los parámetros al `command`. En kube-apiserver la tarea exige
 AMBOS flags, aunque la protección real con `VersionTLS13` la da precisamente `--tls-min-version`
 (Go elige por sí mismo las TLS 1.3 cipher suites, `--tls-cipher-suites` no influye en ellas; consulta la pregunta
-2 de la sección "Compruébate antes de empezar"). `--tls-cipher-suites` sigue siendo necesario explícitamente: es
+2 de la sección "Compruébate antes de empezar"). `--tls-cipher-suites` sigue siendo necesario explícitamente como
 defense-in-depth: si más adelante se rebaja la versión mínima a 1.2, los conjuntos de cifrados débiles no
 se activarán por sí solos. En etcd (donde se admite TLS 1.2) `--cipher-suites` ya limita realmente
 el conjunto ahora mismo, y no de cara al futuro.
@@ -300,7 +300,7 @@ cat /var/work/tests/artifacts/6/binaries.sha256.txt
 Ambas líneas deben terminar en `: OK`. Si la ruta al binario es distinta de `/usr/bin`,
 `command -v` igualmente genera una entrada correcta para `sha256sum -c`.
 
-## Tarea 7. Remediation cycle: un kube-bench FAIL concreto hasta PASS
+## Tarea 7. Remediation cycle: de un kube-bench FAIL concreto a PASS
 
 A diferencia de la tarea 1 (una instantánea de todo el informe), aquí hay que vincular un check concreto
 con su corrección. `kube-bench` admite una ejecución puntual mediante `--check`, por lo que
@@ -416,7 +416,7 @@ k -n kube-system get pods -l component=kube-controller-manager
 k -n kube-system get pods -l component=kube-scheduler
 ```
 
-Comprobamos no el texto del archivo, sino el Pod realmente en ejecución (el kubelet recrea el static Pod no
+No comprobamos el texto del archivo, sino el Pod realmente en ejecución (el kubelet no recrea el static Pod
 al instante tras cambiar el manifest), y la nueva ejecución puntual del mismo check debe
 mostrar `PASS`:
 
@@ -439,7 +439,7 @@ grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 ```
 
 `jq -e` debe imprimir `true` para ambos componentes, y ambos comandos `k get pods`
-de arriba - mostrar `Running`.
+de arriba deben mostrar `Running`.
 
 ## Tarea 10. Remediation cycle: protect-kernel-defaults en el nodo worker
 

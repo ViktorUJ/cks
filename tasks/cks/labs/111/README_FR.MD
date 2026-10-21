@@ -8,7 +8,7 @@ Dans ce lab CKS, vous allez rassembler des artefacts d'evidence reproductibles p
 conteneurisée : rapports de vulnérabilités et d'analyseurs statiques, corrections sûres
 du `Dockerfile` et du manifest du workload, deux SBOM, la recherche de versions de dépendances et la vérification de
 la signature de l'image. Le résultat n'est pas simplement la sortie d'un terminal : chaque rapport doit être
-enregistré à l'endroit indiqué et être apte à un audit.
+enregistré à l'endroit indiqué et pouvoir servir à un audit.
 
 C'est une tâche CKS sur le security tooling et la supply chain, et non un exercice CKA. La plupart des
 artefacts sont analysés localement sur le worker ; la seule exception est la tâche 4, où
@@ -24,32 +24,31 @@ Les secrets et tokens laissés par accident dans un layer nécessitent une véri
 scanning (par exemple, Trivy secret scanning) et inspection de l'history de l'image (`docker history`,
 extraction des couches). Le SBOM résout une autre tâche - l'inventaire des composants et des versions de
 paquets ; il aide à la supply-chain investigation (par exemple, trouver une bibliothèque vulnérable),
-mais n'est pas un mécanisme fiable de recherche de secrets dans l'history des couches et ne remplace pas le secret
+mais n'est pas un mécanisme fiable de recherche de secrets dans l'historique des couches et ne remplace pas le secret
 scanning. Même si la configuration de travail ne contient plus le secret, il peut rester
-accessible dans l'history des couches.
+accessible dans l'historique des couches.
 
-La menace de mutable-tag tampering consiste en ce qu'après le déploiement, à une référence inchangée
-avec tag, on peut substituer une autre image, malveillante. C'est précisément pourquoi le digest pinning est important dans
-les tâches 3–5 : il fige le contenu concret de l'image, et pas seulement son nom et son tag.
+La menace de mutable-tag tampering consiste en ce qu'après le déploiement, une autre image, malveillante, peut être substituée derrière la même référence avec tag, restée inchangée. C'est précisément pourquoi le digest pinning est important dans
+les tâches 3–5 : il fige le contenu exact de l'image, et pas seulement son nom et son tag.
 
-La vérification de la signature dans la tâche 7 démontre qu'un digest concret est signé par une
+La vérification de la signature dans la tâche 7 démontre qu'un digest précis est signé par une
 key/identity de confiance (signature integrity), tandis que le Trivy scan de la tâche 1 ne détecte pas
 de vulnérabilités connues entrant dans sa detection coverage avec la vulnerability DB actuelle
 (Trivy documente lui-même un trade-off en faveur de la precision, dans lequel des faux
 négatifs sont possibles : « 0 findings » n'est pas égal à une formal proof de l'absence de vulnérabilités). Ce sont des axes différents de
 protection : aucun ne remplace l'autre, puisque vulnerability != signature. La signature
 n'est PAS la même chose que provenance/attestation
-(par exemple, build metadata de style SLSA sur de quoi et comment l'artifact a été construit) : `cosign
-verify` confirme l'authenticité de la signature, et non l'history complet de la build ; pour l'attestation,
+(par exemple, build metadata de style SLSA indiquant à partir de quoi et comment l'artifact a été construit) : `cosign
+verify` confirme l'authenticité de la signature, et non l'historique complet du build ; pour l'attestation,
 Sigstore fournit des commandes distinctes `cosign attest`/`cosign verify-attestation`, non
 utilisées dans ce lab.
 
 Le `cosign verify` local (tâche 7) n'est pas en soi un enforcement : il démontre la
-signature d'une image reference concrète au moment de la vérification, mais n'empêche pas quelqu'un de lancer une
+signature d'une image reference précise au moment de la vérification, mais n'empêche pas quelqu'un de lancer une
 image non signée ou signée autrement par un `kubectl apply` direct, en contournant le CI. Seule la
 vérification admission-time (tâche 9a-9c) fait de la signature une condition obligatoire d'admission d'un
-Pod dans le cluster - c'est la différence entre « nous avons vérifié la signature » et « le cluster ne lancera pas d'
-image non signée ».
+Pod dans le cluster - c'est la différence entre « nous avons vérifié la signature » et « le cluster ne lancera pas
+d'image non signée ».
 
 La preuve de cette propriété exige de la rigueur : un nouveau `kubectl apply` d'un Deployment déjà
 existant ne crée pas de nouveau Pod si le template n'a pas changé, c'est pourquoi
@@ -64,13 +63,13 @@ même repository que l'image signée (tâche 9c) - sinon l'admission peut refuse
 <details>
 <summary>1. Pourquoi le SBOM n'est-il pas un mécanisme fiable de recherche de secrets laissés dans un image layer ?</summary>
 
-Le SBOM résout la tâche d'inventaire des COMPOSANTS et des versions de paquets (ce qui est installé, quelle version) - c'est une analyse structurelle des métadonnées du gestionnaire de paquets, et non une recherche de chaînes/secrets arbitraires dans le contenu des fichiers des couches. Un secret laissé, par exemple, dans une variable d'environnement ENV ou un fichier temporaire pendant la build, peut rester dans l'history des couches même après que la couche finale ne le contient plus - pour cela, il faut un outil distinct (secret scanning, `docker history`, extraction des couches), et non un SBOM.
+Le SBOM résout la tâche d'inventaire des COMPOSANTS et des versions de paquets (ce qui est installé, quelle version) - c'est une analyse structurelle des métadonnées du gestionnaire de paquets, et non une recherche de chaînes/secrets arbitraires dans le contenu des fichiers des couches. Un secret laissé, par exemple, dans une variable d'environnement ENV ou un fichier temporaire pendant le build, peut rester dans l'historique des couches même après que la couche finale ne le contient plus - pour cela, il faut un outil distinct (secret scanning, `docker history`, extraction des couches), et non un SBOM.
 </details>
 
 <details>
 <summary>2. Quelle est la différence entre ce que démontre le Trivy scan (tâche 1) et ce que démontre la signature Cosign (tâche 9a-9c) ?</summary>
 
-Au moment de la vérification, avec la vulnerability DB actuelle et la logique de détection de Trivy, le scan N'A PAS DÉTECTÉ de vulnérabilités connues entrant dans sa detection coverage - cela concerne la qualité/sécurité du contenu de l'image dans la mesure où Trivy est capable de le voir. La documentation de Trivy décrit elle-même directement un trade-off en faveur de la precision (minimisation des false positives), dans lequel des false negatives sont possibles - c'est-à-dire que « 0 findings » n'équivaut pas à la preuve formelle de l'absence totale de vulnérabilités. La signature Cosign démontre la SIGNATURE INTEGRITY - qu'un digest concret est signé par une clé/identity de confiance, c'est-à-dire que quelqu'un d'autorisé a confirmé que c'est précisément l'artifact qui doit être déployé. Ce n'est PAS la même chose que provenance/attestation (l'history complet de la build - de quoi, par qui et comment l'artifact a été construit) : pour l'attestation, Sigstore a des commandes distinctes (`cosign attest`/`cosign verify-attestation`), non utilisées dans ce lab. Une image peut être entièrement sûre (0 CVE) et en même temps non signée - ou signée, mais contenir une vulnérabilité inconnue. Ce sont deux axes indépendants de protection.
+Au moment de la vérification, avec la vulnerability DB actuelle et la logique de détection de Trivy, le scan N'A PAS DÉTECTÉ de vulnérabilités connues entrant dans sa detection coverage - cela concerne la qualité/sécurité du contenu de l'image dans la mesure où Trivy est capable de le voir. La documentation de Trivy décrit elle-même directement un trade-off en faveur de la precision (minimisation des false positives), dans lequel des false negatives sont possibles - c'est-à-dire que « 0 findings » n'équivaut pas à la preuve formelle de l'absence totale de vulnérabilités. La signature Cosign démontre la SIGNATURE INTEGRITY - qu'un digest précis est signé par une clé/identity de confiance, c'est-à-dire que quelqu'un d'autorisé a confirmé que c'est précisément l'artifact qui doit être déployé. Ce n'est PAS la même chose que provenance/attestation (l'historique complet du build - de quoi, par qui et comment l'artifact a été construit) : pour l'attestation, Sigstore a des commandes distinctes (`cosign attest`/`cosign verify-attestation`), non utilisées dans ce lab. Une image peut être entièrement sûre (0 CVE) et en même temps non signée - ou signée, mais contenir une vulnérabilité inconnue. Ce sont deux axes indépendants de protection.
 </details>
 
 <details>
@@ -90,7 +89,7 @@ L'environnement est créé par Terragrunt dans AWS `eu-central-1`.
 | `k8s-1` | kubeadm mono-nœud avec Kubernetes `1.36.0`, containerd et **Calico** |
 | `worker` | poste de travail pour l'analyse, `kubectl`, `check_result` et security tools |
 
-Infrastructure de style CKA : l'unique nœud control-plane est autorisé pour les workload et
+Infrastructure de style CKA : l'unique nœud control-plane est autorisé pour les workloads et
 marqué `cks.io/lab=111`. Les commandes principales et les security tools s'exécutent sur le worker.
 Le cluster Kubernetes est utilisé comme target environment pour vérifier le workload hardened et
 la signature policy admission-time : la tâche 4 déploie `catalog`, et les tâches 9b/9c
@@ -118,13 +117,13 @@ garanti ; lors de la mise à jour de Kyverno, retirez cette exception.
 ## Prérequis et limitations
 
 **podman et le registry sur le banc d'essai sont déjà configurés.** Pour construire et publier des images, utilisez `podman`
-(outil de la liste de l'examen ; rootless, depuis l'utilisateur `ubuntu`). Les tâches 3 et 9c exigent de construire et
+(outil de la liste de l'examen ; rootless, sous l'utilisateur `ubuntu`). Les tâches 3 et 9c exigent de construire et
 **publier** une image dans un registry accessible à la fois depuis le worker et depuis le cluster (la référence immuable
 `repo@sha256:...` est prise du registry, un image ID local ne convient pas). Ce registry,
-`registry:2` sur le control-plane, a été levé par le bootstrap :
+`registry:2` sur le control-plane, a été déployé par le bootstrap :
 
 - adresse : `<IP du control-plane>:5000`, elle est notée dans `/etc/cks111/registry` sur le worker ;
-- le protocole est du HTTP ordinaire à l'intérieur du VPC : podman sur le worker et containerd sur le nœud sont configurés pour lui comme
+- le protocole est du HTTP ordinaire à l'intérieur du VPC : podman sur le worker et containerd sur le nœud sont configurés pour l'utiliser comme
   insecure registry (le flag `--tls-verify=false` n'est pas nécessaire), et dans l'`ImageValidatingPolicy` pour Kyverno il faut
   `credentials.allowInsecureRegistry: true` ;
 - les données sont conservées sur un PV local du nœud (`/var/lib/cks111-registry`), elles survivent donc au
@@ -135,8 +134,8 @@ garanti ; lors de la mise à jour de Kyverno, retirez cette exception.
 
 **Limite de Docker Hub.** Les pull anonymes depuis une même IP ont une limite (environ 100 requêtes par 6 heures).
 Pour que `check_result` ne s'y heurte pas, le bootstrap télécharge une seule fois les images du lab dans un cache local
-(`nginx:1.27.3-alpine` et les candidats pour les tâches 1b/1c), et Trivy et Syft lors des scans répétés prennent l'
-image de ce cache par la même référence `nom@sha256:...`, sans s'adresser à Docker Hub. `bom` sait
+(`nginx:1.27.3-alpine` et les candidats pour les tâches 1b/1c), et Trivy et Syft lors des scans répétés prennent
+l'image de ce cache par la même référence `nom@sha256:...`, sans s'adresser à Docker Hub. `bom` sait
 lire l'image uniquement depuis le registry, il fait donc toujours plusieurs requêtes par lancement.
 Si Docker Hub a tout de même renvoyé `TOOMANYREQUESTS`, patientez (la fenêtre de la limite est glissante) ou exécutez
 `podman login docker.io` avec votre propre compte.
@@ -175,43 +174,43 @@ uniquement dans `/var/work/tests/artifacts/<numéro>/`.
 | **1** | **Trivy : rapport de vulnérabilités de l'image** |
 | :---: | :--- |
 | Ce qu'on fait | • Scannez l'`$IMAGE` immuable avec Trivy, y compris les vulnérabilités d'OS et de bibliothèques.<br/>• Enregistrez le JSON structuré dans `/var/work/tests/artifacts/1/trivy-report.json`. |
-| Critères d'acceptation | • **Fichier :** non vide, le JSON est analysé par `jq`, contient `Results` et l'immutable reference de l'image analysée.<br/>• **Vérification fraîche :** le checker répète lui-même `trivy image` pour la même image et exige que ce scan frais coïncide avec succès par `ArtifactName`.<br/>• Un JSON écrit à la main, mais syntaxiquement valide, ne passe pas. |
+| Critères d'acceptation | • **Fichier :** non vide, le JSON est analysable par `jq`, contient `Results` et l'immutable reference de l'image analysée.<br/>• **Nouvelle vérification :** le checker répète lui-même `trivy image` pour la même image et exige que ce nouveau scan réussisse et corresponde par `ArtifactName`.<br/>• Un JSON écrit à la main, mais syntaxiquement valide, ne passe pas. |
 
 <details>
 <summary>💡 Indice pour la tâche 1</summary>
 
-`$IMAGE` se construit en deux étapes : vous scannez d'abord `nginx:1.27.3-alpine` (un tag ordinaire) et vous extrayez `Metadata.RepoDigests[0]` de CE premier rapport JSON, puis vous reconstruisez la commande avec `nginx:1.27.3-alpine@sha256:<digest>` et vous scannez déjà la référence immuable - c'est précisément ce second rapport qu'il faut enregistrer comme final. N'utilisez pas `ImageID`/`DiffID` de la sortie de Trivy comme substitut du registry digest - ce sont des identifiants LOCAUX, qui ne coïncident pas avec le manifest digest dans le registry.
+`$IMAGE` se construit en deux étapes : vous scannez d'abord `nginx:1.27.3-alpine` (un tag ordinaire) et vous extrayez `Metadata.RepoDigests[0]` de CE premier rapport JSON, puis vous reconstruisez la commande avec `nginx:1.27.3-alpine@sha256:<digest>` et cette fois vous scannez la référence immuable - c'est précisément ce second rapport qu'il faut enregistrer comme final. N'utilisez pas `ImageID`/`DiffID` de la sortie de Trivy comme substitut du registry digest - ce sont des identifiants LOCAUX, qui ne coïncident pas avec le manifest digest dans le registry.
 </details>
 
 ---
-| **1b** | **Multi-image CVE triage : trouver l'image contenant une CVE concrète** |
+| **1b** | **Multi-image CVE triage : trouver l'image contenant une CVE précise** |
 | :---: | :--- |
-| Ce qu'on fait | • Ouvrez `~/cks-111/candidates.txt` : il y a trois immutable image reference (`CANDIDATE_1/2/3`) et la `TARGET_CVE` cible, définies individuellement pour votre instance du lab lors du bootstrap.<br/>• Scannez **les trois** images avec Trivy et trouvez laquelle contient réellement `TARGET_CVE`.<br/>• Enregistrez le rapport JSON précisément de cette image dans `/var/work/tests/artifacts/1b/target-scan.json`.<br/>• La ligne `OFFENDING_IMAGE=<référence complète de cette image>` enregistrez-la dans `/var/work/tests/artifacts/1b/answer.txt`. |
+| Ce qu'on fait | • Ouvrez `~/cks-111/candidates.txt` : il y a trois immutable image references (`CANDIDATE_1/2/3`) et la `TARGET_CVE` cible, définies individuellement pour votre instance du lab lors du bootstrap.<br/>• Scannez **les trois** images avec Trivy et trouvez laquelle contient réellement `TARGET_CVE`.<br/>• Enregistrez le rapport JSON précisément de cette image dans `/var/work/tests/artifacts/1b/target-scan.json`.<br/>• La ligne `OFFENDING_IMAGE=<référence complète de cette image>` enregistrez-la dans `/var/work/tests/artifacts/1b/answer.txt`. |
 | Critères d'acceptation | • **Réponse :** `answer.txt` indique précisément le `CANDIDATE_N` dont le scan réel de Trivy contient `TARGET_CVE`.<br/>• **Rapport :** `target-scan.json` est la sortie authentique de Trivy pour cette même image (le checker répète lui-même le scan et compare). |
 
 <details>
 <summary>💡 Indice pour la tâche 1b</summary>
 
-`TARGET_CVE` est différente pour chaque instance du lab - elle est calculée lors du provisioning à partir de la vulnerability DB de Trivy en direct, et n'est pas figée à l'avance, donc dans ce fichier se trouve votre propre réponse. Ne devinez pas d'après le nom du tag (« le plus ancien est sûrement vulnérable ») - scannez réellement les trois et trouvez la correspondance exacte de `VulnerabilityID` dans le JSON. Une commande par image : `trivy image --format json "$ref" | tee scan.json`, puis `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | index("<TARGET_CVE>")' scan.json` - `null` signifie que cette CVE concrète est absente précisément de cette image (elle peut très bien contenir d'autres CVE - cela n'est pas vérifié).
+`TARGET_CVE` est différente pour chaque instance du lab - elle est calculée lors du provisioning à partir de la vulnerability DB de Trivy en direct, et n'est pas figée à l'avance, donc dans ce fichier se trouve votre propre réponse. Ne devinez pas d'après le nom du tag (« le plus ancien est sûrement vulnérable ») - scannez réellement les trois et trouvez la correspondance exacte de `VulnerabilityID` dans le JSON. Une commande par image : `trivy image --format json "$ref" | tee scan.json`, puis `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | index("<TARGET_CVE>")' scan.json` - `null` signifie que cette CVE précise est absente précisément de cette image (elle peut très bien contenir d'autres CVE - cela n'est pas vérifié).
 </details>
 
 ---
-| **1c** | **Workload image triage by CRITICAL severity** |
+| **1c** | **Analyse des images de workload par niveau CRITICAL** |
 | :---: | :--- |
-| Ce qu'on fait | • Dans le namespace `cks-111`, 4 Deployment sont déjà déployés (label `cks.io/task=1c`), chacun avec une seule image immutable épinglée par digest.<br/>• Obtenez les image references de ces Deployments LIVE (ne devinez pas d'après le nom du tag), scannez **les 4** images avec Trivy avec `--severity CRITICAL` et comptez le nombre de `VulnerabilityID` CRITICAL uniques pour chacune.<br/>• Déterminez le Deployment avec le plus grand nombre de CRITICAL (« le plus vulnérable ») et les deux Deployment avec le plus petit nombre (« les deux moins vulnérables »). Notez leurs noms dans `/var/work/tests/artifacts/1c/ranking.txt` comme `MOST_VULNERABLE=<deployment-name>`, `LEAST_VULNERABLE_1=<deployment-name>`, `LEAST_VULNERABLE_2=<deployment-name>`.<br/>• Pour l'image du Deployment le plus vulnérable, générez un CycloneDX SBOM **précisément de Trivy** (`trivy image --format cyclonedx`) dans `1c/cyclonedx.json`.<br/>• Ensuite, remédiez : ne laissez `replicas > 0` que sur les deux Deployment les moins vulnérables, et scalez les deux autres (y compris le plus vulnérable) à `replicas: 0`. |
-| Critères d'acceptation | • **Ranking :** le checker répète lui-même le scan CRITICAL de Trivy des 4 live images et recalcule le ranking - `ranking.txt` doit coïncider avec ce scan frais, et non avec un scan périmé/deviné.<br/>• **SBOM :** `cyclonedx.json` est un document CycloneDX valide précisément de Trivy, se rapportant à l'image du Deployment réellement le plus vulnérable.<br/>• **Remediation :** exactement 2 Deployment (les moins vulnérables d'après le scan frais) ont `replicas > 0`, les 2 autres - `replicas: 0`. |
+| Ce qu'on fait | • Dans le namespace `cks-111`, 4 Deployment sont déjà déployés (label `cks.io/task=1c`), chacun avec une seule image immutable épinglée par digest.<br/>• Obtenez les image references de ces Deployments LIVE (ne devinez pas d'après le nom du tag), scannez **les 4** images avec Trivy avec `--severity CRITICAL` et comptez le nombre de `VulnerabilityID` CRITICAL uniques pour chacune.<br/>• Déterminez le Deployment avec le plus grand nombre de CRITICAL (« le plus vulnérable ») et les deux Deployment avec le plus petit nombre (« les deux moins vulnérables »). Notez leurs noms dans `/var/work/tests/artifacts/1c/ranking.txt` comme `MOST_VULNERABLE=<deployment-name>`, `LEAST_VULNERABLE_1=<deployment-name>`, `LEAST_VULNERABLE_2=<deployment-name>`.<br/>• Pour l'image du Deployment le plus vulnérable, générez un CycloneDX SBOM **précisément avec Trivy** (`trivy image --format cyclonedx`) dans `1c/cyclonedx.json`.<br/>• Ensuite, remédiez : ne laissez `replicas > 0` que sur les deux Deployment les moins vulnérables, et scalez les deux autres (y compris le plus vulnérable) à `replicas: 0`. |
+| Critères d'acceptation | • **Ranking :** le checker répète lui-même le scan CRITICAL de Trivy des 4 live images et recalcule le ranking - `ranking.txt` doit coïncider avec ce scan frais, et non avec un scan périmé/deviné.<br/>• **SBOM :** `cyclonedx.json` est un document CycloneDX valide généré précisément par Trivy, se rapportant à l'image du Deployment réellement le plus vulnérable.<br/>• **Remediation :** exactement 2 Deployment (les moins vulnérables d'après le scan frais) ont `replicas > 0`, les 2 autres - `replicas: 0`. |
 
 <details>
 <summary>💡 Indice pour la tâche 1c</summary>
 
-Obtenez les image references par une commande du type `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jsonpath=...` - n'essayez pas de deviner d'après le nom du Deployment quelle image est « plus récente » ou « plus sûre ». La commande pour compter : `trivy image --scanners vuln --severity CRITICAL --format json <ref>`, puis `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length'`. Pour CycloneDX, utilisez précisément `trivy image --format cyclonedx --output <file> <ref>` - pas Syft (Syft est déjà utilisé dans la tâche 7 pour une autre image, ici Trivy est explicitement exigé). Le scale se fait via `kubectl scale deployment/<name> -n cks-111 --replicas=0` (ou `--replicas=1` pour ceux que l'on conserve).
+Obtenez les image references par une commande du type `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jsonpath=...` - n'essayez pas de deviner d'après le nom du Deployment quelle image est « plus récente » ou « plus sûre ». La commande pour compter : `trivy image --scanners vuln --severity CRITICAL --format json <ref>`, puis `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length'`. Pour CycloneDX, utilisez précisément `trivy image --format cyclonedx --output <file> <ref>` - pas Syft (Syft est déjà utilisé dans la tâche 7 pour une autre image, ici Trivy est explicitement exigé). La mise à l'échelle se fait via `kubectl scale deployment/<name> -n cks-111 --replicas=0` (ou `--replicas=1` pour ceux que l'on conserve).
 </details>
 
 ---
 | **2** | **Rapports initiaux de l'analyse statique** |
 | :---: | :--- |
-| Ce qu'on fait | • AVANT les corrections (sans toucher à aucun de ces trois fichiers après le début de la tâche 3), enregistrez les résultats : Hadolint dans `2/hadolint-before.txt`, kubesec JSON dans `2/kubesec-before.json`, kube-linter JSON dans `2/kube-linter-before.json`.<br/>• Lancez-les directement contre les `Dockerfile`/`deployment.yaml` initiaux ORIGINAUX.<br/>• Ne masquez pas les erreurs via `|| true` dans les fichiers de rapports : un exit code non nul du linter est attendu. |
-| Critères d'acceptation | • **Artefacts :** les trois existent ; Hadolint contient des findings, kubesec contient `scoring`, kube-linter est un objet JSON de KubeLinter valide avec les champs `Reports` et `Summary` ; avant les corrections, `Reports` contient des findings.<br/>• **Comparaison avec le baseline :** le checker compare le contenu des trois artefacts avec son propre baseline, relevé lors du provisioning contre les fichiers initiaux originaux AVANT qu'ils ne soient remis à l'étudiant.<br/>• Un rapport écrit à la main, mais syntaxiquement valide, ne passe pas. |
+| Ce qu'on fait | • AVANT les corrections (sans toucher à aucun de ces trois fichiers après le début de la tâche 3), enregistrez les résultats : Hadolint dans `2/hadolint-before.txt`, kubesec JSON dans `2/kubesec-before.json`, kube-linter JSON dans `2/kube-linter-before.json`.<br/>• Lancez-les directement sur les `Dockerfile`/`deployment.yaml` initiaux ORIGINAUX.<br/>• Ne masquez pas les erreurs via `\|\| true` dans les fichiers de rapports : un exit code non nul du linter est attendu. |
+| Critères d'acceptation | • **Artefacts :** les trois existent ; Hadolint contient des findings, kubesec contient `scoring`, kube-linter est un objet JSON de KubeLinter valide avec les champs `Reports` et `Summary` ; avant les corrections, `Reports` contient des findings.<br/>• **Comparaison avec le baseline :** le checker compare le contenu des trois artefacts avec son propre baseline, relevé lors du provisioning sur les fichiers initiaux originaux AVANT qu'ils ne soient remis à l'étudiant.<br/>• Un rapport écrit à la main, mais syntaxiquement valide, ne passe pas. |
 
 <details>
 <summary>💡 Indice pour la tâche 2</summary>
@@ -222,7 +221,7 @@ Un exit code non nul du linter lorsqu'il détecte des problèmes est un comporte
 ---
 | **3** | **Corriger le Dockerfile d'après les findings** |
 | :---: | :--- |
-| Ce qu'on fait | • Corrigez `/home/ubuntu/cks-111/Dockerfile` : figez l'image de base par l'immutable reference `nginx:1.27.3-alpine@sha256:<manifest-digest>`.<br/>• N'utilisez pas `ADD` avec une URL, ne conservez pas de token dans `ENV`, n'installez pas `sudo`.<br/>• Ajoutez un `USER` non privilégié (uid différent de `0`). Utilisez `COPY` et une installation reproductible de paquets seulement si nécessaire.<br/>• Ajoutez `ARG CKS_SIGNATURE_TEST=signed` et `LABEL cks.signature-test=$CKS_SIGNATURE_TEST` à côté des autres instructions - c'est l'unique point de différence contrôlée de l'image qui sera nécessaire dans la tâche 9c, pour garantir un digest différent sans changer les propriétés de sécurité vérifiées ici.<br/>• Après la correction, enregistrez la sortie réussie de Hadolint dans `3/hadolint-after.txt`. |
+| Ce qu'on fait | • Corrigez `/home/ubuntu/cks-111/Dockerfile` : épinglez l'image de base sur l'immutable reference `nginx:1.27.3-alpine@sha256:<manifest-digest>`.<br/>• N'utilisez pas `ADD` avec une URL, ne conservez pas de token dans `ENV`, n'installez pas `sudo`.<br/>• Ajoutez un `USER` non privilégié (uid différent de `0`). Utilisez `COPY` et une installation reproductible de paquets seulement si nécessaire.<br/>• Ajoutez `ARG CKS_SIGNATURE_TEST=signed` et `LABEL cks.signature-test=$CKS_SIGNATURE_TEST` à côté des autres instructions - c'est l'unique point de différence contrôlée de l'image qui sera nécessaire dans la tâche 9c, pour garantir un digest différent sans changer les propriétés de sécurité vérifiées ici.<br/>• Après la correction, enregistrez la sortie réussie de Hadolint dans `3/hadolint-after.txt`. |
 | Critères d'acceptation | • **Dockerfile :** pas de `latest`, le `ADD` distant est supprimé, il ne reste ni `API_TOKEN` ni `TOKEN`, il y a un `USER` non-root, il y a `ARG CKS_SIGNATURE_TEST` et `LABEL cks.signature-test`.<br/>• **Hadolint :** le rapport final ne contient pas `DL3007`, `DL3013`, `DL3020`, `DL3045`. |
 
 <details>
@@ -234,8 +233,8 @@ Un exit code non nul du linter lorsqu'il détecte des problèmes est un comporte
 ---
 | **4** | **Corriger le workload YAML d'après kubesec et kube-linter** |
 | :---: | :--- |
-| Ce qu'on fait | • Construisez et publiez d'abord la hardened image de la tâche 3, puis indiquez dans `deployment.yaml` sa immutable manifest reference `registry/.../catalog@sha256:<manifest-digest>` (et non l'nginx upstream).<br/>• Au niveau du Pod, ajoutez `automountServiceAccountToken: false`, `runAsNonRoot: true`, `seccompProfile: RuntimeDefault`.<br/>• Dans le conteneur, définissez `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`, requests/limits CPU et memory.<br/>• Pour nginx, montez un `emptyDir`/tmpfs writable dans les chemins temp, pid/run, cache et config et préparez la config avant le démarrage.<br/>• Supprimez `privileged`, appliquez le Deployment, confirmez Ready/Available et une requête HTTP réussie.<br/>• Enregistrez les nouveaux rapports `4/kubesec-after.json` et `4/kube-linter-after.json`. |
-| Critères d'acceptation | • **Image :** le YAML utilise une hardened image épinglée par digest avec `USER 101`, et non l'nginx upstream.<br/>• **Manifest :** les champs requis et les writable mounts sont présents ; `privileged` est absent.<br/>• **Fonctionnement :** le Deployment est Available et la requête HTTP réussit.<br/>• **Rapports :** les deux rapports finaux sont du JSON valide. |
+| Ce qu'on fait | • Construisez et publiez d'abord la hardened image de la tâche 3, puis indiquez dans `deployment.yaml` son immutable manifest reference `registry/.../catalog@sha256:<manifest-digest>` (et non l'nginx upstream).<br/>• Au niveau du Pod, ajoutez `automountServiceAccountToken: false`, `runAsNonRoot: true`, `seccompProfile: RuntimeDefault`.<br/>• Dans le conteneur, définissez `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`, requests/limits CPU et memory.<br/>• Pour nginx, montez un `emptyDir`/tmpfs writable dans les chemins temp, pid/run, cache et config et préparez la config avant le démarrage.<br/>• Supprimez `privileged`, appliquez le Deployment, confirmez Ready/Available et une requête HTTP réussie.<br/>• Enregistrez les nouveaux rapports `4/kubesec-after.json` et `4/kube-linter-after.json`. |
+| Critères d'acceptation | • **Image :** le YAML utilise une hardened image épinglée par digest avec `USER 101`, et non l'nginx upstream.<br/>• **Manifest :** les champs requis, l'init container `prepare-nginx-config` et les writable mounts sont présents ; `privileged` est absent.<br/>• **Fonctionnement :** le Deployment est Available et la requête HTTP réussit.<br/>• **Rapports :** les deux rapports finaux sont du JSON valide. |
 
 <details>
 <summary>💡 Indice pour la tâche 4</summary>
@@ -247,7 +246,7 @@ Un exit code non nul du linter lorsqu'il détecte des problèmes est un comporte
 | **5** | **Recherche de versions de paquets** |
 | :---: | :--- |
 | Ce qu'on fait | • Utilisez Trivy en mode liste de tous les paquets pour `$IMAGE`.<br/>• Enregistrez la commande, l'immutable image reference, le `nginx@sha256:<manifest-digest>` canonique de `Metadata.RepoDigests[0]` et au moins trois lignes `nom=version` dans `/var/work/tests/artifacts/5/version-search.txt`.<br/>• Ne remplacez pas la recherche par une liste manuelle : dans l'evidence doit figurer la ligne de la commande avec `trivy image --list-all-pkgs`. |
-| Critères d'acceptation | • **Artefact :** contient la commande, l'immutable `nginx:1.27.3-alpine@sha256:...`, `repo_digest=nginx@sha256:...` de Trivy et au moins trois paires package/version.<br/>• **Vérification fraîche :** le checker répète lui-même `trivy image --list-all-pkgs` pour la même image et exige que `repo_digest=` et au moins trois paires `name=version` enregistrées coïncident avec ce scan frais.<br/>• Une liste écrite à la main, mais syntaxiquement plausible, ne passe pas. |
+| Critères d'acceptation | • **Artefact :** contient la commande, l'immutable `nginx:1.27.3-alpine@sha256:...`, `repo_digest=nginx@sha256:...` de Trivy et au moins trois paires package/version.<br/>• **Nouvelle vérification :** le checker répète lui-même `trivy image --list-all-pkgs` pour la même image et exige que `repo_digest=` et au moins trois paires `name=version` enregistrées coïncident avec ce scan frais.<br/>• Une liste écrite à la main, mais syntaxiquement plausible, ne passe pas. |
 
 <details>
 <summary>💡 Indice pour la tâche 5</summary>
@@ -256,9 +255,9 @@ Le flag s'appelle précisément `--list-all-pkgs`, et non `--list-packages` ni u
 </details>
 
 ---
-| **5b** | **Find a package version in workload images and remove offending containers** |
+| **5b** | **Trouver la version d'un paquet dans les images de workload et supprimer les conteneurs problématiques** |
 | :---: | :--- |
-| Ce qu'on fait | • Dans le namespace `cks-111` est déjà déployé le Deployment `pkg-audit-app` avec trois conteneurs (`c1`, `c2`, `c3`), chacun sur sa propre image immutable épinglée par digest.<br/>• Exactement dans deux des trois images est présent un même paquet d'une version concrète - les `TARGET_PACKAGE`/`TARGET_VERSION` indiqués pour votre instance du lab sont définis dynamiquement lors du provisioning, il n'y a pas de valeurs figées.<br/>• Obtenez les trois image references du Deployment live, pour chacune exécutez `bom generate` (enregistrez chaque SBOM séparément dans `/var/work/tests/artifacts/5b/bom/`).<br/>• Déterminez quels deux conteneurs contiennent réellement le même package/version et notez la paire trouvée dans `5b/answer.txt` comme `TARGET_PACKAGE=<name>` et `TARGET_VERSION=<version>`.<br/>• Supprimez PRÉCISÉMENT ces deux conteneurs offending du Deployment (via `kubectl edit`/`kubectl apply` d'un manifest corrigé) de sorte qu'il ne reste que le conteneur « propre », et que le Deployment reste `Available`. |
+| Ce qu'on fait | • Dans le namespace `cks-111` est déjà déployé le Deployment `pkg-audit-app` avec trois conteneurs (`c1`, `c2`, `c3`), chacun sur sa propre image immutable épinglée par digest.<br/>• Un même paquet dans une version précise est présent dans exactement deux des trois images - les `TARGET_PACKAGE`/`TARGET_VERSION` indiqués pour votre instance du lab sont définis dynamiquement lors du provisioning, il n'y a pas de valeurs figées.<br/>• Obtenez les trois image references du Deployment live, pour chacune exécutez `bom generate` (enregistrez chaque SBOM séparément dans `/var/work/tests/artifacts/5b/bom/`).<br/>• Déterminez quels sont les deux conteneurs qui contiennent réellement le même package/version et notez la paire trouvée dans `5b/answer.txt` comme `TARGET_PACKAGE=<name>` et `TARGET_VERSION=<version>`.<br/>• Supprimez PRÉCISÉMENT ces deux conteneurs offending du Deployment (via `kubectl edit`/`kubectl apply` d'un manifest corrigé) de sorte qu'il ne reste que le conteneur « propre », et que le Deployment reste `Available`. |
 | Critères d'acceptation | • **Réponse :** `answer.txt` nomme le package/version réel, présent précisément dans deux des trois images d'origine (et non deviné). Ces deux images ont beaucoup de paquets en commun : toute paire `name=version` qui n'est pas dans la troisième image convient.<br/>• **SBOM :** dans `5b/bom/` il y a au moins une sortie authentique de `bom generate` qui confirme cette trouvaille.<br/>• **Vérification indépendante :** le checker exécute indépendamment `bom generate` pour les candidate images d'origine (enregistrées lors du provisioning) et compare votre réponse avec cette exécution indépendante.<br/>• **Deployment :** le Deployment final contient uniquement le conteneur « propre » et reste `Available`. |
 
 <details>
@@ -271,19 +270,19 @@ La commande est `bom generate --format json --output <file> --image <ref>` pour 
 | **6** | **SPDX SBOM via bom** |
 | :---: | :--- |
 | Ce qu'on fait | • Générez un SPDX JSON SBOM avec l'outil `bom` précisément pour l'`$IMAGE` immuable (le même `tag@digest` que celui utilisé dans la tâche 1, et non le bare tag `nginx:1.27.3-alpine`) ; enregistrez-le dans `/var/work/tests/artifacts/6/bom.spdx.json`.<br/>• Dans le fichier `6/bom-command.txt`, notez la commande exécutée avec le `--image $IMAGE` exact. |
-| Critères d'acceptation | • **SBOM :** JSON valide, a `spdxVersion`, contient le tableau `packages` ; l'un des paquets top-level auxquels se réfère `documentDescribes` identifie LE MÊME manifest digest que `$IMAGE` de la tâche 1 (via `versionInfo`/`name`).<br/>• **Commande :** `bom-command.txt` contient l'`$IMAGE` immuable exacte et utilise `bom generate`.<br/>• Un SBOM d'une autre image (sans rapport avec l'`$IMAGE` de la tâche 1) ne passe pas, même si `bom-command.txt` est falsifié.<br/>• **Vérification fraîche :** le checker régénère en outre lui-même le SBOM avec le même `bom` pour la même image et exige que l'ensemble de paquets (`name`/`versionInfo`) de votre SBOM coïncide avec cette exécution fraîche - un document SPDX minimal écrit à la main avec un seul paquet top-level ne passe pas. |
+| Critères d'acceptation | • **SBOM :** JSON valide, a `spdxVersion`, contient le tableau `packages` ; l'un des paquets top-level auxquels se réfère `documentDescribes` identifie LE MÊME manifest digest que `$IMAGE` de la tâche 1 (via `versionInfo`/`name`).<br/>• **Commande :** `bom-command.txt` contient l'`$IMAGE` immuable exacte et utilise `bom generate`.<br/>• Un SBOM d'une autre image (sans rapport avec l'`$IMAGE` de la tâche 1) ne passe pas, même si `bom-command.txt` est falsifié.<br/>• **Nouvelle vérification :** le checker régénère en outre lui-même le SBOM avec le même `bom` pour la même image et exige que l'ensemble de paquets (`name`/`versionInfo`) de votre SBOM coïncide avec cette exécution fraîche - un document SPDX minimal écrit à la main avec un seul paquet top-level ne passe pas. |
 
 <details>
 <summary>💡 Indice pour la tâche 6</summary>
 
-La commande `bom generate -o <output.json> -i <image>` - obligatoirement avec le flag `-o` pour indiquer le fichier de sortie, sinon la sortie ira sur stdout. Le format de sortie de `bom` est son PROPRE SPDX JSON, qui diffère par ses détails du SPDX que peut générer Syft - ne confondez pas ces deux outils différents lors de la génération d'un même format du standard.
+La commande est `bom generate -o <output.json> -i <image>`, obligatoirement avec le flag `-o` pour indiquer le fichier de sortie, sinon la sortie ira sur stdout. Le format de sortie de `bom` est son PROPRE SPDX JSON, qui diffère par ses détails du SPDX que peut générer Syft - ne confondez pas ces deux outils différents lors de la génération d'un même format du standard.
 </details>
 
 ---
 | **7** | **CycloneDX SBOM via Syft et vérification avec Cosign** |
 | :---: | :--- |
-| Ce qu'on fait | • Générez un CycloneDX JSON SBOM de Syft pour la même `$IMAGE` immuable (`nginx:1.27.3-alpine@sha256:<manifest-digest>`) de la tâche 1 et enregistrez-le dans `7/syft.cdx.json`.<br/>• Vérifiez ensuite la signature de l'image publique `gcr.io/distroless/static-debian13:nonroot` via Cosign keyless et enregistrez la sortie réussie complète dans `7/cosign-verify.txt`.<br/>• Pour Distroless, utilisez l'issuer `https://accounts.google.com` et l'identity `keyless@distroless.iam.gserviceaccount.com`. |
-| Critères d'acceptation | • **Syft SBOM :** `bomFormat: CycloneDX`, `components` non vide, `metadata.component.type == "container"` et `metadata.component.version` égal au manifest digest de la même `$IMAGE` de la tâche 1 - un SBOM d'une autre image (bare tag, alpine, busybox, etc.) ne passe pas.<br/>• **Cosign :** une vraie commande `cosign verify` pour `gcr.io/distroless/static-debian13:nonroot` (le tag actuel pris en charge - `gcr.io/distroless/static:nonroot` sans le suffixe `-debian13` est considéré deprecated d'après le README officiel de Distroless et n'est plus mis à jour) avec l'issuer/identity indiqués se termine avec l'exit code `0`, et la sortie complète est enregistrée dans `7/cosign-verify.txt`.<br/>• **Vérification fraîche :** le checker régénère en outre lui-même le SBOM avec le même Syft pour la même image et exige que l'ensemble de composants (`name`/`version`) de votre SBOM coïncide avec cette exécution fraîche - un document CycloneDX minimal écrit à la main avec un seul composant top-level ne passe pas. |
+| Ce qu'on fait | • Générez avec Syft un CycloneDX JSON SBOM pour la même `$IMAGE` immuable (`nginx:1.27.3-alpine@sha256:<manifest-digest>`) de la tâche 1 et enregistrez-le dans `7/syft.cdx.json`.<br/>• Vérifiez ensuite la signature de l'image publique `gcr.io/distroless/static-debian13:nonroot` via Cosign keyless et enregistrez la sortie réussie complète dans `7/cosign-verify.txt`.<br/>• Pour Distroless, utilisez l'issuer `https://accounts.google.com` et l'identity `keyless@distroless.iam.gserviceaccount.com`. |
+| Critères d'acceptation | • **Syft SBOM :** `bomFormat: CycloneDX`, `components` non vide, `metadata.component.type == "container"` et `metadata.component.version` égal au manifest digest de la même `$IMAGE` de la tâche 1 - un SBOM d'une autre image (bare tag, alpine, busybox, etc.) ne passe pas.<br/>• **Cosign :** une vraie commande `cosign verify` pour `gcr.io/distroless/static-debian13:nonroot` (c'est le tag actuel pris en charge ; `gcr.io/distroless/static:nonroot` sans le suffixe `-debian13` est considéré comme deprecated d'après le README officiel de Distroless et n'est plus mis à jour) avec l'issuer/identity indiqués se termine avec l'exit code `0`, et la sortie complète est enregistrée dans `7/cosign-verify.txt`.<br/>• **Nouvelle vérification :** le checker régénère en outre lui-même le SBOM avec le même Syft pour la même image et exige que l'ensemble de composants (`name`/`version`) de votre SBOM coïncide avec cette exécution fraîche - un document CycloneDX minimal écrit à la main avec un seul composant top-level ne passe pas. |
 
 <details>
 <summary>💡 Indice pour la tâche 7</summary>
@@ -294,8 +293,8 @@ Syft génère CycloneDX via le flag `-o cyclonedx-json` (à ne pas confondre ave
 ---
 | **8** | **`trivy sbom` : scanner un fichier SBOM déjà prêt à la recherche de vulnérabilités** |
 | :---: | :--- |
-| Ce qu'on fait | • Le CycloneDX SBOM de la tâche 7 (`7/syft.cdx.json`) décrit la composition de l'image et son OS, mais ne contient pas par lui-même de conclusions sur les vulnérabilités.<br/>• Scannez précisément ce fichier SBOM (et non l'image directement) avec l'outil `trivy sbom` et enregistrez le JSON structuré dans `/var/work/tests/artifacts/8/sbom-scan.json`.<br/>• La commande doit accepter explicitement le fichier SBOM en entrée, et non rescanner `$IMAGE`. |
-| Critères d'acceptation | • **Fichier :** non vide, le JSON est analysé par `jq`, `ArtifactType` = `cyclonedx`, `Results` non vide et contient les vulnérabilités trouvées.<br/>• **Commande :** `sbom-scan-command.txt` contient la commande `trivy sbom` avec le chemin vers `7/syft.cdx.json`.<br/>• **Vérification fraîche :** le checker répète lui-même `trivy sbom` sur ce fichier. |
+| Ce qu'on fait | • Le CycloneDX SBOM de la tâche 7 (`7/syft.cdx.json`) décrit la composition de l'image et son OS, mais ne contient pas par lui-même de conclusions sur les vulnérabilités.<br/>• Scannez précisément ce fichier SBOM (et non l'image directement) avec l'outil `trivy sbom` et enregistrez le JSON structuré dans `/var/work/tests/artifacts/8/sbom-scan.json`.<br/>• La commande doit accepter explicitement le fichier SBOM en entrée, et non rescanner `$IMAGE` ; enregistrez son texte dans `/var/work/tests/artifacts/8/sbom-scan-command.txt`. |
+| Critères d'acceptation | • **Fichier :** non vide, le JSON est analysable par `jq`, `ArtifactType` = `cyclonedx`, `Results` non vide et contient les vulnérabilités trouvées.<br/>• **Commande :** `sbom-scan-command.txt` contient la commande `trivy sbom` avec le chemin vers `7/syft.cdx.json`.<br/>• **Nouvelle vérification :** le checker répète lui-même `trivy sbom` sur ce fichier. |
 
 <details>
 <summary>💡 Indice pour la tâche 8</summary>
@@ -318,20 +317,20 @@ La commande est `trivy sbom <chemin-vers-le-fichier-sbom>`, et PAS `trivy image 
 ---
 | **9b** | **Fresh signed ALLOW : un Pod nouveau après la création de la policy** |
 | :---: | :--- |
-| Ce qu'on fait | • La policy de la tâche 9a doit admettre le `$HARDENED_IMAGE` signé - mais un nouveau `kubectl apply` d'un Deployment déjà existant **ne démontre pas** cela : si le template n'a pas changé, un nouveau ReplicaSet/Pod peut ne pas être créé, et `Running` s'avérera être simplement un ancien Pod, créé avant la policy.<br/>• Créez un objet **nouveau**, qui n'existait pas auparavant : `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 300`.<br/>• Enregistrez le `creationTimestamp` de ce Pod, le `creationTimestamp` de la policy de 9a, et le `status.phase`/condition `Ready` final dans `9b/signed-admission-check.json`. |
+| Ce qu'on fait | • La policy de la tâche 9a doit admettre le `$HARDENED_IMAGE` signé - mais un nouveau `kubectl apply` d'un Deployment déjà existant **ne démontre pas** cela : si le template n'a pas changé, un nouveau ReplicaSet/Pod peut ne pas être créé, et `Running` s'avérera être simplement un ancien Pod, créé avant la policy.<br/>• Créez un objet **nouveau**, qui n'existait pas auparavant : `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`.<br/>• Enregistrez le `creationTimestamp` de ce Pod, le `creationTimestamp` de la policy de 9a, et le `status.phase`/condition `Ready` final dans `9b/signed-admission-check.json`. |
 | Critères d'acceptation | • **Pod :** `signed-admission-check` existe, utilise précisément `$HARDENED_IMAGE` ; pour lui, `cosign verify --key cosign.pub "$HARDENED_IMAGE"` s'exécute avec succès, `status.phase` n'est pas `Failed`, et la condition `Ready` atteint `True`.<br/>• **Artefact :** `9b/signed-admission-check.json` contient cette image et le `creationTimestamp` du Pod **postérieur** au `creationTimestamp` de l'`ImageValidatingPolicy require-signed-catalog-images`.<br/>• Cela démontre le fresh post-policy admission précisément d'une image vérifiablement signée, et non d'un ancien Pod qui a survécu à la policy. |
 
 <details>
 <summary>💡 Indice pour la tâche 9b</summary>
 
-Ne réutilisez pas le Deployment `catalog` de la tâche 4 pour cette vérification - utilisez littéralement un nouveau `kubectl run` avec un nouveau nom de Pod, comme indiqué dans la tâche. Les deux timestamp (du Pod et de la policy) sont des chaînes ISO8601 en UTC, on peut les comparer lexicographiquement comme des chaînes ordinaires (`"2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z"` en bash fonctionne correctement pour ce format).
+Ne réutilisez pas le Deployment `catalog` de la tâche 4 pour cette vérification - utilisez littéralement un nouveau `kubectl run` avec un nouveau nom de Pod, comme indiqué dans la tâche. Les deux timestamps (du Pod et de la policy) sont des chaînes ISO8601 en UTC, on peut les comparer lexicographiquement comme des chaînes ordinaires (`"2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z"` en bash fonctionne correctement pour ce format).
 </details>
 
 ---
 | **9c** | **Signature-specific DENY : un digest unsigned qui existe réellement dans le même repository** |
 | :---: | :--- |
 | Ce qu'on fait | • Construisez et publiez un **second** tag dans le même repository que `$HARDENED_IMAGE` (par exemple, `${HARDENED_TAG%:*}:unsigned-1.0`), sans le signer.<br/>• Cette image doit être un **artifact physiquement différent**, et non le même digest que le `$HARDENED_IMAGE` déjà signé : si vous construisez le même `Dockerfile`/context sans changement, un reproducible/cached build peut donner un digest identique, et alors le tag « unsigned » pointera en fait vers un artifact déjà signé, et `cosign verify` passera de façon inattendue.<br/>• Introduisez une différence contrôlée via un build-arg (par exemple `--build-arg CKS_SIGNATURE_TEST=unsigned-1` avec le `ARG`/`LABEL` correspondant dans le Dockerfile) et enregistrez explicitement la preuve `$UNSIGNED_DIGEST != $HARDENED_DIGEST` dans `9c/digest-comparison.txt`.<br/>• Obtenez le registry manifest digest de la même façon que dans la tâche 3 (`podman push --digestfile`), constituez `$UNSIGNED_IMAGE` dans le même repository.<br/>• Démontrez explicitement que ce digest **existe et est pullable** (une requête `GET /v2/catalog/manifests/<digest>` au registry réussit) et **n'a pas** de signature valide avec votre clé (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` se termine par une erreur) - enregistrez les deux sorties dans `9c/unsigned-exists.txt` et `9c/unsigned-not-signed.txt`.<br/>• Créez ensuite un Pod `catalog-unsigned-probe` avec cette `$UNSIGNED_IMAGE` et enregistrez l'admission denial dans `9c/admission-deny.txt`. |
-| Critères d'acceptation | • **Artefact :** `9c/digest-comparison.txt` contient `hardened_digest=`, `unsigned_digest=` et `unsigned_image=` (une référence `tag@digest` complète dans le même repository que `$HARDENED_IMAGE`, avec un digest réellement différent).<br/>• **Vérification du checker :** il résout lui-même `unsigned_image` dans le registry, confirme l'absence de signature valide via son propre `cosign verify`, crée SON nouveau Pod avec cette image et exige le validation message unique de sa propre policy : `catalog image must have a valid release signature`.<br/>• Une erreur générique d'admission/signature d'une autre policy ne compte pas comme PASS, ni n'importe quelle erreur d'admission (`manifest unknown`/registry lookup ne suffisent pas).<br/>• Les fichiers d'evidence écrits à la main sans véritable admission control ne donnent pas PASS - le checker ne fait confiance à aucun fichier texte, sauf `unsigned_image=` comme indicateur de l'image réelle à vérifier. |
+| Critères d'acceptation | • **Artefact :** `9c/digest-comparison.txt` contient `hardened_digest=`, `unsigned_digest=` et `unsigned_image=` (une référence `tag@digest` complète dans le même repository que `$HARDENED_IMAGE`, avec un digest réellement différent).<br/>• **Vérification du checker :** il résout lui-même `unsigned_image` dans le registry, confirme l'absence de signature valide via son propre `cosign verify`, crée SON nouveau Pod avec cette image et exige le validation message unique de sa propre policy : `catalog image must have a valid release signature`.<br/>• Seul ce message est accepté, et non n'importe quelle erreur d'admission : une erreur générique d'admission/signature d'une autre policy ne donne pas PASS, et `manifest unknown`/les erreurs de registry lookup ne suffisent pas non plus.<br/>• Les fichiers d'evidence écrits à la main sans véritable admission control ne donnent pas PASS - le checker ne fait confiance à aucun fichier texte, sauf `unsigned_image=` comme indicateur de l'image réelle à vérifier. |
 
 <details>
 <summary>💡 Indice pour la tâche 9c</summary>

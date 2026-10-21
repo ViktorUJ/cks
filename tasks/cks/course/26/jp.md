@@ -95,7 +95,7 @@ spec:
       operations: ["CREATE", "UPDATE"]
       resources: ["pods", "pods/ephemeralcontainers"]
   validations:
-  - message: "Only container images registry.example.com/platform/ are allowed; image volumes are forbidden."
+  - message: "registry.example.com/platform/ 配下の container images のみ許可します。image volumes は禁止です。"
     expression: >-
       object.spec.containers.all(c, c.image.startsWith("registry.example.com/platform/")) &&
       (!has(object.spec.initContainers) || object.spec.initContainers.all(c,
@@ -197,11 +197,11 @@ spec:
       object.spec.?initContainers.orValue([]) +
       object.spec.?ephemeralContainers.orValue([])
   validations:
-  - message: "Only images from registry.example.com/platform/ are allowed."
+  - message: "registry.example.com/platform/ 配下の images のみ許可します。"
     expression: >-
       variables.allContainers.all(container,
         container.image.startsWith("registry.example.com/platform/"))
-  - message: "Image volumes are forbidden until a verified verifier exists for them."
+  - message: "検証済みの verifier が利用可能になるまで、image volumes は禁止します。"
     expression: >-
       !has(object.spec.volumes) || !object.spec.volumes.exists(volume, has(volume.image))
 ```

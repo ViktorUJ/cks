@@ -875,7 +875,7 @@ SUBJECT='system:serviceaccount:team-a:ci'
 kubectl auth can-i get configmap/team-a-replica-limit   -n policy-system --as="$SUBJECT"
 ```
 
-> 🔬 **Deep Dive — Manifest-Based Admission Control。** 在 training baseline Kubernetes v1.36 中，這項功能為 Alpha 且預設關閉。在 upstream Kubernetes v1.37 中，它已進入 Beta 且預設啟用。本章主要 workflow 仍以 v1.36 為準；production-current delta 請見 [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_TW.md)。
+> 🔬 **Deep Dive — Manifest-Based Admission Control。** 在 training baseline Kubernetes v1.36 中，這項功能為 Alpha 且預設關閉。在 upstream Kubernetes v1.37 中，它已進入 Beta 且預設啟用。本章主要 workflow 仍以 v1.36 為準；production-current delta 請見 [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
 >
 > 在 v1.36 中啟用 feature gate `ManifestBasedAdmissionControlConfig`；此功能從 API server 磁碟載入 webhook 與 CEL policy manifests。透過 `--admission-control-config-file` 傳遞含有所需 admission plugin 專屬絕對 `staticManifestsDir` 的 `AdmissionConfiguration`。這類 policies 在啟動時生效，獨立於 etcd，並可保護 API-based admission configuration 免於被刪除或變更。這是 experimental control-plane 功能：v1.36 的每一個 static admission object 之 `metadata.name` 都必須以 `.static.k8s.io` 結尾；首次載入時 invalid static manifest 可使 API server 無法 ready。Static manifests 僅限支援的 admission resources；policies 不能使用 `paramKind`，且 `ValidatingAdmissionPolicyBinding` 與 `MutatingAdmissionPolicyBinding` 禁止 `spec.paramRef`。Static webhook 可使用 `clientConfig.url`，但不可使用 `clientConfig.service`。每個 HA API server 都必須取得相同 files；未測試 startup/reload 並建立受控 configuration delivery 前，請勿導入此功能。
 

@@ -53,8 +53,8 @@ exit   # de root
 exit   # du nœud gVisor
 ```
 
-Il n'est pas nécessaire de redémarrer le kubelet : `RuntimeClass` appelle le runtime handler de containerd par
-nom à chaque création de Pod, et non au démarrage du kubelet.
+Il n'est pas nécessaire de redémarrer le kubelet : le kubelet transmet à containerd le nom du handler issu de `RuntimeClass` à
+chaque création de Pod, et non au démarrage du kubelet.
 
 ```yaml
 # runtimeclass-gvisor.yaml
@@ -84,7 +84,7 @@ printf 'RuntimeClass gvisor: handler runsc\n' \
 control-plane, où un tel handler n'existe pas. Le nœud gVisor est en outre marqué du taint
 `sandbox.runtime/gvisor=true:NoSchedule` (`kubectl describe node <nœud-gvisor> | grep Taints`) :
 aucun Pod n'y arrivera, sauf ceux qui le tolèrent. Les `scheduling.tolerations` du RuntimeClass
-sont automatiquement ajoutés à tous les Pod avec cette classe, c'est pourquoi `gvisor-sandbox` y arrive,
+sont automatiquement ajoutés à tous les Pods avec cette classe, c'est pourquoi `gvisor-sandbox` y arrive,
 et pas les autres.
 
 ## 2. Lancer un Pod sandboxed et un Service
@@ -94,7 +94,7 @@ l'expérience inter-nœuds de WireGuard. `runtimeClassName` est appliqué au Pod
 
 `nodeSelector` et `tolerations` dans le Pod sont indiqués explicitement : on voit ainsi sur quel nœud il arrive et pourquoi.
 C'est la même chose que ce qui est décrit dans le `scheduling` du `RuntimeClass` lui-même. Si on ne les indique pas dans le Pod,
-rien ne sera cassé : lors de la création d'un Pod avec `runtimeClassName`, Kubernetes **ajoute** lui-même dedans
+rien ne sera cassé : lors de la création d'un Pod avec `runtimeClassName`, Kubernetes y **ajoute** lui-même
 le `nodeSelector` et les `tolerations` de `RuntimeClass.scheduling` (vérification : `kubectl -n sandbox-110 get
 pod gvisor-sandbox -o jsonpath='{.spec.nodeSelector}'`). Mais alors, dans le manifest, cela ne se voit pas, et sans
 `scheduling` dans le RuntimeClass, le Pod pourrait arriver sur un nœud sans `runsc` et ne pas démarrer.
@@ -159,8 +159,9 @@ cat /var/work/tests/artifacts/2/gvisor-kernel.txt
 kubectl get pod -n sandbox-110 gvisor-sandbox -o wide
 ```
 
-gVisor Sentry montre au workload un kernel view synthétique ; `dmesg` peut être
-limité. C'est attendu et ce n'est pas une raison de donner au conteneur des privileges superflus.
+gVisor Sentry montre au workload un kernel view synthétique ; `dmesg` n'affiche pas le log du noyau
+du nœud, mais un bref log synthétique commençant par la ligne `Starting gVisor...` (c'est elle qu'attend
+le checker). C'est attendu et ce n'est pas une raison de donner au conteneur des privileges superflus.
 
 ## 3. Un Pod runc ordinaire pour comparer
 
@@ -225,7 +226,7 @@ cat /var/work/tests/artifacts/4/tool-versions.txt
 ```
 
 Le cluster a été déployé avec la commande `cilium install`, qui installe Cilium **via Helm**.
-La source of truth durable — les Helm values du release `cilium` ; nous utilisons un upgrade avec le Cilium CLI figé puis nous vérifions le ConfigMap live et les agents :
+La source of truth durable, ce sont les Helm values du release `cilium` ; nous utilisons un upgrade avec le Cilium CLI figé puis nous vérifions le ConfigMap live et les agents :
 
 ```bash
 cilium upgrade --version 1.20.1 \
@@ -277,7 +278,7 @@ echo "remote_ip=$remote_ip"
 ```
 
 ```bash
-# terminal 1 : entrer sur le control-plane et trouver l'interface physique vers remote_ip
+# terminal 1 : se connecter au control-plane et trouver l'interface physique vers remote_ip
 ssh k8s110_controlPlane_1
 sudo -i
 ```
@@ -345,7 +346,7 @@ exit   # du control-plane
 ```
 
 ```bash
-# terminal 2 : récupérer le capture pour la vérification
+# terminal 2 : récupérer la capture pour la vérification
 scp k8s110_controlPlane_1:/tmp/wireguard-tcpdump.txt /var/work/tests/artifacts/5/wireguard-tcpdump.txt
 ```
 
@@ -357,7 +358,7 @@ absence (WireGuard activé) avec UN MÊME capture scope.
 
 Nous n'installons que l'Istio control plane en minimal profile. Le namespace a été préparé avec
 `istio-injection=enabled`, donc les workloads dans `market` reçoivent un Envoy sidecar à leur
-création. `market-api` se trouve sur le gVisor worker, le client - sur le control-plane, ce qui
+création. `market-api` se trouve sur le gVisor worker, le client, sur le control-plane, ce qui
 rend aussi la requête inter-nœuds.
 
 ```bash

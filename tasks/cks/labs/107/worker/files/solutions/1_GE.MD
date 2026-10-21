@@ -1,9 +1,9 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
 
-# Lab 107 - ეტალონური ამოხსნა: Pod Security Admission და immutable root filesystem
+# Lab 107 - ეტალონური ამოხსნა: Pod Security Admission და read-only root filesystem
 
 > შეასრულეთ ბრძანებები სამუშაო მანქანაზე. კონტექსტი `cluster1-admin@cluster1` უკვე
-> გამართულია. Namespace `psa-restricted-107` და `psa-observe-107` შექმნილია საწყისი
+> გამართულია. Namespace `psa-restricted-107`, `psa-observe-107` და `psa-controller-107` შექმნილია საწყისი
 > სკრიპტით, მაგრამ განზრახ PSA labels არ აქვთ.
 
 ## 1. Enforce restricted და უარყოფის შემოწმება
@@ -160,7 +160,7 @@ kubectl get namespace psa-observe-107 --show-labels
 PSA `restricted` უკვე მოითხოვს `allowPrivilegeEscalation: false`-ს და `capabilities.drop`-ს,
 რომელიც შეიცავს `ALL`-ს - დავალება 2 სწორედ ამას აჩვენებს, და ეს Pod Security
 Standard-ის ჩაშენებული ნაწილია, და არა ხარვეზი. მაგრამ PSS `restricted` `automountServiceAccountToken`-ს **არ ამოწმებს**:
-Pod-მა შეიძლება მშვიდად მიიღოს მიმაგრებული ServiceAccount token და PSA სრულად გაიაროს. ამ
+Pod-მა შეიძლება ჩუმად მიიღოს მიმაგრებული ServiceAccount token და PSA სრულად გაიაროს. ამ
 ცალკე, რეალურად დაუფარავი control-ისთვის სწორედ custom `ValidatingAdmissionPolicy` არის მისაღები.
 
 ```yaml
@@ -206,7 +206,7 @@ kubectl get validatingadmissionpolicy,validatingadmissionpolicybinding
 `true` უნდა მიიღოს DENY იმავე წყვილისგან. პირველი Pod
 სრულად შეესაბამება PSA `restricted`-ს (non-root, seccomp, `allowPrivilegeEscalation:
 false`, `capabilities.drop: ["ALL"]`) - PSA თავად მიიღებდა მას, ამიტომ უარყოფა
-სწორედ ახალი policy-გან უნდა მოვიდეს, და არა `violates PodSecurity`-გან:
+სწორედ ახალი policy-სგან უნდა მოვიდეს, და არა `violates PodSecurity`-ისგან:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'YAML'
@@ -267,7 +267,7 @@ spec:
 YAML
 ```
 
-აშკარა მნიშვნელობა `true`-ც უნდა უარყოფილ იქნას იმავე policy-ისა და binding-ის მიერ:
+ცხადი მნიშვნელობა `true`-ც უნდა უარყოფილ იქნეს იმავე policy-ისა და binding-ის მიერ:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'YAML'
@@ -305,14 +305,14 @@ Pod-ები სხვა namespace-ებში (მაგალითად `
 
 ## 7. Controller-driven admission denial
 
-ჯერ მარტივი, hardened-ის გარეშე Deployment - PSA ჯერ enforce არ არის, ყველაფერი გადის:
+ჯერ მარტივი, hardening-ის გარეშე Deployment - PSA ჯერ enforce არ არის, ყველაფერი გადის:
 
 ```bash
 kubectl -n psa-controller-107 create deployment controller-app --image=busybox:1.36 -- sh -c "sleep 3600"
 kubectl -n psa-controller-107 rollout status deployment/controller-app
 ```
 
-ვრთავთ enforce-ს - არსებულ Pod-ს არ ვეხებით:
+ვრთავთ enforce-ს - არსებულ Pod-ს არაფერი ემართება:
 
 ```bash
 kubectl label namespace psa-controller-107 \

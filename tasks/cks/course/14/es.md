@@ -800,7 +800,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 - **Kubernetes v1.37 rootless node path.** `KubeletInUserNamespace` pasó a Beta y permite crear
   un node stack en el que kubelet y componentes de nodo relacionados se ejecutan sin host-root
   mediante un user namespace. No lo confunda con `spec.hostUsers: false`, que aísla un Pod. Véase
-  [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_ES.md).
+  [Kubernetes v1.37 Security Delta (solo en ruso)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 - **Los baselines se definen como código.** La lista de paquetes, enabled services, systemd
   drop-ins, firewall y comprobación de socket se incluyen en immutable image, Ansible/Cloud-Init u
   otro IaC. Una corrección manual de emergencia se lleva después al source of truth.

@@ -1,6 +1,6 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD)
 
-# Lab 104 - 参考解答: RBAC、ServiceAccount token、匿名 API
+# Lab 104 - 参考解答：RBAC、ServiceAccount token、匿名 API
 
 > 手順に特に記載がない限り、コマンドは作業マシンから実行します。Namespace
 > `security-104` はすでに存在します。
@@ -25,10 +25,10 @@ k auth can-i delete secrets -n security-104 \
   --as=system:serviceaccount:security-104:auditor # no になるはず
 ```
 
-## 2. ServiceAccount の Projected token
+## 2. ServiceAccount の projected token
 
 TokenRequest volume は短命の token を発行します；通常の automount は無効にします。
-`audience: kubernetes.default.svc` は固定しません：kubeadm では、これが API server に受け入れられる
+`audience: kubernetes.default.svc` はハードコードしません：kubeadm では、これが API server に受け入れられる
 値であるとは限りません。`audience` を省略すると、kubelet は API server の
 デフォルトの identifier を使用します。別の audience を指定してよいのは、control-plane で
 `--api-audiences` (または `--service-account-issuer` のデフォルト) を確認した後だけです。
@@ -151,7 +151,7 @@ echo "exit code: $?"
 `type: kubernetes.io/service-account-token` の legacy `Secret` を別途マウントすることもしないでください -
 automount が無効でも、そのような Secret は `volumes[].secret` を通じて手動でマウントできてしまい、
 その場合 Pod は automount フィールドの上では形式的に「token なし」ですが、実際には
-コンテナ内に有効な API-token を持つことになります。
+コンテナ内に有効な API token を持つことになります。
 
 ## 4. wildcard 権限の削除
 
@@ -319,7 +319,7 @@ RoleBinding はそれ自身の namespace でのみ有効だからです：cluste
 
 最後に `check_result` を実行します。
 
-## 6. env 経由の Secret の `/proc/1/environ` への漏洩: volume への移行
+## 6. env 経由の Secret の `/proc/1/environ` への漏洩：volume への移行
 
 `app-vulnerable` は `envFrom` を通じて `db-creds` を受け取るため、値はコンテナの PID 1 プロセスの
 environment に入ります。この Pod への `kubectl exec` 権限を持つ人なら誰でも、Kubernetes API にアクセスすることなく、
@@ -500,7 +500,7 @@ k -n security-104-baseline get sa default \
 これは、開発者が単に SA のことを考えない、現実で最もよくあるケースです。フィールド
 `automountServiceAccountToken` は Pod の spec に存在してはいけません - 明示的に `false` を指定すると、
 namespace レベルの baseline が実際に機能していることではなく、Pod 自体の個別の設定
-(課題 3 のような) を実証するだけになってしまいます：
+(課題 3 のような) を実証するだけになってしまいます。
 
 ここでは `--dry-run` すら不要です - Pod に SA/automount に関するフィールドを一切追加しないので、
 フラグなしの `kubectl run` が、必要なものをそのまま直接作成します：
@@ -529,11 +529,11 @@ API アクセスを持つ Pod が必要になった場合は、本当にアク�
 その特定の manifest に `automountServiceAccountToken: true` を明示的に追加してください - namespace 全体の baseline である
 `default` SA を `true` に戻さないでください。また、`volumes[].secret` を通じて
 `type: kubernetes.io/service-account-token` の古い (legacy の) `Secret` を手動でマウントしないでください -
-それは automount の設定に関係なく、Pod に有効な API-token を与えてしまいます。
+それは automount の設定に関係なく、Pod に有効な API token を与えてしまいます。
 
 最後に `check_result` を実行します。
 
-## 9. 統合課題: 危険な RBAC の変更の検出 → audit log → containment
+## 9. 統合課題：危険な RBAC の変更の検出 → audit log → containment
 
 課題 1-8 では、`build-agent` 自身が利用できる特定の権限昇格経路 (wildcard、impersonate/bind/escalate、
 automount) を塞ぎました。ここで必要なのは別の防御レイヤーです -
@@ -562,7 +562,7 @@ EOF
 RBAC のルールが先頭にあります - より具体的なルールは一般的な
 catch-all より前に置く必要があり、そうでないと `Metadata` がイベントを先に捕捉します。policy 全体のレベルの `omitStages: [RequestReceived]`
 は、リクエストの処理前の余分なレコードを取り除きます - それには
-`requestObject`/`responseStatus` がなく、checker はどのみちそれをフィルターで除外します (`stage ==
+`requestObject`/`responseStatus` がなく、checker はそのようなレコードをどのみち除外します (`stage ==
 "ResponseComplete"`)。また、クラスターの他のすべてのリクエストに対する catch-all の `Metadata` ルールがあると、
 このステージは audit.log の量を無駄に 2 倍にしてしまいます。
 
@@ -596,7 +596,7 @@ exit
 ```
 
 `systemctl restart kubelet` は static Pod の即時の再構築を強制します - 課題 5 と同様に、
-待つ必要はありません：
+kubelet がファイルの変更に自分で気づくのを待つより速い方法です：
 
 ```bash
 k get po -n kube-system -l component=kube-apiserver

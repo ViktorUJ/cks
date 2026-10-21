@@ -19,7 +19,7 @@ echo $IMAGE
 ## 0. მომზადება: podman და registry
 
 image-ების აწყობისა და გამოქვეყნებისთვის გამოიყენება `podman` (ის გამოცდის ინსტრუმენტების სიაშია;
-rootless, მუშაობს `ubuntu`-დან). Registry უკვე აამაღლა bootstrap-მა: ეს `registry:2` control-plane-ზე
+rootless, მუშაობს მომხმარებელ `ubuntu`-ს სახელით). Registry უკვე გაუშვა bootstrap-მა: ეს `registry:2` control-plane-ზე
 (`<node-ის IP>:5000`, plain HTTP VPC-ის შიგნით, მონაცემები node-ის ლოკალურ PV-ზე). Podman worker-ზე მასზე გამართულია
 როგორც insecure registry-ზე (`/etc/containers/registries.conf.d/cks111.conf`), containerd
 node-ზე - ასევე, ამიტომ ფლაგი `--tls-verify=false` საჭირო არ არის. ლაბის image-ები წინასწარ ჩამოტვირთულია ლოკალურ
@@ -44,7 +44,7 @@ manifest-ის არსებობას ვამოწმებთ მო�
 ქსელების მისამართებისთვის; Kyverno-სთვის policy-ში ეთითება `credentials.allowInsecureRegistry: true`. `bom` კითხულობს
 image-ებს მხოლოდ registry-იდან, ამიტომ ისევ მიმართავს Docker Hub-ს; თუ `TOOMANYREQUESTS`-ს დაინახავთ, დაელოდეთ ან შეასრულეთ `podman login docker.io` თქვენი ანგარიშით.
 
-## 1. Trivy report
+## 1. Trivy-ის ანგარიში
 
 ```bash
 mkdir -p "$ART/1"
@@ -83,7 +83,7 @@ cat $ART/1b/answer.txt
 # OFFENDING_IMAGE=python:3.9-slim@sha256:...
 ```
 
-## 1c. Workload image triage by CRITICAL severity
+## 1c. Workload image-ების გარჩევა CRITICAL დონის მიხედვით
 
 image-ებს ვიღებთ LIVE Deployments-იდან და თითოეულს ვასკანერებთ; უნიკალური CRITICAL-ების რაოდენობა გამოდის
 Deployment-ის სახელის გვერდით:
@@ -136,7 +136,7 @@ jq '{summary: .Summary, findings: (.Reports | length)}' $ART/2/kube-linter-befor
 
 ## 3. Dockerfile-ის შესწორება
 
-Secret-ს image layer-ში ნუ დაამატებთ და floating tag-ს ნუ გამოიყენებთ: გამოიყენეთ `$IMAGE`, რომელშიც tag შევსებულია manifest digest-ით. `USER 101` მომავალი hardened image-ის თვისებაა.
+Secret-ს image layer-ში ნუ დაამატებთ და floating tag-ს ნუ გამოიყენებთ: გამოიყენეთ `$IMAGE`, რომელშიც tag-ს დამატებული აქვს manifest digest. `USER 101` მომავალი hardened image-ის თვისებაა.
 
 ```bash
 cat > "$ROOT/Dockerfile" <<EOF
@@ -153,7 +153,7 @@ hadolint "$ROOT/Dockerfile" > "$ART/3/hadolint-after.txt"
 grep -nE '^(FROM|COPY|USER)' "$ROOT/Dockerfile"
 ```
 
-`ARG CKS_SIGNATURE_TEST`/`LABEL cks.signature-test` არ ცვლის აქ შემოწმებული არც ერთ
+`ARG CKS_SIGNATURE_TEST`/`LABEL cks.signature-test` არ ცვლის არც ერთ აქ შემოწმებულ
 security-თვისებას (base image, non-root, secret-ის არარსებობა) - ეს კონტროლირებადი
 განსხვავების ერთადერთი წერტილია, რომელიც დავალება 9c-ში სხვა manifest digest-ს
 გარანტირებულად იძლევა Dockerfile-ის დანარჩენის გადახედვის გარეშე.
@@ -315,7 +315,7 @@ Syft ახერხებს როგორც SPDX-ს, ისე CycloneDX-�
 
 ```bash
 mkdir -p "$ART/7"
-# მითითებისთვის ფორმით tag@digest Syft metadata.component.version-ში წერს მხოლოდ tag-ს; მითითება
+# tag@digest ფორმის მითითებისთვის Syft metadata.component.version-ში წერს მხოლოდ tag-ს; მითითება
 # tag-ის გარეშე ("nginx@sha256:...") იძლევა version = manifest digest-ს, რომელიც სწორედ მოწმდება.
 syft "nginx@${IMAGE#*@}" -o "cyclonedx-json=$ART/7/syft.cdx.json"
 ```
@@ -345,7 +345,7 @@ jq '.bomFormat, (.components | length)' $ART/7/syft.cdx.json
 ## 8. `trivy sbom`: მზა SBOM-ფაილის სკანირება
 
 CycloneDX SBOM დავალება 7-დან აღწერს კომპონენტებისა და image-ის OS-ის შემადგენლობას, მაგრამ მოწყვლადობების შესახებ
-დასკვნას არ შეიცავს; `trivy sbom` ასეთ ფაილს პირდაპირ იღებს შესასვლელად, registry-ს თავად image-ისთვის
+დასკვნას არ შეიცავს; `trivy sbom` ასეთ ფაილს პირდაპირ იღებს შემავალ მონაცემად, registry-ს თავად image-ისთვის
 ხელახლა მიმართვის გარეშე.
 
 ```bash
@@ -380,7 +380,7 @@ Docker build context დავალება 9c-ში (Dockerfile-ში `COPY
 build context-ის მთელ შიგთავსს), ამიტომ `cosign.key`, `$ROOT`-ის შიგნით დარჩენილი, მოხვდება
 გამოქვეყნებული image-ის filesystem-ში private signing key-ის registry-ში გაჟონვის სახით. ხელი მოაწერეთ
 სწორედ `$HARDENED_IMAGE`-ს დავალება 3/4-დან, და არა upstream `nginx`-ს. ეს
-`cosign.key` production CI-ში ნუ გადაიტანთ.
+`cosign.key`-ს production CI-ში ნუ გადაიტანთ.
 
 ```bash
 export KEYDIR=/home/ubuntu/.cks111-cosign
@@ -393,7 +393,7 @@ cosign verify --key $KEYDIR/cosign.pub $HARDENED_IMAGE > $ART/9a/cosign-verify.t
 cat $ART/9a/cosign-verify.txt | head -3
 ```
 
-შექმენით `ImageValidatingPolicy`, რომელიც მიუთითებს public key-ზე, რომლითაც ახლახან
+შექმენით `ImageValidatingPolicy`, რომელიც მიუთითებს იმ წყვილის public key-ზე, რომლის private key-თაც ახლახან
 ხელმოწერილია `$HARDENED_IMAGE`. `matchImageReferences` ზღუდავს policy-ს ზუსტად თქვენი image-ის
 repository-ით: OCI references-ისთვის საჭიროა ცალკე გამყოფები `:` (tag) და `@` (digest),
 წინააღმდეგ შემთხვევაში პრეფიქსი `${HARDENED_REPO}*` დაიჭერს, მაგალითად, სხვა repository-ს იმავე
@@ -506,7 +506,7 @@ cat "$ART/9c/digest-comparison.txt"
 `$ROOT/Dockerfile` დავალება 3-იდან უნდა იღებდეს ამ build-arg-ს (მაგალითად,
 `ARG CKS_SIGNATURE_TEST=signed` და `LABEL cks.signature-test=$CKS_SIGNATURE_TEST` არსებული
 ინსტრუქციების გვერდით) - მაშინ აწყობილი image `$HARDENED_IMAGE`-სგან ზუსტად
-ერთი უსაფრთხო მარკით განსხვავდება, დავალებებში 3-4 შემოწმებულ security-თვისებებს ხელს არ ახლებს.
+ერთი უსაფრთხო label-ით (`LABEL`) განსხვავდება და დავალებებში 3-4 შემოწმებულ security-თვისებებს ხელს არ ახლებს.
 
 აშკარად ვამტკიცებთ, რომ ეს digest არსებობს და pullable-ია, policy-ის შემოწმებამდე -
 წინააღმდეგ შემთხვევაში denial არაფერს დაამტკიცებს. ეს თქვენთვის self-check evidence-ია: checker დავალება 9c-სთვის

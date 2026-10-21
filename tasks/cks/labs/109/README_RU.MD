@@ -97,7 +97,7 @@ check_result
 | **2** | **Создать EncryptionConfiguration для Secret** |
 | :---: | :--- |
 | Что делаем | • На control-plane создайте `/etc/kubernetes/enc/encryption-config.yaml`, owner `root:root`, mode `0600`<br/>• Формат: `apiserver.config.k8s.io/v1`, `EncryptionConfiguration`<br/>• Для `secrets` первым provider задайте `aescbc` с именованным base64-ключом из **32 случайных bytes**, затем `identity: {}` |
-| Критерии приёмки | • Файл `root:root` mode `0600` в каталоге `root:root` mode `0700`<br/>• Основной действующий provider для `secrets` — **первый** `aescbc` с корректным named base64 key из 32 bytes<br/>• `identity` допустим только последним временным fallback для legacy plaintext<br/>• Symlink на файл/каталог запрещён |
+| Критерии приёмки | • Файл `root:root` mode `0600` в каталоге `root:root` mode `0700`<br/>• Основной действующий provider для `secrets` - **первый** `aescbc` с корректным named base64 key из 32 bytes<br/>• `identity` допустим только последним временным fallback для legacy plaintext<br/>• Symlink на файл/каталог запрещён |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -120,7 +120,7 @@ check_result
 ---
 | **4** | **Re-encrypt и доказать ciphertext** |
 | :---: | :--- |
-| Что делаем | • После готовности API server создайте в `encryption-109` Secret `encrypted-secret` с literal `token=cks-109-fresh-ciphertext`<br/>• Перепишите все ранее существующие Secret через API (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`)<br/>• Проверьте оба Secret через API и raw etcd<br/>• Только после этой проверки удалите временный `identity` fallback, перезапустите static kube-apiserver и снова проверьте `/readyz` и чтение обоих Secret |
+| Что делаем | • После готовности API server создайте в `encryption-109` Secret `encrypted-secret` с literal `token=cks-109-fresh-ciphertext`<br/>• Перепишите все ранее существующие Secret через API (`kubectl get secrets --all-namespaces -o json \| kubectl replace -f -`)<br/>• Проверьте оба Secret через API и raw etcd<br/>• Только после этой проверки удалите временный `identity` fallback, перезапустите static kube-apiserver и снова проверьте `/readyz` и чтение обоих Secret |
 | Критерии приёмки | • `legacy-secret` и `encrypted-secret` читаются через API с исходными значениями<br/>• Raw value каждого начинается с `k8s:enc:aescbc:v1:`<br/>• Legacy marker больше не виден в raw etcd<br/>• Исходные payload/UID всего bootstrap Secret corpus сохранены, все записи зашифрованы первым действующим ключом<br/>• Ключ из финального файла способен расшифровать ciphertext обоих canary Secret<br/>• В финальной конфигурации отсутствует `identity`, API healthy |
 
 <details>

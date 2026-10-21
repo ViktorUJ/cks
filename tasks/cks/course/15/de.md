@@ -634,7 +634,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
   Monitoring, Suchen nach world-writable Pfaden und die Kontrolle offener Ports laufen regelmäßig,
   nicht nur vor einem Audit.
 - Bewerten Sie für Kubernetes v1.37 die rootless Node-Architektur (`KubeletInUserNamespace`) separat als zusätzliche
-  Least-Privilege-Grenze; sie ist nicht dasselbe wie Pod User Namespaces. Siehe [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_DE.md).
+  Least-Privilege-Grenze; sie ist nicht dasselbe wie Pod User Namespaces. Siehe [Kubernetes v1.37 Security Delta (nur auf Russisch)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 15.8. Mini-Glossar
 

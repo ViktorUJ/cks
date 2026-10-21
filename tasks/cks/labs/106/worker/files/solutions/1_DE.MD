@@ -5,7 +5,7 @@
 > Kubernetes-Befehle (`kubectl`) führst du auf der Arbeitsmaschine (`worker`) aus. Alles, was den
 > Node selbst betrifft (AppArmor, kubelet, `crictl`), machst du **direkt auf dem Node**: Melde dich einmal per `ssh` an
 > und werde root (`sudo -i`) - das ist schneller, als jeden Befehl mit einem separaten
-> `ssh control-plane '...'` zu senden, und genau so sollte man in der Prüfung arbeiten. Der Namespace
+> `ssh control-plane '...'` zu senden, und genau so sollte man in der CKS-Prüfung arbeiten. Der Namespace
 > `security-106` wird in Aufgabe 3 erstellt.
 >
 > ```bash
@@ -17,7 +17,7 @@
 > ```
 >
 > Die Prüfung liest die artifacts von der **Arbeitsmaschine** (`/var/work/tests/artifacts/<Nummer>/`), sie
-> werden nur für die Lab gebraucht - in der Prüfung gibt es sie nicht. Wir speichern sie mit einem kurzen Befehl vom `worker`
+> werden nur für die Lab gebraucht - in der CKS-Prüfung gibt es sie nicht. Wir speichern sie mit einem kurzen Befehl vom `worker`
 > (`> Datei`), den Inhalt sehen wir separat über `cat <Datei>`.
 
 ## 1. Übertragung und Laden des AppArmor profile
@@ -60,7 +60,7 @@ exit
 
 Verwende `aa-enforce`/`aa-complain` und andere in Python geschriebene Werkzeuge zum Ändern von Profilen aus dem
 Paket `apparmor-utils` für DIESES Profil nicht, bevor Aufgabe 9 erledigt ist: Sie rufen intern `apparmor.read_profiles()` auf, das beim Start
-**alle** Dateien in `/etc/apparmor.d/` parst (parse), einschließlich des noch nicht geladenen und nachweislich
+**alle** Dateien in `/etc/apparmor.d/` parst, einschließlich des noch nicht geladenen und nachweislich
 defekten `/etc/apparmor.d/k8s-106-broken-profile` aus Aufgabe 9 - und sie scheitern mit einem Fehler des
 Parsers an einer FREMDEN Datei, ohne überhaupt bis zu deinem Profil zu kommen. `apparmor_parser`
 (eine Binärdatei, kein Python-Wrapper), direkt mit EINER konkreten Datei aufgerufen, parst
@@ -128,7 +128,7 @@ kubectl exec -n security-106 apparmor-writer -- cat /proc/1/attr/current
 # von einem völlig nicht funktionierenden mount/mountPath unterscheiden (in diesem Fall wäre sogar das Lesen nicht verfügbar).
 kubectl exec -n security-106 apparmor-writer -- sh -c 'ls /work'
 
-# Negative control: Der denial muss gerade eine AppArmor-Ablehnung des Schreibens sein.
+# Negative control: Der denial muss genau eine AppArmor-Ablehnung des Schreibens sein.
 kubectl exec -n security-106 apparmor-writer -- \
   sh -c 'printf blocked >/work/cks-106-denied.txt'
 # erwartet wird ein Code ungleich null: Permission denied / Operation not permitted
@@ -151,8 +151,8 @@ exit
 
 Wenn `/proc/1/attr/current` in der konkreten runtime nicht verfügbar ist, halte das fest und stütze dich auf
 die Zuweisung des Localhost profile zusammen mit dem kernel `apparmor="DENIED"` für dieses profile;
-ein einzelner Code ungleich null ohne diese evidence reicht nicht, denn ihn kann auch ein mount oder gewöhnliche
-Unix-Rechte liefern.
+ein einzelner Code ungleich null ohne diese evidence reicht nicht, denn er kann auch durch ein mount-Problem oder gewöhnliche
+Unix-Rechte verursacht werden.
 
 ## 4. RuntimeDefault für einen gewöhnlichen Pod
 
@@ -222,7 +222,7 @@ für forced private propagation aus - und das default AppArmor-Profil von contai
 das dieser Pod erhält, da hier kein explizites `appArmorProfile` gesetzt ist) enthält
 `deny mount,` ohne irgendwelche Bedingungen an Flags, unabhängig von capabilities/seccomp. Daher kann
 `unshare -m true` wegen AppArmor mit `EPERM` scheitern, selbst wenn seccomp `unshare` überhaupt nicht
-einschränkt - ein solcher Probe würde zwei verschiedene security control vermischen. `unshare -n`
+einschränkt - ein solcher Test würde zwei verschiedene security controls vermischen. `unshare -n`
 ruft nur den syscall `unshare(2)` selbst auf, ohne begleitendes `mount()`.
 
 ```yaml
@@ -344,9 +344,9 @@ Wir speichern die Zeile `uid_map` im artifact (auf `worker`):
 ssh control-plane "sudo cat /proc/<host PID>/uid_map" >> /var/work/tests/artifacts/6/userns.txt
 ```
 
-Wenn `host-uid-start` gleich `0` ist - wurde der user namespace nicht angewendet (zum Beispiel wegen
-eines inkompatiblen containerd/runc oder wegen fehlendem `hostUsers: false` im tatsächlich angewendeten
-Pod) - das ist kein hardening, sondern gewöhnliches root auf dem Host. Zum Vergleich: Bei einem gewöhnlichen Pod ohne
+Wenn `host-uid-start` gleich `0` ist, wurde der user namespace nicht angewendet (zum Beispiel wegen
+eines inkompatiblen containerd/runc oder wegen eines fehlenden `hostUsers: false` im tatsächlich angewendeten
+Pod) - das ist kein hardening, sondern ein gewöhnlicher Root-Benutzer auf dem Host. Zum Vergleich: Bei einem gewöhnlichen Pod ohne
 `hostUsers: false` existiert die Datei `/proc/<host-PID>/uid_map` ebenfalls, aber der Prozess bleibt im
 host (initial) user namespace. Daher beginnt das mapping mit UID 0 -> host UID 0 (normalerweise
 eine Zeile der Form `0 0 4294967295`, zum Beispiel `cat /proc/1/uid_map` auf dem Node) und nicht mit
@@ -373,7 +373,7 @@ exit
 ```
 
 ```bash
-# auf dem worker: Der Name des Node in der API ist nicht der Alias 'control-plane' aus /etc/hosts, sondern der echte Name des Nodes (ip-10-...)
+# auf dem worker: Der Name des Nodes in der API ist nicht der Alias 'control-plane' aus /etc/hosts, sondern der echte Name des Nodes (ip-10-...)
 kubectl get nodes     # Ready
 ```
 
@@ -423,7 +423,7 @@ Kernel. `-p`/`--preprocess` ist hier NICHT geeignet - das ist preprocessing (exp
 (einmalig - nur syntax check).
 
 Das artifact `apparmor-debug.txt` muss den **ursprünglichen** Parser-Fehler enthalten, daher
-speichern wir es vor der Korrektur (auf `worker`):
+speichern wir es vor der Korrektur (auf dem `worker`):
 
 ```bash
 mkdir -p /var/work/tests/artifacts/8
@@ -436,7 +436,7 @@ cat /var/work/tests/artifacts/8/apparmor-debug.txt
 Wir verwenden `sudo` auch für die compile-only Prüfung `-Q`: Auf dem Lab-Node (apparmor 3.0.4, Ubuntu)
 versucht der Parser ohne Privilegien bei jedem Start, den policy cache in
 `/var/cache/apparmor` einzurichten, und scheitert mit "Failed setting up policy cache (/var/cache/apparmor):
-Permission denied" VOR der Syntaxprüfung - du erhältst einen irreführenden Fehler zu Rechten statt des
+Permission denied" VOR der Syntaxprüfung - du erhältst eine irreführende Berechtigungsfehlermeldung statt des
 echten Syntaxfehlers, und `apparmor-debug.txt` enthält nicht den benötigten Text
 "syntax error". Auf dem Node selbst verifiziert, auch an einem nachweislich defekten Profil.
 Die Alternative ohne `sudo` ist, `-K`/`--skip-cache` hinzuzufügen (`apparmor_parser -Q -K ...`): Ohne

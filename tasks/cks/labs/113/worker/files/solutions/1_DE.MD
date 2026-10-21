@@ -3,9 +3,9 @@
 # Lab 113 - Referenzlösung: kubeadm minor upgrade
 
 > Wir arbeiten wie in der Prüfung: `kubectl` - auf der Arbeitsmaschine, und Operationen am Node (apt, kubeadm,
-> kubelet) - auf dem Node selbst: Gehe per `ssh <Node>` darauf, wechsle zu root (`sudo -i`),
+> kubelet) - auf dem Node selbst: Melde dich per `ssh <Node>` darauf an, wechsle zu root (`sudo -i`),
 > führe die Befehle aus und verlasse ihn wieder (`exit`, `exit`). Die Startversion des Clusters ist `1.35.x`, die Zielversion ist
-> `1.36.x`. Die Namen der Nodes (`<cp-name>`, `<worker-name>`) nehmen wir aus `kubectl get no`; in der Prüfung sind sie anders, in dieser Lab sind die ssh-Aliase: `k8s113_controlPlane_1` und `k8s113_node_worker1`.
+> `1.36.x`. Die Namen der Nodes (`<cp-name>`, `<worker-name>`) nehmen wir aus `kubectl get no`; in der Prüfung sind sie anders, in diesem Lab sind die ssh-Aliase: `k8s113_controlPlane_1` und `k8s113_node_worker1`.
 
 ## Wo du Befehle in der Dokumentation findest
 
@@ -19,10 +19,10 @@
 | `kubectl uncordon <node>` | [Upgrading kubeadm clusters - Uncordon the node](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#uncordon-the-node) |
 | Worker-Node: `kubeadm upgrade node` | [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) |
 
-Auf den Ubuntu-Nodes ist `needrestart` im Modus «nur Liste» konfiguriert (ohne OK/Cancel-Dialog), daher
+Auf den Ubuntu-Nodes ist `needrestart` im Modus „nur Liste“ konfiguriert (ohne OK/Cancel-Dialog), daher
 bleibt `apt-get install` nicht bei Fragen stehen.
 
-Setze anstelle von `1.36.x` in den Befehlen den realen patch aus `apt-cache madison kubeadm` und aus der
+Setze anstelle von `1.36.x` in den Befehlen den tatsächlichen patch aus `apt-cache madison kubeadm` und aus der
 Ausgabe von `kubeadm upgrade plan` ein.
 
 ```bash
@@ -70,7 +70,7 @@ apt update
 apt-cache madison kubeadm | head -3
 ```
 
-Aktualisiere kubeadm (den realen patch anstelle von `x`). **Führe diesen Befehl separat aus:** `apt-get`
+Aktualisiere kubeadm (den tatsächlichen patch anstelle von `x`). **Führe diesen Befehl separat aus:** `apt-get`
 leert den Eingabepuffer des Terminals, daher gehen Zeilen, die direkt danach eingefügt werden, verloren.
 
 ```bash
@@ -198,20 +198,19 @@ kubectl uncordon <worker-name>
 kubectl get nodes
 ```
 
-## 3. Prüfung der Reihenfolge des upgrade
+## 3. Prüfung der Reihenfolge des upgrades
 
 Aufgabe 3 erfordert keine gesonderten Befehle: Die Reihenfolge belegt der checker-owned Monitor
-(`/var/lib/cks-lab113-checker/upgrade-monitor.log` auf der Arbeitsmaschine), der die ganze Zeit seit
-dem bootstrap geschrieben wurde. Wenn du die Schritte der Reihe nach befolgt hast (zuerst vollständig Abschnitt 1, dann Abschnitt 2), gibt es im
+(`/var/lib/cks-lab113-checker/upgrade-monitor.log` auf der Arbeitsmaschine), der seit dem bootstrap ununterbrochen protokolliert. Wenn du die Schritte der Reihe nach befolgt hast (zuerst vollständig Abschnitt 1, dann Abschnitt 2), gibt es im
 Log eine Zeile, in der die control-plane bereits auf `v1.36.x`, `Ready` und schedulable ist und der worker noch auf
 `v1.35.x`.
 
 ## 4. Prüfung des Fehlens von downtime
 
-> Während `kubeadm upgrade apply` auf der einzigen control-plane startet der API server für einige Sekunden
+> Während des Laufs von `kubeadm upgrade apply` auf der einzigen control-plane startet der API server für einige Sekunden
 > neu, und `kubectl` in der Abfrageschleife antwortet nicht. Solche Zeilen sind als
 > `available=api-unreachable` geschrieben und gehen nicht in die Minimumberechnung ein: Die Nichtverfügbarkeit der API ist kein Ausfall von
-> `canary`. Den downtime belegt der unabhängige Monitor des Checkers (Pod Ready und Container über `crictl`).
+> `canary`. Ob downtime vorliegt, hält der unabhängige Monitor des Checkers fest (Pod Ready und Container über `crictl`).
 
 Stoppe die Abfrageschleife aus Schritt 0 (`Ctrl+C` in ihrer Sitzung) und prüfe, dass das Minimum von `available`
 während des Durchlaufs nie auf 0 gefallen ist:

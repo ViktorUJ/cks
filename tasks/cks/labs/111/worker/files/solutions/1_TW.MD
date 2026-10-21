@@ -3,9 +3,9 @@
 # Lab 111 - 參考解答
 
 所有指令都在 worker 上執行。這些是考試中會有的一般工具指令(trivy、kubesec、
-kube-linter、hadolint、podman、syft、bom、cosign);沒有腳本,在需要
-比較多個結果的地方,是用眼睛看輸出來比較。首先設定共用的
-變數:
+kube-linter、hadolint、podman、syft、bom、cosign)；沒有腳本，在需要
+比較多個結果的地方，是用眼睛看輸出來比較。首先設定共用的
+變數：
 
 ```bash
 export ROOT=/home/ubuntu/cks-111 ART=/var/work/tests/artifacts BASE_TAG=nginx:1.27.3-alpine
@@ -16,16 +16,16 @@ export IMAGE=$BASE_TAG@$(jq -r '.Metadata.RepoDigests[0]' /tmp/cks-111-base.json
 echo $IMAGE
 ```
 
-## 0. 準備:podman 與 registry
+## 0. 準備：podman 與 registry
 
-建置與發布映像使用 `podman`(它在考試的工具清單中;
-rootless,以 `ubuntu` 身分運作)。Registry 已由 bootstrap 啟動:這是 control-plane 上的 `registry:2`
-(`<節點的 IP>:5000`,VPC 內部的 plain HTTP,資料位於節點本機的 PV)。worker 上的 Podman 已經把它設定
-為 insecure registry(`/etc/containers/registries.conf.d/cks111.conf`),節點上的 containerd
-同樣如此,因此不需要旗標 `--tls-verify=false`。實驗的映像事先下載到本機
-快取中,Trivy 與 Syft 使用它,因此重複掃描不會撞上 Docker Hub 的限制。
+建置與發布映像使用 `podman`(它在考試的工具清單中；
+rootless，以 `ubuntu` 身分運作)。Registry 已由 bootstrap 啟動：這是 control-plane 上的 `registry:2`
+(`<節點的 IP>:5000`,VPC 內部的 plain HTTP，資料位於節點本機的 PV)。worker 上的 Podman 已經把它設定
+為 insecure registry(`/etc/containers/registries.conf.d/cks111.conf`)，節點上的 containerd
+同樣如此，因此不需要旗標 `--tls-verify=false`。實驗的映像事先下載到本機
+快取中，Trivy 與 Syft 使用它，因此重複掃描不會撞上 Docker Hub 的限制。
 
-Registry 的位址:
+Registry 的位址：
 
 ```bash
 export REGISTRY="$(cat /etc/cks111/registry)"     # <control-plane 的 IP>:5000
@@ -33,18 +33,18 @@ curl -fsS "http://$REGISTRY/v2/" && echo " registry ok: $REGISTRY"
 podman --version
 ```
 
-cosign 金鑰的密碼保持為空,讓指令不用等待輸入:
+cosign 金鑰的密碼保持為空，讓指令不用等待輸入：
 
 ```bash
 export COSIGN_PASSWORD=""
 ```
 
-Registry 以 HTTP 運作:已發布映像的 digest 取自 `podman push --digestfile`,而
-manifest 是否存在則用對 `/v2/` 的請求檢查。`cosign` 對私有網路的位址會自己使用 HTTP;對 Kyverno,在 policy 中設定 `credentials.allowInsecureRegistry: true`。`bom` 只從 registry
-讀取映像,因此仍然會存取 Docker Hub;如果看到
-`TOOMANYREQUESTS`,請等待,或以你自己的帳號執行 `podman login docker.io`。
+Registry 以 HTTP 運作：已發布映像的 digest 取自 `podman push --digestfile`，而
+manifest 是否存在則用對 `/v2/` 的請求檢查。`cosign` 對私有網路的位址會自己使用 HTTP；對 Kyverno，在 policy 中設定 `credentials.allowInsecureRegistry: true`。`bom` 只從 registry
+讀取映像，因此仍然會存取 Docker Hub；如果看到
+`TOOMANYREQUESTS`，請等待，或以你自己的帳號執行 `podman login docker.io`。
 
-## 1. Trivy report
+## 1. Trivy 報告
 
 ```bash
 mkdir -p "$ART/1"
@@ -85,8 +85,8 @@ cat $ART/1b/answer.txt
 
 ## 1c. 依 CRITICAL severity 做 workload image triage
 
-映像取自 LIVE Deployments 並逐一掃描;唯一的 CRITICAL 數量會與
-Deployment 的名稱一起輸出:
+映像取自 LIVE Deployments 並逐一掃描；不重複的 CRITICAL 數量會與
+Deployment 的名稱一起輸出：
 
 ```bash
 mkdir -p $ART/1c
@@ -110,7 +110,7 @@ EOF
 # dep-d - 第四個 Deployment(CRITICAL 數量第二多),它不會寫入 ranking.txt
 ```
 
-最有弱點的 Deployment 的 CycloneDX SBOM(取自它的 Deployment 的映像),以及縮減其餘的 scale:
+最有弱點的 Deployment 的 CycloneDX SBOM(取自它的 Deployment 的映像)，以及把其餘的 Deployment scale 到 0:
 
 ```bash
 kubectl -n cks-111 get deployment dep-a -o jsonpath='{.spec.template.spec.containers[0].image}'; echo
@@ -122,8 +122,8 @@ kubectl -n cks-111 get deployment -l cks.io/task=1c
 
 ## 2. 修正之前的報告
 
-`hadolint`、`kubesec` 與 `kube-linter` 在有 findings 時會回傳非零狀態;這是預期的
-結果,報告保持原樣儲存。
+`hadolint`、`kubesec` 與 `kube-linter` 在有 findings 時會回傳非零狀態；這是預期的
+結果，報告保持原樣儲存。
 
 ```bash
 mkdir -p $ART/2
@@ -136,7 +136,7 @@ jq '{summary: .Summary, findings: (.Reports | length)}' $ART/2/kube-linter-befor
 
 ## 3. 修正 Dockerfile
 
-不要把 secret 加入 image layer,也不要使用 floating tag:請使用 `$IMAGE`,其中 tag 補上了 manifest digest。`USER 101` 是未來 hardened image 的屬性。
+不要把 secret 加入 image layer，也不要使用 floating tag：請使用 `$IMAGE`，其中 tag 補上了 manifest digest。`USER 101` 是未來 hardened image 的屬性。
 
 ```bash
 cat > "$ROOT/Dockerfile" <<EOF
@@ -155,9 +155,9 @@ grep -nE '^(FROM|COPY|USER)' "$ROOT/Dockerfile"
 
 `ARG CKS_SIGNATURE_TEST`/`LABEL cks.signature-test` 不會改變這裡檢查的任何
 security 特性(base image、non-root、沒有 secret)- 這是唯一的
-受控差異點,在任務 9c 中,它能在不重新審視 Dockerfile 其餘部分的情況下,保證得到不同的 manifest digest。
+受控差異點，在任務 9c 中，它能在不重新審視 Dockerfile 其餘部分的情況下，保證得到不同的 manifest digest。
 
-建置並**發布**映像到 Kubernetes 可存取的 registry;只有本機的 image ID/DiffID 不適用於 digest pinning。代入你自己的 repository,然後取得 registry manifest digest 並組成 immutable reference:
+建置並**發布**映像到 Kubernetes 可存取的 registry；僅有本機的 image ID/DiffID 並不足以進行 digest pinning。代入你自己的 repository，然後取得 registry manifest digest 並組成 immutable reference:
 
 ```bash
 export HARDENED_TAG="$REGISTRY/catalog:1.0"
@@ -170,7 +170,7 @@ printf '%s\n' "$HARDENED_IMAGE"   # <IP>:5000/catalog@sha256:<manifest-digest>
 
 ## 4. 修正 Deployment
 
-`readOnlyRootFilesystem` 需要 nginx 的可寫 runtime 路徑。`emptyDir` 針對性地提供它們;init container(同樣是帶有 `USER 101` 的 hardened image)把預設 config 複製到單獨的可寫 config volume 中。`$HARDENED_IMAGE` 是任務 3 中建置的、以 digest 固定的引用,而不是上游的 image。
+`readOnlyRootFilesystem` 需要 nginx 的可寫 runtime 路徑。`emptyDir` 針對性地提供它們；init container(同樣是帶有 `USER 101` 的 hardened image)把預設 config 複製到單獨的可寫 config volume 中。`$HARDENED_IMAGE` 是任務 3 中建置的、以 digest 固定的引用，而不是上游的 image。
 
 ```bash
 cat > "$ROOT/deployment.yaml" <<EOF
@@ -244,7 +244,7 @@ kubectl run catalog-http-smoke -n cks-111 --rm -i --restart=Never --image=curlim
 
 ## 5. 搜尋套件版本
 
-`--list-all-pkgs` 給出實際的 inventory。標準的 registry manifest digest 只取自 `Metadata.RepoDigests[0]`;`ImageID` 與 `DiffID` 描述的是本機的映像/layers,不是 registry digest 的 fallback。
+`--list-all-pkgs` 給出實際的 inventory。標準的 registry manifest digest 只取自 `Metadata.RepoDigests[0]`;`ImageID` 與 `DiffID` 描述的是本機的映像/layers，不是 registry digest 的 fallback。
 
 ```bash
 mkdir -p "$ART/5" /tmp/cks-111
@@ -267,7 +267,7 @@ kubectl -n cks-111 get deployment pkg-audit-app \
 # c1 <映像 1> / c2 <映像 2> / c3 <映像 3>
 ```
 
-每個映像的 SBOM(代入輸出中的映像),以及每個映像的 `套件=版本` 清單:
+每個映像的 SBOM(代入輸出中的映像)，以及每個映像的 `套件=版本` 清單：
 
 ```bash
 bom generate --format json --output $ART/5b/bom/c1.spdx.json --image <c1 的映像>
@@ -281,13 +281,13 @@ comm -12 /tmp/c1.pkgs /tmp/c3.pkgs | wc -l
 comm -12 /tmp/c2.pkgs /tmp/c3.pkgs | wc -l
 ```
 
-有共同套件的那一對,就是有問題的 containers(假設是 `c1` 與 `c2`)。它們有很多共同的套件:**任何**不在第三個映像中的 `name=version` 都可以:
+有共同套件的那一對，就是有問題的 containers(假設是 `c1` 與 `c2`)。它們有很多共同的套件：**任何**不在第三個映像中的 `name=version` 都可以：
 
 ```bash
 comm -12 /tmp/c1.pkgs /tmp/c2.pkgs | grep -vxFf /tmp/c3.pkgs | head -3
 ```
 
-寫下找到的組合,並刪除正是這兩個 containers(`kubectl edit`),留下「乾淨的」:
+寫下找到的組合，並刪除正是這兩個 containers(`kubectl edit`)，留下「乾淨的」：
 
 ```bash
 printf 'TARGET_PACKAGE=%s\nTARGET_VERSION=%s\n' <name> <version> > $ART/5b/answer.txt     # 例如 apt 與 3.0.3
@@ -307,9 +307,9 @@ jq '.spdxVersion, (.packages | length)' "$ART/6/bom.spdx.json"
 
 ## 7. CycloneDX SBOM(Syft)與 keyless Cosign
 
-Syft 同時支援 SPDX 與 CycloneDX;這裡使用 CycloneDX(`bom` 已經在任務 6 中給出了 SPDX)。
-檢查的是公開的 Distroless 映像及其預期的 Google workload identity;不要
-使用 `--insecure-ignore-tlog`,也不要略過 certificate identity。
+Syft 同時支援 SPDX 與 CycloneDX；這裡使用 CycloneDX(`bom` 已經在任務 6 中給出了 SPDX)。
+檢查的是公開的 Distroless 映像及其預期的 Google workload identity；不要
+使用 `--insecure-ignore-tlog`，也不要略過 certificate identity。
 
 ```bash
 mkdir -p "$ART/7"
@@ -318,8 +318,8 @@ mkdir -p "$ART/7"
 syft "nginx@${IMAGE#*@}" -o "cyclonedx-json=$ART/7/syft.cdx.json"
 ```
 
-在 `syft` 之後,請等它結束,並把後續指令分開貼上:`syft`(和 `apt-get` 一樣)
-會清空終端機的輸入緩衝區,緊接在它之後貼上的幾行會遺失。
+在 `syft` 之後，請等它結束，並把後續指令分開貼上：`syft`(和 `apt-get` 一樣)
+會清空終端機的輸入緩衝區，緊接在它之後貼上的幾行會遺失。
 
 ```bash
 jq -r '.metadata.component.version' "$ART/7/syft.cdx.json"   # sha256:<manifest-digest>
@@ -340,10 +340,10 @@ printf '\nreference=gcr.io/distroless/static-debian13:nonroot\n' >> $ART/7/cosig
 jq '.bomFormat, (.components | length)' $ART/7/syft.cdx.json
 ```
 
-## 8. `trivy sbom`:掃描現成的 SBOM 檔案
+## 8. `trivy sbom`：掃描現成的 SBOM 檔案
 
-任務 7 的 CycloneDX SBOM 描述了映像的組件與 OS 的組成,但不包含關於
-弱點的結論;`trivy sbom` 直接接受這樣的檔案作為輸入,不需要再次向
+任務 7 的 CycloneDX SBOM 描述了映像的元件與 OS 的組成，但不包含關於
+弱點的結論；`trivy sbom` 直接接受這樣的檔案作為輸入，不需要再次向
 registry 取得 image 本身。
 
 ```bash
@@ -353,14 +353,14 @@ trivy sbom --format json --output $ART/8/sbom-scan.json $ART/7/syft.cdx.json
 jq '{artifact: .ArtifactType, os: .Metadata.OS.Family, results: (.Results | length)}' $ART/8/sbom-scan.json
 ```
 
-Trivy 依據 CycloneDX 中的組件 `operating-system`(`alpine 3.20.5`)判斷 OS,並
-把套件與弱點資料庫對照 - `Results` 非空。作為比較:任務 6 的 SPDX
-(`bom`)對 multi-arch 映像不包含 OS(`Detected OS family="none"`),而 `trivy sbom` 對它
+Trivy 依據 CycloneDX 中的元件 `operating-system`(`alpine 3.20.5`)判斷 OS，並
+把套件與弱點資料庫對照 - `Results` 非空。作為比較：任務 6 的 SPDX
+(`bom`)對 multi-arch 映像不包含 OS(`Detected OS family="none"`)，而 `trivy sbom` 對它
 什麼也找不到(`Results` 為空)- 因此這個任務使用 CycloneDX。
 
 ## 9a. Kyverno 與針對 trusted signature 的 `ImageValidatingPolicy`
 
-像實驗 108 中一樣安裝 Kyverno,並等待 admission controller 就緒。
+像實驗 108 中一樣安裝 Kyverno，並等待 admission controller 就緒。
 
 ```bash
 sudo install-kyverno
@@ -375,9 +375,9 @@ kubectl -n kyverno wait --for=condition=Available deployment/kyverno-admission-c
 
 在 `$ROOT` 「之外」產生學習用的金鑰對 - 這個目錄在任務 9c 中會被重複用作
 Docker build context(Dockerfile 中的 `COPY . /usr/share/nginx/html` 會複製
-build context 的「全部」內容),因此留在 `$ROOT` 內的 `cosign.key`,會進入
-所發布 image 的檔案系統,造成 private signing key 洩漏到 registry。請簽署
-任務 3/4 的 `$HARDENED_IMAGE`,而不是上游的 `nginx`。不要把這個
+build context 的「全部」內容)，因此留在 `$ROOT` 內的 `cosign.key`，會進入
+所發布 image 的檔案系統，造成 private signing key 洩漏到 registry。請簽署
+任務 3/4 的 `$HARDENED_IMAGE`，而不是上游的 `nginx`。不要把這個
 `cosign.key` 搬到 production CI。
 
 ```bash
@@ -391,9 +391,9 @@ cosign verify --key $KEYDIR/cosign.pub $HARDENED_IMAGE > $ART/9a/cosign-verify.t
 cat $ART/9a/cosign-verify.txt | head -3
 ```
 
-建立 `ImageValidatingPolicy`,引用剛剛用來簽署 `$HARDENED_IMAGE` 的
+建立 `ImageValidatingPolicy`，引用剛剛用其私鑰簽署 `$HARDENED_IMAGE` 的那組金鑰對的
 公開金鑰。`matchImageReferences` 把 policy 恰好限制在你的映像的 repository:
-對於 OCI references,需要分別的分隔符號 `:`(tag)與 `@`(digest),
+對於 OCI references，需要分別的分隔符號 `:`(tag)與 `@`(digest),
 否則前綴 `${HARDENED_REPO}*` 會涵蓋例如名稱開頭相同的
 另一個 repository。這樣可以避免 policy 阻擋叢集中的其他 Pod。
 
@@ -435,15 +435,15 @@ kubectl apply -f "$ROOT/require-signed-catalog-images.yaml"
 kubectl get imagevalidatingpolicy require-signed-catalog-images -o yaml
 ```
 
-最後執行 `check_result`(部分,測試 9a)。
+最後執行 `check_result`(部分，測試 9a)。
 
 ## 9b. Fresh signed ALLOW:policy 建立之後的新 Pod
 
 對已經存在的 Deployment `catalog` 再次 `kubectl apply`,**並不能證明**
-post-policy admission:如果 template 沒有改變,Kubernetes 不會建立新的
-ReplicaSet/Pod,而觀察到的 `Running` 可能就是在
-`require-signed-catalog-images` 之前就已存在的同一個 Pod。要證明 fresh admission,我們建立**新的**
-物件,它在這一刻之前並不存在:
+post-policy admission：如果 template 沒有改變，Kubernetes 不會建立新的
+ReplicaSet/Pod，而觀察到的 `Running` 可能就是在
+`require-signed-catalog-images` 之前就已存在的同一個 Pod。要證明 fresh admission，我們建立**新的**
+物件，它在這一刻之前並不存在：
 
 ```bash
 POLICY_CREATED=$(kubectl get imagevalidatingpolicy require-signed-catalog-images \
@@ -467,22 +467,22 @@ kubectl get pod signed-admission-check -n cks-111 -o json \
 cat "$ART/9b/signed-admission-check.json"
 ```
 
-準則(`creationTimestamp` 的精度為 1 秒,因此比較是非嚴格的):`createdAfterPolicy == true` 且 `ready == true`。這個 - 而且只有這個 - 證明
+準則(`creationTimestamp` 的精度為 1 秒，因此比較是非嚴格的):`createdAfterPolicy == true` 且 `ready == true`。這個 - 而且只有這個 - 證明
 **這個** policy 放行了**這個**先前不存在的、帶有
-已簽署映像的 Pod,而不是舊的 Pod 只是繼續運作。
+已簽署映像的 Pod，而不是舊的 Pod 只是繼續運作。
 
-最後執行 `check_result`(部分,測試 9b)。
+最後執行 `check_result`(部分，測試 9b)。
 
-## 9c. Signature-specific DENY:同一個 repository 中的 unsigned digest
+## 9c. Signature-specific DENY：同一個 repository 中的 unsigned digest
 
 Unsigned candidate 必須存在於與已簽署的 `$HARDENED_IMAGE`「相同的」repository 中 - 否則 admission 可能因為 `manifest unknown` 或
-registry lookup 錯誤而拒絕,而不是因為缺少簽章,denial 也就無法證明所宣稱的
+registry lookup 錯誤而拒絕，而不是因為缺少簽章，denial 也就無法證明所宣稱的
 security property。我們在同一個 repository 中建置並發布第二個、刻意不簽署的 tag - 而且**務必**使用
-與 `$HARDENED_IMAGE` 不同的內容:如果不加更改地建置
+與 `$HARDENED_IMAGE` 不同的內容：如果不加更改地建置
 同一個 `Dockerfile`/context,reproducible/cached build 可能產生與已簽署映像**相同的**
-manifest digest,那麼對「unsigned」tag 執行 `cosign verify` 會
+manifest digest，那麼對「unsigned」tag 執行 `cosign verify` 會
 出乎意料地通過 - 因為它在物理上會指向已經簽署的 artifact。因此
-我們透過 `ARG`/`LABEL` 引入受控的差異,保證它會改變 digest:
+我們透過 `ARG`/`LABEL` 引入受控的差異，保證它會改變 digest:
 
 ```bash
 export UNSIGNED_TAG="${HARDENED_TAG%:*}:unsigned-1"
@@ -500,16 +500,16 @@ printf 'hardened_digest=%s\nunsigned_digest=%s\nunsigned_image=%s\ndistinct=true
 cat "$ART/9c/digest-comparison.txt"
 ```
 
-任務 3 的 `$ROOT/Dockerfile` 必須接受這個 build-arg(例如,
+任務 3 的 `$ROOT/Dockerfile` 必須接受這個 build-arg(例如，
 在既有指令旁邊有 `ARG CKS_SIGNATURE_TEST=signed` 與 `LABEL cks.signature-test=$CKS_SIGNATURE_TEST`)- 這樣建置出的映像與 `$HARDENED_IMAGE` 恰好
-只差一個安全的 label,不會影響任務 3-4 中檢查的 security 特性。
+只差一個安全的 label，不會影響任務 3-4 中檢查的 security 特性。
 
-在檢查 policy 之前,先明確證明這個 digest 存在且 pullable -
-否則 denial 什麼也證明不了。這是給你自己的 self-check evidence:任務 9c 的 checker
+在檢查 policy 之前，先明確證明這個 digest 存在且 pullable -
+否則 denial 什麼也證明不了。這是給你自己的 self-check evidence：任務 9c 的 checker
 並不信任文字檔作為唯一的證明 - 它會自己解析
-`digest-comparison.txt` 中的 `unsigned_image`,自己檢查沒有簽章,並自己
-以這個映像建立新的 Pod,因此在沒有真正運作的
-admission control 的情況下,手動寫這些檔案不足以得到 PASS。
+`digest-comparison.txt` 中的 `unsigned_image`，自己檢查沒有簽章，並自己
+以這個映像建立新的 Pod，因此在沒有真正運作的
+admission control 的情況下，手動寫這些檔案不足以得到 PASS。
 
 ```bash
 curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
@@ -518,15 +518,15 @@ cat "$ART/9c/unsigned-exists.txt"        # HTTP/1.1 200 OK 以及 docker-content
 ```
 
 明確證明沒有以同一個金鑰簽出的有效簽章 - 在嘗試建立
-Pod「之前」,讓 denial 可預期地專屬於 signature,而不是其他東西:
+Pod「之前」，讓 denial 可預期地專屬於 signature，而不是其他東西：
 
 ```bash
 cosign verify --key "$KEYDIR/cosign.pub" "$UNSIGNED_IMAGE" > "$ART/9c/unsigned-not-signed.txt" 2>&1
 cat "$ART/9c/unsigned-not-signed.txt"     # error: no matching signatures
 ```
 
-現在才嘗試建立 Pod,並確認 denial 指向的正是 policy/
-signature,而不是一般的 admission 錯誤:
+現在才嘗試建立 Pod，並確認 denial 指向的正是 policy/
+signature，而不是一般的 admission 錯誤：
 
 ```bash
 kubectl run catalog-unsigned-probe -n cks-111 --image="$UNSIGNED_IMAGE" --restart=Never > "$ART/9c/admission-deny.txt" 2>&1
@@ -534,14 +534,14 @@ cat "$ART/9c/admission-deny.txt"        # ... catalog image must have a valid re
 kubectl get pod catalog-unsigned-probe -n cks-111       # NotFound:Pod 沒有建立
 ```
 
-與天真的檢查的差別:如果我們改用另一個 repository 的 digest
+與天真的檢查的差別：如果我們改用另一個 repository 的 digest
 (例如任務 1 的上游 `nginx` 的 digest),admission 可能因為完全不同的
 原因而拒絕(`manifest unknown`、沒有 pull 權限)- 這樣的 denial 看起來
-像是「policy 在運作」,而實際上根本沒有走到 signature 檢查。
+像是「policy 在運作」，而實際上根本沒有走到 signature 檢查。
 
 最後執行 `check_result`。
 
-最終檢查:
+最終檢查：
 
 ```bash
 check_result

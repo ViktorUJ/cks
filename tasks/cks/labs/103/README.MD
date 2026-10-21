@@ -5,9 +5,9 @@
 ## Description
 
 In this lab you configure a two-node Kubernetes cluster (control-plane +
-worker) as a security engineer: you install `kube-bench` and, based on its findings
+worker) as a security engineer: you run `kube-bench` (you install it yourself on the worker node) and, based on its findings
 (not from memory), fix insecure parameters of the control-plane components and of the kubelet
-on the worker node, publish an Ingress over TLS only, restrict the control-plane TLS, and
+on both nodes, publish an Ingress over TLS only, restrict the control-plane TLS, and
 confirm the integrity of the installed Kubernetes binaries.
 
 This is not a repetition of the basic Kubernetes setup from CKA. What matters here are the places where
@@ -26,7 +26,7 @@ Reinforce the material of the course chapters:
 ## Self-check before you start
 
 <details>
-<summary>1. Why can running kube-bench with the profile `cis-1.12` on Kubernetes 1.36 not be called authoritative CIS compliance?</summary>
+<summary>1. Why can't a kube-bench run with the `cis-1.12` profile on Kubernetes 1.36 be called authoritative CIS compliance?</summary>
 
 The `kube-bench 0.16.0` version pinned in this lab contains no profile for 1.36 at all - its built-in version mapping goes only up to `"1.34": "cis-1.12"` (the newest available profile). By explicitly specifying `--benchmark cis-1.12` on a 1.36 cluster, we forcibly use the closest existing profile as an approximation: some checks may be irrelevant for the newer version, and new security-relevant parameters specifically for 1.36 are not yet covered by this profile. This is a valuable practical signal, but not a formal compliance statement for version 1.36.
 </details>
@@ -34,11 +34,11 @@ The `kube-bench 0.16.0` version pinned in this lab contains no profile for 1.36 
 <details>
 <summary>2. Why does `--tls-cipher-suites` on kube-apiserver not configure ciphers for TLS 1.3 specifically?</summary>
 
-In Go (in which kube-apiserver is written) the flag `--tls-cipher-suites` controls only the cipher suites for TLS versions ≤ 1.2. For TLS 1.3, Go itself chooses the set of ciphers from a fixed, hardcoded list - they cannot be configured with this flag. Therefore the real protection here is given by `--tls-min-version=VersionTLS13` (it forbids the older protocols entirely), while `--tls-cipher-suites` is relevant where TLS 1.2 is still allowed (for example, etcd in this lab).
+In Go (in which kube-apiserver is written) the flag `--tls-cipher-suites` controls only the cipher suites for TLS versions ≤ 1.2. For TLS 1.3, Go itself chooses the set of ciphers from a fixed, hardcoded list - they cannot be configured with this flag. Therefore the real protection here comes from `--tls-min-version=VersionTLS13` (it forbids the older protocols entirely), while `--tls-cipher-suites` is relevant where TLS 1.2 is still allowed (for example, etcd in this lab).
 </details>
 
 <details>
-<summary>3. Why can a hash computed from the file being verified itself not be used as the reference for SHA-256 verification?</summary>
+<summary>3. Why can't a hash computed from the very file being verified be used as the reference for SHA-256 verification?</summary>
 
 If you compute the SHA-256 of a file and compare it with itself, the check always passes - even if the file was replaced with something malicious. The reference checksum must be obtained from an independent, trusted source - the official Kubernetes release page - and not from the local file you are verifying.
 </details>
@@ -84,8 +84,9 @@ The environment is deployed in AWS (`eu-central-1`) via Terragrunt.
 > **Version and exam.** As of 2026-09-06 the official CKS exam is based on Kubernetes `v1.35`. This lab uses `1.36.0`, so everything related to that version is a forward-looking training scenario and not a statement about the current exam version.
 
 The control-plane has its taint removed, so a training Pod can be run on it if needed.
-For tasks 2, 3, and 5 the static Pods are automatically recreated by the kubelet after the
-changed manifest or configuration is saved. Do not delete the control-plane Pods manually.
+For tasks 3, 5, and 9 the static Pods are automatically recreated by the kubelet after the
+changed manifest is saved; in tasks 2 and 10, after editing the `KubeletConfiguration`, the kubelet must be
+restarted manually (`systemctl restart kubelet`). Do not delete the control-plane Pods manually.
 
 ## Deployment
 
@@ -114,7 +115,7 @@ ssh control-plane hostname
 
 | **1** | **CIS Benchmark report** |
 | :---: | :--- |
-| What to do | On the `control-plane` node run `kube-bench` for Kubernetes `1.36.0`. Save the full evidence in `/var/work/tests/artifacts/1/kube-bench.txt`: `kubernetes_version`, `kube_bench_version`, the chosen `benchmark`, `mapping_status`, and then the report itself. `kube-bench` is already installed on `control-plane` (as on the real exam, where the CIS Benchmark tooling is already on the nodes) - you do not need to install or copy it, and it is exactly that node that must be checked. The version mapping built into the pinned `kube-bench 0.16.0` ends with the entry `"1.34": "cis-1.12"` - there are no newer profiles (including any profile for 1.35/1.36) in this version at all. Therefore run `--benchmark cis-1.12` explicitly and label the result on `1.36` as `forced-approximate`, not authoritative compliance. **Run the full set of targets for `cis-1.12`:** `--targets master,node,controlplane,etcd,policies` - this is the map of targets that kube-bench associates with the `cis-1.12` profile; skipping any of them produces an incomplete report. Without an explicit `--targets`, kube-bench determines the type of the current node itself and takes for it not this whole list but a narrower set - `etcd` and `policies` do not get into such an auto-detected run, so a report without an explicit `--targets` will be incomplete. |
+| What to do | On the `control-plane` node run `kube-bench` for Kubernetes `1.36.0`. Save the full evidence in `/var/work/tests/artifacts/1/kube-bench.txt`: `kubernetes_version`, `kube_bench_version`, the chosen `benchmark`, `mapping_status`, and then the report itself. `kube-bench` is already installed on `control-plane` (as on the real exam, where the CIS Benchmark tooling is already on the nodes) - you do not need to install or copy it, and it is exactly that node that must be checked. The version mapping built into the pinned `kube-bench 0.16.0` ends with the entry `"1.34": "cis-1.12"` - there are no newer profiles (including any profile for 1.35/1.36) in this version at all. Therefore run `--benchmark cis-1.12` explicitly and label the result on `1.36` as `forced-approximate`, not authoritative compliance. **Run the full set of targets for `cis-1.12`:** `--targets master,node,controlplane,etcd,policies` - this is the map of targets that kube-bench associates with the `cis-1.12` profile; skipping any of them produces an incomplete report. Without an explicit `--targets`, kube-bench detects the type of the current node on its own and runs a narrower set for it instead of this whole list - `etcd` and `policies` are not included in such an auto-detected run, so a report without an explicit `--targets` will be incomplete. |
 | Acceptance criteria | - the evidence contains all four version/mapping fields;<br/>- `mapping_status=forced-approximate` explicitly explains the absence of official coverage for `1.36`;<br/>- the report contains the results of all sections `master`, `node`, `controlplane`, `etcd`, `policies` (not just an arbitrary `[PASS]`/`[WARN]`/`[FAIL]` line);<br/>- the text does not present the result as authoritative CIS compliance for Kubernetes `1.36`. |
 
 <details>
@@ -146,7 +147,7 @@ Look in the task 1 report for the checks `4.2.1` (`--anonymous-auth`) and `4.2.4
 <details>
 <summary>💡 Hint for task 3</summary>
 
-Look in the task 1 report for the check `1.2.15` (`--profiling`) in the `master` section. It corresponds to the flag `--profiling=false` in the `command` of the static Pod manifest `/etc/kubernetes/manifests/kube-apiserver.yaml`. Do not edit the Pod via `kubectl edit` - this is a static Pod, the kubelet manages it directly from the manifest file on disk and will overwrite any change made through the API back. Add the flag directly into the YAML file on the node and wait: the kubelet does not notice the file change instantly.
+Look in the task 1 report for the check `1.2.15` (`--profiling`) in the `master` section. It corresponds to the flag `--profiling=false` in the `command` of the static Pod manifest `/etc/kubernetes/manifests/kube-apiserver.yaml`. Do not edit the Pod via `kubectl edit` - this is a static Pod, the kubelet manages it directly from the manifest file on disk and will revert any change made through the API. Add the flag directly into the YAML file on the node and wait: the kubelet does not notice the file change instantly.
 </details>
 
 ---
@@ -193,7 +194,7 @@ The HTTP→HTTPS redirect check is not an artificial requirement of this lab but
 
 | **5** | **Control-plane TLS hardening** |
 | :---: | :--- |
-| What to do | In `/etc/kubernetes/manifests/kube-apiserver.yaml` set `--tls-min-version=VersionTLS13` and `--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`. In `/etc/kubernetes/manifests/etcd.yaml` set `--cipher-suites` with the same set. After the components are recreated, confirm that `TLSv1.3` is negotiated (`openssl s_client -tls1_3`) and that `TLSv1.2` is rejected (`openssl s_client -tls1_2` ends with a handshake error), and save the output in `/var/work/tests/artifacts/5/tls13.txt`. It is important to understand the semantics: in Go the flag `--tls-cipher-suites` applies only to TLS ≤ 1.2, and with `--tls-min-version=VersionTLS13` the specific TLS 1.3 cipher suites are not configured by this flag (Go chooses them itself). Therefore for kube-apiserver the actual protection here is given by min-version 1.3 itself; cipher-suites are meaningful where TLS 1.2 is allowed (for example, for etcd). |
+| What to do | In `/etc/kubernetes/manifests/kube-apiserver.yaml` set `--tls-min-version=VersionTLS13` and `--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`. In `/etc/kubernetes/manifests/etcd.yaml` set `--cipher-suites` with the same set. After the components are recreated, confirm that `TLSv1.3` is negotiated (`openssl s_client -tls1_3`) and that `TLSv1.2` is rejected (`openssl s_client -tls1_2` ends with a handshake error), and save the output in `/var/work/tests/artifacts/5/tls13.txt`. It is important to understand the semantics: in Go the flag `--tls-cipher-suites` applies only to TLS ≤ 1.2, and with `--tls-min-version=VersionTLS13` the specific TLS 1.3 cipher suites are not configured by this flag (Go chooses them itself). Therefore, for kube-apiserver, the actual protection here comes specifically from min-version 1.3; cipher-suites are meaningful where TLS 1.2 is allowed (for example, for etcd). |
 | Acceptance criteria | - both required TLS flags are present in the kube-apiserver manifest;<br/>- the cipher suites are present in the etcd manifest;<br/>- kube-apiserver and etcd are healthy;<br/>- the TLS artifact contains the confirmation of `TLSv1.3` and a recorded rejection of TLS 1.2 (non-zero exit/handshake failure). |
 
 <details>

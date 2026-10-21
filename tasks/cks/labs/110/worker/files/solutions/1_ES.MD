@@ -53,8 +53,8 @@ exit   # de root
 exit   # del nodo gVisor
 ```
 
-No hace falta reiniciar el kubelet: `RuntimeClass` llama al runtime handler de containerd por
-nombre en cada creación de un Pod, y no al arrancar el kubelet.
+No hace falta reiniciar el kubelet: el kubelet pasa a containerd el nombre del handler de `RuntimeClass` en
+cada creación de un Pod, y no al arrancar el kubelet.
 
 ```yaml
 # runtimeclass-gvisor.yaml
@@ -84,7 +84,7 @@ printf 'RuntimeClass gvisor: handler runsc\n' \
 control-plane, donde no existe tal handler. El nodo gVisor, además, está marcado con el taint
 `sandbox.runtime/gvisor=true:NoSchedule` (`kubectl describe node <nodo-gvisor> | grep Taints`):
 en él no caerá ningún Pod, salvo los que lo toleran. `scheduling.tolerations` en el RuntimeClass
-se añaden automáticamente a todos los Pod con esta clase, por eso `gvisor-sandbox` cae allí,
+se añaden automáticamente a todos los Pods con esta clase, por eso `gvisor-sandbox` cae allí,
 y los demás no.
 
 ## 2. Ejecutar un Pod sandboxed y un Service
@@ -94,9 +94,9 @@ experimento entre nodos de WireGuard. `runtimeClassName` se aplica al Pod, y no 
 
 `nodeSelector` y `tolerations` en el Pod se indican explícitamente: así se ve en qué nodo cae y por qué.
 Es lo mismo que está descrito en el `scheduling` del propio `RuntimeClass`. Si no se indican en el Pod,
-no se romperá nada: al crear un Pod con `runtimeClassName`, Kubernetes por sí mismo **añade** a él
+no se romperá nada: al crear un Pod con `runtimeClassName`, Kubernetes le **añade** por sí mismo
 el `nodeSelector` y los `tolerations` de `RuntimeClass.scheduling` (comprobación: `kubectl -n sandbox-110 get
-pod gvisor-sandbox -o jsonpath='{.spec.nodeSelector}'`). Pero entonces en el manifest eso no se ve, y sin
+pod gvisor-sandbox -o jsonpath='{.spec.nodeSelector}'`). Pero entonces en el manifiesto eso no se ve, y sin
 `scheduling` en el RuntimeClass el Pod podría caer en un nodo sin `runsc` y no arrancar.
 
 ```yaml
@@ -159,8 +159,9 @@ cat /var/work/tests/artifacts/2/gvisor-kernel.txt
 kubectl get pod -n sandbox-110 gvisor-sandbox -o wide
 ```
 
-gVisor Sentry muestra al workload un kernel view sintético; `dmesg` puede estar
-limitado. Es lo esperado y no es motivo para conceder al contenedor privileges de más.
+gVisor Sentry muestra al workload un kernel view sintético; `dmesg` muestra no el log del kernel
+del nodo, sino un breve log sintético que empieza con la línea `Starting gVisor...` (precisamente la que espera
+el checker). Es lo esperado y no es motivo para conceder al contenedor privileges de más.
 
 ## 3. Un Pod runc normal para comparar
 
@@ -225,7 +226,7 @@ cat /var/work/tests/artifacts/4/tool-versions.txt
 ```
 
 El clúster se desplegó con el comando `cilium install`, que instala Cilium **mediante Helm**.
-El source of truth duradero — los Helm values del release `cilium`; usamos un upgrade con el Cilium CLI fijado y después comprobamos el ConfigMap live y los agents:
+El source of truth duradero son los Helm values del release `cilium`; usamos un upgrade con el Cilium CLI fijado y después comprobamos el ConfigMap live y los agents:
 
 ```bash
 cilium upgrade --version 1.20.1 \
@@ -290,7 +291,7 @@ ip route get $remote_ip
 ```
 
 **Baseline: WireGuard desactivado.** Desactivamos temporalmente WireGuard y repetimos LA MISMA petición con EL MISMO
-capture scope. Al final restablece obligatoriamente `enable-wireguard: "true"`.
+capture scope. Al final restableceremos obligatoriamente `enable-wireguard: "true"`.
 
 ```bash
 # terminal 2
@@ -502,7 +503,7 @@ cat /var/work/tests/artifacts/6/market-outside.txt
 
 `PeerAuthentication` controla el inbound server mode. El client interno recibe un
 certificado y usa mTLS automáticamente; el Pod en `default` no tiene sidecar y envía
-plaintext, por lo que el Envoy server con `STRICT` restablece la conexión. Termina con:
+plaintext, por lo que el Envoy server con `STRICT` corta la conexión con un reset (RST). Termina con:
 
 ```bash
 check_result

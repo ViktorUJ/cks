@@ -9,27 +9,27 @@
 `runAsNonRoot`、registry の allowlist；最後のオプションの段階では、admission 時の Pod の mutation を扱います。
 課題 6 では、このアプローチを別の仕組み - 組み込みの
 `ImagePolicyWebhook` と比較します。そこでは image の判断を、クラスター内の CEL 式ではなく、`ImageReview` API を通じて外部の HTTP(S)-backend が行います。
-最後の課題 7 は、3 つ目の独立した admission engine：**Gatekeeper (OPA/Rego)** で、Kyverno 内で CEL を書くのではなく、すでにデプロイされているが
+最後の課題 7 は、3 つ目の独立した admission engine である **Gatekeeper (OPA/Rego)** を扱い、そこでは Kyverno 内で CEL を書くのではなく、すでにデプロイされているが
 不完全な policy を修正します。課題に記載されたオブジェクトと名前だけを扱ってください。
 
 ## 開始前のセルフチェック
 
 <details>
-<summary>1. 明示的なタグ `:latest` だけを禁止しても、mutable-tag のリスク全体を塞げないのはなぜか?</summary>
+<summary>1. 明示的なタグ `:latest` だけを禁止しても、mutable-tag のリスク全体を塞げないのはなぜか？</summary>
 
-image がタグなしで指定された場合 (たとえば `nginx`)、Docker/OCI はデフォルトでそれを `nginx:latest` として解決します - implicit latest です。文字列 `:latest` の文字どおりの一致だけを確認する policy は、そのような image を通してしまいますが、意味的には明示的な `:latest` と同じものです。正しい policy は、明示的な latest と implicit latest の両方を拒否する - あるいは明示的な versioned tag/digest を要求する必要があります。
+image がタグなしで指定された場合 (たとえば `nginx`)、Docker/OCI はデフォルトでそれを `nginx:latest` として解決します - implicit latest です。文字列 `:latest` の文字どおりの一致だけを確認する policy は、そのような image を通してしまいますが、意味的には明示的な `:latest` と同じものです。正しい policy は、明示的な latest と implicit latest の両方を拒否するか、あるいは明示的な versioned tag/digest を要求する必要があります。
 </details>
 
 <details>
-<summary>2. validating policy が `ephemeralContainers` を `containers`/`initContainers` とは別に確認する必要があるのはなぜか?</summary>
+<summary>2. validating policy が `ephemeralContainers` を `containers`/`initContainers` とは別に確認する必要があるのはなぜか？</summary>
 
 `kubectl debug` は、通常の Pod の CREATE/UPDATE ではなく、別の subresource API (`pods/ephemeralcontainers`) を通じて、すでに存在する Pod に ephemeral container を追加します。policy がこの subresource を明示的に含めずにリソース `pods` だけにマッチしている場合、未検証/untrusted な ephemeral container を追加しようとする試みは、通常の containers 向けに書かれたすべての validating policies をすり抜ける可能性があります。
 </details>
 
 <details>
-<summary>3. Kyverno の `ValidatingPolicy` と `MutatingPolicy` の原理的な違いは何か?</summary>
+<summary>3. Kyverno の `ValidatingPolicy` と `MutatingPolicy` の原理的な違いは何か？</summary>
 
-`ValidatingPolicy` はリクエストを確認して許可または拒否 (Allow/Deny) するだけで - オブジェクトは変更されません。`MutatingPolicy` は、保存する前にオブジェクトを変更します (フィールドを追加/変更します。たとえば label) - リクエストはそれでも通りますが、内容は変更されています。課題 5 が mutation を使うのは、まさに目的が Pod の拒否ではなく、label を自動的に追加することだからです。
+`ValidatingPolicy` はリクエストを確認して許可または拒否 (Allow/Deny) するだけで、オブジェクトは変更されません。`MutatingPolicy` は、保存する前にオブジェクトを変更します (フィールドを追加/変更します。たとえば label) - リクエストはそれでも通りますが、内容は変更されています。課題 5 が mutation を使うのは、まさに目的が Pod の拒否ではなく、label を自動的に追加することだからです。
 </details>
 
 ## インフラ
@@ -113,8 +113,8 @@ kubectl get deployment -n kyverno -o json | \
 `pods/ephemeralcontainers` の両方を別々にカバーする必要があります - そうでないと `kubectl debug` は policy をすり抜けます。
 CEL ロジック自体については：image の文字列を、最後の `/` の後にある最後の `:` で `registry/path` と `tag` に分解してください
 (最後の `/` の前にある `:` は、タグではなく registry のポートの一部である可能性があります)；
-分解した後にタグがまったくなければ - それは implicit latest です；タグがあっても
-`latest` に等しければ - それも禁止されるケースです；digest (`@sha256:...`) は別の、常に
+分解した後にタグがまったくなければ、それは implicit latest です；タグがあっても
+`latest` に等しければ、それも禁止されるケースです；digest (`@sha256:...`) は別の、常に
 許可されるケースで、タグには該当しません。
 </details>
 
@@ -266,7 +266,7 @@ init と ephemeral コンテナで確認してください。
 </details>
 
 ---
-| **5** | **オプション: Kyverno で label を mutate する** |
+| **5** | **オプション：Kyverno で label を mutate する** |
 | :---: | :--- |
 | やること | • namespace `policy-108` の Pod に、label `security.cks.io/managed-by: kyverno` が存在しない場合に追加する、CEL ベースの `MutatingPolicy` `add-kyverno-managed-label` (`policies.kyverno.io/v1`) を作成します。<br/>• validation ではなく mutation を使用します。<br/>• 他の namespace の Pod は mutate しないでください。 |
 | 受け入れ基準 | • 許可された registry と `runAsNonRoot: true` を持ち、この label がまだない Pod の server-side dry-run が、mutation の後に値 `kyverno` でそれを受け取る<br/>• label がすでに別の値で設定されている Pod は、元の値を保持する<br/>• `default` の Pod にはこの label が付かないままである<br/>• この段階は `check_result` に表示されるが、スキップしても構わない |
@@ -274,25 +274,25 @@ init と ephemeral コンテナで確認してください。
 <details>
 <summary>💡 課題 5 のヒント</summary>
 
-この段階はオプションです - 時間がなくなった場合は、実習の他の部分にリスクなくスキップできます。mutation を確認するテスト Pod は、すでに課題 2-4 の policies (trusted registry、non-root) を通る必要があります - 前の policy のいずれかにそれ自体が拒否されると、mutation の結果がまったく見えません。課題の「存在しない場合」は単なる希望ではありません：mutation は label の有無を明示的に確認し、すでにある場合はオブジェクトに触れてはいけません。そうでなければ、label のない Pod が正しい値を受け取ったとしても、課題は達成されていません。
+この段階はオプションです - 時間がなくなった場合は、実習の他の部分に影響を与えずにスキップできます。mutation を確認するテスト Pod は、すでに課題 2-4 の policies (trusted registry、non-root) を通る必要があります - 前の policy のいずれかにそれ自体が拒否されると、mutation の結果がまったく見えません。課題の「存在しない場合」は単なる希望ではありません：mutation は label の有無を明示的に確認し、すでにある場合はオブジェクトに触れてはいけません。そうでなければ、label のない Pod が正しい値を受け取ったとしても、課題は達成されていません。
 </details>
 
 ---
 | **6** | **ImagePolicyWebhook: CEL policy の代わりに外部 backend** |
 | :---: | :--- |
-| やること | • 作業マシンには、すでに `/opt/image-policy-backend/server.py` が用意されています - `ImageReview` API を実装する最小限の HTTPS サーバーで (タグ `:latest` またはタグがまったくない image を拒否します)。<br/>• これを namespace `image-policy` に Deployment としてデプロイし、ポート `8443` の Service `image-policy-backend` の背後に置きます。Backend は TLS で接続を受け付ける必要があります (upstream の `ImagePolicyWebhook` の契約は HTTPS を要求し、plain HTTP はサポートされません)。<br/>• `control-plane` (`ssh`、その後 `sudo -i`) で、plugin `ImagePolicyWebhook` 用の `AdmissionConfiguration` (`defaultAllow: false`) と、あなたの backend を指す kubeconfig を設定します。<br/>• static manifest `kube-apiserver.yaml` で、`ImagePolicyWebhook` を既存の `--enable-admission-plugins` のリストに**追加**し (リスト全体を置き換えないでください - すでに有効な plugins を無効にするリスクがあります)、`--runtime-config=imagepolicy.k8s.io/v1alpha1=true` を有効にします。<br/>• API の復旧後、`:latest` の Pod を作成します - 拒否される必要があります；次に、固定されたタグの Pod - 作成される必要があります。 |
-| 受け入れ基準 | • `image-policy-backend` が Available である<br/>• Kube-apiserver が healthy で、plugin が追加されており (置き換えられておらず)、`--runtime-config` がある<br/>• backend の kubeconfig が HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy` を使用している<br/>• `:latest` と implicit latest (タグなしの registry-port を含む) の Pod が、namespace `default` で、まさに ImagePolicyWebhook によって拒否される — 通常の Pod でも、init/ephemeral container でも同様<br/>• ユーザー定義のアノテーション `alpha.image-policy.k8s.io/break-glass: "true"` は例外にならない<br/>• Namespace `policy-108` は、Tasks 2-4 の Kyverno 用に割り当てられており、2 つの独立した admission の仕組みが互いの拒否を隠さないようにしている<br/>• そのため backend は、`ImageReview.spec.namespace == policy-108` の場合は判断を Kyverno に委譲し、それ以外のすべての namespace では ImagePolicyWebhook が引き続き動作する<br/>• 固定されたタグの Pod が作成され Running である<br/>• backend の outage の間に Service が実際に Endpoints を失い、この endpoint の利用不能により API が拒否する (`defaultAllow: false`)。その後、Service の selector と admission が正確に元の状態に復元される |
+| やること | • 作業マシンには、すでに `/opt/image-policy-backend/server.py` が用意されています - `ImageReview` API を実装する最小限の HTTPS サーバーです (タグ `:latest` またはタグがまったくない image を拒否します)。<br/>• これを namespace `image-policy` に Deployment としてデプロイし、ポート `8443` の Service `image-policy-backend` の背後に置きます。Backend は TLS で接続を受け付ける必要があります (upstream の `ImagePolicyWebhook` の契約は HTTPS を要求し、plain HTTP はサポートされません)。<br/>• `control-plane` (`ssh`、その後 `sudo -i`) で、plugin `ImagePolicyWebhook` 用の `AdmissionConfiguration` (`defaultAllow: false`) と、あなたの backend を指す kubeconfig を設定します。<br/>• static manifest `kube-apiserver.yaml` で、`ImagePolicyWebhook` を既存の `--enable-admission-plugins` のリストに**追加**し (リスト全体を置き換えないでください - すでに有効な plugins を無効にするリスクがあります)、`--runtime-config=imagepolicy.k8s.io/v1alpha1=true` を有効にします。<br/>• API の復旧後、`:latest` の Pod を作成します - 拒否される必要があります；次に、固定されたタグの Pod - 作成される必要があります。 |
+| 受け入れ基準 | • `image-policy-backend` が Available である<br/>• Kube-apiserver が healthy で、plugin が追加されており (置き換えられておらず)、`--runtime-config` がある<br/>• backend の kubeconfig が HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy` を使用している<br/>• `:latest` と implicit latest (タグなしの registry-port を含む) の Pod が、namespace `default` で、まさに ImagePolicyWebhook によって拒否される - 通常の Pod でも、init/ephemeral container でも同様<br/>• ユーザー定義のアノテーション `alpha.image-policy.k8s.io/break-glass: "true"` は例外にならない<br/>• Namespace `policy-108` は、課題 2-4 の Kyverno 用に割り当てられており、2 つの独立した admission の仕組みが互いの拒否を隠さないようにしている<br/>• そのため backend は、`ImageReview.spec.namespace == policy-108` の場合は判断を Kyverno に委譲し、それ以外のすべての namespace では ImagePolicyWebhook が引き続き動作する<br/>• 固定されたタグの Pod が作成され Running である<br/>• backend の outage の間に Service が実際に Endpoints を失い、この endpoint の利用不能により API が拒否する (`defaultAllow: false`)。その後、Service の selector と admission が正確に元の状態に復元される |
 
 <details>
 <summary>💡 課題 6 のヒント</summary>
 
-`ImagePolicyWebhook` は、課題 1-5 の Kyverno とは原理的に異なる仕組みです：判断を行うのは、クラスター内の CEL 式ではなく、`ImageReview` API を通じた外部の HTTPS-backend です。用意された `/opt/image-policy-backend/server.py` を `control-plane` にコピーしてください (たとえば SSH 経由で `scp`/`cat`) - この課題が確認するのは、admission plugin の wiring、TLS の契約、ImageReview API の理解であり、HTTP サーバーをゼロから書く能力ではありません。TLS については：まず Service を作成し (`ClusterIP` を知るため)、次にその IP を SAN に含む自己署名証明書を作成し (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`)、続いてコードと証明書の両方をマウントする Deployment を作成します。既存の `--enable-admission-plugins` を新しい値で全体的に置き換えないでください - すでに有効な plugins にカンマ区切りで `ImagePolicyWebhook` を追記してください (通常は `NodeRestriction` がすでにあります)。また `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` も忘れないでください - この API を明示的に有効にしないと、backend はまったく呼び出されません。Namespace `image-policy` は事前に作成されていません - Deployment/Service の前に自分で作成してください。リソース/パス/フラグの詳細な手順で行き詰まった場合は、参考となる手順が解答に示されています。
+`ImagePolicyWebhook` は、課題 1-5 の Kyverno とは原理的に異なる仕組みです：判断を行うのは、クラスター内の CEL 式ではなく、`ImageReview` API を通じた外部の HTTPS-backend です。用意された `/opt/image-policy-backend/server.py` を作業マシンから使用します (たとえば、backend の Deployment 用に ConfigMap にパッケージ化します；`control-plane` にコピーする必要があるのは、webhook の kubeconfig 用の CA 証明書だけです) - この課題が確認するのは、admission plugin の wiring、TLS の契約、ImageReview API の理解であり、HTTP サーバーをゼロから書く能力ではありません。TLS については：まず Service を作成し (`ClusterIP` を知るため)、次にその IP を SAN に含む自己署名証明書を作成し (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`)、続いてコードと証明書の両方をマウントする Deployment を作成します。既存の `--enable-admission-plugins` を新しい値で全体的に置き換えないでください - すでに有効な plugins にカンマ区切りで `ImagePolicyWebhook` を追記してください (通常は `NodeRestriction` がすでにあります)。また `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` も忘れないでください - この API を明示的に有効にしないと、backend はまったく呼び出されません。Namespace `image-policy` は事前に作成されていません - Deployment/Service の前に自分で作成してください。リソース/パス/フラグの詳細な手順で行き詰まった場合は、参考となる手順が解答に示されています。
 </details>
 
 ---
 | **7** | **Gatekeeper ConstraintTemplate: Rego の blocklist を書き足す** |
 | :---: | :--- |
-| やること | • クラスターには、すでに **Gatekeeper** (OPA) と、`ConstraintTemplate` `k8sblockedregistries`、および Constraint `K8sBlockedRegistries/deny-bad-registries` がインストールされており、これは別の namespace `gatekeeper-108` に限定されています (`policy-108` ではありません - これは Kyverno の課題 1-5 とは別の演習場であり、Kyverno と Gatekeeper が同じ Pod を同時に拒否しないようにしています)。<br/>• `ConstraintTemplate` 内の Rego には、すでにいくつかのブロックされた registry (`untrusted-registry.example`、`docker-fake.test`) が含まれていますが、`very-bad-registry.test` は**意図的に含まれていません**。<br/>• `ConstraintTemplate.spec.targets[].rego` を見つけ、そこに `very-bad-registry.test` 用のルールを書き足します - `Constraint` のパラメータではなく、Rego の中にです。<br/>• `deny-bad-registries` はすでに完全に正しく、`spec.parameters` をまったく使用していません - 触れる必要はありません。 |
+| やること | • クラスターには、すでに **Gatekeeper** (OPA) と、`ConstraintTemplate` `k8sblockedregistries`、および `Constraint` `K8sBlockedRegistries/deny-bad-registries` がインストールされています。この Constraint は別の namespace `gatekeeper-108` に限定されています (`policy-108` ではありません - これは Kyverno の課題 1-5 とは別の演習場であり、Kyverno と Gatekeeper が同じ Pod を同時に拒否しないようにしています)。<br/>• `ConstraintTemplate` 内の Rego には、すでにいくつかのブロックされた registry (`untrusted-registry.example`、`docker-fake.test`) が含まれていますが、`very-bad-registry.test` は**意図的に含まれていません**。<br/>• `ConstraintTemplate.spec.targets[].rego` を見つけ、そこに `very-bad-registry.test` 用のルールを書き足します - `Constraint` のパラメータではなく、Rego の中にです。<br/>• `deny-bad-registries` はすでに完全に正しく、`spec.parameters` をまったく使用していません - 触れる必要はありません。 |
 | 受け入れ基準 | • `ConstraintTemplate k8sblockedregistries` と元の Constraint `K8sBlockedRegistries/deny-bad-registries` が存在する<br/>• Rego が元の 2 つの有効なルール (`untrusted-registry.example`、`docker-fake.test`) を保持し、`very-bad-registry.test` 用の新しい有効なルールを含む<br/>• これら 3 つの registry それぞれの Pod が、`gatekeeper-108` で、まさに Constraint `deny-bad-registries` によって拒否される<br/>• 信頼された `registry.k8s.io` の image を持つ Pod は通る<br/>• Constraint が Pod のみで、`gatekeeper-108` に限定され、parameters/selectors/exclusions がないままである<br/>• この種類の追加の Constraint は作成されない |
 
 <details>

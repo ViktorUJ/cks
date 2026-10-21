@@ -69,9 +69,9 @@ curl: (28) Connection timed out after 5000 milliseconds
 
 `client` -> transport-level の deny (`000` とタイムアウト) であり、単なる「200 ではない」ではありません。
 
-## 3. L7 の制限: GET / のみ
+## 3. L7 の制限：GET / のみ
 
-前に確認します (L4-only policy がまだ有効な状態で) - GET と POST の両方が実際に backend に届く必要があります：
+L7 に変更する前に確認します (L4-only policy がまだ有効な状態で) - GET と POST の両方が実際に backend に届く必要があります：
 
 ```bash
 k -n cks-102 exec frontend -- curl -sS -o /dev/null -w 'GET HTTP:%{http_code}\n' -m5 http://backend/
@@ -111,7 +111,7 @@ spec:
 EOF
 ```
 
-後に確認します：
+L7 に変更した後に確認します：
 
 ```bash
 k -n cks-102 exec frontend -- curl -sS -o /dev/null -w 'GET HTTP:%{http_code}\n' -m5 http://backend/
@@ -131,8 +131,8 @@ POST は Cilium の Envoy proxy によって L7 で拒否され (`403`)、transp
 `198.18.0.10`/`198.18.0.20` に解決されます (Kubernetes address space の外にある合成 IP で、control-plane ノード上の別の
 network namespace であり、ClusterIP ではありません：Cilium の `toFQDNs` はクラスター内部の IP に対しては
 allow ルールを適用しません)。bootstrap の時点ですでに立ち上げられ CoreDNS に登録されています：
-`example.com` とは異なり、これらの名前は常に利用可能で Internet に依存しません。policy の前に確認します
-- DNS と 2 つの制御用 endpoint の両方に実際に到達できる必要があります (`-k` は fixture の
+`example.com` とは異なり、これらの名前は常に利用可能で Internet に依存しません。policy の前に確認します：
+DNS と 3 つの確認用 endpoint (`allowed:443`、`allowed:80`、`blocked:443`) のすべてに実際に到達できる必要があります (`-k` は fixture の
 自己署名証明書のためです)：
 
 ```bash
@@ -190,7 +190,7 @@ spec:
 EOF
 ```
 
-後に確認し (数秒待ってください。FQDN-mapping は瞬時には行われません)、課題 2-3 の backend がリグレッションしていないことを確かめます：
+policy の適用後に確認し (数秒待ってください。FQDN-mapping は瞬時には行われません)、課題 2-3 の backend がリグレッションしていないことを確かめます：
 
 ```bash
 k -n cks-102 exec frontend -- curl -sSk -o /dev/null -w 'allowed:443 HTTP:%{http_code}\n' -m10 https://allowed.cks102.test/
@@ -230,7 +230,7 @@ cks-102/frontend:xxxxx -> cks-102/backend:80 http-request FORWARDED (HTTP/1.1 GE
 cks-102/frontend:xxxxx -> cks-102/backend:80 http-request DROPPED (HTTP/1.1 POST http://backend/)
 ```
 
-見えるはずの flow はちょうど 2 つです：verdict `FORWARDED` の `GET /` と、verdict `DROPPED` の `POST /`。見えない場合は、`hubble observe` がリクエストの最中に起動されていなかったということです；やり直してください。
+見えるはずの flow はちょうど 2 つです：verdict `FORWARDED` の `GET /` と、verdict `DROPPED` の `POST /`。見えない場合は、`hubble observe` がリクエストの最中に起動されていなかったということです。やり直してください。
 
 ## 6. 複合 L7 policy: public/private の path scopes
 
@@ -280,7 +280,7 @@ k -n production wait --for=condition=Ready pod/portal --timeout=60s
 k -n finance wait --for=condition=Ready pod/finance-client --timeout=60s
 ```
 
-policy の前の Baseline - 両方の namespace から両方の path が、実際に `200` を返す必要があります：
+policy 適用前の baseline - 両方の namespace から両方の path が、実際に `200` を返す必要があります：
 
 ```bash
 k -n finance exec finance-client -- curl -sS -o /dev/null -w 'public:%{http_code}\n' -m5 http://portal.production/public/
@@ -300,8 +300,8 @@ Policy：同じポートに 2 つの ingress ルール。**Cilium の重要な�
 [{}]` (空の selector) は、「クラスター全体の任意の identity」を意味しません -
 Cilium は、明示的な namespace-label のない任意の `fromEndpoints` selector (空の `{}` を含む) に、
 policy 自身の namespace による制限を暗黙的に追加します。つまり、ここでの `{}` は実際には
-namespace `production` の endpoints にしかマッチせず、`finance`/`cks-102` にはマッチしません
-- 実機での確認がこれを裏付けています：文字どおりの `{}` では、外部 client は両方の path で transport
+namespace `production` の endpoints にしかマッチせず、`finance`/`cks-102` にはマッチしません -
+実機での確認がこれを裏付けています：文字どおりの `{}` では、外部 client は両方の path で transport
 timeout を受け取り (ルールがそもそもその namespace に適用されない)、`finance` は
 `/public/*` で `403` を受け取ります (ルール 2 にしかマッチせず、それは `/private/*` のみを許可します)。
 namespace に関係なく本当に任意の identity にマッチさせるには、reserved-label `k8s:io.kubernetes.pod.namespace` に対する
@@ -347,7 +347,7 @@ EOF
 sleep 3
 ```
 
-この selector では、ルール 1 は本当に絶対に任意の identity (`finance` を含む) にマッチするため、
+この selector では、ルール 1 は実際に、文字どおりあらゆる identity (`finance` を含む) にマッチするため、
 `finance` の最終的な allow-set は、`/public/*` (ルール 1) と
 `/private/*` (ルール 2、`finance` のみにマッチ) の和集合になります。それ以外の任意の namespace には
 ルール 1 のみが適用されます。

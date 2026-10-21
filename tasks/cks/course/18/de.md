@@ -255,7 +255,7 @@ standardmäßig deaktiviert) und `CSIDriver.spec.seLinuxMount: true` beim CSI-Tr
 das gewöhnliche rekursive Relabeling. Ändern Sie Label oder Policy nicht zugunsten der Geschwindigkeit ohne einen Test
 der Isolierung und Kompatibilität des jeweiligen CSI/Dateisystems.
 
-> 🔬 **Upstream v1.37.** In Kubernetes v1.37 wurde `SELinuxMount` GA und ist standardmäßig aktiviert. Prüfen Sie vor dem Upgrade eines SELinux-aktivierten Clusters Konflikte von Volume-Labels; bei Bedarf kann ein Workload das rekursive Verhalten explizit mit `spec.securityContext.seLinuxChangePolicy: Recursive` beibehalten. Details: [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_DE.md).
+> 🔬 **Upstream v1.37.** In Kubernetes v1.37 wurde `SELinuxMount` GA und ist standardmäßig aktiviert. Prüfen Sie vor dem Upgrade eines SELinux-aktivierten Clusters Konflikte von Volume-Labels; bei Bedarf kann ein Workload das rekursive Verhalten explizit mit `spec.securityContext.seLinuxChangePolicy: Recursive` beibehalten. Details: [Kubernetes v1.37 Security Delta (nur auf Russisch)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 `procMount` ist eine Linux-Option nur auf Container-Ebene: Der sichere Default `Default` lässt die sensiblen Teile von
 `/proc` maskiert; `Unmasked` erweitert die Sicht des Prozesses und eignet sich nicht für eingeschränkte Workloads.

@@ -4,7 +4,7 @@
 
 > Advanced/production track. Точные версии/флаги CLI могут отличаться между
 > релизами Cilium - проверяйте `cilium install --help`/`cilium upgrade --help`,
-> если что-то из ниже не срабатывает буквально.
+> если что-то из приведённого ниже не срабатывает буквально.
 
 ## 1. Baseline
 
@@ -96,8 +96,8 @@ api HTTP:403
   `spire-data-spire-server-0` навсегда остаётся `Pending`, а `spire-server-0` - `Pending`
   (для лабы хватает эфемерного хранилища).
 - `install.server.securityContext.runAsUser=0` - образ `spire-server` стартует от uid 1000 и
-  не может создать `api.sock` в hostPath-каталоге `root:755`; сервер молча завершает
-  endpoint'ы и убивается liveness-пробой (`Waiting for spire-server to start...` в `cilium-init`).
+  не может создать `api.sock` в hostPath-каталоге `root:755`; сервер молча не поднимает свои
+  endpoint и убивается liveness-пробой (`Waiting for spire-server to start...` в `cilium-init`).
 
 ```bash
 cilium upgrade --version 1.20.1 \

@@ -196,7 +196,7 @@ k -n cks-101 exec probe -- \
 echo $?
 ```
 
-## 5. IMDS final verification
+## 5. Comprobación final de IMDS
 
 ```bash
 # control: IMDS es alcanzable
@@ -271,7 +271,7 @@ echo $?
 k -n cks-101-legacy exec deploy/legacy-client -- curl -sS -m 5 http://backend.cks-101:8080/
 ```
 
-## 7. hostNetwork observation
+## 7. Observación de hostNetwork
 
 ```bash
 k -n cks-101 run hostnetwork-probe --image=curlimages/curl:8.11.1 -l app=frontend \

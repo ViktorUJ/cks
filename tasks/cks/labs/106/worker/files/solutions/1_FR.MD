@@ -69,8 +69,8 @@ que celui-ci et n'est pas soumis à ce problème - c'est précisément pourquoi 
 (nous retirons `complain` de `flags=(...)`) à la main via `sed`, puis rechargeons précisément
 ce fichier via `apparmor_parser -r`.
 
-`aa-status` est un outil distinct de consultation de l'état, et non de modification des profils, et il n'a
-pas sa place ici. Le mode d'un profil concret est affiché par `aa-status --pretty-json` (vérifié sur
+`aa-status` est un outil distinct de consultation de l'état, et non de modification des profils, et cet avertissement
+ne le concerne pas. Le mode d'un profil concret est affiché par `aa-status --pretty-json` (vérifié sur
 le nœud du lab, apparmor 3.0.4 ; `--json` donne la même chose sur une seule ligne, par exemple
 `aa-status --json | jq -r '.profiles["k8s-106-deny-write"]'`). L'alternative est le fichier du noyau
 `grep -F 'k8s-106-deny-write' /sys/kernel/security/apparmor/profiles` : là, le format est
@@ -124,7 +124,7 @@ kubectl get pod -n security-106 apparmor-writer
 kubectl exec -n security-106 apparmor-writer -- cat /proc/1/attr/current
 # k8s-106-deny-write (enforce)
 
-# Contrôle positif AVANT le refus : une opération read autorisée précisément sur le même /work,
+# Contrôle positif AVANT le refus : une opération read autorisée précisément sur le même /work
 # où le denial sera vérifié - sans cette étape, le refus d'écriture ne pourrait pas être distingué
 # d'un mount/mountPath qui ne fonctionne pas du tout (dans ce cas, même la lecture serait indisponible).
 kubectl exec -n security-106 apparmor-writer -- sh -c 'ls /work'
@@ -152,8 +152,8 @@ exit
 
 Si `/proc/1/attr/current` n'est pas disponible dans le runtime concret, consignez-le et appuyez-vous
 sur l'assignation du Localhost profile avec le kernel `apparmor="DENIED"` pour ce profile ;
-un seul code non nul sans cette evidence est insuffisant, car il peut être donné par un mount ou un
-Unix permission ordinaire.
+un seul code non nul sans cette evidence est insuffisant, car il peut être donné par un mount ou une
+permission Unix ordinaire.
 
 ## 4. RuntimeDefault pour un Pod ordinaire
 
@@ -378,7 +378,7 @@ exit
 kubectl get nodes     # Ready
 ```
 
-Nous créons un Pod sans une seule mention de `seccompProfile`, ni au niveau du Pod ni du container :
+Nous créons un Pod sans une seule mention de `seccompProfile`, ni au niveau du Pod ni au niveau du conteneur :
 
 ```yaml
 # no-seccomp-field.yaml
@@ -434,8 +434,8 @@ cat /var/work/tests/artifacts/8/apparmor-debug.txt
 # ... syntax error, unexpected TOK_CLOSE, expecting TOK_END_OF_RULE
 ```
 
-Nous utilisons `sudo` aussi pour la vérification compile-only `-Q` : sur le nœud du lab (apparmor 3.0.4, Ubuntu)
-sans privilèges le parser à chaque lancement tente de configurer la policy cache dans
+Nous utilisons `sudo` aussi pour la vérification compile-only `-Q` : sur le nœud du lab (apparmor 3.0.4, Ubuntu),
+sans privilèges, le parser tente à chaque lancement de configurer le policy cache dans
 `/var/cache/apparmor` et échoue avec "Failed setting up policy cache (/var/cache/apparmor):
 Permission denied" AVANT la vérification de la syntaxe - vous obtiendrez une erreur trompeuse de droits au lieu de
 la vraie erreur de syntaxe, et `apparmor-debug.txt` ne contiendra pas le texte nécessaire

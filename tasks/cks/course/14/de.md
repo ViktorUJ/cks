@@ -658,7 +658,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 
 ## 14.9. Anwendung in der Produktion
 
-- **Kubernetes v1.37 Rootless Node Path.** `KubeletInUserNamespace` wurde Beta und ermöglicht den Aufbau eines Node Stack, in dem kubelet und zugehörige Node Components ohne Host Root über einen User Namespace laufen. Verwechseln Sie dies nicht mit `spec.hostUsers: false`, das einen Pod isoliert. Siehe [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_DE.md).
+- **Kubernetes v1.37 Rootless Node Path.** `KubeletInUserNamespace` wurde Beta und ermöglicht den Aufbau eines Node Stack, in dem kubelet und zugehörige Node Components ohne Host Root über einen User Namespace laufen. Verwechseln Sie dies nicht mit `spec.hostUsers: false`, das einen Pod isoliert. Siehe [Kubernetes v1.37 Security Delta (nur auf Russisch)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 - **Baseline wird als Code festgelegt.** Die Liste der Packages, enabled Services, systemd Drop-ins, Firewall und Socket-Prüfung gehören in ein Immutable Image, Ansible/Cloud-Init oder anderes IaC. Ein manueller Emergency Fix wird anschließend in die Source of Truth übertragen.
 - **Nodes werden nach Rolle getrennt.** Control Plane, Worker, Build Host und Docker Host erhalten nicht denselben Satz an Packages und Ports. Insbesondere wird Docker Daemon nicht nur wegen interaktivem `docker ps` auf einem Worker installiert, wenn CRI containerd ist.
 - **Runtime-Zugriff wird als privilegierter Zugriff geprüft.** Änderungen an Gruppenmitgliedern, Berechtigungen von containerd/NRI/Docker Socket und systemd Override durchlaufen dasselbe Review wie die Vergabe von `sudo`; erlaubte Systemgruppen enthalten keine gewöhnlichen Benutzer.

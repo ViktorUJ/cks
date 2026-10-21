@@ -15,19 +15,19 @@ Kubernetes `1.35.x`-ზე; თქვენი ამოცანაა ორ�
 <details>
 <summary>1. რატომ მოითხოვს `kubeadm upgrade` control-plane-ის upgrade-ს მკაცრად worker-node-ებამდე, და არა ნებისმიერი თანმიმდევრობით?</summary>
 
-`kubeadm upgrade apply` control-plane-ზე ანახლებს API server-ისა და other control-plane კომპონენტების ვერსიას, ასევე კლასტერის version skew policy-ს. Worker-node, API server-თან შედარებით ძალიან ახალი kubelet-ით, შეიძლება დაარღვევდეს მხარდაჭერილ skew-ს (kubelet არ უნდა იყოს kube-apiserver-ზე ახალი). control-plane-ის პირველად განახლება იძლევა გარანტიას, რომ API server უკვე მიზნობრივ ვერსიაზეა, როცა worker მასზევე გადადის - ეს თვითნებური რეკომენდაცია არ არის, არამედ Kubernetes-ის version skew policy-ის მოთხოვნაა.
+`kubeadm upgrade apply` control-plane-ზე ანახლებს API server-ისა და control-plane-ის სხვა კომპონენტების ვერსიას; სწორედ ამ ვერსიიდან ითვლება კლასტერის version skew policy. Worker-node, API server-თან შედარებით ძალიან ახალი kubelet-ით, შეიძლება დაარღვიოს მხარდაჭერილი skew (kubelet არ უნდა იყოს kube-apiserver-ზე ახალი). control-plane-ის პირველ რიგში განახლება იძლევა გარანტიას, რომ API server უკვე მიზნობრივ ვერსიაზეა, როცა worker მასზევე გადადის - ეს თვითნებური რეკომენდაცია არ არის, არამედ Kubernetes-ის version skew policy-ის მოთხოვნაა.
 </details>
 
 <details>
 <summary>2. რატომ არის apt-repository `pkgs.k8s.io`-ის გადართვა სავალდებულო ახალ minor-ზე გადასვლისას, მაშინ როცა patch-განახლებები მის გარეშე მუშაობს?</summary>
 
-`packages.cloud.google.com`/`apt.kubernetes.io`-დან მიგრაციის შემდეგ, `pkgs.k8s.io` ორგანიზებულია როგორც **ცალკე repository ყოველი minor-ვერსიისთვის** (`core:/stable:/v1.35`, `core:/stable:/v1.36` და ა.შ.), და არა ერთიანი repository ყველა ვერსიით. უკვე მიერთებული repo `v1.35`-ის შიგნით ხელმისაწვდომია მხოლოდ `1.35.x` patch-რელიზები. რომ `apt install kubeadm=1.36.x-*`-მა `1.36` ვერსიები დაინახოს, ჯერ უნდა მიაერთოთ (`sources.list.d/kubernetes.list`) და ხელი მოაწეროთ (`Release.key`) სწორედ repo-ს `core:/stable:/v1.36`.
+`packages.cloud.google.com`/`apt.kubernetes.io`-დან მიგრაციის შემდეგ, `pkgs.k8s.io` ორგანიზებულია როგორც **ცალკე repository ყოველი minor-ვერსიისთვის** (`core:/stable:/v1.35`, `core:/stable:/v1.36` და ა.შ.), და არა ერთიანი repository ყველა ვერსიით. უკვე მიერთებული repo `v1.35`-ის შიგნით ხელმისაწვდომია მხოლოდ `1.35.x` patch-რელიზები. რომ `apt install kubeadm=1.36.x-*`-მა `1.36` ვერსიები დაინახოს, ჯერ უნდა მიაერთოთ `sources.list.d/kubernetes.list`-ში სწორედ repo `core:/stable:/v1.36` (იცვლება მხოლოდ ვერსია URL-ში; keyring ხელმოწერის გასაღებით `Release.key` უცვლელი რჩება).
 </details>
 
 <details>
 <summary>3. რატომ არის `kubectl drain` კლასტერის upgrade-მდე არა უბრალოდ "კარგი პრაქტიკა", არამედ კონკრეტულად რისგან დაცვა?</summary>
 
-`kubeadm upgrade` control-plane-ზე თავიდან ქმნის კომპონენტების static Pod-manifest-ებს (kube-apiserver, controller-manager, scheduler), ხოლო ნებისმიერ node-ზე kubelet-ის upgrade მოითხოვს მის restart-ს - ამ მომენტში node დროებით კარგავს Pod-ების სტატუსის სწორად რეპორტინგისა და ახლების მიღების უნარს. `drain` წინასწარ გადაასახლებს ჩვეულებრივ workload-Pod-ებს სხვა node-ებზე (ან მონიშნავს მათ evicted-ად), რომ node-ის ეს დროებითი ჩავარდნა აპლიკაციის downtime-ად არ იქცეს. `drain`-ის გარეშე განახლებად node-ზე Pod-ები restart-ის დროს მიუწვდომელი შეიძლება აღმოჩნდეს სხვა node-ზე კომპენსაციური გადასვლის გარეშე.
+`kubeadm upgrade` control-plane-ზე თავიდან ქმნის კომპონენტების static Pod-manifest-ებს (kube-apiserver, controller-manager, scheduler), ხოლო ნებისმიერ node-ზე kubelet-ის upgrade მოითხოვს მის restart-ს - ამ მომენტში node დროებით კარგავს Pod-ების სტატუსის სწორად რეპორტინგისა და ახლების მიღების უნარს. `drain` წინასწარ გადაასახლებს ჩვეულებრივ workload-Pod-ებს სხვა node-ებზე (ან მონიშნავს მათ evicted-ად), რომ node-ის ეს დროებითი ჩავარდნა აპლიკაციის downtime-ად არ იქცეს. `drain`-ის გარეშე განახლების პროცესში მყოფ node-ზე Pod-ები restart-ის დროს მიუწვდომელი შეიძლება აღმოჩნდეს სხვა node-ზე კომპენსაციური გადასვლის გარეშე.
 </details>
 
 ## კავშირი კურსთან
@@ -50,7 +50,7 @@ upgrade-ის მიზნობრივი ვერსია - `1.36.x` (ლ
 დანარჩენი core ლაბები 101-112. minor-ვერსიების გამოტოვებას (მაგალითად პირდაპირი გადასვლა `1.35` → `1.37`)
 kubeadm მხარს არ უჭერს - ამ ლაბში ასეთი გადასვლა არც არის საჭირო.
 
-node-ებზე წვდომისთვის გამოიყენეთ aliases `k8s113_controlPlane_1` და `k8s113_node_worker1`.
+node-ებზე წვდომისთვის გამოიყენეთ alias-ები `k8s113_controlPlane_1` და `k8s113_node_worker1`.
 
 Namespace `upgrade-113` Deployment-ით `canary` (2 replica) უკვე განთავსებულია - ეს თქვენი
 downtime-ის არარსებობის ინდიკატორია. მთელი upgrade-ის განმავლობაში სულ მცირე ერთი replica უნდა
@@ -85,7 +85,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 | **1** | **control-plane-ის upgrade მიზნობრივ minor-მდე** |
 | :---: | :--- |
 | რას ვაკეთებთ | • შედით `k8s113_controlPlane_1`-ზე (`ssh`, შემდეგ `sudo -i`).<br/>• გადართეთ apt-repository `pkgs.k8s.io` `core:/stable:/v1.35`-დან `core:/stable:/v1.36`-ზე: `/etc/apt/sources.list.d/kubernetes.list`-ში იცვლება მხოლოდ ვერსია URL-ში (ასე არის აღწერილი Kubernetes-ის დოკუმენტაციაში, keyring იგივე რჩება).<br/>• განაახლეთ პაკეტი `kubeadm` `1.36.x`-მდე, შეასრულეთ `kubeadm upgrade plan`, შემდეგ `kubeadm upgrade apply v1.36.x`.<br/>• მხოლოდ წარმატებული `apply`-ის შემდეგ შეასრულეთ `kubectl drain` ამ node-ისთვის.<br/>• განაახლეთ პაკეტები `kubelet`/`kubectl` `1.36.x`-მდე, გადატვირთეთ `kubelet`, შემდეგ შეასრულეთ `kubectl uncordon`. |
-| მიღების კრიტერიუმები | • `kubeadm version`, `kubelet --version`, ლოკალური `kubectl version --client` და API server-ის ვერსია (`kubectl version`) control-plane-ზე აცხადებს `v1.36.x`-ს.<br/>• node `k8s113_controlPlane_1` სტატუსშია `Ready`.<br/>• ბრძანების `kubeadm upgrade apply` სრული გამოტანა (სტრიქონით `SUCCESS` და მიზნობრივი ვერსიით) სიტყვასიტყვით შენახულია `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt`-ში სამუშაო მანქანაზე (ბრძანება სრულდება node-ზე, გამოტანა იწერება ფაილში node-ზე, შემდეგ კოპირდება `scp`-ით). |
+| მიღების კრიტერიუმები | • `kubeadm version`, `kubelet --version`, ლოკალური `kubectl version --client` და API server-ის ვერსია (`kubectl version`) control-plane-ზე აცხადებს `v1.36.x`-ს.<br/>• control-plane node (`<cp-სახელი>` `kubectl get no`-დან) სტატუსშია `Ready`.<br/>• ბრძანების `kubeadm upgrade apply` სრული გამოტანა (სტრიქონით `SUCCESS` და მიზნობრივი ვერსიით) სიტყვასიტყვით შენახულია `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt`-ში სამუშაო მანქანაზე (ბრძანება სრულდება node-ზე, გამოტანა იწერება ფაილში node-ზე, შემდეგ კოპირდება `scp`-ით). |
 
 <details>
 <summary>💡 მინიშნება დავალება 1-ისთვის</summary>
@@ -114,7 +114,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 <details>
 <summary>💡 მინიშნება დავალება 3-ისთვის</summary>
 
-თუ worker-node-ის upgrade უკვე დაიწყეთ (ან მით უმეტეს დაასრულეთ) control-plane-მდე - გაჩერდით, worker-ის უკან დაბრუნება `1.35.x` პაკეტების ჩამოტვირთვაზე მარტივი გზით შეუძლებელია, მაგრამ სწორი გზა - control-plane-ის upgrade-ის დასრულებაა, შემდეგ worker-node-ის upgrade-ის გაგრძელება/გამეორება. მთავარია - worker-node-ის შემდეგი upgrade (როდესაც არ უნდა იყოს დაწყებული) უნდა მოხდეს control-plane-ის სრულად დასრულებული upgrade-ის შემდეგ. დავალება 2-ს ნუ დაიწყებთ, სანამ `kubectl get node k8s113_controlPlane_1` არ აჩვენებს `v1.36.x`-სა და `Ready`-ს.
+თუ worker-node-ის upgrade უკვე დაიწყეთ (ან მით უმეტეს დაასრულეთ) control-plane-მდე - გაჩერდით, worker-ის უკან დაბრუნება `1.35.x` პაკეტების ჩამოტვირთვაზე მარტივი გზით შეუძლებელია, მაგრამ სწორი გზა - control-plane-ის upgrade-ის დასრულებაა, შემდეგ worker-node-ის upgrade-ის გაგრძელება/გამეორება. მთავარია - worker-node-ის შემდეგი upgrade (როდესაც არ უნდა იყოს დაწყებული) უნდა მოხდეს control-plane-ის სრულად დასრულებული upgrade-ის შემდეგ. დავალება 2-ს ნუ დაიწყებთ, სანამ `kubectl get node <cp-სახელი>` არ აჩვენებს `v1.36.x`-სა და `Ready`-ს.
 </details>
 
 ---
@@ -126,7 +126,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 <details>
 <summary>💡 მინიშნება დავალება 4-ისთვის</summary>
 
-გამოკითხვის ციკლის მაგალითი, რომლის დატოვებაც შეიძლება ცალკე ტერმინალში/`screen`/`tmux`-ში მუშაობაზე დავალებების 1-2 შესრულების მთელი დროის განმავლობაში: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. თუ Deployment მოკლე დროით ყველა replica-ს კარგავდა - შეამოწმეთ `kubectl get pods -n upgrade-113 -o wide` და რომ თანმიმდევრული drain-ები PDB-სა და required anti-affinity-ს იცავს.
+გამოკითხვის ციკლის მაგალითი, რომელიც შეიძლება გაშვებული დატოვოთ ცალკე ტერმინალში/`screen`/`tmux`-ში დავალებების 1-2 შესრულების მთელი დროის განმავლობაში: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. თუ Deployment მოკლე დროით ყველა replica-ს კარგავდა - შეამოწმეთ `kubectl get pods -n upgrade-113 -o wide` და რომ თანმიმდევრული drain-ები PDB-სა და required anti-affinity-ს იცავს.
 </details>
 
 ## შედეგის შემოწმება
@@ -135,12 +135,12 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 check_result
 ```
 
-შემოწმება შეიცავს `0 Init`-სა და ხუთ სავალდებულო ტესტს. ტესტები 1-2 ამოწმებენ
+შემოწმება შეიცავს `0 Init`-სა და ხუთ სავალდებულო ტესტს. ტესტები 1-2 ამოწმებს
 `kubeadm`/`kubelet`/ლოკალური `kubectl`-ის ვერსიებსა და სტატუსს `Ready` control-plane-ზე და worker-node-ზე
 შესაბამისად, ასევე სიტყვასიტყვით evidence-ფაილს `kubeadm upgrade`-ის გამოტანით. ტესტი 3
 ამოწმებს upgrade-ის თანმიმდევრობას checker-owned მონიტორით კლასტერის მდგომარეობის, და არა
-ფაილების მოდიფიკაციის დროით. ტესტი 4 ამოწმებს, რომ დატვირთვას `canary` არ ჰქონია გამოსვლა,
-იმავე checker-owned monitor-ის გამოყენებით როგორც ჭეშმარიტების წყაროსი. ტესტი 5 - საბოლოო
+ფაილების მოდიფიკაციის დროით. ტესტი 4 ამოწმებს, რომ დატვირთვას `canary` არ ჰქონია downtime,
+ჭეშმარიტების წყაროდ იმავე checker-owned monitor-ის გამოყენებით. ტესტი 5 - საბოლოო
 შემოწმებაა, რომ ორივე node მართლაც მიზნობრივ ვერსიაზეა და არ არის დატოვებული მდგომარეობაში
 `cordon`.
 

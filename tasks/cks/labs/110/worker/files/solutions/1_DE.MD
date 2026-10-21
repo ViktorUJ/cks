@@ -53,8 +53,8 @@ exit   # aus root
 exit   # vom gVisor-Node
 ```
 
-Das Kubelet muss nicht neu gestartet werden: `RuntimeClass` ruft den containerd runtime handler beim
-Erstellen jedes Pods über den Namen auf und nicht beim Start des kubelet.
+Das Kubelet muss nicht neu gestartet werden: das kubelet übergibt den Namen des handlers aus der `RuntimeClass` beim
+Erstellen jedes Pods an containerd und nicht beim Start des kubelet.
 
 ```yaml
 # runtimeclass-gvisor.yaml
@@ -159,8 +159,9 @@ cat /var/work/tests/artifacts/2/gvisor-kernel.txt
 kubectl get pod -n sandbox-110 gvisor-sandbox -o wide
 ```
 
-Der gVisor Sentry zeigt dem workload einen synthetischen kernel view; `dmesg` kann
-eingeschränkt sein. Das ist erwartet und kein Grund, dem Container überflüssige privileges zu geben.
+Der gVisor Sentry zeigt dem workload einen synthetischen kernel view; `dmesg` gibt nicht das Kernel-Log
+des Nodes aus, sondern ein kurzes synthetisches Log, das mit der Zeile `Starting gVisor...` beginnt (genau diese erwartet
+der checker). Das ist erwartet und kein Grund, dem Container überflüssige privileges zu geben.
 
 ## 3. Gewöhnlicher runc Pod zum Vergleich
 
@@ -203,7 +204,7 @@ die Prüfung des Images.
 
 ## 4. Cilium WireGuard aktivieren
 
-Cilium verwaltet WireGuard keys und peers selbst. Wir aktivieren ein Verschlüsselungs-Backend -
+Cilium verwaltet WireGuard keys und peers selbst. Wir aktivieren nur ein einziges Verschlüsselungs-Backend -
 IPsec fügen wir nicht hinzu. Wichtig: Das **Client**-`cilium` CLI (auf dem worker installiert) hat keinen
 Unterbefehl `encrypt enable`; WireGuard wird über die Cilium-Konfiguration aktiviert und nicht über einen
 runtime-Befehl. Zuerst halten wir die Versionen fest und gleichen den agent mit der requirements matrix ab:
@@ -262,7 +263,7 @@ verwenden wir denselben Capture-Scope (`host <remote-node-ip>`, ohne Port-Filter
 VORHER/NACHHER beim Aktivieren von WireGuard für denselben Flow zwischen Nodes.
 
 Ein Capture auf `any` ist KEIN korrekter Beobachtungspunkt für den on-wire state: `any` sieht auch das interne
-Cilium-Interface `cilium_wg0`, über das konstruktionsbedingt des Tunnels BEREITS ENTSCHLÜSSELTER
+Cilium-Interface `cilium_wg0`, über das durch die Konstruktion des Tunnels BEREITS ENTSCHLÜSSELTER
 Traffic läuft. Mitgeschnitten werden muss das physische egress-Interface zum entfernten Node (nicht `any`, `cilium_*`,
 `lxc*`, `veth*`).
 
@@ -351,7 +352,7 @@ scp k8s110_controlPlane_1:/tmp/wireguard-tcpdump.txt /var/work/tests/artifacts/5
 
 Ziehe keine Schlüsse aus `tcpdump` im Pod netns: Dort kann der Traffic vor dem Cilium encryption point noch
 plaintext sein. Der Nachweis ist hier der Übergang vom sichtbaren marker (WireGuard ausgeschaltet) zu seinem
-Fehlen (WireGuard eingeschaltet) bei EIN UND DEMSELBEN Capture-Scope.
+Fehlen (WireGuard eingeschaltet) bei EINEM UND DEMSELBEN Capture-Scope.
 
 ## 6. Istio und PeerAuthentication STRICT
 
@@ -458,7 +459,7 @@ kubectl get pods -n market
 
 # Baseline (STRICT ist noch nicht angewendet): Ein plaintext client außerhalb des mesh muss 200 erhalten -
 # das beweist, dass die Konnektivität grundsätzlich funktioniert und jede spätere Ablehnung
-# gerade von STRICT mTLS verursacht wird und nicht von einem unabhängigen DNS/Netzwerk-Problem.
+# genau durch STRICT mTLS verursacht wird und nicht von einem unabhängigen DNS/Netzwerk-Problem.
 kubectl exec -n default mesh-outside -- \
   curl -sv --max-time 10 http://market-api.market.svc.cluster.local \
   > /var/work/tests/artifacts/6/market-outside-baseline.txt 2>&1

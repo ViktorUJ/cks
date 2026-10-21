@@ -4,7 +4,7 @@
 
 > Nous travaillons comme à l'examen : `kubectl` - sur la machine de travail, et les opérations sur le nœud (apt, kubeadm,
 > kubelet) - sur le nœud lui-même : entrez-y avec `ssh <nœud>`, passez en root (`sudo -i`),
-> exécutez les commandes et sortez (`exit`, `exit`). La version de départ du cluster est `1.35.x`, la version cible -
+> exécutez les commandes et sortez (`exit`, `exit`). La version de départ du cluster est `1.35.x`, la version cible est
 > `1.36.x`. Les noms des nœuds (`<nom-cp>`, `<nom-worker>`) sont pris dans `kubectl get no` ; à l'examen, ils sont différents, dans ce lab les alias ssh sont : `k8s113_controlPlane_1` et `k8s113_node_worker1`.
 
 ## Où trouver les commandes dans la documentation
@@ -20,7 +20,7 @@
 | Nœud worker : `kubeadm upgrade node` | [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) |
 
 Sur les nœuds Ubuntu, `needrestart` est configuré en mode « liste seulement » (sans dialogue OK/Cancel), donc
-`apt-get install` ne s'arrête pas sur des questions.
+`apt-get install` ne s'interrompt pas pour poser des questions.
 
 À la place de `1.36.x` dans les commandes, substituez le patch réel issu de `apt-cache madison kubeadm` et de
 la sortie de `kubeadm upgrade plan`.
@@ -138,7 +138,7 @@ Ne commencez qu'après que le control-plane est `Ready` en `1.36.x` (version ske
 le kubelet du worker ne peut pas être plus récent que le control-plane). Attendez que `canary` soit de nouveau `2/2` :
 
 ```bash
-# sur la machine de travail : répétez jusqu'à ce que AVAILABLE devienne 2
+# sur la machine de travail : répétez jusqu'à ce qu'AVAILABLE devienne 2
 kubectl get deployment canary -n upgrade-113
 ```
 
@@ -201,20 +201,20 @@ kubectl get nodes
 ## 3. Vérification de l'ordre de l'upgrade
 
 La tâche 3 n'exige pas de commandes distinctes : l'ordre est démontré par le checker-owned monitor
-(`/var/lib/cks-lab113-checker/upgrade-monitor.log` sur la machine de travail), qui était écrit en continu
+(`/var/lib/cks-lab113-checker/upgrade-monitor.log` sur la machine de travail), qui enregistre en continu
 depuis le bootstrap. Si vous avez suivi les étapes dans l'ordre (d'abord entièrement la section 1, puis la section 2), dans
 le log il y a une ligne où le control-plane est déjà en `v1.36.x`, `Ready` et schedulable, tandis que le worker est encore en
 `v1.35.x`.
 
 ## 4. Vérification de l'absence de downtime
 
-> Pendant `kubeadm upgrade apply` sur l'unique control-plane, l'API server redémarre quelques secondes,
+> Pendant `kubeadm upgrade apply` sur l'unique control-plane, l'API server redémarre et reste indisponible pendant quelques secondes,
 > et `kubectl` dans la boucle d'interrogation ne répond pas. Ces lignes sont enregistrées comme
 > `available=api-unreachable` et n'entrent pas dans le calcul du minimum : l'indisponibilité de l'API n'est pas une interruption de
-> `canary`. Le downtime est démontré par le moniteur indépendant du checker (Pod Ready et conteneurs via `crictl`).
+> `canary`. La présence ou l'absence de downtime est consignée par le moniteur indépendant du checker (Pod Ready et conteneurs via `crictl`).
 
 Arrêtez la boucle d'interrogation de l'Étape 0 (`Ctrl+C` dans sa session) et vérifiez que le minimum de `available`
-sur l'exécution n'est pas descendu à 0 :
+au cours de l'exécution n'est pas descendu à 0 :
 
 ```bash
 grep -oE 'available=[0-9]+' /var/work/tests/artifacts/4/canary-availability.log | sort -u

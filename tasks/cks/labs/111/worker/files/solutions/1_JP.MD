@@ -16,7 +16,7 @@ export IMAGE=$BASE_TAG@$(jq -r '.Metadata.RepoDigests[0]' /tmp/cks-111-base.json
 echo $IMAGE
 ```
 
-## 0. 準備: podman と registry
+## 0. 準備：podman と registry
 
 image のビルドと公開には `podman` を使用します (試験のツールのリストにあります；
 rootless で、`ubuntu` として動作します)。Registry は bootstrap によってすでに立ち上げられています：control-plane 上の `registry:2`
@@ -40,12 +40,12 @@ export COSIGN_PASSWORD=""
 ```
 
 Registry は HTTP で動作します：公開した image の digest は `podman push --digestfile` から取得し、
-manifest の存在は `/v2/` へのリクエストで確認します。`cosign` はプライベートネットワークのアドレスには自分で HTTP を使用します；
+manifest の存在は `/v2/` へのリクエストで確認します。`cosign` はプライベートネットワークのアドレスには自動的に HTTP を使用します；
 Kyverno では policy に `credentials.allowInsecureRegistry: true` を設定します。`bom` は
 registry からしか image を読み取れないため、引き続き Docker Hub にアクセスします；`TOOMANYREQUESTS` が出たら、
 待つか、自分のアカウントで `podman login docker.io` を実行してください。
 
-## 1. Trivy report
+## 1. Trivy のレポート
 
 ```bash
 mkdir -p "$ART/1"
@@ -283,7 +283,7 @@ comm -12 /tmp/c1.pkgs /tmp/c3.pkgs | wc -l
 comm -12 /tmp/c2.pkgs /tmp/c3.pkgs | wc -l
 ```
 
-共通のパッケージが多いペアが、問題のあるコンテナです (たとえば `c1` と `c2`)。それらには共通のパッケージが
+共通のパッケージを持つペアが、問題のあるコンテナです (たとえば `c1` と `c2`)。それらには共通のパッケージが
 多数あります：3 つ目の image にない**任意の** `name=version` で構いません：
 
 ```bash
@@ -316,7 +316,7 @@ Syft は SPDX と CycloneDX の両方に対応します；ここでは CycloneDX
 
 ```bash
 mkdir -p "$ART/7"
-# tag@digest 形式の参照では、Syft は metadata.component.version に tag のみを記録します; tag のない
+# tag@digest 形式の参照では、Syft は metadata.component.version に tag のみを記録します。tag のない
 # 参照 ("nginx@sha256:...") では version = manifest digest となり、それが確認されます。
 syft "nginx@${IMAGE#*@}" -o "cyclonedx-json=$ART/7/syft.cdx.json"
 ```
@@ -393,8 +393,8 @@ cosign verify --key $KEYDIR/cosign.pub $HARDENED_IMAGE > $ART/9a/cosign-verify.t
 cat $ART/9a/cosign-verify.txt | head -3
 ```
 
-`$HARDENED_IMAGE` に署名したばかりの公開鍵を参照する `ImageValidatingPolicy` を作成します。
-`matchImageReferences` は、policy をあなたの image の repository にちょうど限定します：OCI references には、
+`$HARDENED_IMAGE` の署名に使ったばかりの鍵ペアの公開鍵を参照する `ImageValidatingPolicy` を作成します。
+`matchImageReferences` は、policy をあなたの image の repository だけに厳密に限定します：OCI references には、
 別々の区切り文字 `:` (tag) と `@` (digest) が必要です。そうでなければ、プレフィックス `${HARDENED_REPO}*` が、
 たとえば同じ名前の始まりを持つ別の repository まで捕捉してしまいます。
 これにより、policy がクラスターの他の Pod をブロックすることがなくなります。
@@ -540,7 +540,7 @@ kubectl get pod catalog-unsigned-probe -n cks-111       # NotFound: Pod は作�
 
 素朴な確認との違い：代わりに別の repository の digest (たとえば、課題 1 の upstream `nginx` の digest) を使っていたら、
 admission はまったく別の理由 (`manifest unknown`、pull アクセスがない) で拒否した可能性があり - そのような denial は
-「policy が動作している」ように見えますが、実際には signature の確認にまったく到達していません。
+「policy が動作している」ように見えたでしょうが、実際には signature の確認にまったく到達していなかったことになります。
 
 最後に `check_result` を実行します。
 

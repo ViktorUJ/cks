@@ -3,14 +3,14 @@
 # Lab 111 - solution de référence
 
 Toutes les commandes s'exécutent sur le worker. Ce sont des commandes ordinaires des outils (trivy, kubesec,
-kube-linter, hadolint, podman, syft, bom, cosign) présents à l'examen ; il n'y a pas de scripts, là où
+kube-linter, hadolint, podman, syft, bom, cosign) présents à l'examen ; il n'y a pas de scripts ; là où
 il faut comparer plusieurs résultats, cela se fait à l'œil sur la sortie. Définissez d'abord les
 variables communes :
 
 ```bash
 export ROOT=/home/ubuntu/cks-111 ART=/var/work/tests/artifacts BASE_TAG=nginx:1.27.3-alpine
 cd $ROOT
-# Le tag est mutable : on apprend une fois le manifest digest via Trivy et ensuite on utilise tag@digest.
+# Le tag est mutable : on récupère une seule fois le manifest digest via Trivy, puis on utilise tag@digest.
 trivy image --format json $BASE_TAG > /tmp/cks-111-base.json
 export IMAGE=$BASE_TAG@$(jq -r '.Metadata.RepoDigests[0]' /tmp/cks-111-base.json | cut -d@ -f2)
 echo $IMAGE
@@ -19,9 +19,9 @@ echo $IMAGE
 ## 0. Préparation : podman et registry
 
 Pour construire et publier des images, on utilise `podman` (il figure dans la liste des outils de l'examen ;
-rootless, fonctionne depuis `ubuntu`). Le registry a déjà été levé par le bootstrap : c'est `registry:2` sur le control-plane
+rootless, s'exécute sous l'utilisateur `ubuntu`). Le registry a déjà été déployé par le bootstrap : c'est `registry:2` sur le control-plane
 (`<IP du nœud>:5000`, HTTP simple dans le VPC, données sur un PV local du nœud). Podman sur le worker est configuré
-pour lui comme insecure registry (`/etc/containers/registries.conf.d/cks111.conf`), containerd sur le
+pour l'utiliser comme insecure registry (`/etc/containers/registries.conf.d/cks111.conf`), containerd sur le
 nœud aussi, c'est pourquoi le flag `--tls-verify=false` n'est pas nécessaire. Les images du lab sont téléchargées à l'avance dans un cache
 local utilisé par Trivy et Syft, de sorte que les scans répétés ne se heurtent pas à la limite de Docker Hub.
 
@@ -39,13 +39,13 @@ Nous laissons le mot de passe de la clé cosign vide, afin que les commandes n'a
 export COSIGN_PASSWORD=""
 ```
 
-Le registry fonctionne en HTTP : le digest de l'image publiée, nous le prenons de `podman push --digestfile`, et l'
+Le registry fonctionne en HTTP : le digest de l'image publiée, nous l'obtenons à partir de `podman push --digestfile`, et
 existence du manifest, nous la vérifions par une requête à `/v2/`. `cosign` utilise lui-même HTTP pour les adresses de
 réseaux privés ; pour Kyverno, dans la policy on définit `credentials.allowInsecureRegistry: true`. `bom` lit
 les images uniquement depuis le registry, il s'adresse donc toujours à Docker Hub ; si vous voyez
 `TOOMANYREQUESTS`, patientez ou exécutez `podman login docker.io` avec votre propre compte.
 
-## 1. Trivy report
+## 1. Rapport Trivy
 
 ```bash
 mkdir -p "$ART/1"
@@ -84,7 +84,7 @@ cat $ART/1b/answer.txt
 # OFFENDING_IMAGE=python:3.9-slim@sha256:...
 ```
 
-## 1c. Workload image triage by CRITICAL severity
+## 1c. Analyse des images de workload par niveau CRITICAL
 
 Nous prenons les images des Deployments LIVE et scannons chacune ; le nombre de CRITICAL uniques est affiché à côté du
 nom du Deployment :
@@ -159,7 +159,7 @@ sécurité vérifiées ici (base image, non-root, absence de secret) - c'est l'u
 différence contrôlée qui, dans la tâche 9c, garantit un autre manifest digest sans
 revoir le reste du Dockerfile.
 
-Construisez et **publiez** l'image dans un registry accessible à Kubernetes ; un seul local image ID/DiffID ne convient pas pour le digest pinning. Remplacez par votre repository, puis obtenez le registry manifest digest et constituez l'immutable reference :
+Construisez et **publiez** l'image dans un registry accessible à Kubernetes ; un local image ID/DiffID à lui seul ne convient pas pour le digest pinning. Remplacez par votre repository, puis obtenez le registry manifest digest et constituez l'immutable reference :
 
 ```bash
 export HARDENED_TAG="$REGISTRY/catalog:1.0"
@@ -246,7 +246,7 @@ kubectl run catalog-http-smoke -n cks-111 --rm -i --restart=Never --image=curlim
 
 ## 5. Recherche de versions de paquets
 
-`--list-all-pkgs` donne l'inventory réel. Le registry manifest digest canonique est pris uniquement de `Metadata.RepoDigests[0]` ; `ImageID` et `DiffID` décrivent l'image/layers locaux et ne sont pas un fallback pour le registry digest.
+`--list-all-pkgs` donne l'inventory réel. Le registry manifest digest canonique est obtenu uniquement à partir de `Metadata.RepoDigests[0]` ; `ImageID` et `DiffID` décrivent l'image/layers locaux et ne sont pas un fallback pour le registry digest.
 
 ```bash
 mkdir -p "$ART/5" /tmp/cks-111
@@ -260,7 +260,7 @@ trivy image --list-all-pkgs --format json "$IMAGE" > /tmp/cks-111/packages.json
 cat "$ART/5/version-search.txt"
 ```
 
-## 5b. Find a package version in workload images and remove offending containers
+## 5b. Trouver la version d'un paquet dans les images de workload et supprimer les conteneurs problématiques
 
 ```bash
 mkdir -p $ART/5b/bom
@@ -269,7 +269,7 @@ kubectl -n cks-111 get deployment pkg-audit-app \
 # c1 <image 1> / c2 <image 2> / c3 <image 3>
 ```
 
-SBOM de chaque image (remplacez les images de la sortie) et la liste `paquet=version` de chacune :
+SBOM de chaque image (insérez les images issues de la sortie) et la liste `paquet=version` de chacune :
 
 ```bash
 bom generate --format json --output $ART/5b/bom/c1.spdx.json --image <image c1>
@@ -311,8 +311,8 @@ jq '.spdxVersion, (.packages | length)' "$ART/6/bom.spdx.json"
 ## 7. CycloneDX SBOM (Syft) et Cosign keyless
 
 Syft sait faire à la fois SPDX et CycloneDX ; ici nous prenons CycloneDX (`bom` a déjà donné du SPDX dans la tâche 6).
-On vérifie l'image publique de Distroless et sa Google workload identity attendue ; n'
-utilisez pas `--insecure-ignore-tlog` et n'omettez pas la certificate identity.
+On vérifie l'image publique de Distroless et sa Google workload identity attendue ; n'utilisez
+pas `--insecure-ignore-tlog` et n'omettez pas la certificate identity.
 
 ```bash
 mkdir -p "$ART/7"
@@ -322,7 +322,7 @@ syft "nginx@${IMAGE#*@}" -o "cyclonedx-json=$ART/7/syft.cdx.json"
 ```
 
 Après `syft`, attendez la fin et collez les commandes suivantes séparément : `syft` (comme `apt-get`)
-vide le tampon d'entrée du terminal, et les lignes collées juste derrière sont perdues.
+vide le tampon d'entrée du terminal, et les lignes collées juste après sont perdues.
 
 ```bash
 jq -r '.metadata.component.version' "$ART/7/syft.cdx.json"   # sha256:<manifest-digest>
@@ -332,7 +332,7 @@ cosign verify \
   gcr.io/distroless/static-debian13:nonroot > $ART/7/cosign-verify.txt 2>&1
 echo "exit code: $?"      # 0 = signature vérifiée
 
-# gcr.io/distroless/static:nonroot (sans le suffixe -debian13) est considéré deprecated et n'est plus
+# gcr.io/distroless/static:nonroot (sans le suffixe -debian13) est considéré comme deprecated et n'est plus
 # mis à jour d'après le README officiel de Distroless - nous utilisons le tag actuel
 # pris en charge gcr.io/distroless/static-debian13:nonroot. Le succès de cosign verify
 # se détermine par l'exit code, et non par la chaîne littérale "Verified OK" - cette chaîne n'existe pas dans la
@@ -379,7 +379,7 @@ kubectl -n kyverno wait --for=condition=Available deployment/kyverno-admission-c
 Générez la paire de clés pédagogique EN DEHORS de `$ROOT` - ce répertoire est réutilisé comme
 Docker build context dans la tâche 9c (`COPY . /usr/share/nginx/html` dans le Dockerfile copie
 TOUT le contenu du build context), c'est pourquoi un `cosign.key` laissé dans `$ROOT` se retrouvera
-à l'intérieur du image filesystem publié comme une fuite de la private signing key dans le registry. Signez
+à l'intérieur de l'image filesystem publié comme une fuite de la private signing key dans le registry. Signez
 précisément `$HARDENED_IMAGE` de la tâche 3/4, et non l'`nginx` upstream. Ne transférez pas ce
 `cosign.key` dans un CI de production.
 
@@ -394,8 +394,8 @@ cosign verify --key $KEYDIR/cosign.pub $HARDENED_IMAGE > $ART/9a/cosign-verify.t
 cat $ART/9a/cosign-verify.txt | head -3
 ```
 
-Créez l'`ImageValidatingPolicy` qui se réfère à la clé publique avec laquelle
-`$HARDENED_IMAGE` vient d'être signé. `matchImageReferences` limite la policy exactement au repository
+Créez l'`ImageValidatingPolicy` qui se réfère à la clé publique de la paire dont la clé privée vient de servir à signer
+`$HARDENED_IMAGE`. `matchImageReferences` limite la policy exactement au repository
 de votre image : pour les OCI references, il faut des séparateurs distincts `:` (tag) et `@` (digest),
 sinon le préfixe `${HARDENED_REPO}*` capturerait, par exemple, un autre repository avec le même début
 de nom. Cela empêche la policy de bloquer les autres Pod du cluster.
@@ -541,8 +541,7 @@ kubectl get pod catalog-unsigned-probe -n cks-111       # NotFound : le Pod n'es
 
 La différence avec une vérification naïve : si à la place nous avions pris un digest d'un autre repository
 (par exemple, le digest de l'`nginx` upstream de la tâche 1), l'admission aurait pu refuser pour une raison
-tout autre (`manifest unknown`, absence d'accès de pull), et un tel denial aurait eu l'air
-d'un « la policy fonctionne », alors qu'en réalité la vérification de signature n'a même pas été atteinte.
+tout autre (`manifest unknown`, absence d'accès de pull), et un tel denial aurait donné l'impression que « la policy fonctionne », alors qu'en réalité la vérification de signature n'a même pas été atteinte.
 
 À la fin, exécutez `check_result`.
 

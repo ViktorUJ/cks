@@ -1,9 +1,9 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD)
 
-# Lab 107 - 参考解答: Pod Security Admission と immutable root filesystem
+# Lab 107 - 参考解答：Pod Security Admission と read-only root filesystem
 
 > コマンドは作業マシンで実行してください。コンテキスト `cluster1-admin@cluster1` はすでに
-> 設定されています。Namespace `psa-restricted-107` と `psa-observe-107` は起動
+> 設定されています。Namespace `psa-restricted-107`、`psa-observe-107`、`psa-controller-107` は起動
 > スクリプトによって作成されていますが、PSA labels は意図的に付けられていません。
 
 ## 1. Enforce restricted と拒否の確認
@@ -103,7 +103,7 @@ kubectl delete pod restricted-app -n psa-restricted-107
 kubectl apply -f restricted-app.yaml
 ```
 
-## 3. baseline の Audit と warn
+## 3. baseline の audit と warn
 
 これらのモードはリクエストを禁止しません。`warn` はクライアントに警告を返し、`audit` は
 API server の audit event に annotation

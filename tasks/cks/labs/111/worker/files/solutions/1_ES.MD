@@ -3,7 +3,7 @@
 # Lab 111 - solución de referencia
 
 Todos los comandos se ejecutan en el worker. Son comandos normales de las herramientas (trivy, kubesec,
-kube-linter, hadolint, podman, syft, bom, cosign) que hay en el examen; no hay scripts, donde
+kube-linter, hadolint, podman, syft, bom, cosign) que hay en el examen; no hay scripts; cuando
 hace falta comparar varios resultados, se hace a simple vista por la salida. Primero define las
 variables comunes:
 
@@ -19,7 +19,7 @@ echo $IMAGE
 ## 0. Preparación: podman y registry
 
 Para construir y publicar imágenes se usa `podman` (está en la lista de herramientas del examen;
-rootless, funciona desde `ubuntu`). El registry ya lo levantó el bootstrap: es `registry:2` en el control-plane
+rootless, se ejecuta como `ubuntu`). El registry ya lo levantó el bootstrap: es `registry:2` en el control-plane
 (`<IP del nodo>:5000`, HTTP plano dentro de la VPC, datos en un PV local del nodo). Podman en el worker está configurado
 para él como insecure registry (`/etc/containers/registries.conf.d/cks111.conf`), containerd en el
 nodo también, por lo que el flag `--tls-verify=false` no hace falta. Las imágenes del laboratorio están descargadas de antemano en una caché
@@ -45,7 +45,7 @@ redes privadas; para Kyverno en la policy se establece `credentials.allowInsecur
 las imágenes solo desde el registry, por lo que sigue acudiendo a Docker Hub; si ves
 `TOOMANYREQUESTS`, espera o ejecuta `podman login docker.io` con tu propia cuenta.
 
-## 1. Trivy report
+## 1. Informe de Trivy
 
 ```bash
 mkdir -p "$ART/1"
@@ -84,7 +84,7 @@ cat $ART/1b/answer.txt
 # OFFENDING_IMAGE=python:3.9-slim@sha256:...
 ```
 
-## 1c. Workload image triage by CRITICAL severity
+## 1c. Análisis de las imágenes de workload por nivel CRITICAL
 
 Las imágenes las tomamos de los Deployments LIVE y escaneamos cada una; el número de CRITICAL únicas se imprime junto al
 nombre del Deployment:
@@ -159,7 +159,7 @@ seguridad comprobadas aquí (base image, non-root, ausencia de secret): es el ú
 diferencia controlada que en la tarea 9c garantiza otro manifest digest sin
 revisar el resto del Dockerfile.
 
-Construye y **publica** la imagen en un registry accesible para Kubernetes; un solo local image ID/DiffID no sirve para el digest pinning. Sustituye por tu repository, luego obtén el registry manifest digest y forma la immutable reference:
+Construye y **publica** la imagen en un registry accesible para Kubernetes; un local image ID/DiffID por sí solo no sirve para el digest pinning. Pon tu propio repository, luego obtén el registry manifest digest y forma la immutable reference:
 
 ```bash
 export HARDENED_TAG="$REGISTRY/catalog:1.0"
@@ -260,7 +260,7 @@ trivy image --list-all-pkgs --format json "$IMAGE" > /tmp/cks-111/packages.json
 cat "$ART/5/version-search.txt"
 ```
 
-## 5b. Find a package version in workload images and remove offending containers
+## 5b. Encontrar la versión de un paquete en las imágenes de workload y eliminar los contenedores problemáticos
 
 ```bash
 mkdir -p $ART/5b/bom
@@ -310,7 +310,7 @@ jq '.spdxVersion, (.packages | length)' "$ART/6/bom.spdx.json"
 
 ## 7. CycloneDX SBOM (Syft) y Cosign keyless
 
-Syft sabe tanto SPDX como CycloneDX; aquí tomamos CycloneDX (`bom` ya dio SPDX en la tarea 6).
+Syft sabe generar tanto SPDX como CycloneDX; aquí tomamos CycloneDX (`bom` ya dio SPDX en la tarea 6).
 Se comprueba la imagen pública de Distroless y su Google workload identity esperada; no
 uses `--insecure-ignore-tlog` ni omitas la certificate identity.
 
@@ -322,7 +322,7 @@ syft "nginx@${IMAGE#*@}" -o "cyclonedx-json=$ART/7/syft.cdx.json"
 ```
 
 Tras `syft` espera a que termine y pega los comandos siguientes por separado: `syft` (igual que `apt-get`)
-vacía el búfer de entrada del terminal, y las líneas pegadas justo detrás se pierden.
+vacía el búfer de entrada del terminal, y las líneas pegadas justo después se pierden.
 
 ```bash
 jq -r '.metadata.component.version' "$ART/7/syft.cdx.json"   # sha256:<manifest-digest>
@@ -394,7 +394,7 @@ cosign verify --key $KEYDIR/cosign.pub $HARDENED_IMAGE > $ART/9a/cosign-verify.t
 cat $ART/9a/cosign-verify.txt | head -3
 ```
 
-Crea la `ImageValidatingPolicy` que se refiere a la clave pública con la que se acaba de
+Crea la `ImageValidatingPolicy` que se refiere a la clave pública del par cuya clave privada se acaba de usar para
 firmar `$HARDENED_IMAGE`. `matchImageReferences` limita la policy exactamente al repository
 de tu imagen: para las OCI references hacen falta separadores aparte `:` (tag) y `@` (digest),
 de lo contrario el prefijo `${HARDENED_REPO}*` capturaría, por ejemplo, otro repository con el mismo inicio
@@ -507,7 +507,7 @@ cat "$ART/9c/digest-comparison.txt"
 El `$ROOT/Dockerfile` de la tarea 3 debe aceptar este build-arg (por ejemplo,
 `ARG CKS_SIGNATURE_TEST=signed` y `LABEL cks.signature-test=$CKS_SIGNATURE_TEST` junto a
 las instrucciones existentes); entonces la imagen construida difiere de `$HARDENED_IMAGE` exactamente en
-una etiqueta segura, sin afectar a las propiedades de seguridad comprobadas en las tareas 3-4.
+un `LABEL` inocuo, sin afectar a las propiedades de seguridad comprobadas en las tareas 3-4.
 
 Demostramos explícitamente que este digest existe y es pullable antes de comprobar la policy;
 de lo contrario el denial no demostrará nada. Es un self-check evidence para ti: el checker de la tarea 9c
@@ -536,7 +536,7 @@ signature, y no a un error genérico de admission:
 ```bash
 kubectl run catalog-unsigned-probe -n cks-111 --image="$UNSIGNED_IMAGE" --restart=Never > "$ART/9c/admission-deny.txt" 2>&1
 cat "$ART/9c/admission-deny.txt"        # ... catalog image must have a valid release signature
-kubectl get pod catalog-unsigned-probe -n cks-111       # NotFound: el Pod no está creado
+kubectl get pod catalog-unsigned-probe -n cks-111       # NotFound: el Pod no se ha creado
 ```
 
 La diferencia con una comprobación ingenua: si en su lugar hubiéramos tomado un digest de otro repository

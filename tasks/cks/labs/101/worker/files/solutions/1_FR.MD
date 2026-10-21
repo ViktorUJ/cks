@@ -4,7 +4,7 @@
 
 On utilise `k` à la place de `kubectl` (l'alias est déjà disponible à l'examen).
 
-Avant de commencer (si nécessaire), on supprime les anciens namespace :
+Avant de commencer (si nécessaire), on supprime les anciens namespaces :
 ```bash
 k delete ns cks-101 cks-101-legacy imds-control --ignore-not-found
 ```
@@ -188,7 +188,7 @@ spec:
 EOF
 ```
 
-On vérifie via le Service DNS :
+On vérifie via le nom DNS du Service :
 
 ```bash
 k -n cks-101 exec probe -- \
@@ -196,7 +196,7 @@ k -n cks-101 exec probe -- \
 echo $?
 ```
 
-## 5. IMDS final verification
+## 5. Vérification finale d'IMDS
 
 ```bash
 # control : IMDS est accessible
@@ -267,11 +267,11 @@ On vérifie :
 k -n cks-101-legacy exec deploy/legacy-client -- curl -sS -o /dev/null -w 'HTTP:%{http_code}\n' -m 5 http://169.254.169.254/
 echo $?
 
-# backend est accessible via le Service DNS
+# backend est accessible via le nom DNS du Service
 k -n cks-101-legacy exec deploy/legacy-client -- curl -sS -m 5 http://backend.cks-101:8080/
 ```
 
-## 7. hostNetwork observation
+## 7. Observation de hostNetwork
 
 ```bash
 k -n cks-101 run hostnetwork-probe --image=curlimages/curl:8.11.1 -l app=frontend \

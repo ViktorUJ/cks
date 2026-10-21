@@ -23,7 +23,7 @@ les outils CIS Benchmark sont déjà présents sur les nœuds) - inutile de le c
 `1.36` ne figure pas encore dans la support table officielle de kube-bench ; le version mapping intégré
 de cette version se termine par l'entrée `"1.34": "cis-1.12"` - il n'y a pas de profils plus récents (y compris
 un quelconque profil pour 1.35/1.36) dans `0.16.0`, nous utilisons donc précisément `cis-1.12`
-comme le plus proche existant. Nous le lançons donc de force comme approximate
+comme le plus proche existant. Nous le lançons de force comme approximate
 hardening signal, et non comme authoritative CIS compliance assessment.
 
 ```bash
@@ -44,12 +44,12 @@ grep '== Summary' /var/work/tests/artifacts/1/kube-bench.txt
 # == Summary policies ==
 ```
 
-Vérifiez à l'œil que les cinq `== Summary <target> ==` sont présentes - sans
+Vérifiez à l'œil que les cinq lignes `== Summary <target> ==` sont présentes - sans
 `--targets` explicite, une partie d'entre elles (`etcd`, `policies`) n'entrera pas dans le rapport.
 
 ## Tâche 2. Hardening du kubelet
 
-Ne vous rappelez pas les noms des champs de mémoire - à l'examen, il est plus rapide de les extraire directement du rapport
+Ne cherchez pas à retrouver de mémoire les noms des champs - à l'examen, il est plus rapide de les extraire directement du rapport
 kube-bench déjà produit (tâche 1). Chaque check y a une section `== Remediations <target> ==`
 avec le texte de correction tout prêt - `grep -A1` sur le numéro du check donne tout de suite le champ voulu :
 
@@ -104,10 +104,10 @@ k get --raw="/api/v1/nodes/${NODE}/proxy/configz" \
 k wait --for=condition=Ready "node/${NODE}" --timeout=120s
 ```
 
-## Tâche 3. Désactiver profiling de kube-apiserver
+## Tâche 3. Désactiver le profiling de kube-apiserver
 
 La même technique que dans la tâche 2 - utilisez le rapport kube-bench de la tâche 1 comme source de
-vérité, ne vous rappelez pas le flag de mémoire :
+vérité, ne cherchez pas à retrouver le flag de mémoire :
 
 ```bash
 grep -A2 '^1.2.15 ' /var/work/tests/artifacts/1/kube-bench.txt
@@ -300,7 +300,7 @@ cat /var/work/tests/artifacts/6/binaries.sha256.txt
 Les deux lignes doivent se terminer par `: OK`. Si le chemin du binaire diffère de `/usr/bin`,
 `command -v` produit tout de même une entrée correcte pour `sha256sum -c`.
 
-## Tâche 7. Remediation cycle : un kube-bench FAIL concret jusqu'à PASS
+## Tâche 7. Remediation cycle : d'un kube-bench FAIL concret à PASS
 
 Contrairement à la tâche 1 (instantané de tout le rapport), il faut ici relier un check concret
 à sa correction. `kube-bench` prend en charge une exécution ciblée via `--check`, il n'est donc pas
@@ -379,7 +379,7 @@ La même technique que dans les tâches 7-8 (trouver le `[FAIL]` concret via kub
 confirmer `[PASS]`), pour les checks `1.3.2` (kube-controller-manager profiling) et `1.4.1`
 (kube-scheduler profiling). Tous deux, comme toute la section `1.x`, relèvent du target `master` dans
 `cis-1.12`, un `--targets` explicite n'est donc pas nécessaire - exactement comme dans les tâches 7-8. La tâche 3
-a déjà désactivé profiling uniquement sur kube-apiserver ; kubeadm par défaut N'ajoute PAS du tout
+a déjà désactivé le profiling uniquement sur kube-apiserver ; kubeadm par défaut N'ajoute PAS du tout
 `--profiling=false` aux manifests de kube-controller-manager/kube-scheduler.
 
 ```bash
@@ -416,7 +416,7 @@ k -n kube-system get pods -l component=kube-controller-manager
 k -n kube-system get pods -l component=kube-scheduler
 ```
 
-On vérifie non pas le texte du fichier, mais le Pod réellement en cours d'exécution (le kubelet recrée le static Pod non
+On vérifie non pas le texte du fichier, mais le Pod réellement en cours d'exécution (le kubelet ne recrée pas le static Pod
 instantanément après la modification du manifest), et la nouvelle exécution ciblée du même check doit
 afficher `PASS` :
 
@@ -439,7 +439,7 @@ grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 ```
 
 `jq -e` doit afficher `true` pour les deux composants, et les deux commandes `k get pods`
-ci-dessus - afficher `Running`.
+ci-dessus doivent afficher `Running`.
 
 ## Tâche 10. Remediation cycle : protect-kernel-defaults sur le nœud worker
 

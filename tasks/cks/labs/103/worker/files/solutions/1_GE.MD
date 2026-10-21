@@ -23,7 +23,7 @@ CIS Benchmark tooling node-ებზე უკვე არის) - worker-ი�
 `1.36` kube-bench-ის ოფიციალურ support table-ში ჯერ არ არის; ამ ვერსიის ჩაშენებული version mapping
 მთავრდება ჩანაწერით `"1.34": "cis-1.12"` - უფრო ახალი პროფილები (1.35/1.36-ის
 რომელიმე პროფილის ჩათვლით) `0.16.0`-ში საერთოდ არ არის, ამიტომ ვიყენებთ სწორედ `cis-1.12`-ს
-როგორც უახლოეს არსებულს. ამიტომ ჩვენ მას იძულებით ვუშვებთ როგორც approximate
+როგორც უახლოეს არსებულს. ჩვენ მას იძულებით ვუშვებთ როგორც approximate
 hardening signal-ს, და არა როგორც authoritative CIS compliance assessment-ს.
 
 ```bash
@@ -49,7 +49,7 @@ grep '== Summary' /var/work/tests/artifacts/1/kube-bench.txt
 
 ## დავალება 2. kubelet-ის hardening
 
-ველების სახელებს მეხსიერებით ნუ იხსენებთ - გამოცდაზე უფრო სწრაფია მათი პირდაპირ უკვე გადაღებული
+ველების სახელებს მეხსიერებით ნუ იხსენებთ - გამოცდაზე უფრო სწრაფია მათი პირდაპირ უკვე მიღებული
 kube-bench-ის ანგარიშიდან (დავალება 1) ამოღება. თითოეულ check-ს იქ აქვს სექცია `== Remediations <target> ==`
 გასწორების მზა ტექსტით - `grep -A1` check-ის ნომრით მაშინვე იძლევა საჭირო ველს:
 
@@ -72,7 +72,7 @@ authentication:
     enabled: false
 ```
 
-გამოცდაზე ყოველ ბრძანებას `sudo`-თი ნუ დაუწყებთ პრეფიქსს - ერთხელ გახდით root (`sudo -i`), ეს
+გამოცდაზე ყოველ ბრძანებას წინ `sudo`-ს ნუ მიუწერთ - ერთხელ გახდით root (`sudo -i`), ეს
 უფრო სწრაფია:
 
 ```bash
@@ -87,8 +87,8 @@ exit   # control-plane-იდან გასვლა
 ```
 
 ვამოწმებთ არა ფაილის სტატიკურ ტექსტს, არამედ მოქმედ კონფიგურაციას, რომელიც kubelet-მა
-რეალურად გამოიყენა - API `configz`-ის გავლით (YAML-ის ტექსტური პარსინგი ადვილად
-შეიძლება მოატყუონ მსგავსმა ველებმა, როგორიცაა `webhook.enabled`, ხოლო `configz` ასახავს იმას, რასაც kubelet
+რეალურად გამოიყენა - API `configz`-ის გავლით (YAML-ის ტექსტური პარსინგის მოტყუება ადვილია
+მსგავსი ველებით, როგორიცაა `webhook.enabled`, ხოლო `configz` ასახავს იმას, რასაც kubelet
 თავად თვლის თავის კონფიგურაციად):
 
 ```bash
@@ -214,7 +214,7 @@ curl -v "http://secure.cks.local:${HTTP_NODEPORT}/"
 # < Location: https://secure.cks.local
 ```
 
-ეს HTTP→HTTPS redirect - გამოცდის რეალური კითხვაა, და არა ლაბის ხელოვნური მოთხოვნა
+ეს HTTP→HTTPS redirect გამოცდის რეალური კითხვაა, და არა ლაბის ხელოვნური მოთხოვნა
 (იხ. mock-გამოცდა `tasks/cks/mock/04`, დავალება 4).
 
 ## დავალება 5. kube-apiserver-ისა და etcd-ის TLS hardening
@@ -234,7 +234,7 @@ k exec -n kube-system $(k get po -n kube-system -l component=etcd -o name) -- et
 ორივე static Pod manifest-ში დაამატეთ პარამეტრები `command`-ში. kube-apiserver-ზე დავალება მოითხოვს
 ორივე ფლაგს, თუმცა `VersionTLS13`-ის დროს რეალურ დაცვას სწორედ `--tls-min-version` იძლევა
 (Go TLS 1.3 cipher suites-ს თავად ირჩევს, `--tls-cipher-suites` მათზე გავლენას არ ახდენს - იხ. კითხვა
-2 განყოფილებაში "შეამოწმეთ თავი სტარტამდე"). `--tls-cipher-suites` მაინც აშკარად არის საჭირო - ეს
+2 განყოფილებაში „შეამოწმეთ თავი სტარტამდე“). `--tls-cipher-suites` მაინც ცხადად უნდა იყოს მითითებული - ეს
 defense-in-depth-ია: თუ მინიმალურ ვერსიას მოგვიანებით 1.2-მდე შეასუსტებენ, სუსტი შიფრების ნაკრებები
 თავისთავად არ ჩაირთვება. etcd-ზე (იქ TLS 1.2 დაშვებულია) `--cipher-suites` ნაკრებს უკვე ახლა რეალურად
 ზღუდავს, და არა მომავლისთვის.
@@ -262,7 +262,7 @@ ssh control-plane "sudo grep -- '--cipher-suites=' /etc/kubernetes/manifests/etc
 mkdir -p /var/work/tests/artifacts/5
 ssh control-plane 'openssl s_client -connect 127.0.0.1:6443 -tls1_3 -brief </dev/null' \
   > /var/work/tests/artifacts/5/tls13.txt 2>&1
-# Protocol version: TLSv1.3 - კავშირი გაიარა
+# Protocol version: TLSv1.3 - კავშირი დამყარდა
 
 ssh control-plane 'openssl s_client -connect 127.0.0.1:6443 -tls1_2 -brief </dev/null' \
   >> /var/work/tests/artifacts/5/tls13.txt 2>&1
@@ -280,7 +280,7 @@ cat /var/work/tests/artifacts/5/tls13.txt
 ## დავალება 6. kubelet-ისა და kubectl-ის SHA-256-ის შემოწმება
 
 ეტალონი ლოკალური ფაილებიდან არ გამოითვლება. ჩამოტვირთეთ Kubernetes `v1.36.0`-ის ოფიციალურად გამოქვეყნებული
-ჯამები, ჩამოაყალიბეთ ფაილები `sha256sum -c`-ის ფორმატში და შეინახეთ შედეგები.
+საკონტროლო ჯამები, ჩამოაყალიბეთ ფაილები `sha256sum -c`-ის ფორმატში და შეინახეთ შედეგები.
 
 ```bash
 mkdir -p /var/work/tests/artifacts/6 /tmp/cks-103-sha
@@ -298,12 +298,12 @@ cat /var/work/tests/artifacts/6/binaries.sha256.txt
 ```
 
 ორივე სტრიქონი უნდა მთავრდებოდეს `: OK`-ით. თუ binary-ის გზა `/usr/bin`-ისგან განსხვავდება,
-`command -v` მაინც ქმნის სწორ შესასვლელს `sha256sum -c`-ისთვის.
+`command -v` მაინც ქმნის სწორ შემავალ მონაცემებს `sha256sum -c`-ისთვის.
 
 ## დავალება 7. Remediation cycle: კონკრეტული kube-bench FAIL-იდან PASS-მდე
 
 დავალება 1-ისგან განსხვავებით (მთელი ანგარიშის snapshot), აქ საჭიროა ერთი კონკრეტული check-ის
-მის გასწორებასთან დაკავშირება. `kube-bench` მხარს უჭერს წერტილოვან გაშვებას `--check`-ით, ამიტომ
+მის გასწორებასთან დაკავშირება. `kube-bench` მხარს უჭერს ცალკეული check-ის გაშვებას `--check`-ით, ამიტომ
 მთელი ანგარიშის ხელით თავიდან წაკითხვა საჭირო არ არის:
 
 ```bash
@@ -376,7 +376,7 @@ k -n kube-system get pods -l component=kube-controller-manager
 ## დავალება 9. Remediation cycle: profiling kube-controller-manager-სა და kube-scheduler-ზე
 
 იგივე ხერხი, რაც დავალებებში 7-8 (kube-bench-ით კონკრეტული `[FAIL]`-ის პოვნა, გასწორება,
-`[PASS]`-ის დადასტურება), checks `1.3.2` (kube-controller-manager profiling) და `1.4.1`
+`[PASS]`-ის დადასტურება), check-ებისთვის `1.3.2` (kube-controller-manager profiling) და `1.4.1`
 (kube-scheduler profiling). ორივე, მთელი `1.x` განყოფილების მსგავსად, `cis-1.12`-ში მიეკუთვნება target `master`-ს,
 ამიტომ აშკარა `--targets` საჭირო არ არის - ზუსტად ისე, როგორც დავალებებში 7-8. დავალება 3-მა
 profiling მხოლოდ kube-apiserver-ზე გამორთო; kubeadm ნაგულისხმევად `--profiling=false`-ს
@@ -438,8 +438,8 @@ grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 # [PASS] 1.4.1 Ensure that the --profiling argument is set to false ...
 ```
 
-`jq -e` ორივე კომპონენტისთვის უნდა გამოიტანოს `true`, ხოლო ზემოთ ორივე ბრძანება `k get pods`
-- აჩვენოს `Running`.
+`jq -e` ორივე კომპონენტისთვის უნდა გამოიტანოს `true`, ხოლო ზემოთ მოცემულმა ორივე `k get pods` ბრძანებამ
+უნდა აჩვენოს `Running`.
 
 ## დავალება 10. Remediation cycle: protect-kernel-defaults worker-node-ზე
 

@@ -11,8 +11,8 @@ Para un namespace aparte habilitarás los modos de observación `audit` y `warn`
 `baseline`. Para terminar, el root filesystem del contenedor pasará a read-only, y la única
 escritura necesaria se permitirá en un `emptyDir`.
 
-Trabaja solo con los objetos de las tareas. En el clúster se han creado de antemano los namespace vacíos
-`psa-restricted-107` y `psa-observe-107`; en ellos no hay PSA-labels ni workload.
+Trabaja solo con los objetos de las tareas. En el clúster se han creado de antemano los namespaces vacíos
+`psa-restricted-107`, `psa-observe-107` y `psa-controller-107`; en ellos no hay PSA-labels ni workload.
 
 ## Compruébate antes de empezar
 
@@ -67,13 +67,13 @@ check_result
 ---
 | **1** | **Enforce restricted con versión fijada** |
 | :---: | :--- |
-| Qué hacemos | En el namespace `psa-restricted-107` establece `pod-security.kubernetes.io/enforce=restricted` y `pod-security.kubernetes.io/enforce-version=v1.36`. Asegúrate de que PSA realmente rechaza un Pod inseguro: un server-side dry-run de un Pod con `hostNetwork: true` en este namespace debe terminar con un error con `violates PodSecurity`. No cambies los labels de los namespace del sistema. |
-| Criterios de aceptación | Ambos enforce-label tienen los valores exactos; el Pod inseguro no pasa el admission en `psa-restricted-107`; los namespace del sistema `kube-system`, `kube-public` y `kube-node-lease` no reciben labels `pod-security.kubernetes.io/*` en el marco de este laboratorio. |
+| Qué hacemos | En el namespace `psa-restricted-107` establece `pod-security.kubernetes.io/enforce=restricted` y `pod-security.kubernetes.io/enforce-version=v1.36`. Asegúrate de que PSA realmente rechaza un Pod inseguro: un server-side dry-run de un Pod con `hostNetwork: true` en este namespace debe terminar con un error que contenga `violates PodSecurity`. No cambies los labels de los namespaces del sistema. |
+| Criterios de aceptación | Ambos enforce-label tienen los valores exactos; el Pod inseguro no pasa el admission en `psa-restricted-107`; los namespaces del sistema `kube-system`, `kube-public` y `kube-node-lease` no reciben labels `pod-security.kubernetes.io/*` en el marco de este laboratorio. |
 
 <details>
 <summary>💡 Pista para la tarea 1</summary>
 
-`kubectl label namespace psa-restricted-107 pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/enforce-version=v1.36`: ambos label se aplican al instante, PSA no requiere reiniciar nada. Compruébalo mediante `kubectl apply --dry-run=server` con `hostNetwork: true`: precisamente `--dry-run=server` (no `client`), porque los admission controllers, incluido PSA, funcionan solo en el server-side.
+`kubectl label namespace psa-restricted-107 pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/enforce-version=v1.36`: ambos labels se aplican al instante, PSA no requiere reiniciar nada. Compruébalo mediante `kubectl apply --dry-run=server` con `hostNetwork: true`: precisamente `--dry-run=server` (no `client`), porque los admission controllers, incluido PSA, funcionan solo en el server-side.
 </details>
 
 <details>
@@ -99,7 +99,7 @@ EOF
 echo "baseline exit: $?"
 ```
 
-Establece ambos label y luego repite EL MISMO manifest: ahora debe haber un error
+Establece ambos labels y luego repite EL MISMO manifest: ahora debe haber un error
 de admission con el texto `violates PodSecurity`:
 
 ```bash
@@ -133,7 +133,7 @@ echo "after-label exit: $?"
 <details>
 <summary>💡 Pista para la tarea 2</summary>
 
-Si el Pod recibe un admission rejection, lee con atención el mensaje de error: normalmente nombra el campo EXACTO que falta (por ejemplo, "container has no capabilities.drop"). Un detalle importante sobre la semántica de PSS `restricted` en Kubernetes 1.36: exige un `seccompProfile` efectivo (no necesariamente duplicado literalmente) admisible: el perfil a nivel de Pod (`spec.securityContext.seccompProfile.type`) puede ser heredado por los contenedores que no tienen definido el suyo, y a la inversa, basta con el campo a nivel de container si está indicado explícitamente en TODOS los contenedores, incluso sin un perfil a nivel de Pod. Es decir, el propio PSS no exige literalmente AMBOS niveles a la vez. **En este laboratorio pedimos deliberadamente que indiques `RuntimeDefault` explícitamente tanto en el Pod como en el contenedor**, no porque lo exija PSS, sino para que practiques con ambos niveles de configuración. Del mismo modo, `runAsUser: 1000` es una decisión de explicit hardening de este laboratorio: PSS `restricted` prohíbe el UID `0`, pero no exige concretamente `1000` (cualquier valor distinto de cero o la ausencia total del campo es admisible para el propio PSS).
+Si el Pod recibe un admission rejection, lee con atención el mensaje de error: normalmente nombra el campo EXACTO que falta (por ejemplo, "container has no capabilities.drop"). Un detalle importante sobre la semántica de PSS `restricted` en Kubernetes 1.36: exige un `seccompProfile` admisible efectivo (no necesariamente duplicado literalmente): el perfil a nivel de Pod (`spec.securityContext.seccompProfile.type`) puede ser heredado por los contenedores que no tienen definido el suyo, y a la inversa, basta con el campo a nivel de container si está indicado explícitamente en TODOS los contenedores, incluso sin un perfil a nivel de Pod. Es decir, el propio PSS no exige literalmente AMBOS niveles a la vez. **En este laboratorio pedimos deliberadamente que indiques `RuntimeDefault` explícitamente tanto en el Pod como en el contenedor**, no porque lo exija PSS, sino para que practiques con ambos niveles de configuración. Del mismo modo, `runAsUser: 1000` es una decisión explícita de hardening propia de este laboratorio: PSS `restricted` prohíbe el UID `0`, pero no exige concretamente `1000` (cualquier valor distinto de cero o la ausencia total del campo es admisible para el propio PSS).
 </details>
 
 ---
@@ -145,7 +145,7 @@ Si el Pod recibe un admission rejection, lee con atención el mensaje de error: 
 <details>
 <summary>💡 Pista para la tarea 3</summary>
 
-Cuatro label separados: es fácil olvidar uno de ellos (sobre todo el `-version` de uno de los modos). Comprueba los cuatro a la vez: `kubectl get namespace psa-observe-107 -o jsonpath='{.metadata.labels}' | jq`.
+Cuatro labels separados: es fácil olvidar uno de ellos (sobre todo el `-version` de uno de los modos). Comprueba los cuatro a la vez: `kubectl get namespace psa-observe-107 -o jsonpath='{.metadata.labels}' | jq`.
 </details>
 
 <details>
@@ -170,7 +170,7 @@ spec:
 EOF
 ```
 
-Establece los cuatro label y luego repite EL MISMO manifest: ahora `kubectl apply`
+Establece los cuatro labels y luego repite EL MISMO manifest: ahora `kubectl apply`
 debe mostrar `Warning: ... would violate PodSecurity "baseline:v1.36"`, y el comando
 igualmente debe terminar con éxito (exit 0), y no con un error:
 
@@ -222,7 +222,7 @@ kubectl get pod baseline-audit-sample -n psa-observe-107 -o jsonpath='{.status.p
 ```
 
 Compara con el namespace `psa-restricted-107` (tarea 1): el mismo manifest nonsafe allí
-DEBE ser rechazado, y aquí - aceptado. La diferencia está precisamente en el label `enforce`, que está
+DEBE ser rechazado, y aquí, aceptado. La diferencia está precisamente en el label `enforce`, que está
 en un namespace y no está en el otro:
 
 ```bash
@@ -245,8 +245,8 @@ kubectl get namespace psa-restricted-107 psa-observe-107 --show-labels
 ---
 | **6** | **Native ValidatingAdmissionPolicy: exigir `automountServiceAccountToken: false`** |
 | :---: | :--- |
-| Qué hacemos | • PSA `restricted` ya exige `allowPrivilegeEscalation: false`, `capabilities.drop` contiene `ALL`, non-root y seccomp: la tarea 2 muestra precisamente eso.<br/>• Pero PSS `restricted` **no comprueba** `automountServiceAccountToken`: un Pod que no necesita la Kubernetes API puede recibir silenciosamente un ServiceAccount token montado y pasar PSA por completo. Es un control aparte, no cubierto por PSS, por lo que aquí procede precisamente una `ValidatingAdmissionPolicy` custom, y no duplicar el PSA integrado.<br/>• Crea una `ValidatingAdmissionPolicy` `require-no-automount-token` con una expresión CEL que exija `automountServiceAccountToken == false` a nivel de Pod.<br/>• Aplica un `ValidatingAdmissionPolicyBinding` `require-no-automount-token-binding`, limitado por `matchResources.namespaceSelector` a `psa-restricted-107`, con `validationActions: [Deny]`.<br/>• Demuestra los tres estados con server-side dry-run: un Pod totalmente compatible con PSA (con todos los campos de la tarea 2: non-root, seccomp, drop ALL, escalation false) sin el campo debe recibir DENY de la pareja exacta policy+binding; `automountServiceAccountToken: false` debe recibir ALLOW; `automountServiceAccountToken: true` debe volver a recibir DENY de la misma pareja.<br/>• Tras crear la policy, los nuevos Pod en `psa-restricted-107` (incluido el `restricted-app` que se recrea) deben contener por sí mismos `automountServiceAccountToken: false`, de lo contrario la política los rechazará. |
-| Criterios de aceptación | • **Objetos:** existen `ValidatingAdmissionPolicy require-no-automount-token` y su `ValidatingAdmissionPolicyBinding`, `validationActions` contiene `Deny`, el Binding hace match solo con `psa-restricted-107`. En el laboratorio existe exactamente un Binding para esta policy: `require-no-automount-token-binding`; no se crean Binding adicionales de esta policy para otros namespace.<br/>• **Tres estados:** el server-side dry-run de un Pod compatible con PSA sin `automountServiceAccountToken: false` es rechazado precisamente por la pareja `ValidatingAdmissionPolicy 'require-no-automount-token'` y `ValidatingAdmissionPolicyBinding 'require-no-automount-token-binding'` (no por el mensaje de PSA `violates PodSecurity` ni por otra policy); el Pod con `automountServiceAccountToken: false` es aceptado, y el Pod con `automountServiceAccountToken: true` es rechazado por la misma pareja exacta.<br/>• **Cobertura de todos los Pod:** la policy cubre todos los Pod seleccionados por sus `resourceRules` dentro de `psa-restricted-107`. No añadas `spec.matchConditions`, `matchConstraints.objectSelector` ni `matchConstraints.namespaceSelector` a la `ValidatingAdmissionPolicy`, ni `objectSelector` al Binding `matchResources`: reducen la coverage a una parte de los Pod, y un workload podrá quedar fuera de la comprobación por label o por condición de la petición.<br/>• **Namespace scope:** se define solo mediante el Binding `matchResources.namespaceSelector`, vinculado exactamente a `psa-restricted-107`; el selector no contiene condiciones sobre otras claves de namespace-label y por sí mismo limita sin ambigüedad el scope a este namespace.<br/>• **CEL:** la validation no contiene excepciones por nombre/labels/annotations del Pod, user/request, `namespaceObject`, `params`, `variables` ni otros campos: la decisión depende solo de `object.spec.automountServiceAccountToken` (es admisible cualquier forma CEL correcta, incluida la sintaxis optional `object.spec.?automountServiceAccountToken.orValue(true) == false`). `spec.auditAnnotations` está ausente o vacío: sus CEL expressions aparte pueden influir en el admission mediante `failurePolicy`, por lo que el admission control se define solo mediante `spec.validations`. No se usan `variables` ni `paramKind`.<br/>• **Resource scope:** `matchConstraints.resourceRules` limitan la policy exactamente a `core/v1 pods` para las operaciones `CREATE` y `UPDATE`, sin `resourceNames`; `scope` está ausente, es `*` o `Namespaced`, pero no `Cluster`; no se usan `excludeResourceRules`. El Binding no reduce el resource/operation scope mediante sus propias `resourceRules`/`excludeResourceRules`.<br/>• Esto permite demostrar el boolean contract completo con tres estados `missing / false / true`, y no con unos cuantos ejemplos de workload elegidos. |
+| Qué hacemos | • PSA `restricted` ya exige `allowPrivilegeEscalation: false`, que `capabilities.drop` contenga `ALL`, non-root y seccomp: la tarea 2 muestra precisamente eso.<br/>• Pero PSS `restricted` **no comprueba** `automountServiceAccountToken`: un Pod que no necesita la Kubernetes API puede recibir silenciosamente un ServiceAccount token montado y pasar PSA por completo. Es un control aparte, no cubierto por PSS, por lo que aquí procede precisamente una `ValidatingAdmissionPolicy` custom, y no duplicar el PSA integrado.<br/>• Crea una `ValidatingAdmissionPolicy` `require-no-automount-token` con una expresión CEL que exija `automountServiceAccountToken == false` a nivel de Pod.<br/>• Aplica un `ValidatingAdmissionPolicyBinding` `require-no-automount-token-binding`, limitado por `matchResources.namespaceSelector` a `psa-restricted-107`, con `validationActions: [Deny]`.<br/>• Demuestra los tres estados con server-side dry-run: un Pod totalmente compatible con PSA (con todos los campos de la tarea 2: non-root, seccomp, drop ALL, escalation false) sin el campo debe recibir DENY de la pareja exacta policy+binding; `automountServiceAccountToken: false` debe recibir ALLOW; `automountServiceAccountToken: true` debe volver a recibir DENY de la misma pareja.<br/>• Tras crear la policy, los nuevos Pod en `psa-restricted-107` (incluido el `restricted-app` que se recrea) deben contener por sí mismos `automountServiceAccountToken: false`, de lo contrario la política los rechazará. |
+| Criterios de aceptación | • **Objetos:** existen `ValidatingAdmissionPolicy require-no-automount-token` y su `ValidatingAdmissionPolicyBinding`, `validationActions` contiene `Deny`, el Binding hace match solo con `psa-restricted-107`. En el laboratorio existe exactamente un Binding para esta policy: `require-no-automount-token-binding`; no se crean Bindings adicionales de esta policy para otros namespaces.<br/>• **Tres estados:** el server-side dry-run de un Pod compatible con PSA sin `automountServiceAccountToken: false` es rechazado precisamente por la pareja `ValidatingAdmissionPolicy 'require-no-automount-token'` y `ValidatingAdmissionPolicyBinding 'require-no-automount-token-binding'` (no por el mensaje de PSA `violates PodSecurity` ni por otra policy); el Pod con `automountServiceAccountToken: false` es aceptado, y el Pod con `automountServiceAccountToken: true` es rechazado por la misma pareja exacta.<br/>• **Cobertura de todos los Pod:** la policy cubre todos los Pod seleccionados por sus `resourceRules` dentro de `psa-restricted-107`. No añadas `spec.matchConditions`, `matchConstraints.objectSelector` ni `matchConstraints.namespaceSelector` a la `ValidatingAdmissionPolicy`, ni `objectSelector` al Binding `matchResources`: reducen la coverage a una parte de los Pod, y un workload podrá quedar fuera de la comprobación por label o por condición de la petición.<br/>• **Namespace scope:** se define solo mediante el Binding `matchResources.namespaceSelector`, vinculado exactamente a `psa-restricted-107`; el selector no contiene condiciones sobre otras claves de namespace-label y por sí mismo limita sin ambigüedad el scope a este namespace.<br/>• **CEL:** la validation no contiene excepciones por nombre/labels/annotations del Pod, user/request, `namespaceObject`, `params`, `variables` ni otros campos: la decisión depende solo de `object.spec.automountServiceAccountToken` (es admisible cualquier forma CEL correcta, incluida la sintaxis optional `object.spec.?automountServiceAccountToken.orValue(true) == false`). `spec.auditAnnotations` está ausente o vacío: sus propias CEL expressions pueden influir en el admission mediante `failurePolicy`, por lo que el admission control se define solo mediante `spec.validations`. No se usan `variables` ni `paramKind`.<br/>• **Resource scope:** `matchConstraints.resourceRules` limitan la policy exactamente a `core/v1 pods` para las operaciones `CREATE` y `UPDATE`, sin `resourceNames`; `scope` está ausente, es `*` o `Namespaced`, pero no `Cluster`; no se usan `excludeResourceRules`. El Binding no reduce el resource/operation scope mediante sus propias `resourceRules`/`excludeResourceRules`.<br/>• Esto permite demostrar el boolean contract completo con tres estados `missing / false / true`, y no con unos cuantos ejemplos de workload elegidos. |
 
 <details>
 <summary>💡 Pista para la tarea 6</summary>
@@ -424,10 +424,12 @@ echo "exit code in psa-observe-107: $?"
 ```
 </details>
 
+---
+
 | **7** | **Controller-driven admission denial: diagnóstico mediante ReplicaSet events** |
 | :---: | :--- |
 | Qué hacemos | En el namespace vacío `psa-controller-107` crea un Deployment `controller-app` (label `app=controller-app`, replicas=1) con un Pod template simple sin hardening (por ejemplo `busybox:1.36`, `sleep 3600`, sin `securityContext`): debe arrancar con éxito, PSA todavía no estorba. Después habilita `pod-security.kubernetes.io/enforce=restricted` y `enforce-version=v1.36` en este namespace (el Pod ya existente seguirá funcionando: PSA no toca los objetos ya creados). Elimina el Pod actual: el ReplicaSet intentará crear un reemplazo, y ahora el admission lo rechazará. Comprueba la causa mediante `kubectl -n psa-controller-107 describe rs` y `kubectl -n psa-controller-107 get events`: allí habrá un `FailedCreate` con el texto `violates PodSecurity "restricted:v1.36"`. Corrige el Pod template del Deployment (añade los mismos campos de hardening que en la tarea 2: non-root, `seccompProfile: RuntimeDefault`, `capabilities.drop: [ALL]`, `allowPrivilegeEscalation: false`) y espera a que el ReplicaSet cree con éxito un Pod nuevo que pase. |
-| Criterios de aceptación | El namespace enforces `restricted:v1.36`; el template del Deployment es totalmente PSS-restricted-compliant; tras eliminar el Pod actual, el ReplicaSet realmente crea un nuevo Pod Ready bajo el enforce-mode actual (no simplemente "el objeto existe": se comprueba mediante una eliminación en vivo y una nueva creación). |
+| Criterios de aceptación | En el namespace está activo el enforce `restricted:v1.36`; el Pod template del Deployment cumple por completo el PSS `restricted`; tras eliminar el Pod actual, el ReplicaSet realmente crea un nuevo Pod Ready bajo el enforce-mode actual (no simplemente "el objeto existe": se comprueba mediante una eliminación en vivo y una nueva creación). |
 
 <details>
 <summary>💡 Pista para la tarea 7</summary>

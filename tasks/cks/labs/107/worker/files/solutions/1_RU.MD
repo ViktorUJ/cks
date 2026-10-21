@@ -1,9 +1,9 @@
 [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
 
-# Лаба 107 - эталонное решение: Pod Security Admission и immutable root filesystem
+# Лаба 107 - эталонное решение: Pod Security Admission и read-only root filesystem
 
 > Выполняйте команды на рабочей машине. Контекст `cluster1-admin@cluster1` уже
-> настроен. Namespace `psa-restricted-107` и `psa-observe-107` созданы стартовым
+> настроен. Namespace `psa-restricted-107`, `psa-observe-107` и `psa-controller-107` созданы стартовым
 > скриптом, но намеренно не имеют PSA labels.
 
 ## 1. Enforce restricted и проверка отказа

@@ -1,6 +1,6 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD)
 
-# Lab 108 - 参考解答: Kyverno admission policies
+# Lab 108 - 参考解答：Kyverno admission policies
 
 > すべてのコマンドは作業マシンで実行します。コンテキストはすでに設定済みです；namespace
 > `policy-108` は起動スクリプトによって作成されています。まず Kyverno をインストールして
@@ -191,11 +191,11 @@ Pod を作成せず、image pull もしない確認です。`docker.io` は 1 �
 untrusted の値にすぎません；policy が本当に allowlist (許可された 2 つ以外の任意の
 registry を禁止する) であり、単に文字列として `docker.io` を禁止する denylist ではないことを確認してください -
 そうでないと、unqualified な image、別のサードパーティの registry、綴りの似た host が
-簡単にすり抜けます：
+簡単にすり抜けます。
 
 Positive controls は、`containers`、`initContainers`、`ephemeralContainers` で、許可された 2 つの prefix (`registry.k8s.io/` と
 `ghcr.io/cks-lab/`) の両方をカバーする必要があります；どちらかの registry を通常のコンテナだけに
-限定しないでください。
+限定しないでください：
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -297,7 +297,7 @@ EOF
 `registry.k8s.io/e2e-test-images/busybox:1.36-1` で実行します (成功が期待されます)。subresource の
 update を保護するのは、まさに `matchConstraints` の `pods/ephemeralcontainers` です。
 
-## 5. オプション: mutation label
+## 5. オプション：mutation label
 
 この `MutatingPolicy` は Pod を拒否せず、CEL の
 `ApplyConfiguration` を通じて label を追加します - ただし label がまだ設定されていない場合のみです。課題が求めているのは、まさに
@@ -371,8 +371,8 @@ EOF
 # 期待される結果: external (mutation はすでに設定された値を上書きしません)
 ```
 
-`check_result` を実行します。段階 5 はチェックに表示されますが、オプションです：mutation policy がなくても、
-最初の 4 つの段階の合格が取り消されることはありません。
+`check_result` を実行します。課題 5 はチェックに表示されますが、オプションです：mutation policy がなくても、
+課題 1-4、6、7 の合格には影響しません。
 
 ## 6. ImagePolicyWebhook: 外部 backend
 
@@ -588,12 +588,12 @@ kubectl get pod webhook-pinned-ok
 `default` とその他の namespace (`policy-108` を除く) では、explicit/implicit の
 latest を禁止します；`policy-108` は、課題 2-4 の 3 つの Kyverno-policy が完全に制御します。
 これは仕組みを分離するための実習上の措置であり、一般的な production パターンではありません。
-ユーザー定義のアノテーション `alpha.image-policy.k8s.io/break-glass` は許可を与え「ません」：
+ユーザー定義のアノテーション `alpha.image-policy.k8s.io/break-glass` は許可を**与えません**：
 ImageReview の forwarding annotations は認証の確認ではありません。
 
 `defaultAllow: false` は fail-closed を意味します：backend が利用できない場合、新しい Pod/image は
 許可されず、禁止されます。これを明示的に確認してください - ただし `image-policy-backend` を 0 レプリカに
-スケールしては「いけません」：`ImagePolicyWebhook` はこの構成では namespace による除外のない cluster-wide の
+スケールしては**いけません**：`ImagePolicyWebhook` はこの構成では namespace による除外のない cluster-wide の
 admission plugin であるため、backend 自身の Pod も確認します。レプリカを一時的にすべて取り除いてから
 戻そうとすると、新しい backend Pod の作成自体が、同じ (その時点で
 利用できない) ImagePolicyWebhook を通ることになり、正しい `defaultAllow: false` のもとで拒否されます -
@@ -612,7 +612,7 @@ kubectl get endpoints image-policy-backend -n image-policy -w
 
 kubectl run webhook-should-fail-closed --image="nginx:fail-closed-check-$(date +%s%N)"
 # 期待される結果: Forbidden - backend が利用できず、defaultAllow:false が admission を禁止します
-# (秒単位の日付だけでなく、まだ見たことのないタグを使うのは、前回の試行の同じタグに対する
+# (単なる秒単位の日付ではなく、まだ見たことのないタグを使うのは、前回の試行の同じタグに対する
 # backend の応答の TTL キャッシュに当たらないようにするためです)
 
 kubectl patch service image-policy-backend -n image-policy \
@@ -622,7 +622,7 @@ kubectl get endpoints image-policy-backend -n image-policy -w
 # 不要でした
 ```
 
-これは、production 構成の ImagePolicyWebhook について第 26 章で説明されているのと
+これは、production 構成の ImagePolicyWebhook について[コースの第 26 章](../../../../../course/26/jp.md)で説明されているのと
 同じ、原理的な fail-closed の判断です。
 
 ## 7. Gatekeeper: ConstraintTemplate に Rego の blocklist を書き足す
@@ -706,7 +706,7 @@ EOF
 
 拒否が実際に Gatekeeper (`validation.gatekeeper.sh`) から来たものであり、課題 2-4 の Kyverno
 `ValidatingPolicy` のいずれかからではないことを確認してください - エラーメッセージが
-webhook と Constraint の名前を明示しています。課題を `Constraint.spec.parameters` で解決しないでください
-- この policy のバージョンでは、Constraint はそれらをまったく使用しません。
+webhook と Constraint の名前を明示しています。課題を `Constraint.spec.parameters` で解決しないでください。
+この policy のバージョンでは、Constraint はそれらをまったく使用しません。
 
 `check_result` を実行します。

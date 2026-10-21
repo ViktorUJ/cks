@@ -1,10 +1,10 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [日本語版](1_JP.MD)
 
-# Lab 108 - 參考解答:Kyverno admission policies
+# Lab 108 - 參考解答：Kyverno admission policies
 
-> 所有指令都在工作機上執行。Context 已經設定好;namespace
+> 所有指令都在工作機上執行。Context 已經設定好；namespace
 > `policy-108` 由啟動腳本建立。請先安裝 Kyverno 並等待
-> webhook:否則後續基於 CEL 的 policies 不會檢查 admission 請求。
+> webhook：否則後續基於 CEL 的 policies 不會檢查 admission 請求。
 
 ```bash
 export KUBECONFIG=/home/ubuntu/.kube/config
@@ -14,7 +14,7 @@ kubectl config use-context "$CTX"
 
 ## 1. 安裝 Kyverno
 
-worker 上準備了固定版本的 installer:它會把 Kyverno 的 Helm chart
+worker 上準備了固定版本的 installer：它會把 Kyverno 的 Helm chart
 `3.9.0`(Kyverno `1.19`)安裝到 namespace `kyverno`。執行之前可以先查看它。
 
 ```bash
@@ -27,16 +27,16 @@ kubectl get crd mutatingpolicies.policies.kyverno.io
 
 等到 `kyverno` 中至少有一個 Deployment 的 `AVAILABLE > 0`。
 
-> **Migration note。**舊的 `kyverno.io/v1` `Policy`/`ClusterPolicy` 範例只在維護
+> **Migration note**。舊的 `kyverno.io/v1` `Policy`/`ClusterPolicy` 範例只在維護
 > 既有叢集時才有用。在 Kyverno `1.19` 中它們已被 deprecated,
 > 並計畫在 `1.20` 中移除。本實驗中的新 policy 使用
 > `policies.kyverno.io/v1`。
 
 ## 2. 禁止 `latest` 標籤
 
-建立 Deny 模式的 `ValidatingPolicy`。規則會檢查全部三個 container 清單 -
-`containers`、`initContainers` 與 `ephemeralContainers`:否則被禁止的 image 很容易
-透過 init 或 ephemeral container 夾帶進去,而 Pod 本身仍然會通過 admission。
+建立 `Deny` 模式的 `ValidatingPolicy`。規則會檢查全部三個 container 清單 -
+`containers`、`initContainers` 與 `ephemeralContainers`：否則被禁止的 image 很容易
+透過 init 或 ephemeral container 夾帶進去，而 Pod 本身仍然會通過 admission。
 
 ```yaml
 # deny-latest-tag.yaml
@@ -94,17 +94,17 @@ EOF
 # 預期:成功(沒有任何 admission 錯誤)
 ```
 
-確認標籤的處理考慮到 registry 埠中的冒號:`registry.example:5000/app`
-不包含 image tag,必須被當作 implicit latest 而被拒絕。Digest 在其他 container 清單中
-也必須被接受 - 例如在 `initContainers` 中,以及透過
+確認標籤的處理考慮到 registry 埠中的冒號：`registry.example:5000/app`
+不包含 image tag，必須被當作 implicit latest 而被拒絕。Digest 在其他 container 清單中
+也必須被接受 - 例如在 `initContainers` 中，以及透過
 `kubectl debug --image=...` 用於 `ephemeralContainers`。
 
 ## 3. 要求 `runAsNonRoot`
 
-這個 policy 要求 Pod-level `securityContext` 中的值正是 `true`;隱含的
+這個 policy 要求 Pod-level `securityContext` 中的值正是 `true`；隱含的
 值與 `false` 都不會通過。此外還禁止 Pod 層級的 `runAsUser: 0`,
-以及在全部三個 container 清單中 container-level 的 overrides `runAsNonRoot: false` / `runAsUser: 0`,否則 container-level 的 securityContext 就能夠覆寫
-Pod-level `runAsNonRoot: true`,並啟動 root 行程。
+以及在全部三個 container 清單中 container-level 的 overrides `runAsNonRoot: false` / `runAsUser: 0`，否則 container-level 的 securityContext 就能夠覆寫
+Pod-level `runAsNonRoot: true`，並啟動 root 行程。
 
 ```yaml
 # require-run-as-non-root.yaml
@@ -150,7 +150,7 @@ kubectl apply -f require-run-as-non-root.yaml
 ## 4. 只允許已核准的 registry
 
 允許 `registry.k8s.io` 與專門的組織路徑 `ghcr.io/cks-lab`。CEL
-合併全部三個 container 清單,並對每個 image 套用同一個 allowlist。
+合併全部三個 container 清單，並對每個 image 套用同一個 allowlist。
 
 ```yaml
 # allow-approved-registries.yaml
@@ -188,14 +188,14 @@ kubectl apply -f allow-approved-registries.yaml
 ```
 
 不建立 Pod、不 pull image 的檢查。`docker.io` 只是「一個」具體的
-untrusted 值;請確認 policy 確實是 ALLOWLIST(禁止兩個允許的 registry 之外的「任何」
-registry),而不只是逐字字串的 `docker.io` denylist -
+untrusted 值；請確認 policy 確實是 ALLOWLIST(禁止兩個允許的 registry 之外的「任何」
+registry)，而不只是逐字字串的 `docker.io` denylist -
 否則 unqualified image、另一個第三方 registry 或寫法相似的 host 很容易
-繞過:
+繞過。
 
 Positive controls 必須在 `containers`、`initContainers` 與 `ephemeralContainers` 中涵蓋兩個允許的 prefix(`registry.k8s.io/` 與
-`ghcr.io/cks-lab/`);不要
-讓其中一個 registry 只限於一般的 container。
+`ghcr.io/cks-lab/`)；不要
+讓其中一個 registry 只限於一般的 container:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -255,8 +255,8 @@ spec:
 EOF
 ```
 
-四個都必須被拒絕。下面第一個 Pod 是主 container 違反規則,
-第二個 - 只有 `initContainers` 違反;兩者都必須被拒絕:
+四個都必須被拒絕。下面第一個 Pod 是主 container 違反規則，
+第二個 - 只有 `initContainers` 違反；兩者都必須被拒絕：
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -292,18 +292,18 @@ EOF
 ```
 
 兩個指令都必須以 admission policy 錯誤結束。若要明確嘗試透過
-`ephemeralContainers` 繞過,請建立一個允許的 Pod,然後先用
-`docker.io/library/busybox:1.36` 執行 `kubectl debug`(預期 denial),再用
+`ephemeralContainers` 繞過，請建立一個允許的 Pod，然後先用
+`docker.io/library/busybox:1.36` 執行 `kubectl debug`(預期 denial)，再用
 `registry.k8s.io/e2e-test-images/busybox:1.36-1`(預期成功)。保護 subresource update 的
 正是 `matchConstraints` 中的
 `pods/ephemeralcontainers`。
 
-## 5. 選擇性:mutation label
+## 5. 選擇性：mutation label
 
-這個 `MutatingPolicy` 不拒絕 Pod,而是透過 CEL
+這個 `MutatingPolicy` 不拒絕 Pod，而是透過 CEL
 `ApplyConfiguration` 加入 label - 但只有在 label 還沒有設定時才會加入。任務要求的正是
-defaulting 語意(「如果它不存在」):已經帶有這個 label、但值「不同」的 Pod
-(例如來自其他擁有者/工具),不應被強制覆寫。
+defaulting 語意(「如果它不存在」)：已經帶有這個 label、但值「不同」的 Pod
+(例如來自其他擁有者/工具)，其 label 值不應被強制覆寫。
 
 ```yaml
 # add-kyverno-managed-label.yaml
@@ -372,18 +372,18 @@ EOF
 # 預期:external(mutation「不會」覆寫已經設定的值)
 ```
 
-執行 `check_result`。階段 5 會顯示在檢查中,但它是選擇性的:缺少
-mutation policy 不應該取消前四個階段的計分。
+執行 `check_result`。任務 5 會顯示在檢查中，但它是選擇性的：缺少
+mutation policy 不會影響任務 1-4、6 與 7 的計分。
 
-## 6. ImagePolicyWebhook:外部 backend
+## 6. ImagePolicyWebhook：外部 backend
 
-與任務 1-5 不同,這裡 image 的決定是由外部 HTTPS-backend 透過
-`ImageReview` API 做出的,而不是 Kyverno 內部的 CEL 運算式。上游關於
+與任務 1-5 不同，這裡 image 的決定是由外部 HTTPS-backend 透過
+`ImageReview` API 做出的，而不是 Kyverno 內部的 CEL 運算式。上游關於
 ImagePolicyWebhook 的文件明確要求 backend 連線使用 TLS("It is
-required that the backend communicate over TLS"),因此我們使用自簽
-憑證,而不是 HTTP。
+required that the backend communicate over TLS")，因此我們使用自簽
+憑證，而不是 HTTP。
 
-Backend 已經在工作機上準備好了:
+Backend 已經在工作機上準備好了：
 
 ```bash
 cat /opt/image-policy-backend/server.py
@@ -419,7 +419,7 @@ BACKEND_IP=$(kubectl get service image-policy-backend -n image-policy -o jsonpat
 echo "$BACKEND_IP"
 ```
 
-簽發在 SAN 中帶有這個 `ClusterIP` 的自簽憑證,並把它儲存到 Secret:
+簽發在 SAN 中帶有這個 `ClusterIP` 的自簽憑證，並把它儲存到 Secret:
 
 ```bash
 workdir=$(mktemp -d)
@@ -433,7 +433,7 @@ kubectl create secret tls image-policy-backend-tls -n image-policy \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-部署 Deployment,同時掛載程式碼與憑證:
+部署 Deployment，同時掛載程式碼與憑證：
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
@@ -476,8 +476,8 @@ EOF
 kubectl rollout status deployment/image-policy-backend -n image-policy --timeout=90s
 ```
 
-把 CA 憑證(這裡是 self-signed,所以伺服器憑證本身就是它自己的
-CA)複製到 `control-plane`,讓 kube-apiserver 在連線到 backend 時能夠驗證憑證鏈,然後登入節點:
+把 CA 憑證(這裡是 self-signed，所以伺服器憑證本身就是它自己的
+CA)複製到 `control-plane`，讓 kube-apiserver 在連線到 backend 時能夠驗證憑證鏈，然後登入節點：
 
 ```bash
 CP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
@@ -489,7 +489,7 @@ sudo -i
 ```
 
 在 `control-plane` 上建立 admission config 與給 backend 的 kubeconfig。路徑位於 **control-plane
-本身**的磁碟上:
+本身**的磁碟上：
 
 ```bash
 # 在 control-plane 上(root)
@@ -530,10 +530,10 @@ current-context: image-policy
 EOF
 ```
 
-編輯 static manifest **在 `control-plane` 上**(你已經在 root 工作階段中)。不要整個取代
+**在 `control-plane` 上**編輯 static manifest(你已經在 root 工作階段中)。不要整個取代
 既有的 `--enable-admission-plugins` - 請把 `ImagePolicyWebhook` 接在目前的
-值之後(通常那裡已經有 `NodeRestriction`),加入 `--admission-control-config-file` 與
-`--runtime-config`,並把新的目錄以 hostPath 掛載:
+值之後(通常那裡已經有 `NodeRestriction`)，加入 `--admission-control-config-file` 與
+`--runtime-config`，並把新的目錄以 hostPath 掛載：
 
 ```bash
 # 在 control-plane 上(root)
@@ -561,20 +561,20 @@ spec:
       type: DirectoryOrCreate
 ```
 
-儲存之後離開節點;kubelet 會自己接手 static Pod 的變更:
+儲存之後離開節點；kubelet 會自己接手 static Pod 的變更：
 
 ```bash
 exit   # 離開 root
 exit   # 離開 control-plane
 ```
 
-等待 API 恢復:
+等待 API 恢復：
 
 ```bash
 until kubectl get --raw=/readyz 2>/dev/null | grep -q '^ok$'; do sleep 5; done
 ```
 
-檢查這兩種情況:
+檢查這兩種情況：
 
 ```bash
 kubectl run webhook-latest-must-fail --image=nginx:latest
@@ -587,21 +587,21 @@ kubectl get pod webhook-pinned-ok
 ```
 
 `ImagePolicyWebhook` 使用來自 `/opt/image-policy-backend/server.py` 的 backend:
-在 `default` 與其餘 namespace(`policy-108` 除外)中,它禁止 explicit/implicit
+在 `default` 與其餘 namespace(`policy-108` 除外)中，它禁止 explicit/implicit
 latest;`policy-108` 則完全由任務 2–4 的三個 Kyverno policy 控制。
-這是實驗用的機制隔離,而不是通用的 production pattern。
-使用者 annotation `alpha.image-policy.k8s.io/break-glass` 「不會」給予許可:
+這是實驗用的機制隔離，而不是通用的 production pattern。
+使用者 annotation `alpha.image-policy.k8s.io/break-glass` 「不會」給予許可：
 ImageReview 轉發的 annotations 不是身分驗證。
 
-`defaultAllow: false` 表示 fail-closed:如果 backend 無法連線,新的 Pod/image
-會被禁止,而不是被允許。請明確檢查這一點 - 但「不要」把
+`defaultAllow: false` 表示 fail-closed：如果 backend 無法連線，新的 Pod/image
+會被禁止，而不是被允許。請明確檢查這一點 - 但「不要」把
 `image-policy-backend` 縮減到 0 個 replica:`ImagePolicyWebhook` 是 cluster-wide 的 admission
-plugin,在我們的設定中沒有依 namespace 的例外,因此它也會檢查 backend 自己的 Pod。
-如果暫時移除所有 replica,然後試圖把它們恢復回來,建立「新的」backend Pod
-「本身」就會經過同一個(此刻無法連線的)ImagePolicyWebhook,並在 `defaultAllow: false` 正確運作時被拒絕 -
+plugin，在我們的設定中沒有依 namespace 的例外，因此它也會檢查 backend 自己的 Pod。
+如果暫時移除所有 replica，然後試圖把它們恢復回來，建立「新的」backend Pod
+「本身」就會經過同一個(此刻無法連線的)ImagePolicyWebhook，並在 `defaultAllow: false` 正確運作時被拒絕 -
 就會形成 deadlock,`kubectl rollout status` 無法脫離。因此請改為
-把 Service 與 backend 斷開,把 `selector` 改成不存在的值 - 這不會
-建立也不會刪除任何 Pod,只是暫時移除 `Endpoints`:
+把 Service 與 backend 斷開，把 `selector` 改成不存在的值 - 這不會
+建立也不會刪除任何 Pod，只是暫時移除 `Endpoints`:
 
 ```bash
 kubectl get service image-policy-backend -n image-policy -o jsonpath='{.spec.selector}'
@@ -624,17 +624,17 @@ kubectl get endpoints image-policy-backend -n image-policy -w
 # 重建/重新建立
 ```
 
-這和第 26 章中為
-production 設定的 ImagePolicyWebhook 所描述的,是同樣原則性的 fail-closed 決策。
+這和[課程的第 26 章](../../../../../course/26/tw.md)中為
+production 設定的 ImagePolicyWebhook 所描述的，是同樣原則性的 fail-closed 決策。
 
-## 7. Gatekeeper:在 ConstraintTemplate 中補寫 Rego blocklist
+## 7. Gatekeeper：在 ConstraintTemplate 中補寫 Rego blocklist
 
 Gatekeeper 以及起始的(不完整的)`ConstraintTemplate`/`Constraint` 已經由
 叢集的 bootstrap 部署在單獨的 namespace `gatekeeper-108` 中 - 這是本實驗中單獨的、第三個
-admission engine(在 Kyverno 與 ImagePolicyWebhook 之後),檢查的正是
-OPA/Rego 技能。`gatekeeper-108` 與 Kyverno 的任務 1-5(`policy-108`)是刻意隔離的:
+admission engine(在 Kyverno 與 ImagePolicyWebhook 之後)，檢查的正是
+OPA/Rego 技能。`gatekeeper-108` 與 Kyverno 的任務 1-5(`policy-108`)是刻意隔離的：
 否則同一個測試 Pod 可能同時被 Kyverno 與
-Gatekeeper 拒絕,denial 的來源就會不明確。查看目前的 Rego:
+Gatekeeper 拒絕，denial 的來源就會不明確。查看目前的 Rego:
 
 ```bash
 kubectl get constrainttemplate k8sblockedregistries -o yaml
@@ -649,10 +649,10 @@ blocked_registry("docker-fake.test")
 
 其中沒有 `very-bad-registry.test` - 需要補寫的正是這一行。`Constraint
 deny-bad-registries` 已經完全正確,而且完全不使用 `spec.parameters` -
-不需要編輯它;修正「正是」在 `ConstraintTemplate` 內的 Rego 中,
+不需要編輯它；修正「正是」在 `ConstraintTemplate` 內的 Rego 中，
 而不是在 Constraint 中。編輯 template(例如 `kubectl edit
 constrainttemplate k8sblockedregistries`,或 `get -o yaml` → 修改 → `apply -f -`),
-加入新的一行,但不要刪除既有的:
+加入新的一行，但不要刪除既有的：
 
 ```rego
 blocked_registry("untrusted-registry.example")
@@ -660,9 +660,9 @@ blocked_registry("docker-fake.test")
 blocked_registry("very-bad-registry.test")
 ```
 
-用 server-side dry-run 檢查全部三種結果,不建立持久的 Pod:新的
-registry 必須被 denied,舊的(已經被封鎖的)- 仍然是 denied(沒有
-退化),受信任的 - 通過:
+用 server-side dry-run 檢查全部三種結果，不建立持久的 Pod：新的
+registry 必須被 denied，舊的(已經被封鎖的)- 仍然是 denied(沒有
+迴歸)，受信任的 - 通過：
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -707,9 +707,9 @@ EOF
 # 預期:成功(沒有任何 admission 錯誤)
 ```
 
-確認拒絕確實來自 Gatekeeper(`validation.gatekeeper.sh`),而
+確認拒絕確實來自 Gatekeeper(`validation.gatekeeper.sh`)，而
 不是來自任務 2-4 中的某個 Kyverno `ValidatingPolicy` - 錯誤訊息明確
-指出 webhook 與你的 Constraint 的名稱。不要透過 `Constraint.spec.parameters` 來解決這個任務
-- 在這個版本的 policy 中,Constraint 完全不使用它們。
+指出 webhook 與你的 Constraint 的名稱。不要透過 `Constraint.spec.parameters` 來解決這個任務 -
+在這個版本的 policy 中，Constraint 完全不使用它們。
 
 執行 `check_result`。

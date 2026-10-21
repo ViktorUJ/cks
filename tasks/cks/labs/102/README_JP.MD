@@ -8,7 +8,7 @@
 
 ## 目的
 
-[第 06 章。Cilium NetworkPolicy](../../course/06/jp.md) の内容を定着させます：
+[第 06 章「Cilium NetworkPolicy」](../../course/06/jp.md) の内容を定着させます：
 
 - `CiliumNetworkPolicy`、`endpointSelector`、labels による identity；
 - source と TCP ポートによる L3/L4 の制限；
@@ -34,7 +34,7 @@ L3/L4 は、source/destination の identity とポートに基づいて接続全
 </details>
 
 <details>
-<summary>3. Hubble で L7-denial を実証するとき、テストの後ではなくテストの最中に通信を capture することが重要なのはなぜか?</summary>
+<summary>3. Hubble で L7-denial を実証するとき、テストの前に通信の capture を開始しておくと便利なのはなぜか、またそれは必須か?</summary>
 
 リクエストの前に起動した `hubble observe --follow` は、controlled capture に便利なモードです。必要な flow が保存される前に retention buffer から消えてしまうリスクを減らせます。ただし、これは有効な evidence を得る唯一の方法ではありません。通常の `hubble observe` でも、retention window の範囲内ですでに保存されているイベントを (たとえば正しい `--since` で) 読み取れますし、出力をファイルにエクスポートすることもできます。どの方法でも、evidence は時間窓、source/destination、HTTP method/path、verdict を、具体的な GET/POST のテストケースに一意に結びつけている必要があります。
 
@@ -175,7 +175,7 @@ controlled capture のためには、`GET`/`POST` の前に `hubble observe --fo
 <details>
 <summary>💡 課題 6 のヒント</summary>
 
-`rules.http` の Path は正確な文字列ではなく regex (Envoy 互換) です：
+`rules.http` の path は正確な文字列ではなく regex (Envoy 互換) です：
 `/public/` ではなく `/public/.*` です。同じ `endpointSelector` + ポートに対する、
 異なる `fromEndpoints` を持つ 2 つの ingress ルールは、identity ごとに加算的に結合されます：
 絶対に任意の identity (`finance` を含む) を許可するルールは、`finance-client` に
@@ -185,8 +185,8 @@ controlled capture のためには、`GET`/`POST` の前に `hubble observe --fo
 まさにこのためです：「任意」のルールがすでに全員に対して TCP コネクト自体を許可しており、
 ここでは L4 が 1 つの source に制限されていないからです。
 
-**落とし穴**：`fromEndpoints: [{}]` (空の selector) は、任意の namespace の任意の identity にマッチさせる方法では
-ありません。Cilium は、明示的な namespace-label のない `fromEndpoints` selector を
+**落とし穴**：`fromEndpoints: [{}]` (空の selector) は、任意の namespace の任意の identity にマッチさせる方法ではありません。
+Cilium は、明示的な namespace-label のない `fromEndpoints` selector を
 暗黙的に policy 自身の namespace にスコープし、これは空の `{}` にも適用されます -
 その結果、そのようなルールは `production` のみにマッチし、`finance`/`cks-102` にはマッチせず、
 両方の外部 namespace は期待される挙動の代わりに transport-level の deny を受け取ります。
@@ -194,7 +194,7 @@ namespace に関係なく本当に任意の identity を許可するには、res
 `k8s:io.kubernetes.pod.namespace` に対して `operator: Exists` を持つ `matchExpressions` を使用します -
 この label が存在するという事実は、あらゆる Pod に対して真です。
 
-nginx 設定の `location /public/` (正確なパス) と CNP の regex-path を混同しないでください -
+nginx 設定の `location /public/` (パスのプレフィックス) と CNP の regex-path を混同しないでください -
 これらは別の場所にあり、構文も異なります。
 
 </details>
@@ -209,7 +209,7 @@ worker で次を実行します：
 check_result
 ```
 
-チェックは 6 つの独立した課題を実行します。`check_result` は live クラスターの挙動を自分で検証します
+チェックは 6 つの独立した課題を対象とします。`check_result` は live クラスターの挙動を自分で検証します
 (あなたの policy は削除も変更もされません：checker は読み取りのみを行い、
 テスト用リクエストを送信し、Hubble 用の GET/POST を自分で生成します) - 受講者による成果物ファイルは不要です。
 checker 自身の診断用 runtime 確認は `/var/work/tests/checker-artifacts/` に保存されます。

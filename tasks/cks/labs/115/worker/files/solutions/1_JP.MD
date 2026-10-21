@@ -32,7 +32,7 @@ kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status | gre
 kubectl get nodes
 ```
 
-> cilium-cli 0.19 の `cilium status` は、行 `KubeProxyReplacement`/`Encryption` を出力しません；
+> cilium-cli 0.19 の `cilium status` は、`KubeProxyReplacement`/`Encryption` の行を出力しません；
 > それらは agent の Pod 内の `cilium-dbg status` が表示します (checker もそのように確認します)。
 
 ```
@@ -52,7 +52,7 @@ api HTTP:403
 ```
 
 `403` (`000` ではない) は、Service ClusterIP 経由の API への TCP/TLS が kube-proxy なしで実際に動作していることを意味します；
-ここで `403` は想定どおりです。トークンなしのリクエストであり、応答があったこと自体で十分です。
+トークンなしのリクエストなので、ここで `403` は想定どおりです。応答があったこと自体で十分です。
 
 ## 3. WireGuard encryption
 
@@ -177,7 +177,7 @@ ciliumnetworkpolicy.cilium.io/backend-auth-required created
 
 ## 6. Positive/negative control
 
-Negative control は `app-115` の**別の Pod** です：Pod 自身へのトラフィック (Service 経由を含む) は
+ネガティブコントロールは `app-115` の**別の Pod** です：Pod 自身へのトラフィック (Service 経由を含む) は
 Cilium が常に通すため、`backend` への `exec` は何も証明しません。
 
 ```bash

@@ -130,9 +130,9 @@ POST უარყო Cilium-ის Envoy proxy-მ L7-ზე (`403`), და ა
 `allowed.cks102.test`/`blocked.cks102.test` - lab-owned fixture, რომელიც resolve-დება
 `198.18.0.10`/`198.18.0.20`-ზე (სინთეტიკური IP-ები Kubernetes address space-ის გარეთ, ცალკე
 network namespace control-plane node-ზე, და არა ClusterIP: `toFQDNs` Cilium-ში არ ავრცელებს
-allow-წესს კლასტერის შიგნით არსებულ IP-ზე), აყვანილი და CoreDNS-ში ჩაწერილი ჯერ კიდევ bootstrap-ის დროს:
-`example.com`-ისგან განსხვავებით, ეს სახელები ყოველთვის ხელმისაწვდომია და Internet-ზე არ არის დამოკიდებული. ვამოწმებთ policy-მდე
-- DNS და ორივე საკონტროლო endpoint რეალურად ხელმისაწვდომი უნდა იყოს (`-k` - fixture-ის თვითხელმოწერილი
+allow-წესს კლასტერის შიგნით არსებულ IP-ზე), გაშვებული და CoreDNS-ში ჩაწერილი ჯერ კიდევ bootstrap-ის დროს:
+`example.com`-ისგან განსხვავებით, ეს სახელები ყოველთვის ხელმისაწვდომია და Internet-ზე არ არის დამოკიდებული. ვამოწმებთ policy-მდე -
+DNS და სამივე საკონტროლო endpoint (`allowed:443`, `allowed:80`, `blocked:443`) რეალურად ხელმისაწვდომი უნდა იყოს (`-k` - fixture-ის თვითხელმოწერილი
 სერტიფიკატი):
 
 ```bash
@@ -230,13 +230,13 @@ cks-102/frontend:xxxxx -> cks-102/backend:80 http-request FORWARDED (HTTP/1.1 GE
 cks-102/frontend:xxxxx -> cks-102/backend:80 http-request DROPPED (HTTP/1.1 POST http://backend/)
 ```
 
-უნდა ვნახოთ ზუსტად ორი flow: `GET /` verdict-ით `FORWARDED` და `POST /` verdict-ით `DROPPED`. თუ ისინი არ ჩანს - `hubble observe` მოთხოვნების დროს არ იყო გაშვებული; გაიმეორეთ.
+უნდა ვნახოთ ზუსტად ორი flow: `GET /` verdict-ით `FORWARDED` და `POST /` verdict-ით `DROPPED`. თუ ისინი არ ჩანან - `hubble observe` მოთხოვნების დროს არ იყო გაშვებული; გაიმეორეთ.
 
 ## 6. შედგენილი L7 policy: public/private path scopes
 
 მეორე, დამოუკიდებელი backend ორი path-scope-ით. nginx-კონფიგს მთლიანად ვცვლით
-(`default.conf`), რათა `location` აბრუნებდეს `200`-ს კონკრეტულ prefix-ზე და `404`-ს ყველაფერზე
-დანარჩენზე - მის გარეშე არ არსებობს გზა, HTTP-კოდით განვასხვავოთ "დაშვებული" "აკრძალულისგან".
+(`default.conf`), რათა `location` აბრუნებდეს `200`-ს კონკრეტულ prefix-ზე და `404`-ს დანარჩენ ყველაფერზე -
+მის გარეშე არ არსებობს გზა, რომ HTTP-კოდით განვასხვავოთ "დაშვებული" "აკრძალულისგან".
 
 ```bash
 k create ns production
@@ -298,10 +298,10 @@ private:200
 
 Policy: ორი ingress-წესი ერთ პორტზე. **Cilium-ის მნიშვნელოვანი ხაფანგი**: `fromEndpoints:
 [{}]` (ცარიელი selector) namespaced `CiliumNetworkPolicy`-ში **არ** ნიშნავს "ნებისმიერ identity-ს მთელ
-კლასტერში" - Cilium არაპირდაპირ ამატებს თავად policy-ის namespace-ით შეზღუდვას ნებისმიერ
+კლასტერში" - Cilium იმპლიციტურად ამატებს თავად policy-ის namespace-ით შეზღუდვას ნებისმიერ
 `fromEndpoints`-selector-ს აშკარა namespace-label-ის გარეშე, ცარიელი `{}`-ის ჩათვლით. ანუ `{}`
-აქ პრაქტიკაში ემთხვევა მხოლოდ endpoints-ს namespace `production`-ში, და არა `finance`/`cks-102`-ს
-- ცოცხალი შემოწმება ამას ადასტურებს: ბუკვალური `{}`-ით გარე client იღებს transport
+აქ პრაქტიკაში ემთხვევა მხოლოდ endpoints-ს namespace `production`-ში, და არა `finance`/`cks-102`-ს -
+ცოცხალი შემოწმება ამას ადასტურებს: პირდაპირი `{}`-ით გარე client იღებს transport
 timeout-ს ორივე path-ზე (წესი მის namespace-ზე საერთოდ არ ვრცელდება), ხოლო `finance` იღებს
 `403`-ს `/public/*`-ზე (ემთხვევა მხოლოდ წესს 2, რომელიც უშვებს მხოლოდ `/private/*`-ს).
 იმისთვის, რომ რეალურად დავემთხვეთ ნებისმიერ identity-ს namespace-ის მიუხედავად, საჭიროა `matchExpressions`
@@ -371,7 +371,7 @@ private:403
 
 `finance-client` -> ორივე path `200`. `cks-102/client` (ნებისმიერი სხვა namespace) -> `/public/*`
 კვლავ `200`, ხოლო `/private/*` - `403` (Envoy L7 deny, და არა transport-level `000`: წესმა 1
-უკვე დაუშვა თავად TCP-კონექტი ყველა identity-სთვის).
+უკვე დაუშვა თავად TCP-კავშირი ყველა identity-სთვის).
 
 ---
 

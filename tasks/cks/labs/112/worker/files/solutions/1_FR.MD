@@ -244,11 +244,11 @@ kubectl get --raw=/readyz
 ```
 
 ```bash
-# terminal 1 : les flags sont arrivés dans le manifest de travail
+# terminal 1 : les flags figurent bien dans le manifest actif
 grep -E -- '--audit-(policy-file|log-path|log-max)' /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
-Créez le ConfigMap et générez les deux requêtes, puis enregistrez un JSON event approprié pour chacun
+Créez le ConfigMap et générez les deux requêtes, puis enregistrez un JSON event approprié pour chacune
 comme artefacts :
 
 ```bash
@@ -272,7 +272,7 @@ jq -c 'select(.objectRef.resource == "secrets" and .objectRef.namespace == "runt
 scp control-plane:/tmp/art/4/*.json /var/work/tests/artifacts/4/
 ```
 
-Vérifiez que le ConfigMap est journalisé avec son corps, et le Secret - uniquement au niveau `Metadata` et
+Vérifiez que le ConfigMap est journalisé avec son corps, et que le Secret ne l'est qu'au niveau `Metadata` et
 **sans** `requestObject`/`responseObject` :
 
 ```bash
@@ -345,7 +345,7 @@ kubectl exec -n "$NS" falco-shell -- \
 INCIDENT_EXEC_PID=$!
 ```
 
-Ensuite, nous faisons tout sur le control-plane tant que le processus est vivant : nous prenons l'alert, et à partir de lui - le container id et le
+Ensuite, nous faisons tout sur le control-plane tant que le processus est vivant : nous prenons l'alert et nous en extrayons le container id et le
 host pid (nous partons de l'alert, sans deviner) :
 
 ```bash
@@ -414,7 +414,7 @@ D'abord, nous enregistrons l'evidence, puis nous isolons le namespace au niveau 
 Pod compromis. C'est une chaîne de containment minimale, et non une investigation complète :
 la credential revocation/rotation, la recherche d'autres workloads et la restauration de l'owner/controller relèvent
 d'un processus IR distinct. La dernière commande démontre un outcome négatif, et ne cherche pas un
-texte d'erreur concret.
+texte d'erreur précis.
 
 ```bash
 # terminal 2
@@ -439,7 +439,7 @@ cat "$DIR/containment.txt"
 # exec_exit=1 (pas 0)
 ```
 
-## Tâche 7. Override d'une macro upstream et sortie en JSON/fichier
+## 7. Override d'une macro upstream et sortie en JSON/fichier
 
 La règle standard **Terminal shell in container** se déclenchera aussi sur un outil
 légitime. L'endroit correct pour une exception environment-specific n'est pas la modification de
@@ -503,7 +503,7 @@ journalctl -u falco-modern-bpf -b --no-pager -n 200 | grep -F 'A shell was spawn
 L'output standard de la règle **Terminal shell in container** ne contient pas `k8s.pod.name`/
 `k8s.ns.name` (on peut s'en assurer sur le control-plane : `grep -A3 "rule: Terminal shell in container" /etc/falco/falco_rules.yaml`
 montrera l'`output` sans ces champs). Sans l'evidence de Pod/namespace dans l'alert lui-même, une correlation fiable
-d'un déclenchement concret avec un Pod concret est impossible - un `grep` textuel sur le nom du Pod dans le journal
+d'un déclenchement précis avec un Pod précis est impossible - un `grep` textuel sur le nom du Pod dans le journal
 ne trouvera tout simplement aucune correspondance. Nous ajoutons ces champs par le même mécanisme `override`, mais avec
 `output: append` au lieu de `condition: replace` :
 
@@ -521,7 +521,7 @@ systemctl restart falco && sleep 10
 
 Dans `/etc/falco/config.d/`, activez le format JSON et la sortie fichier. Falco 0.38+ prend par défaut
 en compte les `config_files` de ce répertoire ; ajouter directement dans `falco.yaml` crée des
-clés top-level en double lors d'un relancement et survit moins bien à la mise à jour du paquet -
+clés top-level en double lors d'une nouvelle exécution et survit moins bien à la mise à jour du paquet -
 `config.d` est destiné précisément aux ajouts locaux :
 
 ```bash
@@ -554,7 +554,7 @@ tail -n 20 /var/log/falco/events.log \
 # {"pod": "immutable-app", "ns": "runtime-112"}
 ```
 
-## Tâche 8. Audit webhook backend
+## 8. Audit webhook backend
 
 `audit-receiver` est déjà déployé par le script de démarrage. Créez un webhook kubeconfig pointant
 vers son Service ; pour le lab, HTTP est admis, en production le webhook exige HTTPS et un client
@@ -623,7 +623,7 @@ Vérification intermédiaire :
 check_result
 ```
 
-## Tâche 9. Tâche d'intégration : contournement de l'admission via containerd et détection via Falco
+## 9. Tâche d'intégration : contournement de l'admission via containerd et détection via Falco
 
 Cette tâche relie Supply Chain Security (lab 111, chapitre 26) au Runtime Security de ce
 lab : la vérification d'admission (Kyverno) ne voit pas un conteneur s'il est créé directement via
@@ -660,7 +660,7 @@ echo "CKS112_REGISTRY=$CKS112_REGISTRY CKS112_TRUSTED_REPO=$CKS112_TRUSTED_REPO"
 
 Nous créons une `ValidatingPolicy` native avec un allowlist sur le trusted registry. Nous utilisons la Kyverno CEL
 Image library (`image(...).registry()`/`.repository()`) pour une comparaison exacte, et non
-`startsWith` - sinon `${CKS112_TRUSTED_REPO}-evil` passerait aussi la policy, parce que sa
+`startsWith` - sinon `${CKS112_TRUSTED_REPO}-evil` passerait aussi la policy, parce que son
 image string commence simplement par la sous-chaîne autorisée. Le message de denial contient le
 marqueur unique `CKS112_TRUSTED_REPO_POLICY`, afin que BATS puisse plus tard distinguer précisément cette
 policy de toute autre admission webhook/policy du cluster :
@@ -745,7 +745,7 @@ cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_1 'echo CKS112_CTR_BYPASS; sleep 5'
 > se déclencherait sur le processus hôte de lancement (son repository est vide, c'est-à-dire différent de trusted),
 > et même une image de confiance donnerait un faux alert.
 >
-> Falco affiche pour l'image non pas le tag avec lequel le conteneur est lancé, mais le premier par ordre alphabétique
+> Falco affiche pour l'image non pas le tag avec lequel le conteneur est lancé, mais, par ordre alphabétique, le premier
 > nom d'image (une image peut avoir plusieurs noms). C'est pourquoi les noms des images du lab utilisent
 > l'hôte de registry `cks112.local:5000`, qui est trié avant `docker.io`.
 
@@ -803,7 +803,7 @@ ne sont pas équivalentes en tant que security control :
 cat >> /etc/falco/falco_rules.local.yaml <<EOF
 
 - rule: CKS112 Runtime Bypass of Admission
-  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via ctr/crictl directly)
+  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via crictl/CRI directly)
   condition: >
     spawned_process and
     container.id != host and
@@ -843,13 +843,13 @@ cks112-rm $BYPASS_1
 cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_2 'echo CKS112_CTR_BYPASS; sleep 5'
 sleep 3
 journalctl -u falco-modern-bpf --since "$START_TS" --no-pager | grep 'CKS112 runtime bypass of admission' > /tmp/art/9/falco-bypass-attempt.log
-cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-alpine.log
+cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-untrusted.log
 cks112-rm $BYPASS_2
 ```
 
 Enfin, nous démontrons le prefix-trap lui-même : un repository construit comme `${TRUSTED_REPO}-evil`
 COMMENCE par la même sous-chaîne que le `$TRUSTED_REPO` autorisé, mais ne lui est pas exactement égal.
-Si la Falco condition utilisait `startswith` (comme dans une version antérieure, incorrecte,
+Si la Falco condition utilisait `startswith` (comme dans la variante naïve
 de cette règle), cette image passerait INAPERÇUE - c'est précisément pourquoi la condition corrigée
 `!=` doit l'attraper. L'image prefix-trap est préparée par le bootstrap (`$CKS112_PREFIX_IMAGE`,
 avec un digest distinct) :
@@ -868,11 +868,11 @@ cks112-rm $PREFIX_TRAP
 scp 'control-plane:/tmp/art/9/*' /var/work/tests/artifacts/9/
 ```
 
-> **Structure des fichiers d'evidence de la tâche 9.** `falco-bypass-attempt.log` est l'artifact
-> combiné principal, que vérifie la réception automatique (il contient les deux alerts :
+> **Structure des fichiers d'evidence de la tâche 9.** `falco-bypass-attempt.log` est l'artefact
+> combiné principal, que contrôlent les tests d'acceptation automatiques (il contient les deux alerts :
 > untrusted et prefix-trap, mais ne doit pas contenir d'alert pour le trusted repo). De plus,
 > chaque probe écrit son propre fichier pour le diagnostic manuel : `probe-trusted.log` (doit être
-> vide - c'est le negative control), `probe-alpine.log` et `probe-prefix.log`.
+> vide - c'est le negative control), `probe-untrusted.log` et `probe-prefix.log`.
 
 La conclusion clé de cette tâche : le registry allowlist à l'admission et Falco au runtime ne sont pas des
 couches interchangeables, mais complémentaires. L'admission arrête le chemin via la Kubernetes
@@ -889,8 +889,8 @@ des contrôles de sécurité équivalents, même si les deux vérifient formelle
 
 Les tâches 3, 7 et 9 construisaient la condition autour de `spawned_process`/`proc.cmdline` - détection
 par le LANCEMENT d'un processus et ses arguments. Ici, on utilise une classe de
-condition Falco fondamentalement différente : la détection par l'OUVERTURE d'un fichier/périphérique concret, indépendamment de
-quel processus le fait et avec quels arguments de ligne de commande.
+condition Falco fondamentalement différente : la détection par l'OUVERTURE d'un fichier/périphérique précis, indépendamment de
+l'identité du processus qui le fait et de ses arguments de ligne de commande.
 
 Le Deployment `mem-scanner` (2 répliques) est déjà déployé par le bootstrap ; les deux répliques ouvrent périodiquement
 `/dev/mem` depuis l'intérieur du conteneur. Le chemin `/dev/mem` dans le conteneur est un synthetic
@@ -957,7 +957,7 @@ jq '.spec.replicas' /var/work/tests/artifacts/10/scaled-down.json
 # attendu : 0
 ```
 
-`container.id != host` dans la condition n'est pas un détail décoratif : sans elle, la règle se déclencherait
+`container.id != host` dans la condition n'est pas un détail décoratif : sans cette condition, la règle se déclencherait
 aussi sur des processus système légitimes du nœud (par exemple, des outils de diagnostic de la mémoire),
 lancés hors des conteneurs, en créant de bruyants false positives sur chaque nœud du cluster.
 

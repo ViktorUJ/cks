@@ -1114,7 +1114,7 @@ SUBJECT='system:serviceaccount:team-a:ci'
 kubectl auth can-i get configmap/team-a-replica-limit   -n policy-system --as="$SUBJECT"
 ```
 
-> 🔬 **Deep Dive — Manifest-Based Admission Control.** Training baseline Kubernetes v1.36-ში ფუნქცია Alpha-ს სტატუსშია და default-ით გამორთულია. Upstream Kubernetes v1.37-ში ის Beta-ზე გადავიდა და enabled by default გახდა. ამ თავის საბაზისო workflow ბმულია v1.36-თან; production-current delta იხილეთ [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_GE.md)-ში.
+> 🔬 **Deep Dive — Manifest-Based Admission Control.** Training baseline Kubernetes v1.36-ში ფუნქცია Alpha-ს სტატუსშია და default-ით გამორთულია. Upstream Kubernetes v1.37-ში ის Beta-ზე გადავიდა და enabled by default გახდა. ამ თავის საბაზისო workflow ბმულია v1.36-თან; production-current delta იხილეთ [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)-ში.
 >
 > v1.36-ში ჩართეთ feature gate `ManifestBasedAdmissionControlConfig`; ფუნქცია
 > ატვირთავს webhook და CEL policy manifests-ს API server-ის დისკიდან. გადასცემეთ

@@ -1,6 +1,6 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD)
 
-# Lab 110 - 参考解答: gVisor、WireGuard、Istio STRICT
+# Lab 110 - 参考解答：gVisor、WireGuard、Istio STRICT
 
 > 試験と同じように作業します：`kubectl`、`cilium`、`istioctl` は作業マシンで実行し、ノードに対する操作
 > (containerd、tcpdump) はノード自体で行います：`ssh <ノード>` で入り、root になり
@@ -41,7 +41,7 @@ runsc --version
 systemctl is-active containerd
 grep runsc /etc/containerd/config.toml
 
-# runsc のセクションを書き足し (runtime_type の値は正確でなければなりません) containerd を再起動する
+# runsc のセクションを書き足し (runtime_type の値は正確でなければならない)、containerd を再起動する
 cat >> /etc/containerd/config.toml <<EOF
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runsc]
   runtime_type = "io.containerd.runsc.v1"
@@ -53,8 +53,8 @@ exit   # root から
 exit   # gVisor ノードから
 ```
 
-kubelet を再起動する必要はありません：`RuntimeClass` は、kubelet の起動時ではなく、Pod を作成するたびに
-containerd runtime handler を名前で呼び出します。
+kubelet を再起動する必要はありません：kubelet は、kubelet の起動時ではなく、Pod を作成するたびに
+`RuntimeClass` の handler 名を containerd に渡します。
 
 ```yaml
 # runtimeclass-gvisor.yaml
@@ -160,7 +160,7 @@ kubectl get pod -n sandbox-110 gvisor-sandbox -o wide
 ```
 
 gVisor Sentry は workload に合成された kernel view を見せます；`dmesg` は
-制限されている場合があります。これは想定内であり、コンテナに余分な privileges を与える理由にはなりません。
+ノードの kernel ログではなく、`Starting gVisor...` で始まる短い合成ログを出力します (checker が期待しているのはまさにこの行です)。これは想定内であり、コンテナに余分な privileges を与える理由にはなりません。
 
 ## 3. 比較用の通常の runc Pod
 
@@ -238,7 +238,7 @@ test "$(kubectl -n kube-system get cm cilium-config -o jsonpath='{.data.enable-w
 cilium status --wait
 ```
 
-暗号化の status は、agent で `cilium-dbg` を通じて読み取ります：これは Cilium agent に同梱されている Pod 内の debug CLI です。ローカルの `cilium` CLI は install/cluster-level のツールのままで、Pod 内でのそれの代わりにはなりません。`cilium-dbg status` には `--all-encryption` フラグは「ありません」 (1.20.x で利用できるのは `--all-addresses`、`--all-clusters`、`--all-controllers`、`--all-health`、`--all-nodes`、`--all-redirects`、`--verbose` のみです) - 詳細な peer/allowed-IP/remote-node の evidence は、存在しないフラグではなく `cilium-dbg debuginfo --output json` で取得します。
+暗号化の status は、agent で `cilium-dbg` を通じて読み取ります：これは Cilium agent に同梱されている Pod 内の debug CLI です。ローカルの `cilium` CLI は install/cluster-level のツールのままで、Pod 内でのそれの代わりにはなりません。`cilium-dbg status` には `--all-encryption` フラグは**ありません** (1.20.x で利用できるのは `--all-addresses`、`--all-clusters`、`--all-controllers`、`--all-health`、`--all-nodes`、`--all-redirects`、`--verbose` のみです) - 詳細な peer/allowed-IP/remote-node の evidence は、存在しないフラグではなく `cilium-dbg debuginfo --output json` で取得します。
 
 ```bash
 agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0].metadata.name}')
@@ -289,7 +289,7 @@ ip route get $remote_ip
 # 10.110.2.172 dev ens5 src 10.110.1.x   <- インターフェース (ens5)、any / cilium_* / lxc* / veth* ではありません
 ```
 
-**Baseline: WireGuard 無効。** 一時的に WireGuard を無効にして、同じリクエストを 同じ
+**Baseline: WireGuard 無効。** 一時的に WireGuard を無効にして、同じリクエストを同じ
 capture scope で繰り返します。最後に必ず `enable-wireguard: "true"` を戻します。
 
 ```bash
@@ -315,7 +315,7 @@ kubectl exec -n sandbox-110 runc-baseline -- \
 grep CKS110-WIREGUARD-MARKER /tmp/wireguard-baseline.txt
 ```
 
-**After: WireGuard 有効。** WireGuard を復元し、同じリクエストを 同じ
+**変更後: WireGuard 有効。** WireGuard を復元し、同じリクエストを同じ
 キャプチャ scope で繰り返します：今度は WireGuard UDP/51871 が見え、marker はないはずです。
 
 ```bash

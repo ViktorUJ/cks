@@ -46,7 +46,7 @@ notBefore=Jan  1 00:00:00 2026 GMT
 notAfter=Apr  6 00:00:00 2028 GMT
 ```
 
-Wir schreiben genau diese Werte (fingerprint - hex ohne Doppelpunkte) ins artifact:
+Wir schreiben genau diese Werte (fingerprint - Hex-Wert ohne Doppelpunkte) ins Artefakt:
 
 ```bash
 mkdir -p /var/work/tests/artifacts
@@ -97,7 +97,7 @@ curl -sS -o /dev/null -w 'external HTTP:%{http_code}\n' -m5 "http://$node_ip:301
 kubectl -n cks-114 run probe --image=curlimages/curl:8.10.1 --restart=Never --command -- sleep 300
 kubectl -n cks-114 wait --for=condition=Ready pod/probe --timeout=60s
 kubectl -n cks-114 exec probe -- curl -sS -o /dev/null -w 'in-cluster HTTP:%{http_code}\n' -m5 http://kubernetes-public.cks-114.svc.cluster.local/
-# Warte vor Task 4 auf die unabhängige Erfassung der NodePort- und DNS-probes durch den Monitor.
+# Warte vor Aufgabe 4 auf die unabhängige Erfassung der NodePort- und DNS-probes durch den Monitor.
 for i in $(seq 1 60); do
   test -s /var/lib/cks-lab114-checker/nodeport-phase-seen && break
   sleep 3
@@ -112,8 +112,8 @@ in-cluster HTTP:200
 
 ## 4. Reduce exposure: NodePort -> ClusterIP
 
-`kubectl patch` auf dem Array `ports` **entfernt** `nodePort` nicht von selbst - man muss das ganze Array
-ohne dieses Feld ersetzen (oder `kubectl edit` von Hand und die Zeile entfernen):
+Wir entfernen `nodePort` explizit: Ein JSON patch ändert den Typ und löscht `/spec/ports/0/nodePort`
+(oder die Zeile manuell per `kubectl edit` entfernen):
 
 ```bash
 kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
@@ -122,7 +122,7 @@ kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
 ]'
 ```
 
-Wir prüfen dasselbe Paar von Prüfungen (kube-proxy entfernt die NodePort-Regeln ebenfalls nicht sofort, daher
+Wir führen dieselben zwei Prüfungen erneut aus (kube-proxy entfernt die NodePort-Regeln ebenfalls nicht sofort, daher
 warten wir zuerst, bis der Port nicht mehr antwortet):
 
 ```bash
@@ -138,7 +138,7 @@ in-cluster HTTP:200
 ```
 
 `kubernetes-public:30114` wird von kube-proxy auf dem Node nicht mehr bedient (transport deny); der clusterinterne Pfad
-über Service DNS ist nicht regrediert.
+über Service DNS funktioniert weiterhin (keine Regression).
 
 ```bash
 kubectl -n cks-114 delete pod probe --ignore-not-found

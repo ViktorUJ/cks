@@ -16,14 +16,14 @@ k config use-context "$CTX"
 ssh control-plane hostname
 ```
 
-## 課題 1。kube-bench のレポート
+## 課題 1：kube-bench のレポート
 
 `kube-bench` `0.16.0` はすでに `control-plane` にインストールされています (CIS Benchmark のツールが
 ノード上にすでにある実際の試験と同様に) - worker からそこへコピーする必要はありません。Kubernetes
 `1.36` はまだ kube-bench の公式 support table に載っていません；このバージョンの組み込み version mapping は
-エントリ `"1.34": "cis-1.12"` で終わっており - それより新しいプロファイル (1.35/1.36 向けの
-いかなるプロファイルを含む) は `0.16.0` にはまったくないため、最も近い既存のものとして `cis-1.12` を使用します。
-したがって、これを authoritative な CIS compliance assessment ではなく、approximate な
+エントリ `"1.34": "cis-1.12"` で終わっており、それより新しいプロファイル (1.35/1.36 向けの
+プロファイルも含めて) は `0.16.0` にはまったくないため、最も近い既存のものとして `cis-1.12` を使用します。
+これを authoritative な CIS compliance assessment ではなく、approximate な
 hardening signal として強制的に実行します。
 
 ```bash
@@ -47,11 +47,11 @@ grep '== Summary' /var/work/tests/artifacts/1/kube-bench.txt
 5 つの `== Summary <target> ==` がすべてあることを目で確認してください - 明示的な
 `--targets` がないと、その一部 (`etcd`、`policies`) はレポートに含まれません。
 
-## 課題 2。kubelet の hardening
+## 課題 2：kubelet の hardening
 
 フィールド名を記憶で思い出さないでください - 試験では、すでに取得した kube-bench のレポート
 (課題 1) から直接取り出す方が速いです。そこでは各 check に、修正のテキストが書かれた
-セクション `== Remediations <target> ==` があり - check 番号で `grep -A1` すれば、すぐに必要なフィールドが得られます：
+セクション `== Remediations <target> ==` があり、check 番号で `grep -A1` すれば、すぐに必要なフィールドが得られます：
 
 ```bash
 grep -A1 '^4.2.1 ' /var/work/tests/artifacts/1/kube-bench.txt
@@ -103,7 +103,7 @@ k get --raw="/api/v1/nodes/${NODE}/proxy/configz" \
 k wait --for=condition=Ready "node/${NODE}" --timeout=120s
 ```
 
-## 課題 3。kube-apiserver の profiling を無効にする
+## 課題 3：kube-apiserver の profiling を無効にする
 
 課題 2 と同じ手法です - 課題 1 の kube-bench のレポートを信頼できる情報源として使用し、
 フラグを記憶で思い出さないでください：
@@ -132,7 +132,7 @@ k get po -n kube-system -l component=kube-apiserver
 # STATUS が Running になるはずです - まだなら、数秒待ってからやり直してください
 ```
 
-## 課題 4。TLS Secret と Ingress
+## 課題 4：TLS Secret と Ingress
 
 最小限のアプリケーションと Service を作成し、正確な DNS 名の自己署名証明書を生成してから、
 TLS Secret と Ingress を作成します。`ingress-nginx` controller は、この実習ではすでに
@@ -216,7 +216,7 @@ curl -v "http://secure.cks.local:${HTTP_NODEPORT}/"
 この HTTP→HTTPS の redirect は、実習が作り出した人為的な要件ではなく、実際の試験の問題です
 (mock-exam `tasks/cks/mock/04`、課題 4 を参照)。
 
-## 課題 5。kube-apiserver と etcd の TLS hardening
+## 課題 5：kube-apiserver と etcd の TLS hardening
 
 フラグの正確な名前をドキュメントで探さないでください - すでに実行中の Pod の中から
 バイナリ自体に尋ねて (control plane のどのコンポーネントにも `--help` があります)、必要な部分を grep する方が速いです：
@@ -265,7 +265,7 @@ ssh control-plane 'openssl s_client -connect 127.0.0.1:6443 -tls1_3 -brief </dev
 
 ssh control-plane 'openssl s_client -connect 127.0.0.1:6443 -tls1_2 -brief </dev/null' \
   >> /var/work/tests/artifacts/5/tls13.txt 2>&1
-# ssl3_read_bytes:tlsv1 alert protocol version - handshake は失敗するはずです、それが求められている結果です
+# ssl3_read_bytes:tlsv1 alert protocol version - handshake は失敗するはずです。それが求められている結果です
 
 echo 'TLS 1.2 correctly rejected (non-zero exit / handshake failure)' \
   >> /var/work/tests/artifacts/5/tls13.txt
@@ -276,9 +276,9 @@ cat /var/work/tests/artifacts/5/tls13.txt
 `openssl s_client -tls1_2` が handshake エラー/non-zero exit で終了することは、
 `TLS 1.2 correctly rejected` として記録されている必要があります。
 
-## 課題 6。kubelet と kubectl の SHA-256 を確認する
+## 課題 6：kubelet と kubectl の SHA-256 を確認する
 
-基準はローカルファイルから計算しません。公式に公開されている Kubernetes `v1.36.0` の合計値を
+基準はローカルファイルから計算しません。公式に公開されている Kubernetes `v1.36.0` のチェックサムを
 ダウンロードし、`sha256sum -c` 形式のファイルを作成して、結果を保存します。
 
 ```bash
@@ -299,7 +299,7 @@ cat /var/work/tests/artifacts/6/binaries.sha256.txt
 両方の行が `: OK` で終わる必要があります。バイナリのパスが `/usr/bin` と異なっていても、
 `command -v` は `sha256sum -c` に対する正しい入力を生成します。
 
-## 課題 7。Remediation cycle: 具体的な kube-bench の FAIL から PASS へ
+## 課題 7：Remediation cycle: 具体的な kube-bench の FAIL から PASS へ
 
 課題 1 (レポート全体のスナップショット) とは異なり、ここでは 1 つの具体的な check を
 その修正と結びつける必要があります。`kube-bench` は `--check` による個別の実行をサポートしているため、
@@ -344,7 +344,7 @@ k get --raw='/readyz'
 k -n kube-system get pods -l component=kube-apiserver
 ```
 
-## 課題 8。Remediation cycle: kube-controller-manager
+## 課題 8：Remediation cycle: kube-controller-manager
 
 課題 7 と同じ手法を、別のコンポーネントと別の check ID (`1.1.3` -
 kube-controller-manager pod specification file のパーミッション) に対して行います：
@@ -372,7 +372,7 @@ grep -A1 '1.1.3' /var/work/tests/artifacts/8/after.txt
 k -n kube-system get pods -l component=kube-controller-manager
 ```
 
-## 課題 9。Remediation cycle: kube-controller-manager と kube-scheduler の profiling
+## 課題 9：Remediation cycle: kube-controller-manager と kube-scheduler の profiling
 
 課題 7-8 と同じ手法 (kube-bench で具体的な `[FAIL]` を見つけ、修正し、
 `[PASS]` を確認する) を、checks `1.3.2` (kube-controller-manager の profiling) と `1.4.1`
@@ -440,7 +440,7 @@ grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 `jq -e` は両方のコンポーネントで `true` を出力するはずで、上の 2 つの `k get pods` コマンドは
 どちらも `Running` を表示するはずです。
 
-## 課題 10。Remediation cycle: worker ノードでの protect-kernel-defaults
+## 課題 10：Remediation cycle: worker ノードでの protect-kernel-defaults
 
 課題 7-9 と同じ手法を、今度は実際の worker ノード (control-plane ではない) で、ただし
 別のプロファイルに対して行います。固定された `kube-bench 0.16.0`/`cis-1.12` (この実習の他のすべての
@@ -466,7 +466,7 @@ workdir=$(mktemp -d)
 asset="kube-bench_${KUBE_BENCH_VERSION}_linux_${arch}.tar.gz"
 base="https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}"
 curl -fsSL -o "$workdir/$asset" "$base/$asset"
-# 課題 6 と同じ手法: ファイル自体から計算した合計値ではなく、独立に公開されている合計値と照合する。
+# 課題 6 と同じ手法: ファイル自体から計算したチェックサムではなく、独立に公開されているチェックサムと照合する。
 curl -fsSL -o "$workdir/checksums.txt" "$base/kube-bench_${KUBE_BENCH_VERSION}_checksums.txt"
 (cd "$workdir" && grep -E "[[:space:]]${asset}\$" checksums.txt | sha256sum --check --strict -)
 tar -xzf "$workdir/$asset" -C "$workdir"

@@ -58,7 +58,7 @@ kubeadm-кластере, включить WireGuard encryption, включит�
 
 |           **2**           | **Установка Cilium как замены kube-proxy**                                                                                                                                                                       |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|       Что делаем       | • Установите Cilium agent/chart версии `1.20.1` через установленный на worker `cilium` CLI версии `v0.19.7`, с `kubeProxyReplacement=true` и явно заданными `k8sServiceHost`/`k8sServicePort`, указывающими на настоящий API server (не Service ClusterIP - без kube-proxy кластер не может резолвить `kubernetes.default` до того, как Cilium сам поднимется) |
+|       Что делаем       | • Установите Cilium agent/chart версии `1.20.1` через установленный на worker `cilium` CLI версии `v0.19.7`, с `kubeProxyReplacement=true` и явно заданными `k8sServiceHost`/`k8sServicePort`, указывающими на настоящий API server (не Service ClusterIP - без kube-proxy трафик на ClusterIP `kubernetes.default` не доходит до API server, пока сам Cilium не поднимется) |
 | Критерии приёмки | • `KubeProxyReplacement: True/Strict` (в `cilium-dbg status` агента)<br/>• Node становится `Ready`<br/>• ClusterIP Service достижим без kube-proxy |
 |        Проверка        | `cilium status --wait`, `kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status \| grep KubeProxyReplacement`, затем `kubectl get nodes` -> `Ready`. Из тестового Pod: `curl https://kubernetes.default.svc.cluster.local/` должен получить HTTP response (не connection error). |
 
@@ -94,7 +94,7 @@ kubeadm-кластере, включить WireGuard encryption, включит�
 
 ---
 
-|           **6**           | **Positive/negative control: authenticated identity позволена, посторонняя - нет**                                                                                                                                                                       |
+|           **6**           | **Positive/negative control: authenticated identity разрешена, посторонняя - нет**                                                                                                                                                                       |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |       Что делаем       | • Проверьте эффект policy живым трафиком: клиент из `ingress-115` должен достигать `backend` (после успешного SPIRE-based mutual auth handshake)<br/>• Отдельный Pod из "неправильного" namespace (`app-115`, не `ingress-115`; трафик backend к самому себе Cilium всегда пропускает) должен быть заблокирован |
 | Критерии приёмки | • В изолированном зеркальном backend baseline разрешает оба клиента, после применения копии policy разрешён только `ingress-115`<br/>• Действующий backend отвечает разрешённому клиенту, отклоняет клиентов из `app-115` и нового независимого namespace<br/>• Cilium BPF auth map содержит `spire` для точной пары identity клиента/backend |

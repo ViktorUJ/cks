@@ -4,8 +4,7 @@
 
 > Wir arbeiten wie in der Prüfung: `kubectl`-Befehle werden auf der Arbeitsmaschine ausgeführt, und Operationen am
 > Node (etcd, Dateien und manifest der control-plane) - auf der control-plane selbst: Melde dich dort mit
-> `ssh control-plane` an, führe die Befehle aus und verlasse sie wieder (`exit`). Das ist **nur ein Lern-Ein-Node-
-> Cluster**; in production gibt man Benutzern keinen direkten Zugriff auf etcd.
+> `ssh control-plane` an, führe die Befehle aus und verlasse sie wieder (`exit`). Das ist **nur ein Ein-Node-Lerncluster**; in production gibt man Benutzern keinen direkten Zugriff auf etcd.
 
 ## Wo du Beispiele in der Dokumentation findest
 
@@ -126,11 +125,11 @@ Bei Verlust des Schlüssels wird das encrypted Secret aus einem snapshot unlesba
 
 Zuerst speichern wir das manifest **außerhalb** des Verzeichnisses `/etc/kubernetes/manifests/`: Das kubelet liest jede nicht versteckte Datei dieses Verzeichnisses als static
 Pod, einschließlich `*.bak`. Eine Kopie des ursprünglichen manifest innerhalb des
-Verzeichnisses ist ein zweiter static Pod mit demselben Namen; das kubelet kann gerade ihn weiter starten
+Verzeichnisses ist ein zweiter static Pod mit demselben Namen; das kubelet kann weiterhin genau diesen starten
 (die alte Konfiguration ohne `--encryption-provider-config`), und die Änderung der Hauptdatei
-wird still nicht wirksam, und die Verschlüsselung bleibt bei äußerlich gesundem API server ausgeschaltet.
-Öffne auf der control-plane gerade das vorhandene static-Pod-
-manifest und füge **zu den vorhandenen** `command`, `volumeMounts` und `volumes` diese Elemente hinzu;
+wird stillschweigend nicht wirksam, und die Verschlüsselung bleibt bei äußerlich gesundem API server ausgeschaltet.
+Öffne auf der control-plane genau das vorhandene static-Pod-Manifest
+und füge **zu den vorhandenen** `command`, `volumeMounts` und `volumes` diese Elemente hinzu;
 ersetze nicht die gesamte Datei durch eine Vorlage.
 
 ```bash
@@ -246,7 +245,7 @@ until kubectl get --raw=/readyz 2>/dev/null | grep -qx ok; do sleep 2; done
 kubectl -n "$NS" get secret legacy-secret encrypted-secret
 ```
 
-Der Endzustand dieser Lab: Der encrypted provider ist der erste und einzige, `identity`
+Der Endzustand dieses Labs: Der verschlüsselnde provider (`aescbc`) ist der erste und einzige, `identity`
 ist entfernt. Der temporäre fallback darf nicht als dauerhafte „Absicherung“ stehen bleiben.
 
 ## 5. API-Zugriff einschränken und token automount deaktivieren
@@ -318,24 +317,24 @@ check_result
 `automountServiceAccountToken: false` verringert die für den Pod verfügbare credential surface, schränkt aber das RBAC des
 ServiceAccount selbst nicht ein, falls die Anwendung andere credentials erhält.
 
-## Zusatz: Wie KMS v2 aussieht und die vollständige Schlüsselrotation
+## Zusatz: Wie KMS v2 und die vollständige Schlüsselrotation aussehen
 
 ### KMS v2: envelope encryption ohne lokalen Schlüssel in der Config
 
 `aescbc` oben wird nur für die Lernmechanik gebraucht. In production bindet KMS v2 ein
 unterstütztes KMS-plugin über einen lokalen Unix socket in der `EncryptionConfiguration` an.
-Bei KMS v2 verwendet der API server einen verschlüsselten seed/DEK auf Ebene des API server und
+Bei KMS v2 verwendet der API server einen verschlüsselten seed/DEK auf Ebene des API servers und
 leitet daraus die Verschlüsselungsschlüssel einzelner Einträge ab. Das plugin schützt den seed über einen externen KEK;
 dadurch unterscheidet sich KMS v2 vom per-resource KMS v1. Etcd speichert den ciphertext der Ressourcen und die
 für die Entschlüsselung nötigen metadata. Der KEK bleibt im externen KMS und nicht in etcd oder Git. Das Schema
-der Konfiguration hängt von der Version von Kubernetes und des plugin ab, aber grundsätzlich werden ein provider `kms`,
+der Konfiguration hängt von der Kubernetes- und der plugin-Version ab, aber grundsätzlich werden ein provider `kms`,
 ein stabiler key-Name und der Endpoint des sockets gebraucht. Kopiere keinen Beispiel-Endpoint aus einem fremden Cluster:
 gleiche das Format von KMS v2 und die health/ACL-Anforderungen mit der Dokumentation deiner Version von Kubernetes ab.
 
 ### Vollständiger lifecycle der Rotation des aescbc key
 
-Der Übergang `identity -> aescbc` in Aufgabe 4 ist eine migration und keine Rotation eines bereits
-verschlüsselten Schlüssels. Mache vor der Rotation einen verschlüsselten etcd snapshot und speichere
+Der Übergang `identity -> aescbc` in Aufgabe 4 ist eine migration und keine Rotation des Schlüssels für bereits
+verschlüsselte Daten. Mache vor der Rotation einen verschlüsselten etcd snapshot und speichere
 den alten Schlüssel für ein rollback. Füge den neuen Schlüssel **an erster Stelle** hinzu, und lasse den alten vorübergehend
 an zweiter Stelle: providers werden der Reihe nach gelesen, und neue Einträge werden mit dem ersten Schlüssel geschrieben.
 
@@ -348,7 +347,7 @@ an zweiter Stelle: providers werden der Reihe nach gelesen, und neue Einträge w
       secret: <base64-32-byte-old-key>
 ```
 
-Schreibe nach dem Neustart des API server die Ressourcen neu und prüfe gerade den Namen des neuen key im rohen
+Schreibe nach dem Neustart des API servers die Ressourcen neu und prüfe genau den Namen des neuen key im rohen
 ciphertext und nicht nur das allgemeine Präfix `k8s:enc`:
 
 ```bash

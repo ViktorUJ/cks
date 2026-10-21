@@ -5,9 +5,9 @@
 ## Descripción
 
 En este laboratorio configuras un clúster de Kubernetes de dos nodos (control-plane +
-worker) como ingeniero de seguridad: instalas `kube-bench` y, según sus hallazgos
+worker) como ingeniero de seguridad: ejecutas `kube-bench` (en el nodo worker lo instalas tú mismo) y, según sus hallazgos
 (no de memoria), corriges los parámetros inseguros de los componentes del control-plane y del kubelet
-del nodo worker, publicas un Ingress solo por TLS, restringes el TLS del control plane y
+en ambos nodos, publicas un Ingress solo por TLS, restringes el TLS del control plane y
 confirmas la integridad de los binarios de Kubernetes instalados.
 
 Esto no es una repetición de la configuración básica de Kubernetes de CKA. Aquí importan los lugares
@@ -28,7 +28,7 @@ Consolidar el contenido de los capítulos del curso:
 <details>
 <summary>1. ¿Por qué no se puede llamar authoritative CIS compliance a ejecutar kube-bench con el perfil `cis-1.12` en Kubernetes 1.36?</summary>
 
-La versión `kube-bench 0.16.0`, fijada en este laboratorio, no contiene ningún perfil para 1.36: su version mapping integrado llega solo hasta `"1.34": "cis-1.12"` (el perfil más reciente disponible). Al indicar explícitamente `--benchmark cis-1.12` en un clúster 1.36, usamos por la fuerza el perfil existente más cercano como approximation: parte de las comprobaciones puede no ser aplicable a una versión más nueva, y los nuevos parámetros relevantes para la seguridad específicos de 1.36 este perfil aún no los cubre. Es una señal práctica valiosa, pero no un formal compliance statement para la versión 1.36.
+La versión `kube-bench 0.16.0`, fijada en este laboratorio, no contiene ningún perfil para 1.36: su version mapping integrado llega solo hasta `"1.34": "cis-1.12"` (el perfil más reciente disponible). Al indicar explícitamente `--benchmark cis-1.12` en un clúster 1.36, forzamos el uso del perfil existente más cercano como approximation: parte de las comprobaciones puede no ser aplicable a una versión más nueva, y los nuevos parámetros relevantes para la seguridad específicos de 1.36 este perfil aún no los cubre. Es una señal práctica valiosa, pero no un formal compliance statement para la versión 1.36.
 </details>
 
 <details>
@@ -40,7 +40,7 @@ En Go (en el que está escrito kube-apiserver) el flag `--tls-cipher-suites` con
 <details>
 <summary>3. ¿Por qué no se puede usar como referencia para la SHA-256 verification un hash calculado a partir del propio archivo que se comprueba?</summary>
 
-Si calculas el SHA-256 de un archivo y lo comparas consigo mismo, la comprobación siempre pasará, incluso si el archivo ha sido sustituido por algo malicioso. La checksum de referencia debe obtenerse de una fuente independiente y de confianza: la página oficial de la release de Kubernetes, y no del archivo local que estás comprobando.
+Si calculas el SHA-256 de un archivo y lo comparas consigo mismo, la comprobación siempre pasará, incluso si el archivo ha sido sustituido por algo malicioso. El checksum de referencia debe obtenerse de una fuente independiente y de confianza: la página oficial de la release de Kubernetes, y no del archivo local que estás comprobando.
 </details>
 
 ## Qué creamos y para qué
@@ -84,8 +84,9 @@ El entorno se despliega en AWS (`eu-central-1`) mediante Terragrunt.
 > **Versión y examen.** A fecha de 2026-09-06, el CKS exam oficial parte de Kubernetes `v1.35`. Este laboratorio usa `1.36.0`, por lo que todo lo relativo a esta versión es un escenario didáctico forward-looking, y no una afirmación sobre la versión actual del examen.
 
 Al control-plane se le ha quitado el taint, por lo que, si hace falta, se puede lanzar en él un Pod de laboratorio.
-Para las tareas 2, 3 y 5, los static Pods son recreados automáticamente por el kubelet tras guardar
-el manifest o la configuración modificados. No elimines manualmente los Pods del control-plane.
+Para las tareas 3, 5 y 9, los static Pods son recreados automáticamente por el kubelet tras guardar
+el manifest modificado; en las tareas 2 y 10, tras modificar la `KubeletConfiguration`, el kubelet hay que
+reiniciarlo manualmente (`systemctl restart kubelet`). No elimines manualmente los Pods del control-plane.
 
 ## Despliegue
 
@@ -128,7 +129,7 @@ La comprobación espera cuatro líneas-marcador concretas al principio del archi
 | **2** | **Hardening del kubelet: read-only port y anonymous auth** |
 | :---: | :--- |
 | Qué hacemos | En el control-plane encuentra y corrige dos ajustes inseguros del kubelet: todavía sirve el read-only port sin autenticación y acepta peticiones anónimas (consulta el capítulo sobre hardening del kubelet). Usa el informe de `kube-bench` de la tarea 1 como fuente de verdad: ya marcó ambos problemas en la sección `node` para este mismo nodo; encuentra ahí los `[FAIL]` junto a estos dos temas y guíate por ellos. Corrige la `kubelet configuration`, reinicia el kubelet y espera a que el nodo esté listo. No sustituyas la comprobación por un artefacto de texto: los ajustes deben estar aplicados en el nodo. |
-| Criterios de aceptación | - en la kubelet configuration en vigor el read-only port está desactivado;<br/>- la anonymous authentication del kubelet está desactivada;<br/>- el nodo `Ready` tras el reinicio. |
+| Criterios de aceptación | - en la kubelet configuration en vigor el read-only port está desactivado;<br/>- la anonymous authentication del kubelet está desactivada;<br/>- el nodo está `Ready` tras el reinicio. |
 
 <details>
 <summary>💡 Pista para la tarea 2</summary>
@@ -206,7 +207,7 @@ El flag en etcd se llama `--cipher-suites` (sin `tls-` al principio): es OTRO no
 
 | **6** | **Verificación de la integridad de kubelet y kubectl** |
 | :---: | :--- |
-| Qué hacemos | Contrasta el SHA-256 de los `kubelet` instalados en el control-plane y de `kubectl` en el worker con las checksum publicadas de Kubernetes `v1.36.0`. Guarda los comandos y el resultado de `sha256sum -c` en `/var/work/tests/artifacts/6/binaries.sha256.txt`. No uses como referencia hashes calculados a partir del propio archivo que se comprueba. |
+| Qué hacemos | Contrasta el SHA-256 del `kubelet` instalado en el control-plane y del `kubectl` instalado en el worker con los checksums publicados de Kubernetes `v1.36.0`. Guarda los comandos y el resultado de `sha256sum -c` en `/var/work/tests/artifacts/6/binaries.sha256.txt`. No uses como referencia hashes calculados a partir del propio archivo que se comprueba. |
 | Criterios de aceptación | - el artefacto existe;<br/>- contiene resultados correctos independientes para `kubelet` y `kubectl` (`OK`);<br/>- las sumas de referencia se obtuvieron de la release oficial `v1.36.0`. |
 
 <details>
@@ -245,8 +246,8 @@ El mismo orden de acciones que en la tarea 7: primero `before.txt` con `[FAIL]`,
 
 | **9** | **Remediation cycle: profiling en kube-controller-manager y kube-scheduler** |
 | :---: | :--- |
-| Qué hacemos | La misma técnica que en las tareas 7-8, para los checks `1.3.2` (kube-controller-manager profiling) y `1.4.1` (kube-scheduler profiling): ambos bajo el mismo perfil `cis-1.12`, no hace falta un `--targets` explícito. Ejecuta `kube-bench --check 1.3.2` y `--check 1.4.1` en `control-plane` y guarda la salida **antes** de la corrección en `/var/work/tests/artifacts/9/controller-manager-before.txt` y `.../scheduler-before.txt`: ambos deben contener `[FAIL]`. La tarea 3 ya desactivó profiling en kube-apiserver; por defecto, kubeadm no añade `--profiling=false` a los manifests de `kube-controller-manager`/`kube-scheduler` en absoluto. Añade `--profiling=false` al `command` de ambos static Pod manifests, espera a la recreación y vuelve a ejecutar los mismos check, guardando la salida en `.../controller-manager-after.txt` y `.../scheduler-after.txt`: ambos deben contener `[PASS]` sin un solo `[FAIL]`. |
-| Criterios de aceptación | los archivos `before` contienen `[FAIL]` para `1.3.2`/`1.4.1` respectivamente; los Pods realmente en ejecución `kube-controller-manager`/`kube-scheduler` contienen `--profiling=false` en su `command` (se comprueba a través de la API); los archivos `after` contienen `[PASS]` sin `[FAIL]` para los mismos check; ambos Pod en la fase `Running`. |
+| Qué hacemos | La misma técnica que en las tareas 7-8, para los checks `1.3.2` (kube-controller-manager profiling) y `1.4.1` (kube-scheduler profiling): ambos bajo el mismo perfil `cis-1.12`, no hace falta un `--targets` explícito. Ejecuta `kube-bench --check 1.3.2` y `--check 1.4.1` en `control-plane` y guarda la salida **antes** de la corrección en `/var/work/tests/artifacts/9/controller-manager-before.txt` y `.../scheduler-before.txt`: ambos deben contener `[FAIL]`. La tarea 3 ya desactivó profiling en kube-apiserver; por defecto, kubeadm no añade `--profiling=false` a los manifests de `kube-controller-manager`/`kube-scheduler` en absoluto. Añade `--profiling=false` al `command` de ambos static Pod manifests, espera a la recreación y vuelve a ejecutar los mismos checks, guardando la salida en `.../controller-manager-after.txt` y `.../scheduler-after.txt`: ambos deben contener `[PASS]` sin un solo `[FAIL]`. |
+| Criterios de aceptación | los archivos `before` contienen `[FAIL]` para `1.3.2`/`1.4.1` respectivamente; los Pods realmente en ejecución `kube-controller-manager`/`kube-scheduler` contienen `--profiling=false` en su `command` (se comprueba a través de la API); los archivos `after` contienen `[PASS]` sin `[FAIL]` para los mismos checks; ambos Pods están en la fase `Running`. |
 
 <details>
 <summary>💡 Pista para la tarea 9</summary>
@@ -259,7 +260,7 @@ El mismo orden de acciones que en las tareas 7-8: primero `before.txt` con `[FAI
 | **10** | **Remediation cycle: protect-kernel-defaults en el nodo worker** |
 | :---: | :--- |
 | Qué hacemos | La misma técnica que en las tareas 7-9, ahora en el nodo worker REAL del clúster (no en el control-plane), pero para OTRO perfil: el `cis-1.12` fijado (usado en todo este laboratorio) no contiene en absoluto el check protect-kernel-defaults: CIS lo eliminó/renumeró en esta versión del perfil, y el propio `4.2.6` en `cis-1.12` es otro check (`--make-iptables-util-chains`, PASS por defecto). El check necesario con el mismo ID existe en el perfil más antiguo `cis-1.24` del mismo binario: usa explícitamente `--benchmark cis-1.24 --check 4.2.6` solo para esta tarea. A diferencia de `control-plane`, `kube-bench` en el nodo worker NO está preinstalado: instálalo aquí por ti mismo (una instalación real: descargar la misma release fijada, desempaquetar `binary` y `cfg`), y no lo copies de ningún sitio. Guarda la salida **antes** de la corrección en `/var/work/tests/artifacts/10/before.txt` (debe contener `[FAIL]` con el texto sobre protect-kernel-defaults). El `KubeletConfiguration` generado por kubeadm en el nodo worker no contiene en absoluto el campo `protectKernelDefaults` (equivalente al default inseguro `false`): añade `protectKernelDefaults: true` a `/var/lib/kubelet/config.yaml` de este nodo, reinicia el kubelet, espera a `Ready`, luego vuelve a ejecutar el mismo check (con el mismo `cis-1.24`) y guarda `/var/work/tests/artifacts/10/after.txt` (debe contener `[PASS]`). |
-| Criterios de aceptación | `before.txt` contiene `[FAIL] 4.2.6` con el texto sobre protect-kernel-defaults (no cualquier `4.2.6`); en la kubelet configuration en vigor del nodo worker (`/configz`) hay `protectKernelDefaults: true`; `after.txt` contiene `[PASS] 4.2.6` con el mismo texto, sin `[FAIL]`; el nodo worker `Ready` tras el reinicio. |
+| Criterios de aceptación | `before.txt` contiene `[FAIL] 4.2.6` con el texto sobre protect-kernel-defaults (no cualquier `4.2.6`); en la kubelet configuration en vigor del nodo worker (`/configz`) hay `protectKernelDefaults: true`; `after.txt` contiene `[PASS] 4.2.6` con el mismo texto, sin `[FAIL]`; el nodo worker está `Ready` tras el reinicio. |
 
 <details>
 <summary>💡 Pista para la tarea 10</summary>

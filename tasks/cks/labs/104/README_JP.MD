@@ -1,10 +1,10 @@
 [Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD)
 
-# Lab 104 - Kubernetes API へのアクセス制限: RBAC、ServiceAccount、anonymous-auth
+# Lab 104 - Kubernetes API へのアクセス制限：RBAC、ServiceAccount、anonymous-auth
 
 ## 目的
 
-この CKS 実習では、最小権限の原則に従って Kubernetes API へのアクセスを制限します。実習は、最小限の namespaced RBAC、現代的な短命の ServiceAccount token、API-token を持たない Pod、古くなった過剰な権限の削除、そして API server への匿名アクセスの無効化を扱います。
+この CKS 実習では、最小権限の原則に従って Kubernetes API へのアクセスを制限します。実習は、最小限の namespaced RBAC、現代的な短命の ServiceAccount token、API token を持たない Pod、古くなった過剰な権限の削除、そして API server への匿名アクセスの無効化を扱います。
 
 課題で指定されたオブジェクトだけを扱ってください。Namespace `security-104` と、意図的に危険な `legacy-operator-admin` の紐づけは、課題 10-12 用の fixtures と同様に、起動スクリプトによってすでに用意されています：Secret `legacy-config`、namespace `rbac-a`/`rbac-b`、そして namespace `development`。これは学習用の構成であり、production の例ではありません。
 
@@ -16,9 +16,9 @@
 
 課題 4 は wildcard の cluster-wide 権限を、課題 5 は anonymous access を排除します。これらの経路はそれぞれ単独でも、blast radius を Kubernetes API にまで広げる可能性があります。
 
-課題 6 は、別の漏洩経路を塞ぎます：environment variable で渡された secret はプロセスの環境の一部となり、コンテナへの `exec` 権限を持つ任意のプロセスが `/proc/1/environ` から読み取れます。また、プログラム自体や診断ツールが環境を出力する場合には、application logs、crash dump、その他の診断出力に含まれる可能性もあります。`secretKeyRef` を持つ `env`/`envFrom` に対する `kubectl describe pod` は、Secret とそのキーへの参照 (`<set to the key ... in secret ...>`) だけを表示し、resolved な値は表示しません - この参照を、値そのものの漏洩と混同しないでください。`defaultMode: 0400` を持つ Volume mount は、権限のあるコンテナプロセスが値にアクセスすることを防ぎませんが、secret をプロセスの環境から取り除き、ファイルの読み取り権限を所有者のみに制限します。
+課題 6 は、別の漏洩経路を塞ぎます：environment variable で渡された secret はプロセスの環境の一部となり、コンテナへの `exec` 権限を持つ任意のプロセスが `/proc/1/environ` から読み取れます。また、プログラム自体や診断ツールが環境を出力する場合には、application logs、crash dump、その他の診断出力に含まれる可能性もあります。`secretKeyRef` を持つ `env` に対する `kubectl describe pod` は、Secret とそのキーへの参照 (`<set to the key ... in secret ...>`) だけを表示し、`secretRef` を持つ `envFrom` に対しては Secret の名前だけを表示します。resolved な値は表示しません - この参照を、値そのものの漏洩と混同しないでください。`defaultMode: 0400` を持つ Volume mount は、権限のあるコンテナプロセスが値にアクセスすることを防ぎませんが、secret をプロセスの環境から取り除き、ファイルの読み取り権限を所有者のみに制限します。
 
-課題 7 は、RBAC の privilege escalation の隠れた経路を塞ぎます：`impersonate`、`bind`/`escalate`、CSR approval は、利用可能なリソースのリストを直接は広げませんが、他者の名前で行動したり、自分自身により広い権限を付与したりすることを可能にします - これは課題 4 の wildcard `*` とは別のリスクのカテゴリです。課題 8 は、点的ではなく体系的な防御を扱います：namespace/default SA レベルの automount は、開発者がトークンを明示的に無効化し忘れた Pod に対しても機能します。
+課題 7 は、RBAC の privilege escalation の隠れた経路を塞ぎます：`impersonate`、`bind`/`escalate`、CSR approval は、利用可能なリソースのリストを直接は広げませんが、他者の名前で行動したり、自分自身により広い権限を付与したりすることを可能にします - これは課題 4 の wildcard `*` とは別のリスクのカテゴリです。課題 8 は、個別的ではなく体系的な防御を扱います：namespace/default SA レベルの automount は、開発者が token を明示的に無効化し忘れた Pod に対しても機能します。
 
 課題 9 は、予防 (課題 1-8) と検出が、別個の、互いに補完し合うレイヤーであることを示します。課題 7 で特定の escalation 経路を塞いだとしても、将来のインシデントのためには、常時手動で `kubectl get` を行うことなく**危険な RBAC の変更** (たとえば、誰かへの誤った、または悪意のある `cluster-admin` の付与) を確認する方法が必要です：audit log は、RBAC の状態の現在のスナップショットだけでなく、変更を実際に開始したのが誰かについての、再現可能な forensic evidence を提供します。
 
@@ -31,25 +31,25 @@ ATT&CK T1528 (Steal Application Access Token) と T1613 は、このシナリオ
 `check_result` を開く前に、次の質問に自信を持って答えられることを確認してください。そうでなければ、[第 10 章](../../course/10/jp.md) (RBAC)、[第 11 章](../../course/11/jp.md) (ServiceAccounts)、[第 12 章](../../course/12/jp.md) (API へのアクセス制限) に戻ってください。
 
 <details>
-<summary>1. 課題 1 の文脈で、`Role`+`RoleBinding` は `ClusterRole`+`ClusterRoleBinding` と何が違うか?</summary>
+<summary>1. 課題 1 の文脈で、`Role`+`RoleBinding` は `ClusterRole`+`ClusterRoleBinding` と何が違うか？</summary>
 
 `Role` は 1 つの namespace でのみ有効ですが、その `RoleBinding` は、他の任意の namespace の subject (たとえば ServiceAccount) を参照できます - Kubernetes は、`RoleBinding` 自身の namespace とは異なる `subjects[].namespace` を公式にサポートしています。固定されたままなのは、付与される権限の scope です：subject がどこから来たかに関係なく、権限は `RoleBinding` が作成された namespace でのみ有効です。`RoleBinding` は (`Role` だけでなく) `ClusterRole` も参照できます - その場合、cluster-wide なテンプレートから権限が得られますが、特定の `RoleBinding` の namespace でのみ付与されます。`ClusterRole`+`ClusterRoleBinding` はクラスター全体へのアクセスを与えます。課題 1 は最小限の **namespaced** アクセスを求めているため、`ClusterRole` ではなく `Role` を使います - そうしないと scope が必要以上に広くなります。
 </details>
 
 <details>
-<summary>2. bound projected token (課題 2) が、legacy の Secret ベースの token より安全とされるのはなぜか?</summary>
+<summary>2. bound projected token (課題 2) が、legacy の Secret ベースの token より安全とされるのはなぜか？</summary>
 
 Bound projected token は短命 (`expirationSeconds` で設定) で、自動的に失効して kubelet によりローテーションされ、特定の Pod に紐づいています - Pod が削除されると token は無効になります。Legacy の Secret-token には expiration がなく、通常の `Secret` として etcd に保存され、Pod がもう存在しなくても無期限に有効なままです。
 </details>
 
 <details>
-<summary>3. `automountServiceAccountToken: false` が、Pod レベルと ServiceAccount レベルで与えるものの違いは何か?</summary>
+<summary>3. `automountServiceAccountToken: false` が、Pod レベルと ServiceAccount レベルで与えるものの違いは何か？</summary>
 
 ServiceAccount レベルでは baseline です：Pod が明示的にオーバーライドしない限り、その SA を使用するすべての Pod に値が適用されます。Pod レベルでは override です：Pod spec の明示的なフィールドが SA の値より優先されます。課題 8 は SA/namespace レベルの baseline を特に確認し、課題 2-3 は個別の Pod レベルの明示的な設定を確認します。
 </details>
 
 <details>
-<summary>4. `impersonate`/`bind`/`escalate` (課題 7) が、wildcard `*` (課題 4) と同じリスクの分類に入らないのはなぜか?</summary>
+<summary>4. `impersonate`/`bind`/`escalate` (課題 7) が、wildcard `*` (課題 4) と同じリスクの分類に入らないのはなぜか？</summary>
 
 `resources`/`verbs` の wildcard `*` は、**利用可能な操作とリソースのリスト**を直接広げます。`impersonate`/`bind`/`escalate` は、それ自体では新しいリソースへのアクセスを与えません - **他者の名前で行動する** (`impersonate`) こと、または**もともと持っていなかった権限を自分自身に付与する** (`bind`/`escalate`) ことを可能にします。これは privilege escalation の別のカテゴリで、`verbs`/`resources` だけを見てこれら 3 つの特別な verb を考慮しないと、RBAC の監査で見落としやすいものです。
 </details>
@@ -105,19 +105,19 @@ check_result
 <details>
 <summary>💡 課題 2 のヒント</summary>
 
-`projected.sources[].serviceAccountToken` の正確な構文を暗記する必要はありません - `kubernetes.io/docs` に用意された例があります：Concepts → Storage → [Projected Volumes](https://kubernetes.io/docs/concepts/storage/projected-volumes/)、セクション **"serviceAccountToken projected volumes"**。最もよくある間違いは、それが標準の値だと思い込んで `audience: kubernetes.default.svc` を明示的に指定することです。kubeadm クラスターでは、これはデフォルトとして保証されて「いません」 - API server が `--api-audiences` で受け付けない audience を指定すると、TokenReview は `authenticated: false` を返します。`audience` フィールドをまったく指定しないでください - そうすると kubelet が API server のデフォルトの identifier を要求し、サーバーはそれを確実に受け付けます。また、Pod 自体に `automountServiceAccountToken: false` を指定するのを忘れないでください - そうしないと Kubernetes は、あなたの projected volume に加えて、通常の (legacy スタイルの) token volume も追加します。もう 1 つのよくある間違いは、`expirationSeconds` を小さすぎる値 (たとえば `300`) にすることです：Kubernetes API は `serviceAccountToken` projected volume に最小 `600` 秒を要求します - それより小さい値は、`kubectl apply` の時点で明示的なエラーなしに manifest が適用されたとしても、API contract に適合しません。
+`projected.sources[].serviceAccountToken` の正確な構文を暗記する必要はありません - `kubernetes.io/docs` に用意された例があります：Concepts → Storage → [Projected Volumes](https://kubernetes.io/docs/concepts/storage/projected-volumes/)、セクション **"serviceAccountToken projected volumes"**。最もよくある間違いは、それが標準の値だと思い込んで `audience: kubernetes.default.svc` を明示的に指定することです。kubeadm クラスターでは、これはデフォルトとして**保証されていません** - API server が `--api-audiences` で受け付けない audience を指定すると、TokenReview は `authenticated: false` を返します。`audience` フィールドをまったく指定しないでください - そうすると kubelet が API server のデフォルトの identifier を要求し、サーバーはそれを確実に受け付けます。また、Pod 自体に `automountServiceAccountToken: false` を指定するのを忘れないでください - そうしないと Kubernetes は、あなたの projected volume に加えて、通常の (legacy スタイルの) token volume も追加します。もう 1 つのよくある間違いは、`expirationSeconds` を小さすぎる値 (たとえば `300`) にすることです：Kubernetes API は `serviceAccountToken` projected volume に最小 `600` 秒を要求します - それより小さい値は、`kubectl apply` の時点で API server が invalid として拒否します (`must be at least 10 minutes`)。
 </details>
 
 ---
 | **3** | **Kubernetes API token を持たない Pod** |
 | :---: | :--- |
-| やること | `automountServiceAccountToken: false` を持つ ServiceAccount `no-token-sa` と、この ServiceAccount を使う Pod `no-token` を `security-104` に作成します。Pod 自体にも、明示的に `automountServiceAccountToken: false` を設定します。安全で長時間動作する任意のイメージ (たとえば `busybox:1.36` と `sleep 3600`) を使用します。ServiceAccount の token を持つ Secret を手動で別途マウントしないでください - Pod には、automount 経由でも、明示的にマウントされた legacy Secret 経由でも、API-token が一切あってはなりません。 |
+| やること | `automountServiceAccountToken: false` を持つ ServiceAccount `no-token-sa` と、この ServiceAccount を使う Pod `no-token` を `security-104` に作成します。Pod 自体にも、明示的に `automountServiceAccountToken: false` を設定します。安全で長時間動作する任意のイメージ (たとえば `busybox:1.36` と `sleep 3600`) を使用します。ServiceAccount の token を持つ Secret を手動で別途マウントしないでください - Pod には、automount 経由でも、明示的にマウントされた legacy Secret 経由でも、API token が一切あってはなりません。 |
 | 受け入れ基準 | ServiceAccount と Pod の両方で automount が無効になっている；Pod が `no-token-sa` を使用している；その spec に、自動的に追加された ServiceAccount token volume も、手動でマウントされたタイプ `kubernetes.io/service-account-token` の Secret もない；コンテナ内で `/var/run/secrets/kubernetes.io/serviceaccount/token` を読み取ろうとするとエラーで終了し (ファイルが存在しない)、その際 `kubectl exec` 自体は成功する必要がある。 |
 
 <details>
 <summary>💡 課題 3 のヒント</summary>
 
-課題 8 との違い：ここでは、SA か Pod のどちらか一方で automount を無効にするだけで十分ですが - この課題は**両方**のレベルを同時に (defence in depth) 求めており、どちらか一方ではありません。自己確認します：`kubectl get pod no-token -o jsonpath='{.spec.volumes}'` に `kube-api-access-*` に似たものが含まれていてはなりません。それでも volume が現れた場合は、Pod を作成した後ではなく、作成する前に automount を無効にしたことを確認してください (SA の変更は、すでに作成された Pod には影響しません)。automount を無効にしても、`volumes[].secret` を通じて古い (legacy の) `type: kubernetes.io/service-account-token` の `Secret` を手動でマウントすることは妨げられません - そうすると、Pod には形式上 automounted な volume がなくても、実際には有効な API-token が得られてしまいます。この課題が求めているのは token の完全な不在であり、automount の不在だけではありません。
+課題 8 との違い：技術的には、SA か Pod のどちらか一方のレベルで automount を無効にするだけでも足りますが、この課題は**両方**のレベルを同時に (defence in depth) 求めています。自己確認します：`kubectl get pod no-token -o jsonpath='{.spec.volumes}'` に `kube-api-access-*` に似たものが含まれていてはなりません。それでも volume が現れた場合は、Pod を作成した後ではなく、作成する前に automount を無効にしたことを確認してください (SA の変更は、すでに作成された Pod には影響しません)。automount を無効にしても、`volumes[].secret` を通じて古い (legacy の) `type: kubernetes.io/service-account-token` の `Secret` を手動でマウントすることは妨げられません - そうすると、Pod には形式上 automounted な volume がなくても、実際には有効な API token が得られてしまいます。この課題が求めているのは token の完全な不在であり、automount の不在だけではありません。
 </details>
 
 ---
@@ -135,7 +135,7 @@ check_result
 ---
 | **5** | **API server への anonymous access を無効にする** |
 | :---: | :--- |
-| やること | • control-plane 上に、`/livez`、`/readyz`、`/healthz` を除くすべての endpoint への anonymous access を無効にする `AuthenticationConfiguration` を含むファイル `/etc/kubernetes/authentication-config.yaml` を作成します - kubeadm が static Pod API server の HTTPS liveness/readiness/startup probes に使うのはまさにこれらの path であり、完全な `--anonymous-auth=false` は、攻撃者のアクセスだけでなく probes 自体も壊します。<br/>• `hostPath` volume と引数 `--authentication-config=<コンテナ内のパス>` を通じて、`/etc/kubernetes/manifests/kube-apiserver.yaml` にファイルを接続し、既存の `--anonymous-auth=true` を**削除**します - anonymous access の 2 つの設定方法は互いに排他的であり、両方が指定されると kube-apiserver は起動しません。Kubelet が static Pod を自動的に再起動します。<br/>• API server の準備ができるまで待ち (Pod が Running/Ready のままであること)、認証なしの `/version` へのリクエストが `401` を受け取り、`/livez` と `/readyz` へのリクエストが `200` を受け取ることを確認します。<br/>• さらに、effective な `--authorization-mode` が `Node,RBAC` を含み、`AlwaysAllow` を**含まない**ことを確認します (制限的な authorization のない authentication は無意味です)。<br/>• subjects が `system:anonymous`/グループ `system:unauthenticated` である ClusterRoleBinding を監査します：クラスターには、そのような危険な (lab-owned) 紐づけが 1 つ意図的に残されています、`lab104-unintended-anonymous-access` です。その ClusterRole とともに削除してください。標準の kubeadm の binding `system:public-info-viewer` には**触れないでください** - これも `system:unauthenticated` に紐づいていますが、アクセスを与えるのは non-resource URL `/livez`、`/readyz`、`/healthz`、`/version`、`/version/` のみであり、これは bootstrap の通常の一部 (default Kubernetes RBAC) であって、この課題の発見事項ではありません。<br/>• これは、同じ課題の `AuthenticationConfiguration` とは別のレイヤーです：そこでは `anonymous.conditions` が、匿名 identity を `/livez`/`/readyz`/`/healthz` のみに意図的に許可しています - `/version` に匿名でアクセスできないのは、そのリクエストが authentication の段階でそもそも anonymous identity を受け取らないためであり、より広い non-resource URL のリストを持つ `system:public-info-viewer` による authorization には、そこまで到達しません。 |
+| やること | • control-plane 上に、`/livez`、`/readyz`、`/healthz` を除くすべての endpoint への anonymous access を無効にする `AuthenticationConfiguration` を含むファイル `/etc/kubernetes/authentication-config.yaml` を作成します - kubeadm が static Pod API server の HTTPS liveness/readiness/startup probes に使うのはまさにこれらの path であり、完全な `--anonymous-auth=false` は、攻撃者のアクセスだけでなく probes 自体も壊します。<br/>• `hostPath` volume と引数 `--authentication-config=<コンテナ内のパス>` を通じて、`/etc/kubernetes/manifests/kube-apiserver.yaml` にファイルを接続し、既存の `--anonymous-auth=true` を**削除**します - anonymous access の 2 つの設定方法は互いに排他的であり、両方が指定されると kube-apiserver は起動しません。Kubelet が static Pod を自動的に再起動します。<br/>• API server の準備ができるまで待ち (Pod が Running/Ready のままであること)、認証なしの `/version` へのリクエストが `401` を受け取り、`/livez` と `/readyz` へのリクエストが `200` を受け取ることを確認します。<br/>• さらに、effective な `--authorization-mode` が `Node,RBAC` を含み、`AlwaysAllow` を**含まない**ことを確認します (制限的な authorization のない authentication は無意味です)。<br/>• subjects が `system:anonymous`/グループ `system:unauthenticated` である ClusterRoleBinding を監査します：クラスターには、そのような危険な (lab-owned) 紐づけ `lab104-unintended-anonymous-access` が 1 つ意図的に残されています。その ClusterRole とともに削除してください。標準の kubeadm の binding `system:public-info-viewer` には**触れないでください** - これも `system:unauthenticated` に紐づいていますが、アクセスを与えるのは non-resource URL `/livez`、`/readyz`、`/healthz`、`/version`、`/version/` のみであり、これは bootstrap の通常の一部 (default Kubernetes RBAC) であって、この課題の発見事項ではありません。<br/>• これは、同じ課題の `AuthenticationConfiguration` とは別のレイヤーです：そこでは `anonymous.conditions` が、匿名 identity を `/livez`/`/readyz`/`/healthz` のみに意図的に許可しています - `/version` に匿名でアクセスできないのは、そのリクエストが authentication の段階でそもそも anonymous identity を受け取らないためであり、より広い non-resource URL のリストを持つ `system:public-info-viewer` による authorization には、そこまで到達しません。 |
 | 受け入れ基準 | • Static Pod API server が `--authentication-config` を使用し、それが `anonymous.enabled: true` と、ちょうど `/livez`、`/readyz`、`/healthz` を含む `conditions` を持つ `AuthenticationConfiguration` を参照している。<br/>• 引数 `--anonymous-auth` が存在しない。<br/>• kube-apiserver Pod が再起動後も `Running`/`Ready` のままである。<br/>• 認証なしの `GET /version` が `401` を返す。<br/>• 認証なしの `GET /livez` と `GET /readyz` が `200` を返す。<br/>• 認証された `/readyz` へのリクエスト (有効な credentials で) も動作する。<br/>• Effective な `--authorization-mode` が `Node,RBAC` を含み、`AlwaysAllow` を含まない。<br/>• ClusterRole/ClusterRoleBinding `lab104-anonymous-debug-access`/`lab104-unintended-anonymous-access` が削除されている。<br/>• 標準の `system:public-info-viewer` が手つかずのままである。<br/>• グループ `system:unauthenticated` が、どの namespace でも `pods`/`secrets`/`configmaps` を読み取れない。 |
 
 <details>
@@ -172,10 +172,10 @@ non-resource URL に限定された ClusterRole です。
 </details>
 
 ---
-| **6** | **env 経由の Secret の `/proc/1/environ` への漏洩: volume への移行** |
+| **6** | **env 経由の Secret の `/proc/1/environ` への漏洩：volume への移行** |
 | :---: | :--- |
 | やること | • `security-104` の Pod `app-vulnerable` は、`envFrom.secretRef` を通じて `db-creds` を受け取っています - 値は、コンテナへ `kubectl exec` できる人 (`cat /proc/1/environ`)、または env が誤って出力されたときに logs/describe を読み取れる人なら誰でも見られます。<br/>• この漏洩を確認します：`kubectl exec -n security-104 app-vulnerable -- cat /proc/1/environ` を実行し、出力 (`DB_PASSWORD` を含む) を `/var/work/tests/artifacts/6/env-leak-before.txt` に保存します。<br/>• 同じ名前 `app-vulnerable` で Pod を再作成します：この secret を使う `envFrom`/`env` を削除し、`db-creds` を volume `db-creds-vol` として `/etc/secrets` に、**read-only** かつ `defaultMode: 0400` でマウントします。<br/>• 新しい `/proc/1/environ` に変数 `DB_PASSWORD` がないことを確認し、マウントされたファイルの `stat -L -c '%a'` を `/var/work/tests/artifacts/6/secret-file-mode.txt` に保存します (フラグ `-L` は必須です - secret は `..data` のシンボリックリンクのチェーン経由でマウントされるため、`-L` がないと `stat` は実際のファイルではなくシンボリックリンク自体のモードを表示します)。 |
-| 受け入れ基準 | `env-leak-before.txt` に、Secret `db-creds` の `DB_PASSWORD` の実際の値が含まれている (単なる単語 `DB_PASSWORD` ではない)；最終的な Pod `app-vulnerable` に `db-creds` を参照する `env`/`envFrom` がなく、同じ Secret を別の方法でマウントしていない；volume `db-creds-vol` が `/etc/secrets` に `readOnly: true` と `defaultMode: 0400` (`256` の 10 進数) でマウントされている - checker はコンテナ内で `stat -L -c %a` を自分で確認し、ちょうど `400` を要求する；最終的な Pod の `/proc/1/environ` に `DB_PASSWORD` がない (`exec` が正常に実行された場合 - 失敗した `exec` は証拠とみなされない)；その際、アプリケーションのプロセスは、`/etc/secrets/DB_PASSWORD` から secret の値を実際に読み取ることができる (positive control)。 |
+| 受け入れ基準 | `env-leak-before.txt` に、Secret `db-creds` の `DB_PASSWORD` の実際の値が含まれている (単なる単語 `DB_PASSWORD` ではない)；最終的な Pod `app-vulnerable` に `db-creds` を参照する `env`/`envFrom` がなく、同じ Secret を別の方法でマウントしていない；volume `db-creds-vol` が `/etc/secrets` に `readOnly: true` と `defaultMode: 0400` (10 進数では `256`) でマウントされている - checker はコンテナ内で `stat -L -c %a` を自分で確認し、ちょうど `400` を要求する；最終的な Pod の `/proc/1/environ` に `DB_PASSWORD` がない (`exec` が正常に実行された場合 - 失敗した `exec` は証拠とみなされない)；その際、アプリケーションのプロセスは、`/etc/secrets/DB_PASSWORD` から secret の値を実際に読み取ることができる (positive control)。 |
 
 <details>
 <summary>💡 課題 6 のヒント</summary>
@@ -197,8 +197,8 @@ Volume mount は、すでに `kubectl exec` できる人からアクセスを**�
   コピーします) - アプリケーション内のサードパーティのライブラリ、プラグイン、偶発的な subprocess は、
   開発者が考えていなくても `DB_PASSWORD` を受け取ります；ファイルはそのようには
   渡されません - 子プロセスはパスを明示的に知り、それを開く必要があります；
-- crash handler や error-logger は、クラッシュ時にプロセスの `environ` 全体を出力することがよくあります
-  - それは自動的に logs に流れます；ファイルの内容は、コードが明示的にそれを読み取って
+- crash handler や error-logger は、クラッシュ時にプロセスの `environ` 全体を出力することがよくあります。
+  それは自動的に logs に流れます；ファイルの内容は、コードが明示的にそれを読み取って
   ログに記録しない限り、それ自体では logs に入りません；
 - 環境変数にはアクセス権限のモデルがありません - コンテナの namespace 内の任意のプロセスから見えます；
   `defaultMode: 0400` を持つファイルにはあります - 適切な UID を持つプロセスだけが読み取れます。
@@ -208,7 +208,7 @@ Volume mount は、すでに `kubectl exec` できる人からアクセスを**�
 💡 defaultMode: 400 (10 進数の 400) を指定しました。
    YAML は先頭にゼロを付けた 8 進数リテラル (0400) をサポートしており、Kubernetes はそれを
    通常の Unix のパーミッションとして解釈します；先頭のゼロがない 400 は、パーミッション 0400 ではなく
-   10 進数の 400 として読み取られます (これは 10 進数の 256 です)。
+   10 進数の 400 として読み取られます (パーミッション 0400 は 10 進数では 256 です)。
 ```
 
 これはこの課題で最もよくある間違いです：`defaultMode` は POSIX mode bits を持つ数値フィールドで、
@@ -246,7 +246,7 @@ CSR approval は `impersonate`/`bind`/`escalate` とは別のカテゴリです�
 </details>
 
 ---
-| **9** | **統合課題: audit log で RBAC escalation を検出し、封じ込める** |
+| **9** | **統合課題：audit log で RBAC escalation を検出し、封じ込める** |
 | :---: | :--- |
 | やること | • この課題は、RBAC (この実習) と audit ロギング ([第 32 章](../../course/32/jp.md) を参照) を組み合わせます - audit log がなければ、危険な RBAC の変更の事実は、再現可能な forensic evidence としてではなく、`kubectl get` による事後的なものとしてしか見えません。<br/>• control-plane で、最小限の audit backend を有効にします：`/etc/kubernetes/audit/policy.yaml` を作成し、`apiGroups: ["rbac.authorization.k8s.io"]`、リソース `clusterroles` と `clusterrolebindings` に対する `RequestResponse` ルールと、フォールバックとしての catch-all `Metadata` を含めます。<br/>• static manifest `/etc/kubernetes/manifests/kube-apiserver.yaml` に、`--audit-policy-file=/etc/kubernetes/audit/policy.yaml`、`--audit-log-path=/var/log/kubernetes/audit/audit.log`、および必要な hostPath volume/volumeMount を追加します (ディレクトリは事前に作成してください)。API が復旧するまで待ちます。<br/>• 管理者 (`cluster1-admin`) として、ClusterRole `cluster-admin` を `security-104` の ServiceAccount `build-agent` に紐づける ClusterRoleBinding `incident-simulated-escalation` を作成します - これは `build-agent` 自身による escalation の試み**ではなく** (課題 7 でそこから実際の権限昇格経路はすでに取り消されています)、管理者がモデル化した危険な RBAC の変更です：誰か (人間のオペレーター、スクリプト、compromise された CI/CD) が、誤って、または悪意を持って ServiceAccount に `cluster-admin` を付与するという現実のシナリオで、SOC/security エンジニアの仕事は、常時手動で `kubectl get` を行うのではなく、まさにそのようなイベントを audit log から検出することです。<br/>• audit log から、この名前の `clusterrolebindings` に対する `create` イベントで、`requestObject.roleRef` が `cluster-admin` を指し、`requestObject.subjects` に `system:serviceaccount:security-104:build-agent` があるものを見つけ、イベント全体 (`user.username` を含む - リクエストを実際に開始した人) を `/var/work/tests/artifacts/9/audit-escalation-event.json` に保存します。これは単に「audit ルールが機能していることを確認する」ことではありません - ここでの SOC エンジニアの実際の仕事は、forensic evidence として具体的なレコードを**抽出して保存する**ことです (checker は control-plane の `audit.log` を独立して自分で読み取り、あなたの成果物の `auditID` を実際のレコードと照合します - 似ていても作り上げた JSON は通りません)。<br/>• containment を実行します：`incident-simulated-escalation` を削除し、`kubectl auth can-i '*' '*' -n security-104 --as=system:serviceaccount:security-104:build-agent` でアクセスが取り消されたことを確認し、最終的な `no` を `/var/work/tests/artifacts/9/containment-result.txt` に保存します (`-n`/`-A` なしの `can-i` は、クラスター全体ではなく、kubeconfig コンテキストの現在の namespace のみを確認します - namespace を明示してください)。 |
 | 受け入れ基準 | • kube-apiserver の static manifest に `--audit-policy-file` と `--audit-log-path` が含まれ、API server が healthy である。<br/>• `/var/work/tests/artifacts/9/audit-escalation-event.json` が、`verb: create`、`objectRef.resource: clusterrolebindings`、`objectRef.name: incident-simulated-escalation`、`requestObject.roleRef.name: cluster-admin`、そして `requestObject.subjects` の中に `security-104` の ServiceAccount `build-agent` を持つ、有効な JSON の audit event である。<br/>• containment の後、ClusterRoleBinding `incident-simulated-escalation` が存在しない。<br/>• `containment-result.txt` に `no` が含まれている。 |
@@ -266,7 +266,7 @@ CSR approval は `impersonate`/`bind`/`escalate` とは別のカテゴリです�
 <details>
 <summary>💡 課題 10 のヒント</summary>
 
-`kubectl get secret legacy-config -o jsonpath='{.data.SERVICE_USER}' \| base64 -d` で
+`kubectl get secret legacy-config -o jsonpath='{.data.SERVICE_USER}' | base64 -d` で
 実際の値が得られます - 新しい Secret に任意の文字列を書かないでください。checker は
 元のものを自分で改めてデコードして比較します。`kubectl create secret generic rehydrated-config
 --from-literal=SERVICE_USER=... --from-literal=SERVICE_TOKEN=...` は値を

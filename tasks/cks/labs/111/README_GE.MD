@@ -11,24 +11,24 @@
 იყოს შენახული მითითებულ ადგილას და აუდიტისთვის ვარგისი.
 
 ეს CKS-ამოცანაა security tooling-სა და supply chain-ზე, და არა CKA-ს სავარჯიშო. Artifacts-ის უმეტესობა
-ლოკალურად იანალიზება worker-ზე; ერთადერთი გამონაკლისი - დავალება 4, სადაც
+ლოკალურად ანალიზდება worker-ზე; ერთადერთი გამონაკლისი - დავალება 4, სადაც
 საჭიროა hardened Deployment-ის გამოყენება Ready/Available-ისა და HTTP smoke test-ის შესამოწმებლად.
 
 ## Threat model
 
 ლაბი ახდენს supply chain-ის ნდობის მოდელირებას რამდენიმე დამოუკიდებელი საფრთხით. მავნე
-კოდი ან ცნობილი სისუსტეები image-ში აღმოჩნდება სკანერებით Trivy, kubesec,
+კოდი ან ცნობილი სისუსტეები image-ში აღმოიჩინება სკანერებით Trivy, kubesec,
 kube-linter და Hadolint image-ის, Dockerfile-ისა და manifest-ების შესაბამის დონეებზე.
 
 Secrets და token-ები, რომლებიც შემთხვევით დარჩა layer-ში, ცალკე შემოწმებას მოითხოვს: secret
 scanning (მაგალითად Trivy secret scanning) და image-ის history-ის inspection (`docker history`,
-ფენების ამოღება). SBOM სხვა ამოცანას წყვეტს - კომპონენტებისა და ვერსიების ინვენტარიზაციას;
+ფენების ამოღება). SBOM სხვა ამოცანას წყვეტს - კომპონენტებისა და პაკეტების ვერსიების ინვენტარიზაციას;
 ის ეხმარება supply-chain investigation-ს (მაგალითად, მოწყვლადი ბიბლიოთეკის პოვნაში),
 მაგრამ არ წარმოადგენს ფენების history-ში secrets-ის ძიების საიმედო მექანიზმს და secret
 scanning-ს არ ანაცვლებს. მაშინაც კი, თუ მუშა კონფიგურაცია უკვე აღარ შეიცავს secret-ს, ის შეიძლება დარჩეს
 ხელმისაწვდომი ფენების history-ში.
 
-mutable-tag tampering-ის საფრთხე იმაში მდგომარეობს, რომ ტეგით უცვლელი მითითებით დეპლოის შემდეგ
+mutable-tag tampering-ის საფრთხე იმაში მდგომარეობს, რომ დეპლოის შემდეგ იმავე, უცვლელი ტეგიანი მითითებით
 შეიძლება სხვა, მავნე image-ის ჩანაცვლება. სწორედ ამიტომ არის digest pinning მნიშვნელოვანი
 დავალებებში 3–5: ის აფიქსირებს image-ის კონკრეტულ შიგთავსს, და არა მხოლოდ მის სახელსა და ტეგს.
 
@@ -119,17 +119,17 @@ Helm და `install-kyverno` ასევე ხელმისაწვდო�
 (გამოცდის სიიდან ინსტრუმენტი; rootless, მომხმარებლით `ubuntu`). დავალებები 3 და 9c მოითხოვს image-ის აწყობასა და
 **გამოქვეყნებას** registry-ში, რომელიც worker-იდანაც და კლასტერიდანაც ხელმისაწვდომია (immutable-მითითება
 `repo@sha256:...` registry-იდან მიიღება, ლოკალური image ID არ გამოდგება). ასეთი registry -
-`registry:2` control-plane-ზე - bootstrap-მა აამაღლა:
+`registry:2` control-plane-ზე - bootstrap-მა გაუშვა:
 
 - მისამართი: `<IP control-plane>:5000`, ის ჩაწერილია `/etc/cks111/registry`-ში worker-ზე;
 - პროტოკოლი - ჩვეულებრივი HTTP VPC-ის შიგნით: podman worker-ზე და containerd node-ზე მასზე გამართულია როგორც
   insecure registry-ზე (ფლაგი `--tls-verify=false` საჭირო არ არის), ხოლო Kyverno-ს `ImageValidatingPolicy`-ში საჭიროა
   `credentials.allowInsecureRegistry: true`;
-- მონაცემები ინახება node-ის ლოკალურ PV-ზე (`/var/lib/cks111-registry`), ამიტომ გადაიტანენ
+- მონაცემები ინახება node-ის ლოკალურ PV-ზე (`/var/lib/cks111-registry`), ამიტომ გადაიტანს
   registry-ის Pod-ის გადატვირთვას;
 - გამოქვეყნებული image-ის digest-ს იღებთ `podman push --digestfile`-დან, ხოლო manifest-ის არსებობას
   ამოწმებთ მოთხოვნით `/v2/`-ზე (registry-ში არ არის HTTPS-only ინსტრუმენტები, როგორიცაა `docker buildx imagetools`);
-- ბრძანებების დეტალური თანმიმდევრობა - ნაბიჯში «0. მომზადება» [ამოხსნის](worker/files/solutions/1_GE.MD).
+- ბრძანებების დეტალური თანმიმდევრობა - [ამოხსნის](worker/files/solutions/1_GE.MD) ნაბიჯში «0. მომზადება».
 
 **Docker Hub-ის ლიმიტი.** ერთი IP-დან ანონიმურ pull-ებს აქვთ ლიმიტი (დაახლოებით 100 მოთხოვნა 6 საათში).
 რომ `check_result` მას არ დაეჯახოს, bootstrap ერთხელ ჩამოტვირთავს ლაბის image-ებს ლოკალურ ქეშში
@@ -173,7 +173,7 @@ check_result
 | **1** | **Trivy: image-ის მოწყვლადობების ანგარიში** |
 | :---: | :--- |
 | რას ვაკეთებთ | • დაასკანერეთ immutable `$IMAGE` Trivy-ით, OS და library vulnerabilities-ის ჩათვლით.<br/>• შეინახეთ სტრუქტურირებული JSON `/var/work/tests/artifacts/1/trivy-report.json`-ში. |
-| მიღების კრიტერიუმები | • **ფაილი:** არაცარიელია, JSON იშლება `jq`-ით, შეიცავს `Results`-სა და ანალიზირებული image-ის immutable reference-ს.<br/>• **ახალი შემოწმება:** checker დამოუკიდებლად იმეორებს `trivy image`-ს იმავე image-ისთვის და მოითხოვს, რომ ეს ახალი სკანი წარმატებით დაემთხვეს `ArtifactName`-ით.<br/>• ხელით დაწერილი, მაგრამ სინტაქსურად ვალიდური JSON არ გადის. |
+| მიღების კრიტერიუმები | • **ფაილი:** არაცარიელია, JSON წარმატებით პარსირდება `jq`-ით, შეიცავს `Results`-სა და გაანალიზებული image-ის immutable reference-ს.<br/>• **ახალი შემოწმება:** checker დამოუკიდებლად იმეორებს `trivy image`-ს იმავე image-ისთვის და მოითხოვს, რომ ეს ახალი სკანი წარმატებით დაემთხვეს `ArtifactName`-ით.<br/>• ხელით დაწერილი, მაგრამ სინტაქსურად ვალიდური JSON არ გადის. |
 
 <details>
 <summary>💡 მინიშნება დავალება 1-ისთვის</summary>
@@ -194,7 +194,7 @@ check_result
 </details>
 
 ---
-| **1c** | **Workload image triage by CRITICAL severity** |
+| **1c** | **Workload image-ების გარჩევა CRITICAL დონის მიხედვით** |
 | :---: | :--- |
 | რას ვაკეთებთ | • namespace `cks-111`-ში უკვე განთავსებულია 4 Deployment (label `cks.io/task=1c`), თითოეული ერთი immutable digest-pinned image-ით.<br/>• მიიღეთ image references ამ LIVE Deployments-იდან (ტეგის სახელით ნუ გამოიცნობთ), დაასკანერეთ **ყველა 4** image Trivy-ით `--severity CRITICAL`-ით და თითოეულისთვის დათვალეთ უნიკალური CRITICAL `VulnerabilityID`-ების რაოდენობა.<br/>• განსაზღვრეთ Deployment CRITICAL-ების ყველაზე დიდი რაოდენობით ("ყველაზე მოწყვლადი") და ორი Deployment ყველაზე მცირე რაოდენობით ("ორი ყველაზე ნაკლებად მოწყვლადი"). ჩაწერეთ მათი სახელები `/var/work/tests/artifacts/1c/ranking.txt`-ში როგორც `MOST_VULNERABLE=<deployment-name>`, `LEAST_VULNERABLE_1=<deployment-name>`, `LEAST_VULNERABLE_2=<deployment-name>`.<br/>• ყველაზე მოწყვლადი Deployment-ის image-ისთვის დააგენერირეთ CycloneDX SBOM **სწორედ Trivy-ით** (`trivy image --format cyclonedx`) `1c/cyclonedx.json`-ში.<br/>• შემდეგ remediate: `replicas > 0` დატოვეთ მხოლოდ ორ ყველაზე ნაკლებად მოწყვლად Deployment-ზე, დანარჩენი ორი (ყველაზე მოწყვლადის ჩათვლით) დაამასშტაბეთ `replicas: 0`-მდე. |
 | მიღების კრიტერიუმები | • **Ranking:** checker თავად იმეორებს ყველა 4 live image-ის Trivy CRITICAL-სკანს და ranking-ს თავიდან ითვლის - `ranking.txt` უნდა ემთხვეოდეს ამ ახალ სკანირებას, და არა მოძველებულს/გამოცნობილს.<br/>• **SBOM:** `cyclonedx.json` - ვალიდური CycloneDX-დოკუმენტია სწორედ Trivy-სგან, რომელიც რეალურად ყველაზე მოწყვლადი Deployment-ის image-ს ეხება.<br/>• **Remediation:** ზუსტად 2 Deployment-ს (ახალი სკანით ყველაზე ნაკლებად მოწყვლადები) აქვს `replicas > 0`, დანარჩენ 2-ს - `replicas: 0`. |
@@ -202,14 +202,14 @@ check_result
 <details>
 <summary>💡 მინიშნება დავალება 1c-სთვის</summary>
 
-image references მიიღეთ ბრძანებით ფორმით `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jsonpath=...` - Deployment-ის სახელით გამოცნობას ნუ ცდილობთ, რომელი image არის "უფრო ახალი" ან "უფრო უსაფრთხო". დასათვლელი ბრძანება: `trivy image --scanners vuln --severity CRITICAL --format json <ref>`, შემდეგ `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length'`. CycloneDX-ისთვის გამოიყენეთ სწორედ `trivy image --format cyclonedx --output <file> <ref>` - და არა Syft (Syft უკვე გამოიყენება დავალება 7-ში სხვა image-ისთვის, აქ აშკარად Trivy მოითხოვება). დამასშტაბება კეთდება `kubectl scale deployment/<name> -n cks-111 --replicas=0`-ით (ან `--replicas=1`-ით დასატოვებლებისთვის).
+image references მიიღეთ ასეთი სახის ბრძანებით `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jsonpath=...` - Deployment-ის სახელით გამოცნობას ნუ ცდილობთ, რომელი image არის "უფრო ახალი" ან "უფრო უსაფრთხო". დასათვლელი ბრძანება: `trivy image --scanners vuln --severity CRITICAL --format json <ref>`, შემდეგ `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length'`. CycloneDX-ისთვის გამოიყენეთ სწორედ `trivy image --format cyclonedx --output <file> <ref>` - და არა Syft (Syft უკვე გამოიყენება დავალება 7-ში სხვა image-ისთვის, აქ აშკარად Trivy მოითხოვება). დამასშტაბება კეთდება `kubectl scale deployment/<name> -n cks-111 --replicas=0`-ით (ან `--replicas=1`-ით დასატოვებლებისთვის).
 </details>
 
 ---
 | **2** | **სტატიკური ანალიზის საწყისი ანგარიშები** |
 | :---: | :--- |
-| რას ვაკეთებთ | • შესწორებებამდე (ამ სამი ფაილიდან არცერთს შეხების გარეშე დავალება 3-ის დაწყების შემდეგ) შეინახეთ შედეგები: Hadolint `2/hadolint-before.txt`-ში, kubesec JSON `2/kubesec-before.json`-ში, kube-linter JSON `2/kube-linter-before.json`-ში.<br/>• გაუშვით ისინი უშუალოდ საწყისი სასტარტო `Dockerfile`/`deployment.yaml`-ის წინააღმდეგ.<br/>• ანგარიშების ფაილებში შეცდომებს `|| true`-თი ნუ დამალავთ: linter-ის არანულოვანი exit code მოსალოდნელია. |
-| მიღების კრიტერიუმები | • **Artifacts:** სამივე არსებობს; Hadolint შეიცავს findings-ს, kubesec შეიცავს `scoring`-ს, kube-linter - ვალიდურ KubeLinter JSON-ობიექტს ველებით `Reports` და `Summary`; შესწორებებამდე `Reports` შეიცავს findings-ს.<br/>• **baseline-თან შედარება:** checker ადარებს სამივე artifact-ის შიგთავსს თავის baseline-ს, provisioning-ის დროს გადაღებულს საწყისი სასტარტო ფაილების წინააღმდეგ სტუდენტისთვის მათ გაცემამდე.<br/>• ხელით დაწერილი, მაგრამ სინტაქსურად ვალიდური ანგარიში არ გადის. |
+| რას ვაკეთებთ | • შესწორებებამდე (ამ სამი ფაილიდან არცერთს შეხების გარეშე დავალება 3-ის დაწყების შემდეგ) შეინახეთ შედეგები: Hadolint `2/hadolint-before.txt`-ში, kubesec JSON `2/kubesec-before.json`-ში, kube-linter JSON `2/kube-linter-before.json`-ში.<br/>• გაუშვით ისინი უშუალოდ საწყის სასტარტო `Dockerfile`/`deployment.yaml`-ზე.<br/>• ანგარიშების ფაილებში შეცდომებს `\|\| true`-თი ნუ დამალავთ: linter-ის არანულოვანი exit code მოსალოდნელია. |
+| მიღების კრიტერიუმები | • **Artifacts:** სამივე არსებობს; Hadolint შეიცავს findings-ს, kubesec შეიცავს `scoring`-ს, kube-linter - ვალიდურ KubeLinter JSON-ობიექტს ველებით `Reports` და `Summary`; შესწორებებამდე `Reports` შეიცავს findings-ს.<br/>• **baseline-თან შედარება:** checker ადარებს სამივე artifact-ის შიგთავსს თავის baseline-თან, რომელიც provisioning-ის დროს, სტუდენტისთვის ფაილების გაცემამდე, საწყის სასტარტო ფაილებზე იქნა მიღებული.<br/>• ხელით დაწერილი, მაგრამ სინტაქსურად ვალიდური ანგარიში არ გადის. |
 
 <details>
 <summary>💡 მინიშნება დავალება 2-ისთვის</summary>
@@ -233,7 +233,7 @@ linter-ის არანულოვანი exit code პრობლემ�
 | **4** | **workload YAML-ის შესწორება kubesec-ისა და kube-linter-ის მიხედვით** |
 | :---: | :--- |
 | რას ვაკეთებთ | • ჯერ ააგეთ და გამოაქვეყნეთ hardened image დავალება 3-იდან, შემდეგ მიუთითეთ `deployment.yaml`-ში მისი immutable manifest reference `registry/.../catalog@sha256:<manifest-digest>` (და არა upstream nginx).<br/>• Pod-ის დონეზე დაამატეთ `automountServiceAccountToken: false`, `runAsNonRoot: true`, `seccompProfile: RuntimeDefault`.<br/>• კონტეინერში დააყენეთ `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`, requests/limits CPU-სა და memory-სთვის.<br/>• nginx-ისთვის მიამაგრეთ writable `emptyDir`/tmpfs temp, pid/run, cache და config paths-ზე და მოამზადეთ config გაშვებამდე.<br/>• წაშალეთ `privileged`, გამოიყენეთ Deployment, დაადასტურეთ Ready/Available და წარმატებული HTTP request.<br/>• შეინახეთ ახალი ანგარიშები `4/kubesec-after.json` და `4/kube-linter-after.json`. |
-| მიღების კრიტერიუმები | • **Image:** YAML იყენებს digest-pinned hardened image-ს `USER 101`-ით, და არა upstream nginx-ს.<br/>• **Manifest:** საჭირო ველები და writable mounts არსებობს; `privileged` არ არის.<br/>• **ფუნქციონირება:** Deployment Available-ა და HTTP request წარმატებულია.<br/>• **ანგარიშები:** ორივე საბოლოო ანგარიში - ვალიდური JSON-ია. |
+| მიღების კრიტერიუმები | • **Image:** YAML იყენებს digest-pinned hardened image-ს `USER 101`-ით, და არა upstream nginx-ს.<br/>• **Manifest:** საჭირო ველები, init container `prepare-nginx-config` და writable mounts არსებობს; `privileged` არ არის.<br/>• **ფუნქციონირება:** Deployment Available-ა და HTTP request წარმატებულია.<br/>• **ანგარიშები:** ორივე საბოლოო ანგარიში - ვალიდური JSON-ია. |
 
 <details>
 <summary>💡 მინიშნება დავალება 4-ისთვის</summary>
@@ -250,14 +250,14 @@ linter-ის არანულოვანი exit code პრობლემ�
 <details>
 <summary>💡 მინიშნება დავალება 5-ისთვის</summary>
 
-ფლაგი იწოდება სწორედ `--list-all-pkgs`, და არა `--list-packages` ან მსგავსი ვარიანტი - შეამოწმეთ ფლაგის ზუსტი სახელი `trivy image --help`-ში, თუ ბრძანება არ მუშაობს. ბრძანების რეალური გამოტანა შეინახეთ ფაილში (მაგალითად `tee`-ით), რამდენიმე სტრიქონი package=version ხელით "მეხსიერებიდან" ნუ გადაწერთ - ტესტი ეძებს თავად ბრძანების სტრიქონს როგორც დადასტურებას, რომ მონაცემები ინსტრუმენტიდან მოვიდა.
+ფლაგი იწოდება სწორედ `--list-all-pkgs`, და არა `--list-packages` ან მსგავსი ვარიანტი - შეამოწმეთ ფლაგის ზუსტი სახელი `trivy image --help`-ში, თუ ბრძანება არ მუშაობს. ბრძანების რეალური გამოტანა შეინახეთ ფაილში (მაგალითად `tee`-ით), რამდენიმე სტრიქონს package=version ხელით "მეხსიერებიდან" ნუ გადაწერთ - ტესტი ეძებს თავად ბრძანების სტრიქონს როგორც დადასტურებას, რომ მონაცემები ინსტრუმენტიდან მოვიდა.
 </details>
 
 ---
 | **5b** | **პაკეტის ვერსიის პოვნა workload image-ებში და დამრღვევი კონტეინერების წაშლა** |
 | :---: | :--- |
 | რას ვაკეთებთ | • namespace `cks-111`-ში უკვე განთავსებულია Deployment `pkg-audit-app` სამი კონტეინერით (`c1`, `c2`, `c3`), თითოეული თავის immutable digest-pinned image-ზე.<br/>• ზუსტად სამი image-იდან ორში არის ერთი და იგივე პაკეტი კონკრეტული ვერსიისა - თქვენი ლაბის ინსტანსისთვის მოცემული `TARGET_PACKAGE`/`TARGET_VERSION` დინამიკურად არის განსაზღვრული provisioning-ის დროს, ჩაფიქსირებული მნიშვნელობები არ არის.<br/>• მიიღეთ სამივე image reference live Deployment-იდან, თითოეულისთვის შეასრულეთ `bom generate` (თითოეული SBOM ცალკე შეინახეთ `/var/work/tests/artifacts/5b/bom/`-ში).<br/>• განსაზღვრეთ, რომელი ორი კონტეინერი შეიცავს რეალურად ერთსა და იმავე package/version-ს, და ჩაწერეთ ნაპოვნი წყვილი `5b/answer.txt`-ში როგორც `TARGET_PACKAGE=<name>` და `TARGET_VERSION=<version>`.<br/>• წაშალეთ სწორედ ეს ორი დამრღვევი კონტეინერი Deployment-იდან (`kubectl edit`-ით/გასწორებული manifest-ის `kubectl apply`-ით) ისე, რომ დარჩეს მხოლოდ "სუფთა" კონტეინერი, ხოლო Deployment დარჩეს `Available`. |
-| მიღების კრიტერიუმები | • **პასუხი:** `answer.txt` ასახელებს რეალურ package/version-ს, რომელიც არის სწორედ სამი საწყისი image-იდან ორში (და არა გამოცნობილს). ამ ორ image-ს ბევრი საერთო პაკეტი აქვს: გამოდგება ნებისმიერი ერთი წყვილი `name=version`, რომელიც მესამე image-ში არ არის.<br/>• **SBOM:** `5b/bom/`-ში არის სულ მცირე ერთი ნამდვილი გამოტანა `bom generate`-დან, რომელიც ამ აღმოჩენას ადასტურებს.<br/>• **დამოუკიდებელი შემოწმება:** checker დამოუკიდებლად ასრულებს `bom generate`-ს საწყისი candidate images-ისთვის (შენახულები provisioning-ის დროს) და ადარებს თქვენს პასუხს ამ დამოუკიდებელ გაშვებას.<br/>• **Deployment:** საბოლოო Deployment შეიცავს მხოლოდ "სუფთა" კონტეინერს და რჩება `Available`. |
+| მიღების კრიტერიუმები | • **პასუხი:** `answer.txt` ასახელებს რეალურ package/version-ს, რომელიც არის სწორედ სამი საწყისი image-იდან ორში (და არა გამოცნობილს). ამ ორ image-ს ბევრი საერთო პაკეტი აქვს: გამოდგება ნებისმიერი ერთი წყვილი `name=version`, რომელიც მესამე image-ში არ არის.<br/>• **SBOM:** `5b/bom/`-ში არის სულ მცირე ერთი ნამდვილი გამოტანა `bom generate`-დან, რომელიც ამ აღმოჩენას ადასტურებს.<br/>• **დამოუკიდებელი შემოწმება:** checker დამოუკიდებლად ასრულებს `bom generate`-ს საწყისი candidate images-ისთვის (provisioning-ის დროს შენახული) და ადარებს თქვენს პასუხს ამ დამოუკიდებელ გაშვებასთან.<br/>• **Deployment:** საბოლოო Deployment შეიცავს მხოლოდ "სუფთა" კონტეინერს და რჩება `Available`. |
 
 <details>
 <summary>💡 მინიშნება დავალება 5b-ისთვის</summary>
@@ -269,19 +269,19 @@ linter-ის არანულოვანი exit code პრობლემ�
 | **6** | **SPDX SBOM bom-ით** |
 | :---: | :--- |
 | რას ვაკეთებთ | • დააგენერირეთ SPDX JSON SBOM ინსტრუმენტით `bom` სწორედ immutable `$IMAGE`-ისთვის (იგივე `tag@digest`, რაც დავალება 1-ში გამოიყენეთ, და არა bare tag `nginx:1.27.3-alpine`); შეინახეთ `/var/work/tests/artifacts/6/bom.spdx.json`-ში.<br/>• ფაილში `6/bom-command.txt` ჩაწერეთ შესრულებული ბრძანება ზუსტი `--image $IMAGE`-ით. |
-| მიღების კრიტერიუმები | • **SBOM:** ვალიდური JSON, აქვს `spdxVersion`, შეიცავს მასივს `packages`; ერთი top-level პაკეტი, რომელზეც `documentDescribes` მიუთითებს, განსაზღვრავს იმავე manifest digest-ს, რაც `$IMAGE` დავალება 1-იდან (`versionInfo`/`name`-ით).<br/>• **ბრძანება:** `bom-command.txt` შეიცავს ზუსტ immutable `$IMAGE`-ს და იყენებს `bom generate`-ს.<br/>• SBOM სხვა image-ისთვის (დავალება 1-ის `$IMAGE`-თან დაუკავშირებელი) არ გადის, თუნდაც `bom-command.txt` გაყალბებული იყოს.<br/>• **ახალი შემოწმება:** checker დამატებით დამოუკიდებლად აგენერირებს SBOM-ს იმავე `bom`-ით იმავე image-ისთვის და მოითხოვს, რომ პაკეტების ნაკრები (`name`/`versionInfo`) თქვენს SBOM-ში ამ ახალ გაშვებას დაემთხვეს - მინიმალური ხელით დაწერილი SPDX-დოკუმენტი ერთი top-level პაკეტით არ გადის. |
+| მიღების კრიტერიუმები | • **SBOM:** ვალიდური JSON, აქვს `spdxVersion`, შეიცავს მასივს `packages`; ერთ-ერთი top-level პაკეტი, რომელზეც `documentDescribes` მიუთითებს, იდენტიფიცირებს იმავე manifest digest-ს, რაც `$IMAGE` დავალება 1-იდან (`versionInfo`/`name`-ით).<br/>• **ბრძანება:** `bom-command.txt` შეიცავს ზუსტ immutable `$IMAGE`-ს და იყენებს `bom generate`-ს.<br/>• SBOM სხვა image-ისთვის (დავალება 1-ის `$IMAGE`-თან დაუკავშირებელი) არ გადის, თუნდაც `bom-command.txt` გაყალბებული იყოს.<br/>• **ახალი შემოწმება:** checker დამატებით დამოუკიდებლად აგენერირებს SBOM-ს იმავე `bom`-ით იმავე image-ისთვის და მოითხოვს, რომ პაკეტების ნაკრები (`name`/`versionInfo`) თქვენს SBOM-ში ამ ახალ გაშვებას დაემთხვეს - მინიმალური ხელით დაწერილი SPDX-დოკუმენტი ერთი top-level პაკეტით არ გადის. |
 
 <details>
 <summary>💡 მინიშნება დავალება 6-ისთვის</summary>
 
-ბრძანება `bom generate -o <output.json> -i <image>` - აუცილებლად ფლაგით `-o` გამოტანის ფაილის მისათითებლად, წინააღმდეგ შემთხვევაში გამოტანა stdout-ში წავა. `bom`-ის გამოტანის ფორმატი - მისი საკუთარი SPDX JSON-ია, დეტალებში განსხვავებული SPDX-გან, რომელსაც Syft აგენერირებს - ამ ორ სხვადასხვა ინსტრუმენტს ნუ აგრევთ სტანდარტის ერთი და იგივე ფორმატის გენერირებისას.
+ბრძანება `bom generate -o <output.json> -i <image>` - აუცილებლად ფლაგით `-o` გამოტანის ფაილის მისათითებლად, წინააღმდეგ შემთხვევაში გამოტანა stdout-ში წავა. `bom`-ის გამოტანის ფორმატი - მისი საკუთარი SPDX JSON-ია, დეტალებში განსხვავებული იმ SPDX-ისგან, რომლის გენერირებაც Syft-ს შეუძლია - ამ ორ სხვადასხვა ინსტრუმენტს ნუ აურევთ ერთმანეთში სტანდარტის ერთი და იგივე ფორმატის გენერირებისას.
 </details>
 
 ---
 | **7** | **CycloneDX SBOM Syft-ით და Cosign-ის შემოწმება** |
 | :---: | :--- |
 | რას ვაკეთებთ | • დააგენერირეთ Syft-ის CycloneDX JSON SBOM იმავე immutable `$IMAGE`-ისთვის (`nginx:1.27.3-alpine@sha256:<manifest-digest>`) დავალება 1-დან და შეინახეთ `7/syft.cdx.json`-ში.<br/>• შემდეგ შეამოწმეთ საჯარო image-ის `gcr.io/distroless/static-debian13:nonroot` ხელმოწერა keyless Cosign-ით და შეინახეთ სრული წარმატებული გამოტანა `7/cosign-verify.txt`-ში.<br/>• Distroless-ისთვის გამოიყენეთ issuer `https://accounts.google.com` და identity `keyless@distroless.iam.gserviceaccount.com`. |
-| მიღების კრიტერიუმები | • **Syft SBOM:** `bomFormat: CycloneDX`, არაცარიელი `components`, `metadata.component.type == "container"` და `metadata.component.version`, რომელიც უდრის იმავე `$IMAGE`-ის manifest digest-ს დავალება 1-დან - SBOM სხვა image-ისთვის (bare tag, alpine, busybox და ა.შ.) არ გადის.<br/>• **Cosign:** რეალური ბრძანება `cosign verify` `gcr.io/distroless/static-debian13:nonroot`-ისთვის (აქტუალური მხარდაჭერილი ტეგი - `gcr.io/distroless/static:nonroot` სუფიქსის `-debian13` გარეშე deprecated-ად ითვლება Distroless-ის ოფიციალური README-ის მიხედვით და აღარ განახლდება) მითითებული issuer/identity-ით სრულდება exit code `0`-ით, ხოლო სრული გამოტანა შენახულია `7/cosign-verify.txt`-ში.<br/>• **ახალი შემოწმება:** checker დამატებით დამოუკიდებლად აგენერირებს SBOM-ს იმავე Syft-ით იმავე image-ისთვის და მოითხოვს, რომ კომპონენტების ნაკრები (`name`/`version`) თქვენს SBOM-ში ამ ახალ გაშვებას დაემთხვეს - მინიმალური ხელით დაწერილი CycloneDX-დოკუმენტი ერთი top-level კომპონენტით არ გადის. |
+| მიღების კრიტერიუმები | • **Syft SBOM:** `bomFormat: CycloneDX`, არაცარიელი `components`, `metadata.component.type == "container"` და `metadata.component.version`, რომელიც უდრის იმავე `$IMAGE`-ის manifest digest-ს დავალება 1-დან - SBOM სხვა image-ისთვის (bare tag, alpine, busybox და ა.შ.) არ გადის.<br/>• **Cosign:** რეალური ბრძანება `cosign verify` `gcr.io/distroless/static-debian13:nonroot`-ისთვის (ეს აქტუალური მხარდაჭერილი ტეგია; `gcr.io/distroless/static:nonroot` სუფიქსის `-debian13` გარეშე deprecated-ად ითვლება Distroless-ის ოფიციალური README-ის მიხედვით და აღარ განახლდება) მითითებული issuer/identity-ით სრულდება exit code `0`-ით, ხოლო სრული გამოტანა შენახულია `7/cosign-verify.txt`-ში.<br/>• **ახალი შემოწმება:** checker დამატებით დამოუკიდებლად აგენერირებს SBOM-ს იმავე Syft-ით იმავე image-ისთვის და მოითხოვს, რომ კომპონენტების ნაკრები (`name`/`version`) თქვენს SBOM-ში ამ ახალ გაშვებას დაემთხვეს - მინიმალური ხელით დაწერილი CycloneDX-დოკუმენტი ერთი top-level კომპონენტით არ გადის. |
 
 <details>
 <summary>💡 მინიშნება დავალება 7-ისთვის</summary>
@@ -292,8 +292,8 @@ Syft აგენერირებს CycloneDX-ს ფლაგით `-o cycl
 ---
 | **8** | **`trivy sbom`: მზა SBOM-ფაილის სკანირება მოწყვლადობებზე** |
 | :---: | :--- |
-| რას ვაკეთებთ | • CycloneDX SBOM დავალება 7-დან (`7/syft.cdx.json`) აღწერს image-ისა და მისი OS-ის შემადგენლობას, მაგრამ თავისთავად მოწყვლადობების შესახებ დასკვნას არ შეიცავს.<br/>• დაასკანერეთ სწორედ ეს SBOM-ფაილი (და არა image პირდაპირ) ინსტრუმენტით `trivy sbom` და შეინახეთ სტრუქტურირებული JSON `/var/work/tests/artifacts/8/sbom-scan.json`-ში.<br/>• ბრძანებამ აშკარად უნდა მიიღოს SBOM-ფაილი შესასვლელად, და არ უნდა გადაასკანეროს `$IMAGE`. |
-| მიღების კრიტერიუმები | • **ფაილი:** არაცარიელია, JSON იშლება `jq`-ით, `ArtifactType` = `cyclonedx`, `Results` არაცარიელია და შეიცავს ნაპოვნ მოწყვლადობებს.<br/>• **ბრძანება:** `sbom-scan-command.txt` შეიცავს ბრძანებას `trivy sbom` გზით `7/syft.cdx.json`-მდე.<br/>• **ახალი შემოწმება:** checker თავად იმეორებს `trivy sbom`-ს ამ ფაილზე. |
+| რას ვაკეთებთ | • CycloneDX SBOM დავალება 7-დან (`7/syft.cdx.json`) აღწერს image-ისა და მისი OS-ის შემადგენლობას, მაგრამ თავისთავად მოწყვლადობების შესახებ დასკვნას არ შეიცავს.<br/>• დაასკანერეთ სწორედ ეს SBOM-ფაილი (და არა image პირდაპირ) ინსტრუმენტით `trivy sbom` და შეინახეთ სტრუქტურირებული JSON `/var/work/tests/artifacts/8/sbom-scan.json`-ში.<br/>• ბრძანებამ აშკარად უნდა მიიღოს SBOM-ფაილი შემავალ მონაცემად, და არ უნდა გადაასკანეროს `$IMAGE`; შეინახეთ მისი ტექსტი `/var/work/tests/artifacts/8/sbom-scan-command.txt`-ში. |
+| მიღების კრიტერიუმები | • **ფაილი:** არაცარიელია, JSON წარმატებით პარსირდება `jq`-ით, `ArtifactType` = `cyclonedx`, `Results` არაცარიელია და შეიცავს ნაპოვნ მოწყვლადობებს.<br/>• **ბრძანება:** `sbom-scan-command.txt` შეიცავს `trivy sbom` ბრძანებას `7/syft.cdx.json` ფაილის გზით.<br/>• **ახალი შემოწმება:** checker თავად იმეორებს `trivy sbom`-ს ამ ფაილზე. |
 
 <details>
 <summary>💡 მინიშნება დავალება 8-ისთვის</summary>
@@ -316,20 +316,20 @@ Syft აგენერირებს CycloneDX-ს ფლაგით `-o cycl
 ---
 | **9b** | **Fresh signed ALLOW: ახალი Pod policy-ის შექმნის შემდეგ** |
 | :---: | :--- |
-| რას ვაკეთებთ | • policy დავალება 9a-დან უნდა დაუშვას ხელმოწერილი `$HARDENED_IMAGE` - მაგრამ უკვე არსებული Deployment-ის განმეორებითი `kubectl apply` ამას **არ ამტკიცებს**: თუ template არ შეცვლილა, ახალი ReplicaSet/Pod შეიძლება არ შეიქმნას, და `Running` უბრალოდ policy-მდე შექმნილი ძველი Pod აღმოჩნდება.<br/>• შექმენით **ახალი**, ადრე არარსებული ობიექტი: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 300`.<br/>• შეინახეთ ამ Pod-ის `creationTimestamp`, policy-ის `creationTimestamp` 9a-დან და საბოლოო `status.phase`/`Ready` condition `9b/signed-admission-check.json`-ში. |
-| მიღების კრიტერიუმები | • **Pod:** `signed-admission-check` არსებობს, იყენებს სწორედ `$HARDENED_IMAGE`-ს; მისთვის წარმატებით სრულდება `cosign verify --key cosign.pub "$HARDENED_IMAGE"`, `status.phase` არა `Failed`, ხოლო `Ready` პირობა აღწევს `True`-ს.<br/>• **Artifact:** `9b/signed-admission-check.json` შეიცავს ამ image-ს და Pod-ის `creationTimestamp`-ს **უფრო გვიან**, ვიდრე `ImageValidatingPolicy require-signed-catalog-images`-ის `creationTimestamp`.<br/>• ეს ამტკიცებს სწორედ ვერიფიცირებადად ხელმოწერილი image-ის fresh post-policy admission-ს, და არა policy-ს გადარჩენილ ძველ Pod-ს. |
+| რას ვაკეთებთ | • policy დავალება 9a-დან უნდა დაუშვას ხელმოწერილი `$HARDENED_IMAGE` - მაგრამ უკვე არსებული Deployment-ის განმეორებითი `kubectl apply` ამას **არ ამტკიცებს**: თუ template არ შეცვლილა, ახალი ReplicaSet/Pod შეიძლება არ შეიქმნას, და `Running` უბრალოდ policy-მდე შექმნილი ძველი Pod აღმოჩნდება.<br/>• შექმენით **ახალი**, ადრე არარსებული ობიექტი: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`.<br/>• შეინახეთ ამ Pod-ის `creationTimestamp`, policy-ის `creationTimestamp` 9a-დან და საბოლოო `status.phase`/`Ready` condition `9b/signed-admission-check.json`-ში. |
+| მიღების კრიტერიუმები | • **Pod:** `signed-admission-check` არსებობს, იყენებს სწორედ `$HARDENED_IMAGE`-ს; მისთვის წარმატებით სრულდება `cosign verify --key cosign.pub "$HARDENED_IMAGE"`, `status.phase` არა `Failed`, ხოლო `Ready` პირობა აღწევს `True`-ს.<br/>• **Artifact:** `9b/signed-admission-check.json` შეიცავს ამ image-ს და Pod-ის `creationTimestamp`-ს **უფრო გვიან**, ვიდრე `ImageValidatingPolicy require-signed-catalog-images`-ის `creationTimestamp`.<br/>• ეს ამტკიცებს სწორედ ვერიფიცირებადად ხელმოწერილი image-ის fresh post-policy admission-ს, და არა policy-მდე შექმნილ და შემორჩენილ ძველ Pod-ს. |
 
 <details>
 <summary>💡 მინიშნება დავალება 9b-სთვის</summary>
 
-ამ შემოწმებისთვის Deployment `catalog` დავალება 4-დან ნუ გამოიყენებთ - გამოიყენეთ სიტყვასიტყვით ახალი `kubectl run` Pod-ის ახალი სახელით, როგორც დავალებაშია მითითებული. ორივე timestamp (Pod-ისა და policy-ის) - UTC-ში ISO8601 სტრიქონებია, მათი შედარება შეიძლება ლექსიკოგრაფიულად როგორც ჩვეულებრივი სტრიქონები (`"2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z"` bash-ში ამ ფორმატისთვის სწორად მუშაობს).
+ამ შემოწმებისთვის Deployment `catalog`-ს დავალება 4-დან ნუ გამოიყენებთ - გამოიყენეთ სიტყვასიტყვით ახალი `kubectl run` Pod-ის ახალი სახელით, როგორც დავალებაშია მითითებული. ორივე timestamp (Pod-ისა და policy-ის) - UTC-ში ISO8601 სტრიქონებია, მათი შედარება შეიძლება ლექსიკოგრაფიულად როგორც ჩვეულებრივი სტრიქონები (`"2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z"` bash-ში ამ ფორმატისთვის სწორად მუშაობს).
 </details>
 
 ---
 | **9c** | **Signature-specific DENY: unsigned digest, რეალურად არსებული იმავე repository-ში** |
 | :---: | :--- |
 | რას ვაკეთებთ | • ააგეთ და გამოაქვეყნეთ **მეორე** tag იმავე repository-ში, რაც `$HARDENED_IMAGE` (მაგალითად, `${HARDENED_TAG%:*}:unsigned-1.0`), მისი ხელმოწერის გარეშე.<br/>• ეს image უნდა იყოს **ფიზიკურად სხვა artifact**, და არა იგივე digest, რაც უკვე ხელმოწერილ `$HARDENED_IMAGE`-ს აქვს: თუ იმავე `Dockerfile`/context-ს ცვლილებების გარეშე ააგებთ, reproducible/cached build-მა შეიძლება იდენტური digest მოგცეთ, და მაშინ "unsigned" ტეგი სინამდვილეში უკვე ხელმოწერილ artifact-ზე მიუთითებს, ხოლო `cosign verify` მოულოდნელად გაივლის.<br/>• შეიტანეთ კონტროლირებადი განსხვავება build-arg-ით (მაგალითად `--build-arg CKS_SIGNATURE_TEST=unsigned-1` Dockerfile-ში შესაბამისი `ARG`/`LABEL`-ით) და აშკარად შეინახეთ დადასტურება `$UNSIGNED_DIGEST != $HARDENED_DIGEST` `9c/digest-comparison.txt`-ში.<br/>• მიიღეთ registry manifest digest იმავე გზით, რაც დავალება 3-ში (`podman push --digestfile`), ჩამოაყალიბეთ `$UNSIGNED_IMAGE` იმავე repository-ში.<br/>• აშკარად დაამტკიცეთ, რომ ეს digest **არსებობს და pullable-ია** (მოთხოვნა `GET /v2/catalog/manifests/<digest>` registry-ზე წარმატებულია) და **არ აქვს** თქვენი გასაღებით ვალიდური ხელმოწერა (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` შეცდომით სრულდება) - შეინახეთ ორივე გამოტანა `9c/unsigned-exists.txt`-სა და `9c/unsigned-not-signed.txt`-ში.<br/>• შემდეგ შექმენით Pod `catalog-unsigned-probe` ამ `$UNSIGNED_IMAGE`-ით და შეინახეთ admission denial `9c/admission-deny.txt`-ში. |
-| მიღების კრიტერიუმები | • **Artifact:** `9c/digest-comparison.txt` შეიცავს `hardened_digest=`-ს, `unsigned_digest=`-ს და `unsigned_image=`-ს (სრული `tag@digest`-მითითება იმავე repository-ში, რაც `$HARDENED_IMAGE`, genuinely სხვა digest-ით).<br/>• **checker-ის შემოწმება:** თავად resolve-ს უკეთებს `unsigned_image`-ს registry-ში, ადასტურებს ვალიდური ხელმოწერის არარსებობას საკუთარი `cosign verify`-ით, ქმნის თავის ახალ Pod-ს ამ image-ით და მოითხოვს საკუთარი policy-ის უნიკალურ validation message-ს: `catalog image must have a valid release signature`.<br/>• სხვა policy-ის Generic admission/signature error PASS-ად არ ითვლება, არც ნებისმიერი admission-შეცდომა (`manifest unknown`/registry lookup საკმარისი არ არის).<br/>• ხელით დაწერილი evidence-ფაილები რეალური admission control-ის გარეშე PASS-ს არ იძლევა - checker არც ერთ ტექსტურ ფაილს არ ენდობა, გარდა `unsigned_image=`-ისა, როგორც რეალურ image-ზე მითითებისა შესამოწმებლად. |
+| მიღების კრიტერიუმები | • **Artifact:** `9c/digest-comparison.txt` შეიცავს `hardened_digest=`-ს, `unsigned_digest=`-ს და `unsigned_image=`-ს (სრული `tag@digest`-მითითება იმავე repository-ში, რაც `$HARDENED_IMAGE`, genuinely სხვა digest-ით).<br/>• **checker-ის შემოწმება:** თავად resolve-ს უკეთებს `unsigned_image`-ს registry-ში, ადასტურებს ვალიდური ხელმოწერის არარსებობას საკუთარი `cosign verify`-ით, ქმნის თავის ახალ Pod-ს ამ image-ით და მოითხოვს საკუთარი policy-ის უნიკალურ validation message-ს: `catalog image must have a valid release signature`.<br/>• ითვლება მხოლოდ ეს შეტყობინება, და არა ნებისმიერი admission-შეცდომა: სხვა policy-ის generic admission/signature error PASS-ს არ იძლევა, `manifest unknown`/registry lookup-ის შეცდომებიც საკმარისი არ არის.<br/>• ხელით დაწერილი evidence-ფაილები რეალური admission control-ის გარეშე PASS-ს არ იძლევა - checker არც ერთ ტექსტურ ფაილს არ ენდობა, გარდა `unsigned_image=`-ისა, როგორც რეალურ image-ზე მითითებისა შესამოწმებლად. |
 
 <details>
 <summary>💡 მინიშნება დავალება 9c-სთვის</summary>

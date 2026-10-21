@@ -1,6 +1,6 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD)
 
-# Lab 113 - 参考解答: kubeadm の minor upgrade
+# Lab 113 - 参考解答：kubeadm の minor upgrade
 
 > 試験と同じように作業します：`kubectl` は作業マシンで実行し、ノードに対する操作 (apt、kubeadm、
 > kubelet) はノード自体で行います：`ssh <ノード>` で入り、root になり (`sudo -i`)、
@@ -15,9 +15,9 @@
 | バージョンを選ぶ (`apt-cache madison kubeadm`) | [Upgrading kubeadm clusters - Determine which version to upgrade to](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#determine-which-version-to-upgrade-to) |
 | 最初の control-plane で `kubeadm` を更新し、`kubeadm upgrade plan`、`kubeadm upgrade apply v1.xx.x` を実行する | [Upgrading kubeadm clusters - Upgrading control plane nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#upgrading-control-plane-nodes) |
 | `kubectl drain <node> --ignore-daemonsets` | [Upgrading kubeadm clusters - Drain the node](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#drain-the-node) |
-| `kubelet` と `kubectl` を更新し、`systemctl daemon-reload`、`restart kubelet` | [Upgrading kubeadm clusters - Upgrade kubelet and kubectl](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#upgrade-kubelet-and-kubectl) |
+| `kubelet` と `kubectl` を更新し、`systemctl daemon-reload` と `restart kubelet` を実行する | [Upgrading kubeadm clusters - Upgrade kubelet and kubectl](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#upgrade-kubelet-and-kubectl) |
 | `kubectl uncordon <node>` | [Upgrading kubeadm clusters - Uncordon the node](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#uncordon-the-node) |
-| Worker ノード: `kubeadm upgrade node` | [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) |
+| Worker ノード：`kubeadm upgrade node` | [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) |
 
 Ubuntu のノードでは、`needrestart` が「一覧のみ」のモード (OK/Cancel のダイアログなし) に設定されているため、
 `apt-get install` は質問で止まりません。
@@ -70,7 +70,7 @@ apt update
 apt-cache madison kubeadm | head -3
 ```
 
-kubeadm を更新します (`x` の代わりに実際の patch を入力します)。**このコマンドは別々に実行してください：** `apt-get` は
+kubeadm を更新します (`x` の代わりに実際の patch を入力します)。**このコマンドは単独で実行してください：** `apt-get` は
 ターミナルの入力バッファを破棄するため、その直後に貼り付けた行は失われます。
 
 ```bash
@@ -135,7 +135,7 @@ kubectl get nodes
 ## 2. worker ノードの upgrade
 
 control-plane が `1.36.x` で `Ready` になった後にのみ始めてください (version skew policy：
-worker ノードの kubelet は control-plane より新しくできません)。`canary` が再び `2/2` になるまで待ちます：
+worker ノードの kubelet は control-plane より新しくてはなりません)。`canary` が再び `2/2` になるまで待ちます：
 
 ```bash
 # 作業マシンで: AVAILABLE が 2 になるまで繰り返す
@@ -211,7 +211,7 @@ kubectl get nodes
 > 唯一の control-plane での `kubeadm upgrade apply` の間、API server は数秒間
 > 再起動し、問い合わせのループ内の `kubectl` は応答しません。そのような行は
 > `available=api-unreachable` として記録され、最小値の集計には含まれません：API が利用できないことは、`canary` の
-> 停止ではありません。downtime を証明するのは、checker の独立した monitor (Pod Ready と `crictl` によるコンテナ) です。
+> 停止ではありません。downtime の有無を判定するのは、checker の独立した monitor (Pod Ready と `crictl` によるコンテナ) です。
 
 ステップ 0 の問い合わせのループを停止し (そのセッションで `Ctrl+C`)、実行全体での `available` の最小値が
 0 まで下がらなかったことを確認します：

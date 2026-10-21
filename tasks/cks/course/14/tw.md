@@ -754,7 +754,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 
 - **Kubernetes v1.37 rootless node path。** `KubeletInUserNamespace` 已成為 Beta，能建立 kubelet 與相關
   node components 透過 user namespace、無需 host-root 執行的 node stack。不要將此與隔離 Pod 的
-  `spec.hostUsers: false` 混淆。請見 [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_TW.md)。
+  `spec.hostUsers: false` 混淆。請見 [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
 - **將 baseline 定義為 code。** Package 清單、enabled services、systemd drop-in、firewall 和 socket
   驗證均置於 immutable image、Ansible/Cloud-Init 或其他 IaC。手動 emergency fix 之後必須納入 source of truth。
 - **依角色區分節點。** Control-plane、worker、build-host 和 Docker-host 不會使用相同的 package 與 ports。

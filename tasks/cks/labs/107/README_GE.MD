@@ -6,18 +6,18 @@
 
 ამ CKS-ლაბში თქვენ გაამართავთ ჩაშენებულ **Pod Security Admission (PSA)**-ს
 namespace-ის labels-ით. production namespace-ისთვის ჩაირთვება `restricted`
-`enforce` რეჟიმში, შემოწმდება სახიფათო Pod-ის უარყოფა და განთავსდება გამავალი hardened Pod.
+`enforce` რეჟიმში, შემოწმდება სახიფათო Pod-ის უარყოფა და განთავსდება hardened Pod, რომელიც შემოწმებას გადის.
 ცალკე namespace-ისთვის ჩართავთ დამკვირვებელ რეჟიმებს `audit` და `warn` დონით
 `baseline`. ბოლოს კონტეინერის root filesystem გახდება read-only, ხოლო ერთადერთი
 საჭირო ჩაწერა `emptyDir`-ში დაიშვება.
 
 იმუშავეთ მხოლოდ დავალებების ობიექტებთან. კლასტერში წინასწარ შექმნილია ცარიელი namespace-ები
-`psa-restricted-107` და `psa-observe-107`; PSA-labels და workload მათში არ არის.
+`psa-restricted-107`, `psa-observe-107` და `psa-controller-107`; PSA-labels და workload მათში არ არის.
 
 ## შეამოწმეთ თავი სტარტამდე
 
 <details>
-<summary>1. რით განსხვავდება `enforce` `audit`/`warn`-გან Pod Security Admission-ში?</summary>
+<summary>1. რით განსხვავდება `enforce` `audit`/`warn`-ისგან Pod Security Admission-ში?</summary>
 
 `enforce` რეალურად ბლოკავს არჩეული PSS-დონის დამრღვევი Pod-ის შექმნას - admission request შეცდომით სრულდება. `audit`/`warn` მოთხოვნას არ ბლოკავს: Pod მაინც იქმნება, მაგრამ `audit` kube-apiserver-ის audit log-ში annotation-ს ამატებს, ხოლო `warn` მომხმარებელს `kubectl apply`-ისას ტექსტურ გაფრთხილებას აჩვენებს. ეს პასუხისმგებლობის განსხვავებული დონეებია: `audit`/`warn` - დაკვირვებისთვის რეალური ბლოკირების ჩართვამდე, `enforce` - თავად დაცვა.
 </details>
@@ -29,14 +29,14 @@ namespace-ის labels-ით. production namespace-ისთვის ჩა�
 </details>
 
 <details>
-<summary>3. რატომ არ აკოპირებს `ValidatingAdmissionPolicy` დავალება 6-დან PSA-ს, არამედ ავსებს მას?</summary>
+<summary>3. რატომ არ ადუბლირებს `ValidatingAdmissionPolicy` დავალება 6-დან PSA-ს, არამედ ავსებს მას?</summary>
 
-PSS `restricted` განსაზღვრავს security-ველების ფიქსირებულ, სტანდარტიზებულ ნაკრებს (non-root, capabilities, seccomp, escalation). `automountServiceAccountToken` ამ ნაკრებში არ შედის - PSA მას საერთოდ არ ამოწმებს. ესე იგი, Pod შეიძლება სრულად თავსებადი იყოს `restricted`-თან და მაინც მშვიდად მიიღოს მიმაგრებული API-token, რომელიც მას არ სჭირდება. Custom `ValidatingAdmissionPolicy` ხურავს სწორედ ამ ხარვეზს, იმის ჩანაცვლების ან დუბლირების ცდის გარეშე, რასაც PSA უკვე აკეთებს.
+PSS `restricted` განსაზღვრავს security-ველების ფიქსირებულ, სტანდარტიზებულ ნაკრებს (non-root, capabilities, seccomp, escalation). `automountServiceAccountToken` ამ ნაკრებში არ შედის - PSA მას საერთოდ არ ამოწმებს. ესე იგი, Pod შეიძლება სრულად თავსებადი იყოს `restricted`-თან და მაინც ჩუმად მიიღოს მიმაგრებული API-ტოკენი, რომელიც მას არ სჭირდება. Custom `ValidatingAdmissionPolicy` ხურავს სწორედ ამ ხარვეზს, იმის ჩანაცვლების ან დუბლირების ცდის გარეშე, რასაც PSA უკვე აკეთებს.
 </details>
 
 ## ინფრასტრუქტურა
 
-გარემო იშლება Terragrunt-ით AWS `eu-central-1`-ში:
+გარემო განთავსდება Terragrunt-ით AWS `eu-central-1`-ში:
 
 | კომპონენტი | დანიშნულება |
 |---|---|
@@ -67,7 +67,7 @@ check_result
 ---
 | **1** | **Enforce restricted დაფიქსირებული ვერსიით** |
 | :---: | :--- |
-| რას ვაკეთებთ | namespace `psa-restricted-107`-ზე დააყენეთ `pod-security.kubernetes.io/enforce=restricted` და `pod-security.kubernetes.io/enforce-version=v1.36`. დარწმუნდით, რომ PSA მართლაც უარყოფს სახიფათო Pod-ს: server-side dry-run Pod-ისა `hostNetwork: true`-ით ამ namespace-ში უნდა დასრულდეს შეცდომით `violates PodSecurity`-ით. სისტემური namespace-ების labels ნუ შეცვლით. |
+| რას ვაკეთებთ | namespace `psa-restricted-107`-ზე დააყენეთ `pod-security.kubernetes.io/enforce=restricted` და `pod-security.kubernetes.io/enforce-version=v1.36`. დარწმუნდით, რომ PSA მართლაც უარყოფს სახიფათო Pod-ს: Pod-ის server-side dry-run `hostNetwork: true`-ით ამ namespace-ში უნდა დასრულდეს `violates PodSecurity` შეცდომით. სისტემური namespace-ების labels ნუ შეცვლით. |
 | მიღების კრიტერიუმები | ორივე enforce-label-ს აქვს ზუსტი მნიშვნელობები; სახიფათო Pod `psa-restricted-107`-ში admission-ს ვერ გადის; სისტემური namespace-ები `kube-system`, `kube-public` და `kube-node-lease` ამ ლაბორატორიის ფარგლებში არ იღებენ `pod-security.kubernetes.io/*` labels-ს. |
 
 <details>
@@ -127,13 +127,13 @@ echo "after-label exit: $?"
 ---
 | **2** | **Hardened Pod, რომელიც restricted-ს გადის** |
 | :---: | :--- |
-| რას ვაკეთებთ | შექმენით Pod `restricted-app` `psa-restricted-107`-ში `busybox:1.36`-დან, რომელიც root-ით არ მუშაობს და მაშინვე არ სრულდება. დააყენეთ pod-level `runAsNonRoot: true`, `runAsUser: 1000` და `seccompProfile: RuntimeDefault`. container securityContext-ში აკრძალეთ privilege escalation, გადააგდეთ capability `ALL`, აშკარად დატოვეთ `privileged: false` და დააყენეთ `seccompProfile: RuntimeDefault`. |
+| რას ვაკეთებთ | შექმენით Pod `restricted-app` `psa-restricted-107`-ში `busybox:1.36`-დან, რომელიც root-ით არ მუშაობს და მაშინვე არ სრულდება. დააყენეთ pod-level `runAsNonRoot: true`, `runAsUser: 1000` და `seccompProfile: RuntimeDefault`. container securityContext-ში აკრძალეთ privilege escalation, გადააგდეთ capability `ALL`, ცხადად დატოვეთ `privileged: false` და დააყენეთ `seccompProfile: RuntimeDefault`. |
 | მიღების კრიტერიუმები | Pod მიღებულია PSA-ს მიერ და გაშვებულია; მუშაობს როგორც UID 1000/non-root, და არც ერთი container/init/ephemeral container არ გადაფარავს pod-level `runAsUser: 1000`-ს; seccomp - `RuntimeDefault`; escalation და privileged აკრძალულია; capabilities `ALL` გადაგდებულია. |
 
 <details>
 <summary>💡 მინიშნება დავალება 2-ისთვის</summary>
 
-თუ Pod admission rejection-ს იღებს - შეცდომის შეტყობინება ყურადღებით წაიკითხეთ, ის ჩვეულებრივ ასახელებს ზუსტ ნაკლულ ველს (მაგალითად, "container has no capabilities.drop"). მნიშვნელოვანი დეტალი PSS `restricted`-ის სემანტიკის შესახებ Kubernetes 1.36-ში: ის მოითხოვს ეფექტურ (არა აუცილებლად სიტყვასიტყვით გამეორებულ) დასაშვებ `seccompProfile`-ს - pod-level პროფილი (`spec.securityContext.seccompProfile.type`) შეიძლება მემკვიდრეობით გადაეცეს კონტეინერებს, რომლებსაც საკუთარი ველი არ აქვთ მითითებული, და პირიქით, container-level ველი საკმარისია, თუ ის აშკარად მითითებულია ყველა კონტეინერზე, pod-level პროფილის გარეშეც. ანუ თავად PSS სიტყვასიტყვით ორივე დონეს ერთდროულად არ მოითხოვს. **ამ ლაბში ჩვენ განზრახ გთხოვთ `RuntimeDefault` აშკარად მიუთითოთ როგორც Pod-ზე, ისე კონტეინერზე** - არა იმიტომ, რომ ამას PSS მოითხოვს, არამედ იმისთვის, რომ კონფიგურაციის ორივე დონეზე ივარჯიშოთ. ანალოგიურად `runAsUser: 1000` - ეს სწორედ ამ ლაბის explicit hardening-გადაწყვეტილებაა: PSS `restricted` კრძალავს UID `0`-ს, მაგრამ კონკრეტულად `1000`-ს არ მოითხოვს (ნებისმიერი არანულოვანი მნიშვნელობა ან ველის სრული არარსებობა თავად PSS-ისთვის დასაშვებია).
+თუ Pod admission rejection-ს იღებს - შეცდომის შეტყობინება ყურადღებით წაიკითხეთ, ის ჩვეულებრივ ასახელებს ზუსტ ნაკლულ ველს (მაგალითად, "container has no capabilities.drop"). მნიშვნელოვანი დეტალი PSS `restricted`-ის სემანტიკის შესახებ Kubernetes 1.36-ში: ის მოითხოვს ეფექტურ (არა აუცილებლად სიტყვასიტყვით გამეორებულ) დასაშვებ `seccompProfile`-ს - pod-level პროფილი (`spec.securityContext.seccompProfile.type`) შეიძლება მემკვიდრეობით გადაეცეს კონტეინერებს, რომლებსაც საკუთარი ველი არ აქვთ მითითებული, და პირიქით, container-level ველი საკმარისია, თუ ის ცხადად მითითებულია ყველა კონტეინერზე, pod-level პროფილის გარეშეც. ანუ თავად PSS სიტყვასიტყვით ორივე დონეს ერთდროულად არ მოითხოვს. **ამ ლაბში ჩვენ განზრახ გთხოვთ `RuntimeDefault` ცხადად მიუთითოთ როგორც Pod-ზე, ისე კონტეინერზე** - არა იმიტომ, რომ ამას PSS მოითხოვს, არამედ იმისთვის, რომ კონფიგურაციის ორივე დონეზე ივარჯიშოთ. ანალოგიურად `runAsUser: 1000` - ეს სწორედ ამ ლაბის explicit hardening-გადაწყვეტილებაა: PSS `restricted` კრძალავს UID `0`-ს, მაგრამ კონკრეტულად `1000`-ს არ მოითხოვს (ნებისმიერი არანულოვანი მნიშვნელობა ან ველის სრული არარსებობა თავად PSS-ისთვის დასაშვებია).
 </details>
 
 ---
@@ -207,7 +207,7 @@ echo "exit code: $?"
 <details>
 <summary>💡 მინიშნება დავალება 4-ისთვის</summary>
 
-თუ Pod არ შეიქმნა - შეამოწმეთ, შემთხვევით ხომ არ დააყენეთ `enforce` label დავალება 3-ში მხოლოდ `audit`/`warn`-ის ნაცვლად. PSA-ს Warning პირდაპირ `kubectl apply`-ის გამოტანაში ჩნდება (`Warning: would violate PodSecurity "baseline:v1.36"`), მის ძებნა ცალკე ლოგში საჭირო არ არის.
+თუ Pod არ შეიქმნა - შეამოწმეთ, შემთხვევით ხომ არ დააყენეთ `enforce` label დავალება 3-ში მხოლოდ `audit`/`warn`-ის ნაცვლად. PSA-ს Warning პირდაპირ `kubectl apply`-ის გამოტანაში ჩნდება (`Warning: would violate PodSecurity "baseline:v1.36"`), მისი ძებნა ცალკე ლოგში საჭირო არ არის.
 </details>
 
 <details>
@@ -222,7 +222,7 @@ kubectl get pod baseline-audit-sample -n psa-observe-107 -o jsonpath='{.status.p
 ```
 
 შეადარეთ namespace `psa-restricted-107`-ს (დავალება 1): იგივე nonsafe manifest იქ
-უნდა უარყოფილიყო, ხოლო აქ - მიღებულია. განსხვავება სწორედ `enforce` label-შია, რომელიც
+უნდა იქნეს უარყოფილი, ხოლო აქ - მიღებული. განსხვავება სწორედ `enforce` label-შია, რომელიც
 ერთ namespace-ს აქვს და მეორეს არ აქვს:
 
 ```bash
@@ -233,7 +233,7 @@ kubectl get namespace psa-restricted-107 psa-observe-107 --show-labels
 ---
 | **5** | **Read-only root filesystem writable emptyDir-ით** |
 | :---: | :--- |
-| რას ვაკეთებთ | დაამუშავეთ `restricted-app`: კონტეინერზე ჩართეთ `readOnlyRootFilesystem: true`. შექმენით volume `writable-tmp` ტიპით `emptyDir` (რეკომენდებულია `medium: Memory`, რათა დროებითი ფაილები node-ის დისკზე არ მოხვდეს) და მიამაგრეთ ის `/tmp`-ზე `readOnly: true`-ის გარეშე. კონტეინერს მხოლოდ ამ დროებით ტომში ჩაწერა აქვს დაშვებული; `hostPath` ნუ გამოიყენებთ. დაამტკიცეთ ორივე შედეგი Pod-ის შიგნით ცოცხალი გამოძახებით: კონტეინერის root-ში ჩაწერის ცდა (მაგალითად, `touch /root-write-test.txt`) უნდა დასრულდეს შეცდომით `Read-only file system`, ხოლო `/tmp/test.txt`-ში ჩაწერა - წარმატებით გავიდეს. Pod-ის უცვლელი ველების შეცვლისას წაშალეთ და თავიდან შექმენით `restricted-app` იმავე სახელით. |
+| რას ვაკეთებთ | დაამუშავეთ `restricted-app`: კონტეინერზე ჩართეთ `readOnlyRootFilesystem: true`. შექმენით volume `writable-tmp` ტიპით `emptyDir` (რეკომენდებულია `medium: Memory`, რათა დროებითი ფაილები node-ის დისკზე არ მოხვდეს) და მიამაგრეთ ის `/tmp`-ზე `readOnly: true`-ის გარეშე. კონტეინერს მხოლოდ ამ დროებით ტომში ჩაწერა აქვს დაშვებული; `hostPath` ნუ გამოიყენებთ. დაამტკიცეთ ორივე შედეგი Pod-ის შიგნით ცოცხალი გამოძახებით: კონტეინერის root-ში ჩაწერის ცდა (მაგალითად, `touch /root-write-test.txt`) უნდა დასრულდეს შეცდომით `Read-only file system`, ხოლო `/tmp/test.txt`-ში ჩაწერა - წარმატებით გავიდეს. Pod-ის შეუცვლელი (immutable) ველების შეცვლისას წაშალეთ და თავიდან შექმენით `restricted-app` იმავე სახელით. |
 | მიღების კრიტერიუმები | კონტეინერს აქვს read-only root filesystem; `emptyDir` სახელით `writable-tmp` მიმაგრებულია `/tmp`-ზე როგორც writable; regular containers-ისთვის ეს ერთადერთი writable declarative `volumeMount`-ია, ხოლო ყველა დამატებითი `volumeMounts` read-only-ა; hardened-პარამეტრები დავალება 2-დან შენარჩუნებულია; კონტეინერის root-ში ჩაწერის ცოცხალი ცდა აბრუნებს `Read-only file system`-ს, ხოლო `/tmp/test.txt`-ში ჩაწერა წარმატებით და წასაკითხი შიგთავსით სრულდება. |
 
 <details>
@@ -245,8 +245,8 @@ kubectl get namespace psa-restricted-107 psa-observe-107 --show-labels
 ---
 | **6** | **Native ValidatingAdmissionPolicy: `automountServiceAccountToken: false`-ის მოთხოვნა** |
 | :---: | :--- |
-| რას ვაკეთებთ | • PSA `restricted` უკვე მოითხოვს `allowPrivilegeEscalation: false`-ს, `capabilities.drop` შეიცავს `ALL`-ს, non-root და seccomp - დავალება 2 სწორედ ამას აჩვენებს.<br/>• მაგრამ PSS `restricted` `automountServiceAccountToken`-ს **არ ამოწმებს**: Pod-მა, რომელსაც Kubernetes API არ სჭირდება, შეიძლება მშვიდად მიიღოს მიმაგრებული ServiceAccount token და PSA სრულად გაიაროს. ეს ცალკე, PSS-ით დაუფარავი control-ია, ამიტომ აქ სწორედ custom `ValidatingAdmissionPolicy` არის მისაღები, და არა ჩაშენებული PSA-ს დუბლირება.<br/>• შექმენით `ValidatingAdmissionPolicy` `require-no-automount-token` CEL-გამოსახულებით, რომელიც Pod-ის დონეზე მოითხოვს `automountServiceAccountToken == false`-ს.<br/>• გამოიყენეთ `ValidatingAdmissionPolicyBinding` `require-no-automount-token-binding`, შეზღუდული `matchResources.namespaceSelector`-ით `psa-restricted-107`-ზე, `validationActions: [Deny]`-ით.<br/>• დაამტკიცეთ სამივე მდგომარეობა server-side dry-run-ით: სრულად PSA-თავსებადი Pod (დავალება 2-ის ყველა ველით - non-root, seccomp, drop ALL, escalation false) ველის გარეშე უნდა მიიღოს DENY policy+binding-ის ზუსტი წყვილისგან; `automountServiceAccountToken: false` უნდა მიიღოს ALLOW; `automountServiceAccountToken: true` უნდა კვლავ მიიღოს DENY იმავე წყვილისგან.<br/>• policy-ის შექმნის შემდეგ `psa-restricted-107`-ში ახალი Pod-ები (მათ შორის თავიდან შექმნილი `restricted-app`) თავად უნდა შეიცავდნენ `automountServiceAccountToken: false`-ს, წინააღმდეგ შემთხვევაში პოლიტიკა მათ უარყოფს. |
-| მიღების კრიტერიუმები | • **ობიექტები:** `ValidatingAdmissionPolicy require-no-automount-token` და მისი `ValidatingAdmissionPolicyBinding` არსებობს, `validationActions` შეიცავს `Deny`-ს, Binding ემთხვევა მხოლოდ `psa-restricted-107`-ს. ლაბორატორიაში არსებობს ზუსტად ერთი Binding ამ policy-სთვის - `require-no-automount-token-binding`; ამ policy-ის დამატებითი Binding სხვა namespace-ებისთვის არ იქმნება.<br/>• **სამი მდგომარეობა:** PSA-თავსებადი Pod-ის server-side dry-run `automountServiceAccountToken: false`-ის გარეშე უარყოფილია სწორედ წყვილით `ValidatingAdmissionPolicy 'require-no-automount-token'` და `ValidatingAdmissionPolicyBinding 'require-no-automount-token-binding'` (და არა PSA-შეტყობინებით `violates PodSecurity` ან სხვა policy-ით); Pod `automountServiceAccountToken: false`-ით მიღებულია, ხოლო Pod `automountServiceAccountToken: true`-ით უარყოფილია იმავე ზუსტი წყვილით.<br/>• **ყველა Pod-ის დაფარვა:** policy ფარავს ყველა Pod-ს, რომელიც მისმა `resourceRules`-მა აირჩია, `psa-restricted-107`-ის შიგნით. `ValidatingAdmissionPolicy`-ში ნუ დაამატებთ `spec.matchConditions`-ს, `matchConstraints.objectSelector`-ს ან `matchConstraints.namespaceSelector`-ს, ასევე Binding `matchResources`-ში `objectSelector`-ს - ისინი coverage-ს Pod-ების ნაწილამდე ავიწროებენ, და workload შეიძლება label-ით ან მოთხოვნის პირობით შემოწმებიდან ამოვარდეს.<br/>• **Namespace scope:** განისაზღვრება მხოლოდ Binding `matchResources.namespaceSelector`-ით, ზუსტად მიბმულით `psa-restricted-107`-ზე; selector არ შეიცავს პირობებს სხვა namespace-label keys-ზე და თავისთავად ცალსახად ზღუდავს scope-ს ამ namespace-ით.<br/>• **CEL:** validation არ შეიცავს გამონაკლისებს Pod-ის სახელით/labels-ით/annotations-ით, user/request-ით, `namespaceObject`-ით, `params`-ით, `variables`-ით ან სხვა ველებით: გადაწყვეტილება დამოკიდებულია მხოლოდ `object.spec.automountServiceAccountToken`-ზე (დასაშვებია ნებისმიერი სწორი CEL-ფორმა, მათ შორის optional-სინტაქსი `object.spec.?automountServiceAccountToken.orValue(true) == false`). `spec.auditAnnotations` არ არის ან ცარიელია: მისი ცალკეული CEL expressions-ს `failurePolicy`-ს გავლით შეუძლია admission-ზე გავლენა, ამიტომ admission control მიეთითება მხოლოდ `spec.validations`-ით. `variables` და `paramKind` არ გამოიყენება.<br/>• **Resource scope:** `matchConstraints.resourceRules` policy-ს ზუსტად `core/v1 pods`-ით ზღუდავს ოპერაციებისთვის `CREATE` და `UPDATE`, `resourceNames`-ის გარეშე; `scope` არ არის, უდრის `*`-ს ან `Namespaced`-ს, მაგრამ არა `Cluster`-ს; `excludeResourceRules` არ გამოიყენება. Binding resource/operation scope-ს თავისი `resourceRules`/`excludeResourceRules`-ით არ ავიწროებს.<br/>• ეს საშუალებას იძლევა სრული boolean contract სამი მდგომარეობით `missing / false / true` დამტკიცდეს, და არა რამდენიმე არჩეული workload-მაგალითით. |
+| რას ვაკეთებთ | • PSA `restricted` უკვე მოითხოვს `allowPrivilegeEscalation: false`-ს, `capabilities.drop` შეიცავს `ALL`-ს, non-root და seccomp - დავალება 2 სწორედ ამას აჩვენებს.<br/>• მაგრამ PSS `restricted` `automountServiceAccountToken`-ს **არ ამოწმებს**: Pod-მა, რომელსაც Kubernetes API არ სჭირდება, შეიძლება ჩუმად მიიღოს მიმაგრებული ServiceAccount token და PSA სრულად გაიაროს. ეს ცალკე, PSS-ით დაუფარავი control-ია, ამიტომ აქ სწორედ custom `ValidatingAdmissionPolicy` არის მისაღები, და არა ჩაშენებული PSA-ს დუბლირება.<br/>• შექმენით `ValidatingAdmissionPolicy` `require-no-automount-token` CEL-გამოსახულებით, რომელიც Pod-ის დონეზე მოითხოვს `automountServiceAccountToken == false`-ს.<br/>• გამოიყენეთ `ValidatingAdmissionPolicyBinding` `require-no-automount-token-binding`, შეზღუდული `matchResources.namespaceSelector`-ით `psa-restricted-107`-ზე, `validationActions: [Deny]`-ით.<br/>• დაამტკიცეთ სამივე მდგომარეობა server-side dry-run-ით: სრულად PSA-თავსებადი Pod (დავალება 2-ის ყველა ველით - non-root, seccomp, drop ALL, escalation false) ველის გარეშე უნდა მიიღოს DENY policy+binding-ის ზუსტი წყვილისგან; `automountServiceAccountToken: false` უნდა მიიღოს ALLOW; `automountServiceAccountToken: true` უნდა კვლავ მიიღოს DENY იმავე წყვილისგან.<br/>• policy-ის შექმნის შემდეგ `psa-restricted-107`-ში ახალი Pod-ები (მათ შორის თავიდან შექმნილი `restricted-app`) თავად უნდა შეიცავდნენ `automountServiceAccountToken: false`-ს, წინააღმდეგ შემთხვევაში პოლიტიკა მათ უარყოფს. |
+| მიღების კრიტერიუმები | • **ობიექტები:** `ValidatingAdmissionPolicy require-no-automount-token` და მისი `ValidatingAdmissionPolicyBinding` არსებობს, `validationActions` შეიცავს `Deny`-ს, Binding ემთხვევა მხოლოდ `psa-restricted-107`-ს. ლაბორატორიაში არსებობს ზუსტად ერთი Binding ამ policy-სთვის - `require-no-automount-token-binding`; ამ policy-ის დამატებითი Binding სხვა namespace-ებისთვის არ იქმნება.<br/>• **სამი მდგომარეობა:** PSA-თავსებადი Pod-ის server-side dry-run `automountServiceAccountToken: false`-ის გარეშე უარყოფილია სწორედ წყვილით `ValidatingAdmissionPolicy 'require-no-automount-token'` და `ValidatingAdmissionPolicyBinding 'require-no-automount-token-binding'` (და არა PSA-შეტყობინებით `violates PodSecurity` ან სხვა policy-ით); Pod `automountServiceAccountToken: false`-ით მიღებულია, ხოლო Pod `automountServiceAccountToken: true`-ით უარყოფილია იმავე ზუსტი წყვილით.<br/>• **ყველა Pod-ის დაფარვა:** policy ფარავს ყველა Pod-ს, რომელიც მისმა `resourceRules`-მა აირჩია, `psa-restricted-107`-ის შიგნით. `ValidatingAdmissionPolicy`-ში ნუ დაამატებთ `spec.matchConditions`-ს, `matchConstraints.objectSelector`-ს ან `matchConstraints.namespaceSelector`-ს, ასევე Binding `matchResources`-ში `objectSelector`-ს - ისინი coverage-ს Pod-ების ნაწილამდე ავიწროებენ, და workload შეიძლება label-ით ან მოთხოვნის პირობით შემოწმებიდან ამოვარდეს.<br/>• **Namespace scope:** განისაზღვრება მხოლოდ Binding `matchResources.namespaceSelector`-ით, ზუსტად მიბმულით `psa-restricted-107`-ზე; selector არ შეიცავს პირობებს სხვა namespace-label keys-ზე და თავისთავად ცალსახად ზღუდავს scope-ს ამ namespace-ით.<br/>• **CEL:** validation არ შეიცავს გამონაკლისებს Pod-ის სახელით/labels-ით/annotations-ით, user/request-ით, `namespaceObject`-ით, `params`-ით, `variables`-ით ან სხვა ველებით: გადაწყვეტილება დამოკიდებულია მხოლოდ `object.spec.automountServiceAccountToken`-ზე (დასაშვებია ნებისმიერი სწორი CEL-ფორმა, მათ შორის optional-სინტაქსი `object.spec.?automountServiceAccountToken.orValue(true) == false`). `spec.auditAnnotations` არ არის ან ცარიელია: მის ცალკეულ CEL expressions-ს `failurePolicy`-ის მეშვეობით შეუძლია admission-ზე გავლენის მოხდენა, ამიტომ admission control მიეთითება მხოლოდ `spec.validations`-ით. `variables` და `paramKind` არ გამოიყენება.<br/>• **Resource scope:** `matchConstraints.resourceRules` policy-ს ზუსტად `core/v1 pods`-ით ზღუდავს ოპერაციებისთვის `CREATE` და `UPDATE`, `resourceNames`-ის გარეშე; `scope` არ არის, უდრის `*`-ს ან `Namespaced`-ს, მაგრამ არა `Cluster`-ს; `excludeResourceRules` არ გამოიყენება. Binding resource/operation scope-ს თავისი `resourceRules`/`excludeResourceRules`-ით არ ავიწროებს.<br/>• ეს საშუალებას იძლევა სრული boolean contract სამი მდგომარეობით `missing / false / true` დამტკიცდეს, და არა რამდენიმე არჩეული workload-მაგალითით. |
 
 <details>
 <summary>💡 მინიშნება დავალება 6-ისთვის</summary>
@@ -289,8 +289,8 @@ echo "baseline exit: $?"
 ```
 
 შექმენით VAP + Binding და გაიმეორეთ manifest ველის გარეშე - ახლა მოთხოვნამ უნდა მიიღოს
-DENY სწორედ `ValidatingAdmissionPolicy 'require-no-automount-token'`-გან binding-ით
-`require-no-automount-token-binding`, და არა PSA-გან. შემდეგ შეამოწმეთ ორივე აშკარა მნიშვნელობა:
+DENY სწორედ `ValidatingAdmissionPolicy 'require-no-automount-token'`-ისგან binding-ით
+`require-no-automount-token-binding`, და არა PSA-სგან. შემდეგ შეამოწმეთ ორივე ცხადი მნიშვნელობა:
 `false` უნდა გაიაროს, ხოლო `true` უნდა მიიღოს DENY იმავე ზუსტი წყვილისგან.
 
 ```bash
@@ -356,7 +356,7 @@ EOF
 # მოსალოდნელია: pod/self-check-automount-false created (ან server-side dry-run success)
 ```
 
-ახლა დააყენეთ `automountServiceAccountToken: true` - მოთხოვნა კვლავ უნდა უარყოფილ იქნას
+ახლა დააყენეთ `automountServiceAccountToken: true` - მოთხოვნა კვლავ უნდა უარყოფილ იქნეს
 ზუსტად იმავე policy-ისა და binding-ის მიერ:
 
 ```bash
@@ -423,10 +423,12 @@ echo "exit code in psa-observe-107: $?"
 ```
 </details>
 
+---
+
 | **7** | **Controller-driven admission denial: დიაგნოსტიკა ReplicaSet events-ით** |
 | :---: | :--- |
-| რას ვაკეთებთ | ცარიელ namespace `psa-controller-107`-ში შექმენით Deployment `controller-app` (label `app=controller-app`, replicas=1) მარტივი Pod template-ით hardening-ის გარეშე (მაგალითად `busybox:1.36`, `sleep 3600`, `securityContext`-ის გარეშე) - ის წარმატებით უნდა გაეშვას, PSA ჯერ ხელს არ უშლის. შემდეგ ჩართეთ `pod-security.kubernetes.io/enforce=restricted` და `enforce-version=v1.36` ამ namespace-ზე (უკვე არსებული Pod აგრძელებს მუშაობას - PSA უკვე შექმნილ ობიექტებს არ ეხება). წაშალეთ მიმდინარე Pod: ReplicaSet შეეცდება ჩანაცვლების შექმნას, და ახლა admission მას უარყოფს. შეამოწმეთ მიზეზი `kubectl -n psa-controller-107 describe rs`-ით და `kubectl -n psa-controller-107 get events`-ით - იქ იქნება `FailedCreate` ტექსტით `violates PodSecurity "restricted:v1.36"`. გაასწორეთ Deployment-ის Pod template (დაამატეთ იგივე hardening ველები, რაც დავალება 2-ში: non-root, `seccompProfile: RuntimeDefault`, `capabilities.drop: [ALL]`, `allowPrivilegeEscalation: false`) და დაელოდეთ, სანამ ReplicaSet წარმატებით შექმნის ახალ, გამავალ Pod-ს. |
-| მიღების კრიტერიუმები | Namespace enforces `restricted:v1.36`; Deployment template სრულად PSS-restricted-compliant-ია; მიმდინარე Pod-ის წაშლის შემდეგ ReplicaSet რეალურად ქმნის ახალ Ready Pod-ს მოქმედი enforce-რეჟიმის ქვეშ (არა უბრალოდ "ობიექტი არსებობს" - მოწმდება ცოცხალი წაშლითა და ხელახალი შექმნით). |
+| რას ვაკეთებთ | ცარიელ namespace `psa-controller-107`-ში შექმენით Deployment `controller-app` (label `app=controller-app`, replicas=1) მარტივი Pod template-ით hardening-ის გარეშე (მაგალითად `busybox:1.36`, `sleep 3600`, `securityContext`-ის გარეშე) - ის წარმატებით უნდა გაეშვას, PSA ჯერ ხელს არ უშლის. შემდეგ ჩართეთ `pod-security.kubernetes.io/enforce=restricted` და `enforce-version=v1.36` ამ namespace-ზე (უკვე არსებული Pod აგრძელებს მუშაობას - PSA უკვე შექმნილ ობიექტებს არ ეხება). წაშალეთ მიმდინარე Pod: ReplicaSet შეეცდება ჩანაცვლების შექმნას, და ახლა admission მას უარყოფს. შეამოწმეთ მიზეზი `kubectl -n psa-controller-107 describe rs`-ით და `kubectl -n psa-controller-107 get events`-ით - იქ იქნება `FailedCreate` ტექსტით `violates PodSecurity "restricted:v1.36"`. გაასწორეთ Deployment-ის Pod template (დაამატეთ იგივე hardening ველები, რაც დავალება 2-ში: non-root, `seccompProfile: RuntimeDefault`, `capabilities.drop: [ALL]`, `allowPrivilegeEscalation: false`) და დაელოდეთ, სანამ ReplicaSet წარმატებით შექმნის ახალ Pod-ს, რომელიც admission-ს გადის. |
+| მიღების კრიტერიუმები | Namespace-ში მოქმედებს enforce `restricted:v1.36`; Pod template Deployment-ში სრულად შეესაბამება PSS `restricted`-ს; მიმდინარე Pod-ის წაშლის შემდეგ ReplicaSet რეალურად ქმნის ახალ Ready Pod-ს მოქმედი enforce-რეჟიმის ქვეშ (არა უბრალოდ "ობიექტი არსებობს" - მოწმდება ცოცხალი წაშლითა და ხელახალი შექმნით). |
 
 <details>
 <summary>💡 მინიშნება დავალება 7-ისთვის</summary>
@@ -451,7 +453,7 @@ check_result
 ```
 
 შემოწმება შეიცავს Init-ს და შვიდ დამოუკიდებელ დავალებას. ის დამატებით ასრულებს
-სახიფათო Pod-ის server-side dry-run-ს, ამიტომ მუდმივი «ცუდი» Pod-ის არარსებობა
+სახიფათო Pod-ის server-side dry-run-ს, ამიტომ მუდმივი „ცუდი“ Pod-ის არარსებობა
 restricted namespace-ში - მოსალოდნელი და სწორი შედეგია. დავალება 7-ში checker თავად შლის
 მიმდინარე Pod `controller-app`-ს და ამოწმებს, რომ ReplicaSet რეალურად ხელახლა ქმნის Ready Pod-ს -
 events-ის ტექსტს დამტკიცებად არ იღებს.

@@ -91,13 +91,13 @@ kubectl -n cks-114 wait --for=condition=Ready pod -l app=backend --timeout=90s
 
 ```bash
 node_ip=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
-# kube-proxy NodePort-ის წესებს 1-2 წამიანი დაყოვნებით პროგრამავს - ვიცდით, სანამ პორტი უპასუხებს
+# kube-proxy NodePort-ის წესებს 1-2 წამის დაყოვნებით აპროგრამებს - ვიცდით, სანამ პორტი არ უპასუხებს
 for i in $(seq 1 15); do curl -s -o /dev/null -m2 "http://$node_ip:30114/" && break; sleep 2; done
 curl -sS -o /dev/null -w 'external HTTP:%{http_code}\n' -m5 "http://$node_ip:30114/"
 kubectl -n cks-114 run probe --image=curlimages/curl:8.10.1 --restart=Never --command -- sleep 300
 kubectl -n cks-114 wait --for=condition=Ready pod/probe --timeout=60s
 kubectl -n cks-114 exec probe -- curl -sS -o /dev/null -w 'in-cluster HTTP:%{http_code}\n' -m5 http://kubernetes-public.cks-114.svc.cluster.local/
-# Task 4-მდე დაელოდეთ NodePort და DNS probes-ის მონიტორის მიერ დამოუკიდებელ დაფიქსირებას.
+# დავალება 4-მდე დაელოდეთ NodePort-ისა და DNS probe-ების მონიტორის მიერ დამოუკიდებელ დაფიქსირებას.
 for i in $(seq 1 60); do
   test -s /var/lib/cks-lab114-checker/nodeport-phase-seen && break
   sleep 3
@@ -112,8 +112,8 @@ in-cluster HTTP:200
 
 ## 4. Reduce exposure: NodePort -> ClusterIP
 
-`kubectl patch` მასივზე `ports` `nodePort`-ს თავისთავად **არ შლის** - საჭიროა მთელი მასივის ჩანაცვლება
-ამ ველის გარეშე (ან `kubectl edit` ხელით და სტრიქონის მოხსნა):
+`nodePort`-ს აშკარად ვშლით: ერთი JSON patch ცვლის ტიპს და შლის `/spec/ports/0/nodePort`-ს
+(ან `kubectl edit` ხელით და სტრიქონის მოხსნა):
 
 ```bash
 kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
@@ -122,8 +122,8 @@ kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
 ]'
 ```
 
-ვამოწმებთ იმავე წყვილ შემოწმებას (kube-proxy NodePort-ის წესებსაც მყისიერად არ ხსნის, ამიტომ ჯერ
-ვიცდით, სანამ პორტი პასუხს შეწყვეტს):
+ვასრულებთ იმავე ორ შემოწმებას (kube-proxy NodePort-ის წესებს არც ხსნის მყისიერად, ამიტომ ჯერ
+ვიცდით, სანამ პორტი პასუხს არ შეწყვეტს):
 
 ```bash
 for i in $(seq 1 15); do curl -s -o /dev/null -m2 "http://$node_ip:30114/" || break; sleep 2; done

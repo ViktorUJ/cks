@@ -18,7 +18,7 @@ CURRENT   NAME                        CLUSTER     AUTHINFO         NAMESPACE
 staging-admin@staging
 ```
 
-`staging`/`legacy` sont des decoy, le serveur ne se résout pas/ne répond pas. Nous basculons sur le vrai :
+`staging`/`legacy` sont des decoys, le serveur ne se résout pas/ne répond pas. Nous basculons sur le vrai :
 
 ```bash
 kubectl config use-context cluster1-admin@cluster1
@@ -97,7 +97,7 @@ curl -sS -o /dev/null -w 'external HTTP:%{http_code}\n' -m5 "http://$node_ip:301
 kubectl -n cks-114 run probe --image=curlimages/curl:8.10.1 --restart=Never --command -- sleep 300
 kubectl -n cks-114 wait --for=condition=Ready pod/probe --timeout=60s
 kubectl -n cks-114 exec probe -- curl -sS -o /dev/null -w 'in-cluster HTTP:%{http_code}\n' -m5 http://kubernetes-public.cks-114.svc.cluster.local/
-# Avant la Task 4, attendez que le moniteur consigne indépendamment les probes NodePort et DNS.
+# Avant la tâche 4, attendez que le moniteur consigne indépendamment les probes NodePort et DNS.
 for i in $(seq 1 60); do
   test -s /var/lib/cks-lab114-checker/nodeport-phase-seen && break
   sleep 3
@@ -112,8 +112,8 @@ in-cluster HTTP:200
 
 ## 4. Reduce exposure: NodePort -> ClusterIP
 
-`kubectl patch` sur le tableau `ports` **ne supprime pas** `nodePort` de lui-même - il faut remplacer tout le tableau
-sans ce champ (ou `kubectl edit` à la main et retirer la ligne) :
+Nous retirons explicitement `nodePort` : un seul JSON patch change le type et supprime `/spec/ports/0/nodePort`
+(ou `kubectl edit` à la main et retirer la ligne) :
 
 ```bash
 kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
@@ -122,7 +122,7 @@ kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
 ]'
 ```
 
-Nous vérifions la même paire de contrôles (kube-proxy retire les règles NodePort lui aussi pas instantanément, donc d'abord
+Nous vérifions la même paire de contrôles (kube-proxy ne retire pas non plus instantanément les règles NodePort, donc d'abord
 on attend que le port cesse de répondre) :
 
 ```bash
@@ -138,7 +138,7 @@ in-cluster HTTP:200
 ```
 
 `kubernetes-public:30114` n'est plus écouté par kube-proxy sur le nœud (transport deny) ; le chemin intra-cluster
-via le Service DNS n'a pas régressé.
+via le nom DNS du Service n'a pas régressé.
 
 ```bash
 kubectl -n cks-114 delete pod probe --ignore-not-found

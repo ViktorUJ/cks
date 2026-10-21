@@ -160,8 +160,8 @@ los contenedores durante unos 5 segundos, y los eventos ocurridos antes no los e
 ## 4. Audit: RequestResponse para ConfigMap, Metadata para Secret
 
 Crearemos la policy según la regla del capítulo 32: el request/response completo lo escribimos solo para
-`configmaps` no sensible en `runtime-112`; para `secrets` tomamos `Metadata`, para que el cuerpo del Secret
-(tokens, contraseñas) no llegue al journal. `None` y `omitStages` realmente reducen el high-volume
+el recurso no sensible `configmaps` en `runtime-112`; para `secrets` tomamos `Metadata`, para que el cuerpo del Secret
+(tokens, contraseñas) no llegue al audit log. `None` y `omitStages` realmente reducen el high-volume
 noise; el catch-all final `Metadata` es fallback logging, y no supresión de ruido. El orden de las reglas es importante:
 las reglas específicas van antes del catch-all. La estructura del archivo es del ejemplo de la documentación (sección Audit
 policy).
@@ -248,7 +248,7 @@ kubectl get --raw=/readyz
 grep -E -- '--audit-(policy-file|log-path|log-max)' /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
-Crea el ConfigMap y genera ambas peticiones, luego guarda un evento JSON adecuado de cada uno
+Crea el ConfigMap y genera ambas peticiones, luego guarda un evento JSON adecuado de cada una
 como artefactos:
 
 ```bash
@@ -412,7 +412,7 @@ cat "$DIR/evidence-summary.txt"
 
 Primero guardamos la evidence, luego aislamos el namespace a nivel de red y eliminamos el
 Pod comprometido. Es una cadena mínima de containment, y no una investigación completa:
-la credential revocation/rotation, la búsqueda de otros workload y la restauración del owner/controller se realizan con
+la credential revocation/rotation, la búsqueda de otros workloads y la restauración del owner/controller se realizan con
 un proceso IR aparte. El último comando demuestra un outcome negativo, y no busca un texto
 concreto del error.
 
@@ -439,7 +439,7 @@ cat "$DIR/containment.txt"
 # exec_exit=1 (no 0)
 ```
 
-## Tarea 7. Override de un macro upstream y salida a JSON/archivo
+## 7. Override de un macro upstream y salida a JSON/archivo
 
 La regla estándar **Terminal shell in container** se disparará también con una herramienta
 legítima. El lugar correcto para una excepción environment-specific no es editar
@@ -521,7 +521,7 @@ systemctl restart falco && sleep 10
 
 En `/etc/falco/config.d/` habilita el formato JSON y la salida a archivo. Falco 0.38+ por defecto
 recoge los `config_files` de este directorio; añadir directamente a `falco.yaml` crea
-claves top-level duplicadas en un nuevo arranque y sobrevive peor a la actualización del paquete:
+claves top-level duplicadas al repetir la ejecución y sobrevive peor a la actualización del paquete:
 `config.d` está pensado precisamente para adiciones locales:
 
 ```bash
@@ -554,7 +554,7 @@ tail -n 20 /var/log/falco/events.log \
 # {"pod": "immutable-app", "ns": "runtime-112"}
 ```
 
-## Tarea 8. Audit webhook backend
+## 8. Audit webhook backend
 
 `audit-receiver` ya lo desplegó el script de arranque. Crea un webhook kubeconfig que apunte
 a su Service; para el laboratorio se admite HTTP, en producción el webhook requiere HTTPS y client
@@ -623,7 +623,7 @@ Comprobación intermedia:
 check_result
 ```
 
-## Tarea 9. Tarea de integración: elusión del admission mediante containerd y detección mediante Falco
+## 9. Tarea de integración: elusión del admission mediante containerd y detección mediante Falco
 
 Esta tarea vincula Supply Chain Security (laboratorio 111, capítulo 26) con el Runtime Security de este
 laboratorio: la comprobación de admission (Kyverno) no ve un contenedor si se creó directamente mediante
@@ -633,7 +633,7 @@ lanzado.
 
 **Importante: no lo confundas con el laboratorio 111**: allí la policy comprueba la firma criptográfica
 (Cosign). Aquí la policy comprueba solo el registry/repository allowlist: un admission
-control más simple sin signature/attestor. El principio general para ambos es uno: el admission funciona
+control más simple sin signature/attestor. Ambos comparten el mismo principio: el admission funciona
 solo en el API admission path.
 
 Los lab-owned local registry names los preparó el bootstrap (no el Docker Hub público: el controlled
@@ -722,9 +722,9 @@ Ahora modelamos un camino que el admission controller no ve: el contenedor se cr
 en el container runtime mediante CRI, esquivando por completo kube-apiserver. Para ello en el control-plane hay
 un helper `cks112-run <imagen> <id> '<comando>'` (un wrapper de `crictl runp/create/start`) y
 `cks112-rm <id>` para la limpieza. Por qué no `ctr run`: los contenedores creados mediante `ctr` no son
-conocidos para CRI, y Falco para ellos siempre escribe `container.image.repository = <NA>`: las imágenes trusted y
+conocidos por CRI, y Falco para ellos siempre escribe `container.image.repository = <NA>`: las imágenes trusted y
 untrusted serían indistinguibles. Un contenedor creado mediante CRI, Falco lo ve con la imagen.
-Cada ejecución recibe un único sufijo `$RUN_ID`, y todos los ID creados por ella usan
+Cada ejecución recibe un sufijo único `$RUN_ID`, y todos los ID creados por ella usan
 ese sufijo, por lo que una nueva ejecución no chocará con los restos del intento anterior:
 
 ```bash
@@ -803,7 +803,7 @@ son equivalentes como security control:
 cat >> /etc/falco/falco_rules.local.yaml <<EOF
 
 - rule: CKS112 Runtime Bypass of Admission
-  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via ctr/crictl directly)
+  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via crictl/CRI directly)
   condition: >
     spawned_process and
     container.id != host and
@@ -843,13 +843,13 @@ cks112-rm $BYPASS_1
 cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_2 'echo CKS112_CTR_BYPASS; sleep 5'
 sleep 3
 journalctl -u falco-modern-bpf --since "$START_TS" --no-pager | grep 'CKS112 runtime bypass of admission' > /tmp/art/9/falco-bypass-attempt.log
-cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-alpine.log
+cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-untrusted.log
 cks112-rm $BYPASS_2
 ```
 
 Por último, demostramos el propio prefix-trap: un repository construido como `${TRUSTED_REPO}-evil`
 EMPIEZA por la misma subcadena que el `$TRUSTED_REPO` permitido, pero no es igual a él exactamente.
-Si la Falco condition usara `startswith` (como en una versión anterior e incorrecta
+Si la Falco condition usara `startswith` (como en la variante ingenua
 de esta regla), esa imagen pasaría DESAPERCIBIDA: precisamente por eso la condición corregida
 `!=` debe capturarla. La imagen prefix-trap la preparó el bootstrap (`$CKS112_PREFIX_IMAGE`,
 un digest aparte):
@@ -869,10 +869,10 @@ scp 'control-plane:/tmp/art/9/*' /var/work/tests/artifacts/9/
 ```
 
 > **Estructura de los archivos de evidence de la tarea 9.** `falco-bypass-attempt.log` es el artifact
-> combinado principal, que comprueba la aceptación automática (contiene ambas alertas:
+> combinado principal que se verifica en la aceptación automática (contiene ambas alertas:
 > untrusted y prefix-trap, pero no debe contener una alerta para el trusted repo). Además
 > cada probe escribe su propio archivo para el diagnóstico manual: `probe-trusted.log` (debe estar
-> vacío: ese es el negative control), `probe-alpine.log` y `probe-prefix.log`.
+> vacío: ese es el negative control), `probe-untrusted.log` y `probe-prefix.log`.
 
 La conclusión clave de esta tarea: el registry allowlist en admission y Falco en runtime no son
 capas intercambiables, sino complementarias. El admission detiene el camino a través de la Kubernetes
@@ -883,7 +883,7 @@ se aplica a la signature verification del laboratorio 111: la diferencia es solo
 comprueba la firma, y aquí simplemente el registry/repository. Una conclusión adicional de
 la comprobación prefix-trap de arriba: la Falco condition y la Kyverno CEL policy deben usar la MISMA
 semántica de comparación (`==`/`!=`, y no `startsWith`/prefix); de lo contrario dejan de ser
-security-controles equivalentes, aunque ambos comprueben formalmente "el mismo" repository.
+security-controles equivalentes, aunque ambas comprueben formalmente "el mismo" repository.
 
 ## 10. Detectar el acceso a `/dev/mem` mediante una file/device-open condition
 
@@ -920,7 +920,7 @@ systemctl restart falco && sleep 10
 
 Espera al siguiente ciclo periódico de `mem-scanner` (cada ~15 segundos) y encuentra el
 disparo. El identificador del Pod tómalo DEL propio alert (`k8s_pod=`), y no adivines de antemano
-cuál de las dos réplicas es la culpable: es la misma regla de principio "empieza por el
+cuál de las dos réplicas es la culpable: es la misma regla básica "empieza por el
 alert" que en la tarea 6:
 
 ```bash

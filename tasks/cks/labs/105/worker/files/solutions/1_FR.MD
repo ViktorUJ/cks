@@ -2,7 +2,7 @@
 
 # Lab 105 - solution de référence : System Hardening de l'OS et Docker
 
-> Comment travailler : on entre une seule fois sur le nœud par `ssh` et on exécute les commandes directement dessus (sous
+> Comment travailler : on se connecte une seule fois au nœud par `ssh` et on exécute les commandes directement dessus (sous
 > `sudo -i`, pour ne pas écrire `sudo` avant chaque commande) - c'est plus rapide que d'envoyer
 > chaque commande par un `ssh` distinct, et c'est ainsi qu'il convient de travailler à l'examen. Le nom du
 > nœud control-plane se voit avec `kubectl get no` :
@@ -83,11 +83,11 @@ echo 'tcp/8080: closed' > /var/work/tests/artifacts/2/port-8080.txt
 ## 3. Limiter le trafic entrant avec UFW
 
 Nous déterminons d'abord la topologie et les sources nécessaires. C'est un control-plane mono-nœud,
-qui exécute aussi des workload. Le worker doit avoir un accès SSH et API ; le Pod CIDR et le
+qui exécute aussi des workloads. Le worker doit avoir un accès SSH et API ; le Pod CIDR et le
 nœud lui-même, un accès API. Il n'y a pas ici de flows kubelet/CNI inter-nœuds. Nous n'ouvrons pas `22`/`6443` à
 `Anywhere`.
 
-Sur le `worker`, nous regardons les valeurs nécessaires à l'œil :
+Sur le `worker`, nous relevons visuellement les valeurs nécessaires :
 
 ```bash
 kubectl get no -o wide                                      # INTERNAL-IP du nœud
@@ -105,7 +105,7 @@ printf 'role=control-plane,workload\nworker_ip=%s\nnode_ip=%s\npod_cidr=%s\n' \
 
 Baseline AVANT UFW : nous vérifions que TCP/10250 (kubelet HTTPS) est réellement accessible maintenant - sans
 cela, le « bloqué » après UFW ne démontre rien, le port pouvait être indisponible pour une autre
-raison (security group, routing). Le checker se compare séparément à son propre baseline, mais votre
+raison (security group, routing). Le checker effectue séparément sa propre comparaison avec son baseline, mais votre
 enregistrement est aussi nécessaire :
 
 ```bash
@@ -203,11 +203,11 @@ Vérification declared vs effective : `ufw show added` est la liste déclarative
 à partir des métadonnées `### tuple ###`, que ufw écrit lui-même dans `user.rules` lors de l'ajout d'une règle
 via la CLI. L'état réel du noyau après `ufw reload` est ce que montre
 `ufw show user-rules`. Comparez non seulement la QUANTITÉ de lignes, mais aussi leur CONTENU
-(source/port/proto) : `ufw-user-input` doit montrer le loopback (all, lo) et trois règles tcp
-dpt:22/6443 avec les source-adresses exactes, et `ufw6-user-input` - EXACTEMENT une ligne, le même
+(source/port/proto) : `ufw-user-input` doit montrer le loopback (all, lo) et quatre règles tcp
+dpt:22/6443 avec les adresses source exactes, et `ufw6-user-input` - EXACTEMENT une ligne, le même
 loopback ACCEPT pour v6 (`ufw allow in on lo` est une règle par interface sans IP explicite,
-c'est pourquoi ufw crée toujours aussi bien la version v4 que la version v6). Toute AUTRE ligne/supplémentaire là-bas est
-un bypass étranger :
+c'est pourquoi ufw crée toujours aussi bien la version v4 que la version v6). Toute ligne AUTRE ou supplémentaire à cet endroit est
+un bypass parasite :
 
 ```bash
 ssh "$CP" 'sudo ufw show user-rules'
@@ -264,7 +264,7 @@ normal et ne signifie pas que la configuration est cassée (elle a déjà été 
 répéter la commande.
 
 `sshd -T` sans connection context n'applique pas du tout les blocs `Match` - le man de `sshd(8)`
-dit directement que `Match` en test mode ne s'applique que lorsque `-C` est passé. C'est pourquoi
+dit explicitement que `Match` en test mode ne s'applique que lorsque `-C` est passé. C'est pourquoi
 nous vérifions via `-C`, en simulant une connexion root réelle depuis le worker (les adresses sont prises dans
 `preflight.txt` de la tâche 3) :
 
@@ -290,7 +290,7 @@ TCP/2375 n'a ni TLS ni authentification : l'accès à celui-ci est pratiquement 
 l'hôte. Nous supprimons le systemd override de lab avec le TCP listener, définissons le propriétaire du unix-socket
 via un socket override et retirons `developer` du groupe `docker`.
 
-Nous appliquons les modifications via un `daemon-reload` complet + restart des **deux** unit - c'est une
+Nous appliquons les modifications via un `daemon-reload` complet + restart des **deux** units - c'est une
 étape obligatoire, et pas simplement « relire la config » : sans un vrai restart, on peut par hasard
 « réussir » la vérification si Docker a simplement cessé de répondre (alors TCP/2375 est fermé non pas parce que
 `-H tcp://` a été retiré, mais parce que le daemon ne fonctionne pas du tout).
@@ -310,7 +310,7 @@ systemctl restart docker.service
 chown root:root /var/run/docker.sock && chmod 660 /var/run/docker.sock
 ```
 
-Positive control : Docker après le restart FONCTIONNE réellement (il n'écoute pas seulement plus sur 2375 - il doit
+Positive control : Docker après le restart FONCTIONNE réellement (il ne se contente pas de ne plus écouter sur 2375 - il doit
 fonctionner pleinement via le unix-socket) :
 
 ```bash
@@ -330,7 +330,7 @@ Le contrat de la tâche est plus large que le port 2375 : la Docker API ne doit 
 `docker.socket` ne doit pas contenir de TCP `ListenStream` :
 
 ```bash
-ss -ltnp | grep -E 'dockerd|docker\.socket'    # sortie vide
+ss -ltnp | grep dockerd                        # sortie vide (le socket TCP de systemd de docker.socket est détecté par la ligne suivante)
 systemctl cat docker.socket | grep ListenStream # uniquement /run/docker.sock (et une réinitialisation vide)
 stat -c '%U %G %a' /var/run/docker.sock         # root root 660
 sudo -u developer docker ps                     # permission denied
@@ -489,14 +489,14 @@ fichier `/etc/sysctl.d/99-kubernetes.conf` déjà créé dans la tâche 8 - nous
 distincte en conflit.
 
 Sur Ubuntu, `ulimit -c 0` et `fs.suid_dumpable=0` **ne garantissent pas** l'absence de core dump :
-`man 5 core` documente directement que `RLIMIT_CORE` est ignoré par le noyau si
+`man 5 core` documente explicitement que `RLIMIT_CORE` est ignoré par le noyau si
 `kernel.core_pattern` dirige le dump vers un handler userspace via pipe (`|program`).
 Ubuntu est configuré ainsi par défaut - le crash est intercepté par Apport et enregistré dans
-`/var/lib/apport/coredump/` INDÉPENDAMMENT de `ulimit -c` du processus. La seule façon fiable
+`/var/lib/apport/coredump/` INDÉPENDAMMENT du `ulimit -c` du processus. La seule façon fiable
 est de redéfinir `kernel.core_pattern` lui-même vers un handler délibérément inopérant.
 
 Nous limitons aussi la taille du core dump au niveau des limites de processus - c'est un mécanisme distinct de
-`suid_dumpable`/`core_pattern` (soft limit pour les crashes ordinaires avec l'écriture classique
+`suid_dumpable`/`core_pattern` (soft limit pour les crashs ordinaires avec l'écriture classique
 basée sur fichier, si elle est un jour rétablie).
 
 Sur le control-plane :
@@ -510,7 +510,7 @@ sysctl -n fs.suid_dumpable; cat /proc/sys/kernel/core_pattern   # 0 / |/bin/fals
 printf '* hard core 0\n* soft core 0\n' >> /etc/security/limits.conf
 ```
 
-`limits.conf` s'applique aux nouvelles login-sessions via PAM, et non aux shells déjà ouverts :
+`limits.conf` s'applique aux nouvelles login-sessions via PAM, et non aux shells déjà ouverts ;
 nous vérifions précisément dans une nouvelle session :
 
 ```bash
@@ -519,9 +519,9 @@ exit
 exit
 ```
 
-Artefact `coredump.txt` (sur le `worker`). Il inclut un controlled crash probe : nous confirmons qu'
-après un vrai `SIGSEGV`, AUCUN NOUVEAU core dump retenu n'apparaît, ni dans le répertoire courant
-standard ni via Apport :
+Artefact `coredump.txt` (sur le `worker`). Il inclut un controlled crash probe : nous confirmons
+qu'après un vrai `SIGSEGV`, AUCUN NOUVEAU core dump conservé n'apparaît dans les répertoires d'Apport
+(`/var/lib/apport/coredump`, `/var/crash`) :
 
 ```bash
 ssh "$CP" "sysctl -n fs.suid_dumpable; cat /proc/sys/kernel/core_pattern; sudo su - ubuntu -c 'ulimit -c'" \

@@ -19,11 +19,11 @@ ssh control-plane hostname
 ## Aufgabe 1. kube-bench Bericht
 
 `kube-bench` `0.16.0` ist auf der `control-plane` bereits installiert (wie in der echten Prüfung, wo
-das CIS-Benchmark-Tooling auf den Nodes schon vorhanden ist) - es muss nicht vom worker dorthin kopiert werden. Kubernetes
+das CIS-Benchmark-Tooling auf den Nodes schon vorhanden ist) - er muss nicht vom worker dorthin kopiert werden. Kubernetes
 `1.36` fehlt in der offiziellen support table von kube-bench noch; das eingebaute version mapping
 dieser Version endet mit dem Eintrag `"1.34": "cis-1.12"` - neuere Profile (einschließlich
-irgendeines Profils für 1.35/1.36) gibt es in `0.16.0` überhaupt nicht, daher verwenden wir gerade `cis-1.12`
-als das nächstliegende vorhandene. Deshalb starten wir ihn erzwungen als approximate
+irgendeines Profils für 1.35/1.36) gibt es in `0.16.0` überhaupt nicht, daher verwenden wir genau `cis-1.12`
+als das nächstliegende vorhandene. Wir starten kube-bench mit diesem Profil erzwungen als approximate
 hardening signal und nicht als authoritative CIS compliance assessment.
 
 ```bash
@@ -49,7 +49,7 @@ Vergewissere dich mit eigenen Augen, dass alle fünf `== Summary <target> ==` vo
 
 ## Aufgabe 2. Hardening kubelet
 
-Erinnere dich nicht aus dem Gedächtnis an Feldnamen - in der Prüfung ist es schneller, sie direkt aus dem bereits erstellten
+Rufe Feldnamen nicht aus dem Gedächtnis ab - in der Prüfung ist es schneller, sie direkt aus dem bereits erstellten
 kube-bench-Bericht (Aufgabe 1) zu holen. Zu jedem check gibt es dort einen Abschnitt `== Remediations <target> ==`
 mit fertigem Korrekturtext - `grep -A1` nach der Nummer des checks liefert sofort das benötigte Feld:
 
@@ -107,7 +107,7 @@ k wait --for=condition=Ready "node/${NODE}" --timeout=120s
 ## Aufgabe 3. Profiling beim kube-apiserver deaktivieren
 
 Derselbe Ansatz wie in Aufgabe 2 - verwende den kube-bench-Bericht aus Aufgabe 1 als Quelle der
-Wahrheit, erinnere dich nicht aus dem Gedächtnis an das Flag:
+Wahrheit, rufe das Flag nicht aus dem Gedächtnis ab:
 
 ```bash
 grep -A2 '^1.2.15 ' /var/work/tests/artifacts/1/kube-bench.txt
@@ -300,7 +300,7 @@ cat /var/work/tests/artifacts/6/binaries.sha256.txt
 Beide Zeilen müssen mit `: OK` enden. Wenn der Pfad zur Binärdatei von `/usr/bin` abweicht,
 bildet `command -v` trotzdem eine korrekte Eingabe für `sha256sum -c`.
 
-## Aufgabe 7. Remediation cycle: ein konkretes kube-bench FAIL bis PASS
+## Aufgabe 7. Remediation cycle: von einem konkreten kube-bench FAIL bis PASS
 
 Anders als in Aufgabe 1 (Snapshot des gesamten Berichts) musst du hier einen konkreten check
 mit seiner Korrektur verbinden. `kube-bench` unterstützt den gezielten Lauf über `--check`, daher
@@ -337,8 +337,8 @@ grep -A1 '1.1.1' /var/work/tests/artifacts/7/after.txt
 # [PASS] 1.1.1 Ensure that the API server pod specification file permissions ...
 ```
 
-Bestätige, dass der kube-apiserver gesund geblieben ist: Die Änderung der Dateirechte ändert seinen
-Inhalt nicht, daher darf das kubelet den static Pod nicht neu erstellen.
+Bestätige, dass der kube-apiserver gesund geblieben ist: Die Änderung der Dateirechte ändert den
+Inhalt der Datei nicht, daher sollte das kubelet den static Pod nicht neu erstellen.
 
 ```bash
 k get --raw='/readyz'
@@ -375,7 +375,7 @@ k -n kube-system get pods -l component=kube-controller-manager
 
 ## Aufgabe 9. Remediation cycle: profiling bei kube-controller-manager und kube-scheduler
 
-Derselbe Ansatz wie in den Aufgaben 7-8 (einen konkreten `[FAIL]` über kube-bench finden, korrigieren,
+Derselbe Ansatz wie in den Aufgaben 7-8 (ein konkretes `[FAIL]` über kube-bench finden, korrigieren,
 `[PASS]` bestätigen), für die checks `1.3.2` (kube-controller-manager profiling) und `1.4.1`
 (kube-scheduler profiling). Beide gehören, wie der gesamte Abschnitt `1.x`, im
 `cis-1.12` zum target `master`, daher ist ein explizites `--targets` nicht nötig - genau wie in den Aufgaben 7-8. Aufgabe 3
@@ -449,7 +449,7 @@ Aufgaben dieser Lab verwendet) enthält den check protect-kernel-defaults überh
 umnummeriert; das eigene `4.2.6` in `cis-1.12` ist ein
 ANDERER check (`--make-iptables-util-chains`, standardmäßig `PASS`, hat mit protect-kernel-defaults
 nichts zu tun). Der benötigte check mit derselben ID `4.2.6` existiert im älteren Profil
-`cis-1.24` derselben Binärdatei - verwende gerade ihn, mit explizitem `--benchmark cis-1.24`, nur
+`cis-1.24` derselben Binärdatei - verwende genau dieses Profil, mit explizitem `--benchmark cis-1.24`, nur
 für diese eine Aufgabe.
 
 Anders als auf der control-plane ist `kube-bench` auf dem worker-Node NICHT vorinstalliert - installiere ihn

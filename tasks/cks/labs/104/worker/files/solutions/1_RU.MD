@@ -28,8 +28,8 @@ k auth can-i delete secrets -n security-104 \
 ## 2. Projected токен ServiceAccount
 
 TokenRequest volume выдаёт короткоживущий токен; обычное автомонтирование отключено.
-Не фиксируем `audience: kubernetes.default.svc`: для kubeadm это не гарантированно
-значение, принимаемое API server. Если `audience` опущена, kubelet использует identifier
+Не фиксируем `audience: kubernetes.default.svc`: для kubeadm это не обязательно
+значение, которое принимает API server. Если `audience` опущена, kubelet использует identifier
 API server по умолчанию. Отдельную audience допустимо указать только после проверки
 `--api-audiences` (либо default из `--service-account-issuer`) на control-plane.
 `expirationSeconds` обязан быть в диапазоне `600`-`3600` включительно - Kubernetes API
@@ -229,8 +229,8 @@ k get po -n kube-system -l component=kube-apiserver
 # STATUS должен стать Running - если ещё нет, подождите пару секунд и повторите
 ```
 
-Проверьте все три поведения: `/version` отклоняет анонимные запросы, а `/livez`/`/readyz`
-- принимают:
+Проверьте все три поведения: `/version` отклоняет анонимные запросы, а `/livez`/`/readyz` -
+принимают:
 
 ```bash
 SERVER=$(k config view --minify -o jsonpath='{.clusters[0].cluster.server}')
@@ -316,7 +316,7 @@ done
 неаутентифицированный запрос в эту группу не входит, и проверка перестанет отражать
 настоящую anonymous-идентичность. Проверяем каждый namespace отдельно, потому что
 RoleBinding действует только в своём namespace: отсутствие cluster-wide привязки не
-доказывает отсутствие локальной, а критерий приёмки запрещает доступ ни в одном namespace.
+доказывает отсутствие локальной, а критерий приёмки требует, чтобы доступа не было ни в одном namespace.
 
 В конце выполните `check_result`.
 
@@ -501,7 +501,7 @@ k -n security-104-baseline get sa default \
 это самый частый в реальности случай, когда разработчик просто не думает про SA. Поле
 `automountServiceAccountToken` должно ОТСУТСТВОВАТЬ в спеке Pod - явное указание `false`
 доказывало бы только точечную настройку самого Pod (как в задании 3), а не то, что
-namespace-level baseline реально работает:
+namespace-level baseline реально работает.
 
 Здесь не нужен даже `--dry-run` - раз в Pod не добавляется ни одного поля про SA/automount,
 `kubectl run` без флагов создаёт ровно то, что нужно, напрямую:
@@ -563,7 +563,7 @@ EOF
 Правило RBAC стоит первым - более специфичное правило должно предшествовать общему
 catch-all, иначе `Metadata` перехватит событие раньше. `omitStages: [RequestReceived]`
 на уровне всей policy убирает лишнюю запись до обработки запроса - у неё нет
-`requestObject`/`responseStatus`, которые всё равно фильтрует checker (`stage ==
+`requestObject`/`responseStatus`, а checker такие записи всё равно отбрасывает (`stage ==
 "ResponseComplete"`), а с catch-all `Metadata`-правилом на ВСЕ остальные запросы кластера
 эта стадия удваивала бы объём audit.log без пользы.
 
@@ -597,8 +597,8 @@ exit
 exit
 ```
 
-`systemctl restart kubelet` форсирует немедленную пересборку static Pod - так же, как в
-задании 5, быстрее ждать не нужно:
+`systemctl restart kubelet` форсирует немедленную пересборку static Pod - как и в
+задании 5, это быстрее, чем ждать, пока kubelet сам заметит изменение файла:
 
 ```bash
 k get po -n kube-system -l component=kube-apiserver
@@ -675,7 +675,7 @@ source of truth - **событие во времени** (audit log), котор
 
 В конце выполните `check_result`.
 
-## 10. Decode, create and mount a Secret
+## 10. Декодирование, создание и монтирование Secret
 
 `legacy-config` уже существует. Читаем оба значения через API, а не гадаем:
 
@@ -731,7 +731,7 @@ k exec -n security-104 secret-workflow -- cat /etc/rehydrated/SERVICE_TOKEN
 
 В конце выполните `check_result`.
 
-## 11. Repair existing Role and bind it to an SA from another namespace
+## 11. Исправление существующей Role и привязка её к SA из другого namespace
 
 Существующий Role `pod-role` в `rbac-a` разрешает `get`, `list`, `delete` - убираем
 лишний `delete`, добавляем нужный `watch`:
@@ -766,7 +766,7 @@ k run rbac-a-workload -n rbac-a --image=busybox:1.36 \
 
 В конце выполните `check_result`.
 
-## 12. Client certificate user via CSR + namespaced RBAC
+## 12. Пользователь с клиентским сертификатом через CSR + namespaced RBAC
 
 Генерируем private key и CSR с `CN=john` - RBAC для сертификат-based пользователя
 связывается через `kind: User`, а не `ServiceAccount`, и у `User` нет собственного API

@@ -244,7 +244,7 @@ kubectl get --raw=/readyz
 ```
 
 ```bash
-# ტერმინალი 1: ფლაგები მოხვდა მუშა manifest-ში
+# ტერმინალი 1: ფლაგები მოხვდა მოქმედ manifest-ში
 grep -E -- '--audit-(policy-file|log-path|log-max)' /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
@@ -346,7 +346,7 @@ INCIDENT_EXEC_PID=$!
 ```
 
 შემდეგ ყველაფერს control-plane-ზე ვაკეთებთ, სანამ პროცესი ცოცხალია: ვიღებთ alert-ს, ხოლო მისგან - container id-სა და
-host pid-ს (ვიწყებთ alert-ით, და არ ვხვდებით):
+host pid-ს (ვიწყებთ alert-ით და არ ვმკითხაობთ):
 
 ```bash
 # ტერმინალი 1 (control-plane, root)
@@ -439,7 +439,7 @@ cat "$DIR/containment.txt"
 # exec_exit=1 (არა 0)
 ```
 
-## დავალება 7. upstream-მაკროს override და გამოტანა JSON-ში/ფაილში
+## 7. upstream-მაკროს override და გამოტანა JSON-ში/ფაილში
 
 სტანდარტული წესი **Terminal shell in container** ლეგიტიმურ ინსტრუმენტზეც
 გააქტიურდება. environment-specific გამონაკლისის სწორი ადგილია არა
@@ -554,7 +554,7 @@ tail -n 20 /var/log/falco/events.log \
 # {"pod": "immutable-app", "ns": "runtime-112"}
 ```
 
-## დავალება 8. Audit webhook backend
+## 8. Audit webhook backend
 
 `audit-receiver` უკვე განთავსებულია საწყისი სკრიპტით. შექმენით webhook kubeconfig, რომელიც
 მის Service-ზე მიუთითებს; ლაბისთვის HTTP დასაშვებია, production-ში webhook მოითხოვს HTTPS-სა და client
@@ -623,7 +623,7 @@ kubectl logs -n runtime-112 "$RECEIVER_POD" --tail=50 | grep -A5 objectRef
 check_result
 ```
 
-## დავალება 9. ინტეგრაციული დავალება: admission-ის შემოვლა containerd-ით და აღმოჩენა Falco-ით
+## 9. ინტეგრაციული დავალება: admission-ის შემოვლა containerd-ით და აღმოჩენა Falco-ით
 
 ეს დავალება აკავშირებს Supply Chain Security-ს (ლაბ 111, თავი 26) ამ ლაბის Runtime Security-სთან:
 admission-შემოწმება (Kyverno) კონტეინერს ვერ ხედავს, თუ ის პირდაპირ
@@ -742,7 +742,7 @@ cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_1 'echo CKS112_CTR_BYPASS; sleep 5'
 
 > `container.id != host` აუცილებელია: ბრძანება `cks112-run ... 'echo CKS112_CTR_BYPASS'` თავად
 > ჰოსტზე სრულდება, და მისი command line marker-ს შეიცავს. ამ პირობის გარეშე წესი
-> გააქტიურდებოდა გაშვების ჰოსტურ პროცესზე (მის repository ცარიელია, ანუ trusted-ის ტოლი არ არის),
+> გააქტიურდებოდა გაშვების ჰოსტურ პროცესზე (მისი repository ცარიელია, ანუ trusted-ის ტოლი არ არის),
 > და სანდო image-იც კი ცრუ alert-ს მისცემდა.
 >
 > Falco image-ისთვის აჩვენებს არა იმ ტეგს, რომლითაც კონტეინერია გაშვებული, არამედ ანბანით პირველ
@@ -791,7 +791,7 @@ cat /tmp/art/9/observed-trusted-repo.txt
 გადაუწერლად, რომ არ დავკარგოთ წესები დავალებებიდან 3 და 7). პირობა იყენებს დაკვირვებულ `$TRUSTED_REPO`-თან **ზუსტ**
 შედარებას, და არა `startswith`/prefix-შემოწმებას:
 `not container.image.repository startswith "$TRUSTED_REPO"` გამოტოვებდა (ვერ შეამჩნევდა)
-repository-ს ტიპის `<TRUSTED_REPO>-evil`, რადგან მისი სახელი უბრალოდ დაშვებული
+ისეთ repository-ს, როგორიცაა `<TRUSTED_REPO>-evil`, რადგან მისი სახელი უბრალოდ დაშვებული
 ქვესტრიქონით იწყება - ანუ Falco მას allowlist-ის ნაწილად ჩათვლიდა, თუმცა რეალურად ის დასაშვები
 repository-ს გარეთაა. ეს იგივე ხაფანგია, რომელსაც ზემოთ Kyverno policy თავს არიდებს `==`-ით, და არა
 `startsWith`-ით; admission-ის პირობამ და Falco-ს პირობამ ერთი და იგივე repository-თვისება
@@ -803,7 +803,7 @@ security control-ად ექვივალენტური არ არი
 cat >> /etc/falco/falco_rules.local.yaml <<EOF
 
 - rule: CKS112 Runtime Bypass of Admission
-  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via ctr/crictl directly)
+  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via crictl/CRI directly)
   condition: >
     spawned_process and
     container.id != host and
@@ -843,15 +843,15 @@ cks112-rm $BYPASS_1
 cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_2 'echo CKS112_CTR_BYPASS; sleep 5'
 sleep 3
 journalctl -u falco-modern-bpf --since "$START_TS" --no-pager | grep 'CKS112 runtime bypass of admission' > /tmp/art/9/falco-bypass-attempt.log
-cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-alpine.log
+cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-untrusted.log
 cks112-rm $BYPASS_2
 ```
 
 და ბოლოს, ვამტკიცებთ თავად prefix-trap-ს: repository, აგებული როგორც `${TRUSTED_REPO}-evil`,
 იწყება იმავე ქვესტრიქონით, რაც დაშვებული `$TRUSTED_REPO`, მაგრამ მას ზუსტად არ უდრის.
-თუ Falco condition იყენებდა `startswith`-ს (როგორც ამ წესის უფრო ადრინდელ, არასწორ ვერსიაში), ეს image
-გაივლიდა შეუმჩნევლად - სწორედ ამიტომ გასწორებული პირობა
-`!=` აუცილებლად უნდა დაიჭიროს. prefix-trap image მომზადებულია bootstrap-ით (`$CKS112_PREFIX_IMAGE`,
+თუ Falco condition იყენებდა `startswith`-ს (როგორც ამ წესის ნაივურ ვარიანტში), ეს image
+გაივლიდა შეუმჩნევლად - სწორედ ამიტომ გასწორებულმა პირობამ
+`!=` ეს image აუცილებლად უნდა დაიჭიროს. prefix-trap image მომზადებულია bootstrap-ით (`$CKS112_PREFIX_IMAGE`,
 ცალკე digest):
 
 ```bash
@@ -872,11 +872,11 @@ scp 'control-plane:/tmp/art/9/*' /var/work/tests/artifacts/9/
 > გაერთიანებული artifact-ია, რომელსაც ავტომატური მიღება ამოწმებს (შეიცავს ორივე alert-ს:
 > untrusted და prefix-trap, მაგრამ არ უნდა შეიცავდეს alert-ს trusted repo-სთვის). დამატებით
 > თითოეული probe წერს საკუთარ ფაილს ხელით დიაგნოსტიკისთვის: `probe-trusted.log` (უნდა იყოს
-> ცარიელი - ეს არის negative control), `probe-alpine.log` და `probe-prefix.log`.
+> ცარიელი - ეს არის negative control), `probe-untrusted.log` და `probe-prefix.log`.
 
 ამ დავალების ძირითადი დასკვნა: registry allowlist admission-ზე და Falco runtime-ზე - ერთმანეთის
-ურთიერთშემცვლელი ფენები არ არის, არამედ ურთიერთშემავსებელია. Admission აჩერებს გზას Kubernetes
-API-ით, მაგრამ არაფერი იცის პროცესებზე, რომლებიც პირდაპირ container runtime-ით არის გაშვებული node-ზე;
+შემცვლელი ფენები არ არის, არამედ ურთიერთშემავსებელია. Admission აჩერებს გზას Kubernetes
+API-ით, მაგრამ არაფერი იცის პროცესების შესახებ, რომლებიც პირდაპირ container runtime-ით არის გაშვებული node-ზე;
 Falco **ვერ დაბლოკავს** ასეთი კონტეინერის შექმნას წინასწარ, მაგრამ ხედავს მას გაშვების შემდეგ,
 იმის მიუხედავად, რომელი API (ან მისი არარსებობა) იყო გამოყენებული. იგივე პრინციპი ვრცელდება
 signature verification-ზე ლაბ 111-ში - განსხვავება მხოლოდ იმაშია, რომ იქ policy
@@ -896,7 +896,7 @@ Deployment `mem-scanner` (2 replica) უკვე განთავსებუ
 ხსნის `/dev/mem`-ს კონტეინერის შიგნიდან. გზა `/dev/mem` კონტეინერის შიგნით - synthetic
 safe fixture-ია (backing device სინამდვილეში host-ის `/dev/null`-ია, და არა ჰოსტის რეალური ფიზიკური
 მეხსიერება); Falco-ს პირობისთვის ფაილის სახელით (`fd.name = /dev/mem`) ეს არ განირჩევა -
-აღმოჩენილია თავად სისტემური გამოძახება `open`/`openat`/`openat2`. დაამატეთ წესი
+აღმოიჩინება თავად სისტემური გამოძახება `open`/`openat`/`openat2`. დაამატეთ წესი
 `control-plane`-ზე:
 
 ```bash
@@ -959,6 +959,6 @@ jq '.spec.replicas' /var/work/tests/artifacts/10/scaled-down.json
 
 `container.id != host` პირობაში - დეკორატიული დეტალი არ არის: მის გარეშე წესი გააქტიურდებოდა
 node-ის ლეგიტიმურ სისტემურ პროცესებზეც (მაგალითად, მეხსიერების დიაგნოსტიკის ინსტრუმენტებზე),
-კონტეინერების გარეთ გაშვებულზე, ქმნიდა რა ხმაურიან false positives-ს კლასტერის ყველა node-ზე.
+რომლებიც კონტეინერების გარეთაა გაშვებული, და კლასტერის ყველა node-ზე ხმაურიან false positives-ს შექმნიდა.
 
 ბოლოს გაუშვით `check_result`.

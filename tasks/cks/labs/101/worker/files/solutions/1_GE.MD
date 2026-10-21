@@ -196,7 +196,7 @@ k -n cks-101 exec probe -- \
 echo $?
 ```
 
-## 5. IMDS final verification
+## 5. IMDS-ის საბოლოო შემოწმება
 
 ```bash
 # control: IMDS ხელმისაწვდომია
@@ -271,7 +271,7 @@ echo $?
 k -n cks-101-legacy exec deploy/legacy-client -- curl -sS -m 5 http://backend.cks-101:8080/
 ```
 
-## 7. hostNetwork observation
+## 7. hostNetwork-ის დაკვირვება
 
 ```bash
 k -n cks-101 run hostnetwork-probe --image=curlimages/curl:8.11.1 -l app=frontend \

@@ -29,7 +29,7 @@ Warte, bis mindestens ein Deployment in `kyverno` `AVAILABLE > 0` hat.
 
 > **Migration note.** Alte Beispiele mit `kyverno.io/v1` `Policy`/`ClusterPolicy` bleiben nur
 > bei der Betreuung bestehender Cluster nützlich. In Kyverno `1.19` sind sie deprecated,
-> und in `1.20` ist die Entfernung geplant. Neue policies in dieser Lab verwenden
+> und in `1.20` ist die Entfernung geplant. Neue policies in diesem Lab verwenden
 > `policies.kyverno.io/v1`.
 
 ## 2. Tag `latest` verbieten
@@ -101,7 +101,7 @@ auch in anderen Listen von Containern akzeptiert werden - zum Beispiel in `initC
 
 ## 3. `runAsNonRoot` verlangen
 
-Die policy verlangt gerade den Wert `true` im Pod-level `securityContext`; ein impliziter
+Die policy verlangt genau den Wert `true` im Pod-level `securityContext`; ein impliziter
 Wert und `false` bestehen nicht. Zusätzlich sind `runAsUser: 0` auf Ebene des
 Pods und container-level overrides `runAsNonRoot: false` / `runAsUser: 0` in allen
 drei container lists verboten, sonst kann der container-level securityContext das
@@ -192,11 +192,11 @@ Prüfung ohne Erstellen eines Pods und ohne image pull. `docker.io` ist nur EIN 
 untrusted-Wert; prüfe, dass die policy tatsächlich eine ALLOWLIST ist (sie verbietet JEDE
 Registry außer den beiden erlaubten) und nicht einfach eine Denylist von `docker.io` mit dem buchstäblichen String -
 sonst gehen ein unqualified image, eine andere Drittanbieter-Registry oder ein ähnlich geschriebener Host leicht
-vorbei:
+vorbei.
 
 Positive controls müssen beide erlaubten Präfixe (`registry.k8s.io/` und
 `ghcr.io/cks-lab/`) in `containers`, `initContainers` und `ephemeralContainers` abdecken; beschränke
-keine der Registries nur auf gewöhnliche Container.
+keine der Registries nur auf gewöhnliche Container:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -256,8 +256,8 @@ spec:
 EOF
 ```
 
-Alle vier müssen abgelehnt werden. Der erste Pod unten verletzt die Regel mit dem Haupt-
-Container, der zweite - nur mit `initContainers`; beide müssen abgelehnt werden:
+Alle vier müssen abgelehnt werden. Der erste Pod unten verletzt die Regel mit dem Hauptcontainer,
+der zweite - nur mit `initContainers`; beide müssen abgelehnt werden:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -295,13 +295,13 @@ EOF
 Beide Befehle müssen mit einem admission-policy-Fehler enden. Für einen expliziten Umgehungsversuch über
 `ephemeralContainers` erstelle einen erlaubten Pod und führe dann `kubectl debug` zuerst mit
 `docker.io/library/busybox:1.36` aus (erwartet wird denial), dann mit
-`registry.k8s.io/e2e-test-images/busybox:1.36-1` (erwartet wird Erfolg). Gerade
+`registry.k8s.io/e2e-test-images/busybox:1.36-1` (erwartet wird Erfolg). Genau
 `pods/ephemeralcontainers` in `matchConstraints` schützt das subresource update.
 
 ## 5. Optional: mutation eines Labels
 
 Diese `MutatingPolicy` lehnt den Pod nicht ab, sondern fügt ein Label über CEL
-`ApplyConfiguration` hinzu - aber nur, wenn das Label noch nicht gesetzt ist. Die Aufgabe verlangt gerade
+`ApplyConfiguration` hinzu - aber nur, wenn das Label noch nicht gesetzt ist. Die Aufgabe verlangt ausdrücklich
 die defaulting-Semantik („falls es fehlt“): Ein Pod, der dieses Label bereits mit einem ANDEREN
 Wert trägt (zum Beispiel von einem anderen Eigentümer/Werkzeug), darf es nicht
 zwangsweise überschrieben bekommen.
@@ -373,8 +373,8 @@ EOF
 # erwartet: external (mutation überschreibt einen bereits gesetzten Wert NICHT)
 ```
 
-Führe `check_result` aus. Phase 5 wird in der Prüfung angezeigt, ist aber optional: Das Fehlen der
-mutation policy darf die Wertung der ersten vier Phasen nicht aufheben.
+Führe `check_result` aus. Aufgabe 5 wird in der Prüfung angezeigt, ist aber optional: Das Fehlen der
+mutation policy beeinflusst die Wertung der Aufgaben 1-4, 6 und 7 nicht.
 
 ## 6. ImagePolicyWebhook: externes Backend
 
@@ -478,8 +478,8 @@ EOF
 kubectl rollout status deployment/image-policy-backend -n image-policy --timeout=90s
 ```
 
-Kopiere das CA-Zertifikat (hier self-signed, daher ist das Serverzertifikat selbst sein
-eigenes CA) auf die `control-plane`, damit der kube-apiserver die Kette beim
+Kopiere das CA-Zertifikat (hier self-signed, daher ist das Serverzertifikat selbst seine
+eigene CA) auf die `control-plane`, damit der kube-apiserver die Kette beim
 Verbinden mit dem Backend prüfen kann, und melde dich auf dem Node an:
 
 ```bash
@@ -590,7 +590,7 @@ kubectl get pod webhook-pinned-ok
 ```
 
 `ImagePolicyWebhook` verwendet das Backend aus `/opt/image-policy-backend/server.py`:
-in `default` und den übrigen Namespaces (außer `policy-108`) verbietet er explicit/implicit
+In `default` und den übrigen Namespaces (außer `policy-108`) verbietet er explicit/implicit
 latest; `policy-108` kontrollieren vollständig die drei Kyverno-Policies aus den Aufgaben 2–4.
 Das ist eine Lab-Isolation der Mechanismen und kein universelles production pattern.
 Die Benutzer-Annotation `alpha.image-policy.k8s.io/break-glass` gibt KEINE Erlaubnis:
@@ -624,18 +624,18 @@ kubectl run webhook-should-fail-closed --image="nginx:fail-closed-check-$(date +
 kubectl patch service image-policy-backend -n image-policy \
   -p '{"spec":{"selector":{"app":"image-policy-backend"}}}'
 kubectl get endpoints image-policy-backend -n image-policy -w
-# Ctrl+C, wenn ENDPOINTS wieder erscheint - das ist derselbe Pod wie vor dem Probe, es war keine
+# Ctrl+C, wenn ENDPOINTS wieder erscheint - das ist derselbe Pod wie vor dem Test, es war kein Neuaufbau/keine
 # Neuerstellung nötig
 ```
 
-Das ist dieselbe grundsätzliche fail-closed-Entscheidung, die in Kapitel 26 für die
+Das ist dieselbe grundsätzliche fail-closed-Entscheidung, die in [Kapitel 26 des Kurses](../../../../../course/26/de.md) für die
 production-Konfiguration von ImagePolicyWebhook beschrieben ist.
 
 ## 7. Gatekeeper: Rego blocklist im ConstraintTemplate ergänzen
 
-Gatekeeper und das Start-(unvollständige) `ConstraintTemplate`/`Constraint` sind bereits vom
+Gatekeeper und das anfängliche (unvollständige) `ConstraintTemplate`/`Constraint` sind bereits vom
 bootstrap des Clusters in einem separaten Namespace `gatekeeper-108` ausgerollt - das ist eine separate, dritte
-admission engine in dieser Lab (nach Kyverno und ImagePolicyWebhook), die gerade die
+admission engine in diesem Lab (nach Kyverno und ImagePolicyWebhook), die gezielt die
 OPA/Rego-Fertigkeit prüft. `gatekeeper-108` ist von den Kyverno-Aufgaben 1-5 (`policy-108`)
 absichtlich isoliert: Sonst könnte derselbe Test-Pod gleichzeitig von Kyverno und
 Gatekeeper abgelehnt werden, und die Quelle des denial wäre nicht eindeutig. Sieh dir das aktuelle Rego an:
@@ -651,9 +651,9 @@ blocked_registry("untrusted-registry.example")
 blocked_registry("docker-fake.test")
 ```
 
-`very-bad-registry.test` ist nicht darunter - gerade diese Zeile muss ergänzt werden. `Constraint
+`very-bad-registry.test` ist nicht darunter - genau diese Zeile muss ergänzt werden. `Constraint
 deny-bad-registries` ist bereits vollständig korrekt und verwendet `spec.parameters` überhaupt nicht -
-es muss nicht bearbeitet werden; die Korrektur liegt GERADE im Rego innerhalb des
+es muss nicht bearbeitet werden; die Korrektur liegt GENAU im Rego innerhalb des
 `ConstraintTemplate` und nicht im Constraint. Bearbeite das template (zum Beispiel `kubectl edit
 constrainttemplate k8sblockedregistries`, oder `get -o yaml` → Änderung → `apply -f -`) und
 füge die neue Zeile hinzu, ohne die vorhandenen zu löschen:
@@ -713,7 +713,7 @@ EOF
 
 Stelle sicher, dass die Ablehnung tatsächlich von Gatekeeper kam (`validation.gatekeeper.sh`) und
 nicht von einer der Kyverno `ValidatingPolicy` aus den Aufgaben 2-4 - die Fehlermeldung nennt ausdrücklich
-den webhook und den Namen deines Constraint. Löse die Aufgabe nicht über `Constraint.spec.parameters`
-- in dieser Version der policy verwendet das Constraint sie überhaupt nicht.
+den webhook und den Namen deines Constraints. Löse die Aufgabe nicht über `Constraint.spec.parameters` -
+in dieser Version der policy verwendet das Constraint sie überhaupt nicht.
 
 Führe `check_result` aus.

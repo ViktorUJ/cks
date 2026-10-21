@@ -104,7 +104,7 @@ aceptarse también en las demás listas de contenedores, por ejemplo, en `initCo
 La política exige precisamente el valor `true` en el `securityContext` a nivel de Pod; el valor
 implícito y `false` no pasan. Además están prohibidos `runAsUser: 0` a nivel de
 Pod y los container-level overrides `runAsNonRoot: false` / `runAsUser: 0` en las
-tres container lists; de lo contrario, el securityContext a nivel de container podrá redefinir el
+tres container lists; de lo contrario, el securityContext a nivel de container podrá sobrescribir el
 `runAsNonRoot: true` a nivel de Pod y ejecutar un proceso root.
 
 ```yaml
@@ -190,13 +190,13 @@ kubectl apply -f allow-approved-registries.yaml
 
 Comprobación sin crear un Pod y sin image pull. `docker.io` es solo UN valor
 untrusted concreto; comprueba que la policy realmente es un ALLOWLIST (prohíbe CUALQUIER
-registry salvo los dos permitidos), y no simplemente una denylist de `docker.io` con la cadena literal;
+registry salvo los dos permitidos), y no simplemente un denylist de `docker.io` con la cadena literal;
 de lo contrario una imagen unqualified, otro registry de terceros o un host de escritura parecida pasarán
-de largo con facilidad:
+de largo con facilidad.
 
 Los positive controls deben cubrir ambos prefix permitidos (`registry.k8s.io/` y
 `ghcr.io/cks-lab/`) en `containers`, `initContainers` y `ephemeralContainers`; no
-limites uno de los registry solo a los contenedores normales.
+limites uno de los registry solo a los contenedores normales:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -373,8 +373,8 @@ EOF
 # se espera: external (la mutation NO sobrescribe el valor ya definido)
 ```
 
-Ejecuta `check_result`. La etapa 5 se muestra en la comprobación, pero es opcional: la ausencia de la
-mutation policy no debe anular el aprobado de las primeras cuatro etapas.
+Ejecuta `check_result`. La tarea 5 se muestra en la comprobación, pero es opcional: la ausencia de la
+mutation policy no afecta al aprobado de las tareas 1–4, 6 y 7.
 
 ## 6. ImagePolicyWebhook: backend externo
 
@@ -491,7 +491,7 @@ ssh "$CP"
 sudo -i
 ```
 
-En el `control-plane` crea el admission config y el kubeconfig para el backend. Las rutas son en el disco **del propio
+En el `control-plane` crea el admission config y el kubeconfig para el backend. Las rutas están en el disco **del propio
 control-plane**:
 
 ```bash
@@ -628,7 +628,7 @@ kubectl get endpoints image-policy-backend -n image-policy -w
 # reconstrucción/recreación
 ```
 
-Es la misma decisión fail-closed de principio descrita en el capítulo 26 para la
+Es la misma decisión fundamental fail-closed descrita en el [capítulo 26 del curso](../../../../../course/26/es.md) para la
 configuración de producción de ImagePolicyWebhook.
 
 ## 7. Gatekeeper: completar el blocklist de Rego en el ConstraintTemplate
@@ -713,7 +713,7 @@ EOF
 
 Asegúrate de que el rechazo realmente vino de Gatekeeper (`validation.gatekeeper.sh`), y
 no de una de las `ValidatingPolicy` de Kyverno de las tareas 2-4: el mensaje de error nombra explícitamente
-el webhook y el nombre de tu Constraint. No resuelvas la tarea mediante `Constraint.spec.parameters`
-: en esta versión de la policy el Constraint no los usa en absoluto.
+el webhook y el nombre de tu Constraint. No resuelvas la tarea mediante `Constraint.spec.parameters`:
+en esta versión de la policy el Constraint no los usa en absoluto.
 
 Ejecuta `check_result`.

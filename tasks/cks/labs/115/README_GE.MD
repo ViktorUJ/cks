@@ -9,9 +9,9 @@
 
 ## აღწერა
 
-ამ ლაბის Control-plane აყვანილია `kubeadm init --skip-phases=addon/kube-proxy`-ით - `kube-proxy`
+ამ ლაბის control-plane გაშლილია `kubeadm init --skip-phases=addon/kube-proxy`-ით - `kube-proxy`
 DaemonSet-ის გარეშე და **დაყენებული CNI-ს გარეშე**. Node რჩება `NotReady`-ზე, სანამ თქვენ
-Cilium-ს თავად არ დააყენებთ. ეს შეგნებულია: ლაბი მთლიანად Cilium-ის ხელით დაყენებას ეხება kube-proxy-ის
+Cilium-ს თავად არ დააყენებთ. ეს განზრახ არის ასე: ლაბი მთლიანად Cilium-ის ხელით დაყენებას ეხება kube-proxy-ის
 სრული ჩამნაცვლებლის როლში (`kubeProxyReplacement`), WireGuard
 transparent encryption-ის ინკრემენტულ ჩართვას და Cilium Mutual Authentication-ს SPIRE-ის საფუძველზე - ყოველი ნაბიჯი
 ცალ-ცალკე ყენდება და მოწმდება, და მზა სახით არ გაიცემა.
@@ -30,9 +30,9 @@ Node login-ის შემდეგ მაშინვე `NotReady` იქნ�
 
 ## მიზანი
 
-Cilium-ის დაყენება როგორც kube-proxy-ის სრული ჩამნაცვლებლისა უკვე აყვანილ kube-proxy-free
+Cilium-ის დაყენება როგორც kube-proxy-ის სრული ჩამნაცვლებლისა უკვე გაშლილ kube-proxy-free
 kubeadm-კლასტერზე, WireGuard encryption-ის ჩართვა, Cilium Mutual Authentication-ის ჩართვა
-(SPIRE), და `CiliumNetworkPolicy`-ს დაწერა, რომელიც ორ namespace-ს შორის წარმატებულ mutual authentication-ს
+(SPIRE), და `CiliumNetworkPolicy`-ის დაწერა, რომელიც ორ namespace-ს შორის წარმატებულ mutual authentication-ს
 მოითხოვს.
 
 ## ინფრასტრუქტურა
@@ -58,7 +58,7 @@ kubeadm-კლასტერზე, WireGuard encryption-ის ჩართვ
 
 |           **2**           | **Cilium-ის დაყენება როგორც kube-proxy-ის ჩამნაცვლებლისა** |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|       რას ვაკეთებთ       | • დააყენეთ Cilium agent/chart ვერსიისა `1.20.1` worker-ზე დაყენებული `cilium` CLI ვერსიით `v0.19.7`, `kubeProxyReplacement=true`-ით და აშკარად მითითებული `k8sServiceHost`/`k8sServicePort`-ით, რომლებიც ნამდვილ API server-ზე მიუთითებს (არა Service ClusterIP-ზე - kube-proxy-ის გარეშე კლასტერი ვერ resolve-ს უკეთებს `kubernetes.default`-ს მანამდე, სანამ თავად Cilium აიღგება) |
+|       რას ვაკეთებთ       | • დააყენეთ `1.20.1` ვერსიის Cilium agent/chart worker-ზე დაყენებული `cilium` CLI ვერსიით `v0.19.7`, `kubeProxyReplacement=true`-ით და ცხადად მითითებული `k8sServiceHost`/`k8sServicePort`-ით, რომლებიც ნამდვილ API server-ზე მიუთითებს (არა Service ClusterIP-ზე - kube-proxy-ის გარეშე ტრაფიკი ClusterIP `kubernetes.default`-ზე API server-მდე არ აღწევს, სანამ თავად Cilium არ ამუშავდება) |
 | მიღების კრიტერიუმები | • `KubeProxyReplacement: True/Strict` (აგენტის `cilium-dbg status`-ში)<br/>• Node ხდება `Ready`<br/>• ClusterIP Service მისაწვდომია kube-proxy-ის გარეშე |
 |        შემოწმება        | `cilium status --wait`, `kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status \| grep KubeProxyReplacement`, შემდეგ `kubectl get nodes` -> `Ready`. სატესტო Pod-იდან: `curl https://kubernetes.default.svc.cluster.local/` უნდა მიიღოს HTTP response (და არა connection error). |
 
@@ -75,8 +75,8 @@ kubeadm-კლასტერზე, WireGuard encryption-ის ჩართვ
 |           **4**           | **Cilium Mutual Authentication (SPIRE)** |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |       რას ვაკეთებთ       | • ჩართეთ SPIRE-ის ჩაშენებული დაყენება თავად Cilium helm chart-ის გავლით: `authentication.mutual.spire.enabled=true`, `authentication.mutual.spire.install.enabled=true` |
-| მიღების კრიტერიუმები | • `spire-server` StatefulSet და `spire-agent` DaemonSet-ს აქვს ყველა მოთხოვნილი Ready-replica namespace `cilium-spire`-ში |
-|        შემოწმება        | `kubectl get pods -A \| grep spire` - Pod-ების ორივე ტიპი მდგომარეობაში `Running` და Ready. |
+| მიღების კრიტერიუმები | • `spire-server` StatefulSet-სა და `spire-agent` DaemonSet-ს აქვთ ყველა მოთხოვნილი Ready-replica namespace `cilium-spire`-ში |
+|        შემოწმება        | `kubectl get pods -A \| grep spire` - ორივე ტიპის Pod `Running` და Ready მდგომარეობაშია. |
 
 > **სტენდის თავისებურებები.** კლასტერში StorageClass არ არის, ამიტომ SPIRE-სერვერს ეფემერული
 > საცავი სჭირდება (`authentication.mutual.spire.install.server.dataStorage.enabled=false`). Image
@@ -96,7 +96,7 @@ kubeadm-კლასტერზე, WireGuard encryption-ის ჩართვ
 
 |           **6**           | **Positive/negative control: authenticated identity დაშვებულია, უცხო - არა** |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|       რას ვაკეთებთ       | • შეამოწმეთ policy-ის ეფექტი ცოცხალი ტრაფიკით: კლიენტმა `ingress-115`-დან უნდა მიაღწიოს `backend`-ს (წარმატებული SPIRE-based mutual auth handshake-ის შემდეგ)<br/>• ცალკე Pod "არასწორი" namespace-იდან (`app-115`, და არა `ingress-115`; backend-ის ტრაფიკს საკუთარ თავზე Cilium ყოველთვის უშვებს) უნდა დაიბლოკოს |
+|       რას ვაკეთებთ       | • შეამოწმეთ policy-ის ეფექტი ცოცხალი ტრაფიკით: კლიენტმა `ingress-115`-დან უნდა მიაღწიოს `backend`-ს (წარმატებული SPIRE-based mutual auth handshake-ის შემდეგ)<br/>• ცალკე Pod "არასწორი" namespace-იდან (`app-115`, და არა `ingress-115`; backend-ის ტრაფიკს საკუთარი თავისკენ Cilium ყოველთვის უშვებს) უნდა დაიბლოკოს |
 | მიღების კრიტერიუმები | • იზოლირებულ სარკისებურ backend-ზე baseline უშვებს ორივე კლიენტს, policy-ის ასლის გამოყენების შემდეგ დაშვებულია მხოლოდ `ingress-115`<br/>• მოქმედი backend პასუხობს დაშვებულ კლიენტს, უარყოფს კლიენტებს `app-115`-დან და ახალი დამოუკიდებელი namespace-იდან<br/>• Cilium BPF auth map შეიცავს `spire`-ს კლიენტ/backend-ის identity-ების ზუსტი წყვილისთვის |
 |        შემოწმება        | `curl` client-pod-იდან `ingress-115`-ში `http://backend.app-115.svc.cluster.local/`-ზე -> HTTP response. იგივე curl Pod-იდან `app-115`-ში კლიენტის label-ის გარეშე -> connection error. |
 
@@ -106,7 +106,7 @@ kubeadm-კლასტერზე, WireGuard encryption-ის ჩართვ
 check_result
 ```
 
-Checker **არასდროს ხსნის მოქმედ** `app-115/backend-auth-required`-ს. baseline-ის შესამოწმებლად ის ქმნის დროებით სარკისებურ backend-სა და Service-ს ერთჯერად namespace `cks-115-*`-ში, ჯერ ამოწმებს დაშვებულ ტრაფიკს policy-ის გარეშე, შემდეგ იყენებს შემოწმებული CiliumNetworkPolicy-ის ასლს მხოლოდ სარკისებურ backend-ზე. ცალკე მოწმდება რეალური backend, EndpointSlice, SPIRE identities-ის ზუსტი წყვილები BPF auth map-ში და უცხო namespace-ებიდან კლიენტების აკრძალვა. ყველა შექმნილი Pod, Service, policy და დროებითი namespace იშლება cleanup-ის შემოწმებით.
+Checker **არასდროს ხსნის მოქმედ** `app-115/backend-auth-required`-ს. baseline-ის შესამოწმებლად ის ქმნის დროებით სარკისებურ backend-სა და Service-ს ერთჯერად namespace `cks-115-*`-ში, ჯერ ამოწმებს დაშვებულ ტრაფიკს policy-ის გარეშე, შემდეგ იყენებს შემოწმებული CiliumNetworkPolicy-ის ასლს მხოლოდ სარკისებურ backend-ზე. ცალკე მოწმდება რეალური backend, EndpointSlice, SPIRE identity-ების ზუსტი წყვილები BPF auth map-ში და უცხო namespace-ებიდან კლიენტების აკრძალვა. ყველა შექმნილი Pod, Service, policy და დროებითი namespace იშლება cleanup-ის შემოწმებით.
 
 ეტალონური ამოხსნა: [worker/files/solutions/1_GE.MD](worker/files/solutions/1_GE.MD).
 

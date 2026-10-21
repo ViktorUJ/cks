@@ -962,7 +962,7 @@ kubectl auth can-i get configmap/team-a-replica-limit   -n policy-system --as="$
 > 🔬 **Deep Dive - Manifest-Based Admission Control.** In der Trainingsbaseline Kubernetes v1.36
 > ist das Feature Alpha und standardmäßig deaktiviert. Im Upstream Kubernetes v1.37 wechselte es
 > zu Beta und ist standardmäßig aktiviert. Der primäre Workflow dieses Kapitels bleibt an v1.36
-> gebunden; das Production-current Delta finden Sie in [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_DE.md).
+> gebunden; das Production-current Delta finden Sie in [Kubernetes v1.37 Security Delta (nur auf Russisch)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 >
 > Aktivieren Sie in v1.36 das Feature Gate `ManifestBasedAdmissionControlConfig`; das Feature
 > lädt Webhook- und CEL-Policy-Manifeste von der Platte des API server. Übergeben Sie über

@@ -1,6 +1,6 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD)
 
-# Lab 109 - 参考解答: Secret の encryption at rest
+# Lab 109 - 参考解答：Secret の encryption at rest
 
 > 試験と同じように作業します：`kubectl` のコマンドは作業マシンで実行し、ノードに対する操作
 > (etcd、control-plane のファイルと manifest) は control-plane 自体で行います：
@@ -87,7 +87,7 @@ manager には KMS v2 を使用してください；ローカルの provider は
 
 32 バイトの AES-256 鍵を生成し、base64 でエンコードして、control-plane に設定を作成します。
 `aescbc` が最初にあります：新しい Secret はそれで書き込まれます。`identity` を最後に置くことで、API
-server は移行前の古い plaintext のレコードのみを読み取れます。ファイルの例は、ドキュメントのページ
+server は移行が完了するまでの間だけ、古い plaintext のレコードを読み取れます。ファイルの例は、ドキュメントのページ
 (解答の冒頭のリンク) にあります。
 
 ```bash
@@ -128,7 +128,7 @@ exit   # control-plane から
 コピーは、同じ名前を持つ 2 つ目の static Pod になります；kubelet がまさにそれ
 (`--encryption-provider-config` のない古い設定) を起動し続ける可能性があり、メインのファイルの修正は黙って
 効果を持たず、API server は見かけ上 healthy なまま、暗号化は無効のままになります。
-control-plane で、既存の static-Pod の manifest をまさに開き、**既存の** `command`、`volumeMounts`、
+control-plane で、必ず既存の static-Pod の manifest を開き、**既存の** `command`、`volumeMounts`、
 `volumes` に次の要素を追加します；ファイル全体をテンプレートで置き換えないでください。
 
 ```bash
@@ -171,7 +171,7 @@ exit   # control-plane から
 ```
 
 ```bash
-# 作業マシンで: API server の再起動には 1 分ほどかかります; コマンドが
+# 作業マシンで: API server の再起動には 1 分ほどかかります；コマンドが
 # "readyz check passed" を返すまで繰り返します (それまでは "connection refused" になります)
 kubectl get --raw='/readyz?verbose'
 ```
@@ -244,7 +244,7 @@ until kubectl get --raw=/readyz 2>/dev/null | grep -qx ok; do sleep 2; done
 kubectl -n "$NS" get secret legacy-secret encrypted-secret
 ```
 
-この実習の最終状態：encrypted provider が最初で唯一のものであり、`identity` は
+この実習の最終状態：暗号化を行う provider (`aescbc`) が最初で唯一のものであり、`identity` は
 削除されています。一時的な fallback を、永続的な「保険」として残してはいけません。
 
 ## 5. API アクセスを制限し、token の automount を無効にする
@@ -317,13 +317,13 @@ check_result
 アプリケーションが他の credentials を手に入れた場合の、ServiceAccount 自体の RBAC は
 制限しません。
 
-## 追加: KMS v2 の概要と鍵ローテーションの完全な手順
+## 追加：KMS v2 の概要と鍵ローテーションの完全な手順
 
 ### KMS v2: config にローカルの鍵を持たない envelope encryption
 
 上の `aescbc` は学習用の手順のためだけのものです。production では、KMS v2 は
 サポートされている KMS-plugin を、`EncryptionConfiguration` のローカルの Unix socket を通じて接続します。
-KMS v2 では、API server は API server のレベルで暗号化された seed/DEK を使用し、
+KMS v2 では、API server は、暗号化された seed/DEK を API server のレベルで使用し、
 個々のレコードの暗号化鍵を導出します。Plugin は外部の KEK を通じて seed を保護します；
 これが、per-resource の KMS v1 との違いです。Etcd にはリソースの ciphertext と
 復号に必要なメタデータが保存されます。KEK は外部の KMS にあり、etcd や Git にはありません。設定の
@@ -333,8 +333,8 @@ KMS v2 の形式と health/ACL の要件は、使用している Kubernetes の�
 
 ### aescbc key のローテーションの完全な lifecycle
 
-課題 4 の `identity -> aescbc` への移行は migration であり、すでに
-暗号化された鍵のローテーションではありません。ローテーションの前に、暗号化された etcd snapshot を作成し、
+課題 4 の `identity -> aescbc` の移行は migration であり、すでに
+暗号化されたデータに対する鍵のローテーションではありません。ローテーションの前に、暗号化された etcd snapshot を作成し、
 古い鍵を rollback のために保存してください。新しい鍵を**最初に**追加し、古い鍵は一時的に
 2 番目に残します：providers は順番に読み取られ、新しいレコードは最初の鍵で書き込まれます。
 

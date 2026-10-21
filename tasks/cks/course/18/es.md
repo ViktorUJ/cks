@@ -253,7 +253,7 @@ por default) y `CSIDriver.spec.seLinuxMount: true` en el CSI driver; de otro mod
 relabel recursivo habitual. No cambie un label o policy por rapidez sin probar aislamiento y compatibilidad
 con el CSI/filesystem concreto.
 
-> 🔬 **Upstream v1.37.** En Kubernetes v1.37, `SELinuxMount` pasó a GA y se habilita por default. Antes de actualizar un cluster con SELinux, compruebe conflictos de volume-label; si es necesario, un workload puede conservar explícitamente el comportamiento recursivo con `spec.securityContext.seLinuxChangePolicy: Recursive`. Detalles: [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_ES.md).
+> 🔬 **Upstream v1.37.** En Kubernetes v1.37, `SELinuxMount` pasó a GA y se habilita por default. Antes de actualizar un cluster con SELinux, compruebe conflictos de volume-label; si es necesario, un workload puede conservar explícitamente el comportamiento recursivo con `spec.securityContext.seLinuxChangePolicy: Recursive`. Detalles: [Kubernetes v1.37 Security Delta (solo en ruso)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 `procMount` es una opción Linux solo de nivel container: el `Default` seguro mantiene enmascaradas las
 partes sensibles de `/proc`; `Unmasked` amplía la visibilidad del proceso y no es apropiado para workload

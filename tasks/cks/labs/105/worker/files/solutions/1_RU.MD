@@ -203,7 +203,7 @@ curl -ksS -o /dev/null -w 'kubelet_http=%{http_code}\n' --connect-timeout 2 --ma
 из `### tuple ###` метаданных, которые ufw сам пишет в `user.rules` при добавлении правила
 через CLI. Реальное же состояние ядра после `ufw reload` - то, что показывает
 `ufw show user-rules`. Сравнивайте не только КОЛИЧЕСТВО строк, но и их СОДЕРЖИМОЕ
-(source/port/proto): `ufw-user-input` должен показывать loopback (all, lo) и три tcp
+(source/port/proto): `ufw-user-input` должен показывать loopback (all, lo) и четыре tcp
 dpt:22/6443 правила с точными source-адресами, а `ufw6-user-input` - РОВНО одну строку, тот
 же loopback ACCEPT для v6 (`ufw allow in on lo` - правило по интерфейсу без явного IP,
 поэтому ufw всегда создаёт и v4-, и v6-версию). Любая ДРУГАЯ/дополнительная строка там -
@@ -330,7 +330,7 @@ systemctl cat docker.socket                          # ... SocketGroup=root ... 
 `docker.socket` не должен содержать TCP `ListenStream`:
 
 ```bash
-ss -ltnp | grep -E 'dockerd|docker\.socket'    # пустой вывод
+ss -ltnp | grep dockerd                        # пустой вывод (TCP-сокет systemd от docker.socket ловит следующая строка)
 systemctl cat docker.socket | grep ListenStream # только /run/docker.sock (и пустой сброс)
 stat -c '%U %G %a' /var/run/docker.sock         # root root 660
 sudo -u developer docker ps                     # permission denied
@@ -520,8 +520,8 @@ exit
 ```
 
 Артефакт `coredump.txt` (на `worker`). Включает controlled crash probe: подтверждаем, что
-после реального `SIGSEGV` не появляется НОВЫЙ retained core dump - ни в стандартном
-текущем каталоге, ни через Apport:
+после реального `SIGSEGV` не появляется НОВЫЙ retained core dump в каталогах Apport
+(`/var/lib/apport/coredump`, `/var/crash`):
 
 ```bash
 ssh "$CP" "sysctl -n fs.suid_dumpable; cat /proc/sys/kernel/core_pattern; sudo su - ubuntu -c 'ulimit -c'" \

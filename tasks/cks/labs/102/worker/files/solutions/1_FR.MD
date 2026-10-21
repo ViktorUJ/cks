@@ -130,9 +130,9 @@ POST est rejeté par l'Envoy proxy de Cilium en L7 (`403`), et non par un transp
 `allowed.cks102.test`/`blocked.cks102.test` sont un lab-owned fixture qui se résout en
 `198.18.0.10`/`198.18.0.20` (IP synthétiques hors de l'address space de Kubernetes, un
 network namespace distinct sur le nœud control-plane, et PAS un ClusterIP : `toFQDNs` dans Cilium n'applique pas
-la règle allow à une IP à l'intérieur du cluster), levé et inscrit dans CoreDNS dès le bootstrap :
+la règle allow à une IP à l'intérieur du cluster), déployé et inscrit dans CoreDNS dès le bootstrap :
 contrairement à `example.com`, ces noms sont toujours disponibles et ne dépendent pas d'Internet. On vérifie AVANT
-la policy - le DNS et les deux endpoint de contrôle doivent être réellement accessibles (`-k` - certificat
+la policy - le DNS et les trois endpoint de contrôle (`allowed:443`, `allowed:80`, `blocked:443`) doivent être réellement accessibles (`-k` - certificat
 auto-signé du fixture) :
 
 ```bash
@@ -300,8 +300,8 @@ Policy : deux règles ingress sur le même port. **Un piège important de Cilium
 [{}]` (sélecteur vide) dans une `CiliumNetworkPolicy` namespaced ne signifie PAS « n'importe quelle identity dans
 tout le cluster » - Cilium ajoute implicitement la restriction par le namespace DE LA POLICY ELLE-MÊME à tout
 sélecteur de `fromEndpoints` sans namespace-label explicite, y compris un `{}` vide. C'est-à-dire que `{}`
-ici, en pratique, ne correspond qu'aux endpoints du namespace `production`, et non à `finance`/`cks-102`
-- la vérification en direct le confirme : avec un `{}` littéral, le client externe reçoit un transport
+ici, en pratique, ne correspond qu'aux endpoints du namespace `production`, et non à `finance`/`cks-102` -
+la vérification en direct le confirme : avec un `{}` littéral, le client externe reçoit un transport
 timeout sur LES DEUX path (la règle ne s'applique pas du tout à son namespace), et `finance` reçoit
 `403` sur `/public/*` (ne correspond qu'à la règle 2, qui n'autorise que `/private/*`).
 Pour faire réellement correspondre n'importe quelle identity indépendamment du namespace, il faut `matchExpressions` avec

@@ -183,7 +183,7 @@ Kubernetes v1.33+では`ServiceAccountNodeAudienceRestriction`はBetaでdefault�
 
 courseではこのようなSecretを通常のcredential発行方法ではなくexceptionと考えてください。まずshort-lived TokenRequest、OIDC、またはfederationを優先します。特定integrationがlimited lifetimeで動作できない場合は、exceptionの理由、最小RBAC、Secret protection、rotation/revocation procedureをdocumentしてください。このSecretをPodにAPI accessを与える通常の方法として作成しないでください。これは自動の短いrotationを受けず、leak時の被害をより大きくします。
 
-> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount tokenはこの章の主なJWT identity modelです。Kubernetes v1.37ではPod CertificatesとClusterTrustBundlesもstableになりました。これらはX.509 workload credentialsの発行とrotationのbuilt-in primitivesです。これはCKS Coreの置き換えではなくproduction-current extensionです。[Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_JP.md)を参照してください。
+> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount tokenはこの章の主なJWT identity modelです。Kubernetes v1.37ではPod CertificatesとClusterTrustBundlesもstableになりました。これらはX.509 workload credentialsの発行とrotationのbuilt-in primitivesです。これはCKS Coreの置き換えではなくproduction-current extensionです。[Kubernetes v1.37 Security Delta (ロシア語版のみ)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)を参照してください。
 
 ## 11.4. 専用ServiceAccountと最小RBAC
 

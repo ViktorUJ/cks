@@ -1,14 +1,14 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
 
-# Lab 107 - solution de référence : Pod Security Admission et immutable root filesystem
+# Lab 107 - solution de référence : Pod Security Admission et read-only root filesystem
 
 > Exécutez les commandes sur la machine de travail. Le contexte `cluster1-admin@cluster1` est déjà
-> configuré. Les namespace `psa-restricted-107` et `psa-observe-107` ont été créés par le script
+> configuré. Les namespaces `psa-restricted-107`, `psa-observe-107` et `psa-controller-107` ont été créés par le script
 > de démarrage, mais n'ont volontairement pas de PSA labels.
 
 ## 1. Enforce restricted et vérification du refus
 
-PSA applique les Pod Security Standards d'après les labels du namespace. Nous figerons la version
+PSA applique les Pod Security Standards d'après les labels du namespace. Figeons la version
 du standard, afin que le comportement ne change pas avec une future mise à jour de Kubernetes :
 
 ```bash
@@ -17,7 +17,7 @@ kubectl label namespace psa-restricted-107 \
   pod-security.kubernetes.io/enforce-version=v1.36
 ```
 
-Nous vérifierons l'admission sans enregistrer l'objet dangereux. `hostNetwork` est interdit par le niveau
+Vérifions l'admission sans enregistrer l'objet dangereux. `hostNetwork` est interdit par le niveau
 `restricted`, la commande doit donc se terminer par l'erreur `violates PodSecurity` :
 
 ```bash
@@ -300,7 +300,7 @@ YAML
 ```
 
 `Binding.matchResources.namespaceSelector` limite la policy uniquement à `psa-restricted-107` :
-les Pod des autres namespace (par exemple `psa-observe-107`) ne sont pas vérifiés par cette règle et ne
+les Pods des autres namespaces (par exemple `psa-observe-107`) ne sont pas vérifiés par cette règle et ne
 reçoivent pas de Deny superflu.
 
 ## 7. Controller-driven admission denial
@@ -339,7 +339,7 @@ kubectl -n psa-controller-107 edit deployment controller-app
 ```
 
 Dans `spec.template.spec`, remplacez la ligne `securityContext: {}` par le bloc ci-dessous, et dans le conteneur `busybox`
-(le nom du conteneur est `busybox`, créé par `kubectl create deployment`) ajoutez votre propre `securityContext` :
+(le nom du conteneur est `busybox`, créé par `kubectl create deployment`) ajoutez-lui son propre `securityContext` :
 
 ```yaml
     spec:

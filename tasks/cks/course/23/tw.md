@@ -335,7 +335,7 @@ mTLS policy——需在下一節分別驗證。
 > 🔬 **Upstream identity primitive。** Kubernetes v1.37 已將 Pod Certificates 與 ClusterTrustBundles 穩定化。它們提供
 > Kubernetes-level X.509 primitives，卻不會自動使 Istio/SPIFFE identity plane 變得多餘：signer、trust model 與 mesh
 > enforcement 仍是獨立的 architecture decisions。請見
-> [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_TW.md)。
+> [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
 
 ## 23.6. Istio：sidecar、SPIFFE workload identity 與 `PeerAuthentication`
 

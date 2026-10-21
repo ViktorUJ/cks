@@ -13,7 +13,7 @@
 > sudo -i
 > ```
 >
-> Prüfungen und artifacts: Der Checker liest die artifacts von der **Arbeitsmaschine** (`worker`), aus
+> Prüfungen und Artefakte: Der Checker liest die Artefakte von der **Arbeitsmaschine** (`worker`), aus
 > `/var/work/tests/artifacts/<Nummer>/`, daher verlassen wir nach den Änderungen auf dem Node die Sitzung (`exit`, `exit`) und
 > speichern das artifact mit einem kurzen Befehl vom `worker`. Lege dafür einmal den Node-Namen fest:
 >
@@ -22,7 +22,7 @@
 > mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6,7,9,10}
 > ```
 >
-> Artifacts werden nur für die Prüfung der Lab benötigt: In der Prüfung gibt es sie nicht, dort genügen Befehle auf dem
+> Artifacts werden nur für die Überprüfung des Labs benötigt: In der CKS-Prüfung gibt es sie nicht, dort genügen Befehle auf dem
 > Node und eine flüchtige Prüfung des Ergebnisses. Die Befehle speichern die Ausgabe in einer Datei (`>`), den Inhalt sehen wir
 > separat über `cat <Datei>` - das erwartete Ergebnis steht in den Kommentaren `# ...` unter dem Block.
 >
@@ -104,7 +104,7 @@ printf 'role=control-plane,workload\nworker_ip=%s\nnode_ip=%s\npod_cidr=%s\n' \
 ```
 
 Baseline VOR UFW: Wir prüfen, dass TCP/10250 (kubelet HTTPS) jetzt tatsächlich erreichbar ist - ohne
-dies beweist "blockiert" nach UFW nichts, der Port konnte aus einem anderen Grund unerreichbar sein
+dies beweist "blockiert" nach UFW nichts, der Port könnte aus einem anderen Grund unerreichbar gewesen sein
 (security group, routing). Der Checker gleicht separat mit seiner Baseline ab, aber auch dein
 Eintrag wird gebraucht:
 
@@ -114,7 +114,7 @@ curl -ks -o /dev/null -w '%{http_code}\n' --max-time 3 "https://$NODE_IP:10250/h
 echo 'baseline kubelet 10250: CURL_EXIT=0 HTTPCODE=401' >> /var/work/tests/artifacts/3/preflight.txt
 ```
 
-Wenn die Baseline unerreichbar ist (curl gab `000` zurück) - korrigiere zuerst die Konnektivität, sonst ist das Ergebnis
+Wenn die Baseline unerreichbar ist (curl gab `000` zurück), korrigiere zuerst die Konnektivität, sonst ist das Ergebnis
 nach UFW nicht überzeugend.
 
 Die UFW-Regeln konfigurieren wir auf dem Node. Zuerst erlauben wir recovery und die benötigten Quellen, und erst
@@ -140,7 +140,7 @@ exit
 
 Artifacts (auf `worker`). `ufw show added` ist die normalisierte Darstellung der Regeln, die
 du tatsächlich hinzugefügt hast (NICHT garantiert die ursprüngliche Form/Reihenfolge der Befehle - UFW normalisiert sie bei
-der Anzeige). Die Prüfung vergleicht gerade diese Liste mit der erwarteten allowlist - speichere sie
+der Anzeige). Die Prüfung vergleicht genau diese Liste mit der erwarteten allowlist - speichere sie
 ebenfalls, das ist die zuverlässigste evidence des exact allow-set. Verwalte die Firewall nur über `ufw` -
 bearbeite `/etc/ufw/before*.rules` oder `/etc/ufw/after*.rules` NICHT manuell, das sind
 framework-Dateien mit allgemeinen default-Regeln und kein Ort für source-scoped rules; der Checker
@@ -170,8 +170,8 @@ kubectl get --raw=/readyz
 kubectl get nodes
 kubectl rollout status deployment/health-probe -n cks-105-health --timeout=60s
 # Ein workload innerhalb des Clusters muss weiterhin DNS auflösen und den API server erreichen
-# (UFW darf den Traffic Pod -> CoreDNS und Pod -> API nicht brechen):
-kubectl exec -n cks-105-health deploy/health-probe -- nslookup kubernetes.default   # muss das Address des Service kubernetes zurückgeben
+# (UFW darf den Traffic Pod -> CoreDNS und Pod -> API nicht unterbrechen):
+kubectl exec -n cks-105-health deploy/health-probe -- nslookup kubernetes.default   # muss die Address-Zeile des Service kubernetes zurückgeben
 kubectl exec -n cks-105-health deploy/health-probe -- curl -ks -o /dev/null -w '%{http_code}\n' --max-time 5 https://kubernetes.default.svc/readyz   # jeder Code außer 000
 
 # Ein unerwünschter worker -> kubelet flow darf keine HTTP response liefern.
@@ -203,7 +203,7 @@ Prüfung declared vs effective: `ufw show added` ist eine deklarative Liste, rek
 `### tuple ###` metadata, die ufw selbst in `user.rules` schreibt, wenn eine Regel über die CLI
 hinzugefügt wird. Der echte Zustand des Kernels nach `ufw reload` ist dagegen das, was
 `ufw show user-rules` zeigt. Vergleiche nicht nur die ANZAHL der Zeilen, sondern auch ihren INHALT
-(source/port/proto): `ufw-user-input` muss loopback (all, lo) und drei tcp
+(source/port/proto): `ufw-user-input` muss loopback (all, lo) und vier tcp
 dpt:22/6443 Regeln mit exakten source-Adressen zeigen, und `ufw6-user-input` - GENAU eine Zeile, dasselbe
 loopback ACCEPT für v6 (`ufw allow in on lo` ist eine Regel nach Interface ohne explizite IP,
 daher erzeugt ufw immer eine v4- und eine v6-Version). Jede ANDERE/zusätzliche Zeile dort ist
@@ -221,7 +221,7 @@ CURL_EXIT/HTTPCODE-Vertrag) das erwartete Ergebnis geliefert haben.
 
 ## 4. Kubeconfig des Administrators schützen
 
-`/etc/kubernetes/admin.conf` enthält die cluster-admin credential. Sie darf nur von
+`/etc/kubernetes/admin.conf` enthält die cluster-admin credential. Die Datei darf nur von
 root gelesen werden.
 
 Auf der control-plane:
@@ -286,8 +286,8 @@ ssh "$CP" "sudo sshd -T -C 'user=root,addr=${WORKER_IP},laddr=${NODE_IP},lport=2
 
 ## 6. Unsicheren Zugriff auf den Docker daemon auf `docker-host` schließen
 
-TCP/2375 hat weder TLS noch Authentifizierung: Der Zugriff darauf ist praktisch gleichbedeutend mit root-
-Zugriff auf den Host. Wir entfernen das Lern-systemd-override mit dem TCP-Listener, setzen den Eigentümer des unix-Sockets
+TCP/2375 hat weder TLS noch Authentifizierung: Der Zugriff darauf ist praktisch gleichbedeutend mit root-Zugriff
+auf den Host. Wir entfernen das Lern-systemd-override mit dem TCP-Listener, setzen den Eigentümer des unix-Sockets
 über ein socket override und entfernen `developer` aus der Gruppe `docker`.
 
 Wir wenden die Änderungen über ein vollständiges `daemon-reload` + restart **beider** units an - das ist ein
@@ -330,7 +330,7 @@ Der Vertrag der Aufgabe ist weiter gefasst als der Port 2375: Die Docker API dar
 `docker.socket` darf kein TCP `ListenStream` enthalten:
 
 ```bash
-ss -ltnp | grep -E 'dockerd|docker\.socket'    # leere Ausgabe
+ss -ltnp | grep dockerd                        # leere Ausgabe (der von systemd gehaltene TCP-Socket von docker.socket wird von der nächsten Zeile erfasst)
 systemctl cat docker.socket | grep ListenStream # nur /run/docker.sock (und ein leerer Reset)
 stat -c '%U %G %a' /var/run/docker.sock         # root root 660
 sudo -u developer docker ps                     # permission denied
@@ -360,7 +360,7 @@ Starte nach Ausführung aller Schritte `check_result`.
 das bereits geladene Modul zu entladen, und blockieren dann in jedem Fall das erneute Laden sowohl
 über `blacklist` als auch über ein `install` override. Beide Direktiven wirken auf Ebene von
 `modprobe` (alias resolution und ein explizites `modprobe sctp`) und beseitigen den üblichen Ladepfad;
-sie ersetzen keine kernel-level enforcement (`insmod` fügt das Modul direkt über einen syscall ein
+sie ersetzen kein kernel-level enforcement (`insmod` fügt das Modul direkt über einen syscall ein
 und liest `modprobe.d` nicht, und `modprobe --ignore-install` kann `install` bei gleichwertigem
 root-Zugriff umgehen) - für diese Lab ist wichtig, gerade den erwarteten Autoload-Pfad zu beseitigen und nicht
 einen Schutz vor einem Benutzer zu modellieren, der bereits root auf dem Node hat.
@@ -370,7 +370,7 @@ kein Fehler des Teilnehmers. Protokoll-Kernelmodule (darunter `sctp`) erhalten e
 per-network-namespace-Referenz (`try_module_get` in der pernet-Initialisierung) für jedes netns,
 das zum Zeitpunkt des Ladens des Moduls bereits existierte - auf diesem Node laufen bereits Pods
 (calico, coredns, kube-system), daher kann `sctp` im Zustand `in use` mit
-von null verschiedenem refcount und LEEREM `/sys/module/sctp/holders` bleiben (das heißt, es hält kein anderes Modul -
+von null verschiedenem refcount und LEEREM `/sys/module/sctp/holders` bleiben (das heißt, es wird nicht von einem anderen Modul gehalten -
 es gibt nichts, was rekursiv entladen werden könnte). Das lässt sich nicht beheben, ohne alle diese Pods zu stoppen, was nicht
 zur Aufgabe gehört. Wichtig und geprüft ist gerade das, was unter Kontrolle des Teilnehmers liegt:
 Das Modul darf nicht NEU geladen werden können.
@@ -497,7 +497,7 @@ Weg ist, `kernel.core_pattern` selbst auf einen garantiert nicht funktionierende
 
 Wir begrenzen auch die Größe des core dump auf Ebene der Prozesslimits - das ist ein vom
 `suid_dumpable`/`core_pattern` getrennter Mechanismus (soft limit für gewöhnliche crashes bei klassischem
-datei-basiertem Schreiben, falls dieses jemals wiederhergestellt wird).
+dateibasiertem Schreiben, falls dieses jemals wiederhergestellt wird).
 
 Auf der control-plane:
 
@@ -520,8 +520,8 @@ exit
 ```
 
 Artifact `coredump.txt` (auf `worker`). Enthält einen controlled crash probe: Wir bestätigen, dass
-nach einem echten `SIGSEGV` KEIN NEUER retained core dump erscheint - weder im standardmäßigen
-aktuellen Verzeichnis noch über Apport:
+nach einem echten `SIGSEGV` KEIN NEUER retained core dump in den Apport-Verzeichnissen
+(`/var/lib/apport/coredump`, `/var/crash`) erscheint:
 
 ```bash
 ssh "$CP" "sysctl -n fs.suid_dumpable; cat /proc/sys/kernel/core_pattern; sudo su - ubuntu -c 'ulimit -c'" \

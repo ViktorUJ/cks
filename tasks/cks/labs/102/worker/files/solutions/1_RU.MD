@@ -132,7 +132,7 @@ POST отклонён Envoy proxy Cilium на L7 (`403`), а не transport deny
 network namespace на control-plane узле, а НЕ ClusterIP: `toFQDNs` в Cilium не применяет
 allow-правило к IP внутри кластера), поднятый и вписанный в CoreDNS ещё во время bootstrap:
 в отличие от `example.com`, эти имена всегда доступны и не зависят от Internet. Проверяем ДО
-policy - DNS и оба контрольных endpoint должны быть реально доступны (`-k` - самоподписанный
+policy - DNS и все три контрольных endpoint (`allowed:443`, `allowed:80`, `blocked:443`) должны быть реально доступны (`-k` - самоподписанный
 сертификат fixture):
 
 ```bash
@@ -300,10 +300,10 @@ Policy: два ingress-правила на одном порту. **Важная
 [{}]` (пустой selector) в namespaced `CiliumNetworkPolicy` НЕ означает "любая identity во
 всём кластере" - Cilium неявно добавляет ограничение по namespace САМОЙ policy к любому
 `fromEndpoints`-селектору без явного namespace-label, включая пустой `{}`. То есть `{}`
-здесь на практике матчит только endpoints в namespace `production`, а не `finance`/`cks-102`
-- живая проверка это подтверждает: с буквальным `{}` внешний client получает transport
+здесь на практике матчит только endpoints в namespace `production`, а не `finance`/`cks-102` -
+живая проверка это подтверждает: с буквальным `{}` внешний client получает transport
 timeout на ОБА path (правило вообще не применяется к его namespace), а `finance` получает
-`403` на `/public/*` (matches только правило 2, которое разрешает лишь `/private/*`).
+`403` на `/public/*` (совпадает только с правилом 2, которое разрешает лишь `/private/*`).
 Чтобы реально матчить любую identity независимо от namespace, нужен `matchExpressions` с
 `operator: Exists` по reserved-label `k8s:io.kubernetes.pod.namespace` (сам факт наличия
 этого label истинен для абсолютно любого Pod, независимо от значения) - это, а не пустой

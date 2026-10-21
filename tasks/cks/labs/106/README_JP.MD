@@ -18,16 +18,16 @@ placement、プロセスの実際の挙動を確認する必要があります�
 
 コンテナ内での RCE を仮定します。compromise の後の問いは「攻撃者が shell を得られたか」ではなく、「その shell が次に何をできるか」、そしてその blast radius がどれほど大きいかです。
 
-課題 1-2 の AppArmor は、オブジェクトと操作を制限します：プロファイルを enforce に切り替え、その後で書き込みの拒否を実証します。こうして、すでに compromise されたプロセスは、コンテナ内で実行されているというだけの理由で無制限の操作を得ることはありません。
+課題 1-3 の AppArmor は、オブジェクトと操作を制限します：プロファイルを enforce に切り替え、その後で書き込みの拒否を実証します。こうして、すでに compromise されたプロセスは、コンテナ内で実行されているというだけの理由で無制限の操作を得ることはありません。
 
-課題 3-5 の seccomp は、利用可能なシステムコールを制限します：まず baseline を適用し、次に custom profile を適用し、その後で `unshare(2)` の実際の拒否を確認します。課題 5 にはすでに Pod `sysadmin-control` による negative control が含まれています：同じ capability で seccomp filter がなければ呼び出しが通るため、この比較は compromise の後の境界をまさに示します。
+課題 4-6 の seccomp は、利用可能なシステムコールを制限します：まず baseline を適用し、次に custom profile を適用し、その後で `unshare(2)` の実際の拒否を確認します。課題 6 にはすでに Pod `sysadmin-control` による negative control が含まれています：同じ capability で seccomp filter がなければ呼び出しが通るため、この比較は compromise の後の境界をまさに示します。
 
 ## 開始前のセルフチェック
 
 <details>
 <summary>1. AppArmor の `complain` は `enforce` と何が違うか、そしてなぜ `complain` を防御の証拠として示してはいけないのか?</summary>
 
-`complain` モードでは、AppArmor はプロファイル違反をログに記録するだけで、ブロックは「しません」 - 禁止されるべき操作はそれでも実行され、ただジャーナルに記録が残るだけです。`enforce` では操作が実際にブロックされます。課題 1 は、プロファイルを `enforce` に切り替えることを明示的に求めています。`complain` で「ログに違反がある」ことを示しても防御の証明にはならず - プロセスは結局その操作を実行できたからです。
+`complain` モードでは、AppArmor はプロファイル違反をログに記録するだけで、ブロックは「しません」 - 禁止されるべき操作はそれでも実行され、ただジャーナルに記録が残るだけです。`enforce` では操作が実際にブロックされます。課題 2 がプロファイルを `enforce` に切り替えることを明示的に求めているのは、`complain` で「ログに違反がある」ことを示しても防御の証明にはならないからです - プロセスは結局その操作を実行できてしまいます。
 </details>
 
 <details>
@@ -62,7 +62,7 @@ Kubelet は、相対パスを自身の seccomp root (デフォルトは `/var/li
 リソースの節約のため、control-plane が唯一の workload ノードです：その `NoSchedule` taint は
 解除されています。ノードには label
 `security.cks.io/localhost-profiles-106=true` が付けられています。この実習のすべての Pod は、まさに
-このノードを選択する必要があります - plan-プロファイルは scheduler によって別のノードには移されません。
+このノードを選択する必要があります - Localhost プロファイルはこのノードにのみ存在し、scheduler はそれを別のノードに移しません。
 
 Bootstrap が準備したのは**次のものだけ**です：
 
@@ -129,7 +129,7 @@ ls -la /opt/lab106-fixtures/
 
 課題 9 を終えるまでは、このプロファイルに `aa-enforce`/`aa-complain` を使わないでください：
 `apparmor-utils` のこれらの Python ツールは、本来の作業の前に `/etc/apparmor.d/` の**すべての**ファイルを解析 (パース) します。
-課題 8 のまだ壊れている `k8s-106-broken-profile` も含まれ、他人のファイルでパーサーエラーを起こして失敗します。プロファイルのファイル内のフラグ `complain` を
+これには課題 9 のまだ壊れている `k8s-106-broken-profile` も含まれるため、ツールは無関係なファイルでパーサーエラーを起こして失敗します。プロファイルのファイル内のフラグ `complain` を
 直接 (`sed` で) 修正し、まさにこのファイルを `apparmor_parser -r` で再ロードしてください -
 このバイナリは、`aa-enforce` とは異なり、渡されたファイルだけを解析します。
 </details>
@@ -138,7 +138,7 @@ ls -la /opt/lab106-fixtures/
 | **3** | **Localhost AppArmor Pod と書き込みのブロック** |
 | :---: | :--- |
 | やること | namespace `security-106` と Pod `apparmor-writer` を作成します。Pod は、インフラのノードの label を選択し、ServiceAccount token の automount を無効にし、Pod レベルで `appArmorProfile.type: Localhost`、`localhostProfile: k8s-106-deny-write` を設定する必要があります。`busybox:1.36`、コンテナ `app`、sleep コマンド `sleep 3600`、そして `/work` にマウントした `emptyDir` を使用します。起動後、コマンド `cat /proc/1/attr/current` (インターフェースが利用可能な場合) で effective な profile を確認し、許可された読み取り操作、たとえば `cat /etc/hostname >/dev/null` を実行してから、`/work` にファイルを書き込もうとします；その操作は拒否で終了する必要があります。ノード上で、`journalctl -k \| grep -i apparmor` または `dmesg \| grep -i apparmor` から、profile/process に対する AppArmor の denial を記録してください。 |
-| 受け入れ基準 | Pod が起動しており、まさに Localhost profile を使用し、正しい nodeSelector を持つ；プロセスの effective な profile が `k8s-106-deny-write` を enforce mode で示している (`/proc/.../attr/current` が利用可能な場合)；`/work` への許可された読み取り操作は通り、checker は `/work` に独自の一意な (per-run) ファイルを独立して書き込み、AppArmor の拒否を受け取る。kernel journal/audit log に、まさにこの試行に関連する (一意なファイル名による) この profile のイベント `apparmor="DENIED"` がある - これにより、ジャーナル内の古い denial イベントによる偽の通過を排除する。 |
+| 受け入れ基準 | Pod が起動しており、まさに Localhost profile を使用し、正しい nodeSelector を持つ；プロセスの effective な profile が `k8s-106-deny-write` を enforce mode で示している (`/proc/.../attr/current` が利用可能な場合)；許可された読み取り操作 (たとえば `cat /etc/hostname` や `ls /work`) は通り、checker は `/work` に独自の一意な (per-run) ファイルを独立して書き込み、AppArmor の拒否を受け取る。kernel journal/audit log に、まさにこの試行に関連する (一意なファイル名による) この profile のイベント `apparmor="DENIED"` がある - これにより、ジャーナル内の古い denial イベントによる誤った合格判定 (false pass) を排除する。 |
 
 <details>
 <summary>💡 課題 3 のヒント</summary>
@@ -161,7 +161,7 @@ ls -la /opt/lab106-fixtures/
 ---
 | **5** | **custom Localhost seccomp profile を転送して使用する** |
 | :---: | :--- |
-| やること | ソース `cks-106-deny-unshare.json` は、作業マシンの `/opt/lab106-fixtures/cks-106-deny-unshare.json` にのみあります。label `security.cks.io/localhost-profiles-106=true` を持つノードを特定し、そこにディレクトリ `/var/lib/kubelet/seccomp/profiles/` を作成し (まだなければ)、同じ名前で JSON をそこにコピーします。次に、そのノード上の `security-106` に Pod `localhost-seccomp` を作成します。Pod レベルで `seccompProfile.type: Localhost` と、`/var/lib/kubelet/seccomp/` なしの相対パス `profiles/cks-106-deny-unshare.json` を指定します。コンテナ `app` は `busybox:1.36` を使用し、capability `SYS_ADMIN` を受け取り、確認の後も起動したままである必要があります。**この組み合わせを hardened baseline として扱わないでください:** `SYS_ADMIN` は最も危険な capabilities の 1 つであり続け、`allowPrivilegeEscalation: false` はすでに付与された権限を取り上げません。これは capability にフォーカスした実験であり、セキュリティを示すのは具体的な seccomp の deny です。 |
+| やること | ソース `cks-106-deny-unshare.json` は、作業マシンの `/opt/lab106-fixtures/cks-106-deny-unshare.json` にのみあります。label `security.cks.io/localhost-profiles-106=true` を持つノードを特定し、そこにディレクトリ `/var/lib/kubelet/seccomp/profiles/` を作成し (まだなければ)、同じ名前で JSON をそこにコピーします。次に、そのノード上の `security-106` に Pod `localhost-seccomp` を作成します。Pod レベルで `seccompProfile.type: Localhost` と、`/var/lib/kubelet/seccomp/` なしの相対パス `profiles/cks-106-deny-unshare.json` を指定します。コンテナ `app` は `busybox:1.36` を使用し、capability `SYS_ADMIN` を受け取り、確認の後も起動したままである必要があります。**この組み合わせを hardened baseline として扱わないでください：** `SYS_ADMIN` は最も危険な capabilities の 1 つであり続け、`allowPrivilegeEscalation: false` はすでに付与された権限を取り上げません。これは capability にフォーカスした実験であり、セキュリティを示すのは具体的な seccomp の deny です。 |
 | 受け入れ基準 | JSON profile が転送され、正しいパスでノード上に存在する；正しい nodeSelector を持つ Pod が profile `Localhost:profiles/cks-106-deny-unshare.json` を使用している；JSON profile が `unshare` に対する `SCMP_ACT_ERRNO`/`errnoRet: 1` を含んでいる；コンテナには、実験に必要な `SYS_ADMIN` のみが追加されている。 |
 
 <details>
@@ -223,12 +223,12 @@ file capabilities) **新しい**権限を得ることを禁止しますが、bou
 <details>
 <summary>💡 課題 8 のヒント</summary>
 
-重要な要件は、Pod が Pod レベルでもコンテナレベルでも、`seccompProfile` に「一切」言及していないことです。課題 3 の manifest をコピーして、このフィールドを削除し忘れると - テストは本来示すべきこと、つまり `Seccomp: 2` をもたらしたのが (manifest での明示ではなく) まさに node-level の `seccompDefault` であることを実証しません。
+重要な要件は、Pod が Pod レベルでもコンテナレベルでも、`seccompProfile` に「一切」言及していないことです。課題 4-6 の manifest をコピーして、このフィールドを削除し忘れると - テストは本来示すべきこと、つまり `Seccomp: 2` をもたらしたのが (manifest での明示ではなく) まさに node-level の `seccompDefault` であることを実証しません。
 
 確認では、ディスク上のファイルのテキストではなく、kubelet に実際に適用された設定を基準にします：
 `curl`/`kubectl get --raw /api/v1/nodes/<node>/proxy/configz | jq .kubeletconfig.seccompDefault`。
 `/var/lib/kubelet/config.yaml` に対する単純な grep では、起動している kubelet がまさにこのファイルを
-使っていることは証明されません - コマンドフラグや drop-in が、ファイル自体を変更せずに
+使っていることは証明されません - コマンドラインフラグや drop-in が、ファイル自体を変更せずに
 値を上書きしている可能性があります。ファイルを修正した後は、必ず kubelet を再起動してください -
 設定はその場では反映されません。
 </details>
@@ -254,7 +254,7 @@ file capabilities) **新しい**権限を得ることを禁止しますが、bou
 `-Q`/`-d` の場合でも、`apparmor_parser` は `sudo` で実行してください：実習のノード (apparmor 3.0.4、
 Ubuntu) では、権限がないと、パーサーは起動のたびに `/var/cache/apparmor` の policy cache を設定しようとし、
 構文の確認の前に "Failed setting up policy cache: Permission denied" で失敗します - プロファイルの実際の構文エラーの代わりに、
-権限についての紛らわしいエラーが出ます。これはノード自体で (明らかに壊れたプロファイルでも) 確認済みです。
+権限についての紛らわしいエラーが出ます。これはノード自体で (壊れていることが分かっているプロファイルでも) 確認済みです。
 `sudo` なしで実行する必要がある場合は、`-K` (`--skip-cache`: キャッシュなし) を追加してください -
 権限のない `apparmor_parser -Q -K` はプロファイルの解析まで進み、実際の
 エラーを表示します。ロードと reload (`-r`) は、いずれにせよ権限を必要とします。

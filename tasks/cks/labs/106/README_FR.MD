@@ -19,16 +19,16 @@ placement du Pod et le comportement réel du processus.
 
 Supposons un RCE dans le conteneur. La question après le compromise n'est pas « l'attaquant a-t-il pu obtenir un shell », mais « que peut faire ce shell ensuite » et quelle est l'ampleur de son blast radius.
 
-AppArmor dans les tâches 1–2 limite les objets et les opérations : le profil est passé en enforce, puis on démontre le refus d'écriture. Ainsi, un processus déjà compromis n'obtient pas une action illimitée simplement parce qu'il s'exécute dans un conteneur.
+AppArmor dans les tâches 1–3 limite les objets et les opérations : le profil est passé en enforce, puis on démontre le refus d'écriture. Ainsi, un processus déjà compromis n'obtient pas une action illimitée simplement parce qu'il s'exécute dans un conteneur.
 
-seccomp dans les tâches 3–5 limite l'appel système disponible : d'abord le baseline est appliqué, puis le profil custom, puis on vérifie le refus réel de `unshare(2)`. La tâche 5 contient déjà un negative control via le Pod `sysadmin-control` : avec la même capability sans seccomp filter, l'appel passe, et la comparaison montre donc précisément la frontière après le compromise.
+seccomp dans les tâches 4–6 limite l'appel système disponible : d'abord le baseline est appliqué, puis le profil custom, puis on vérifie le refus réel de `unshare(2)`. La tâche 6 contient déjà un negative control via le Pod `sysadmin-control` : avec la même capability sans seccomp filter, l'appel passe, et la comparaison montre donc précisément la frontière après le compromise.
 
 ## Vérifiez-vous avant de commencer
 
 <details>
 <summary>1. En quoi `complain` diffère-t-il de `enforce` dans AppArmor, et pourquoi `complain` ne peut-il pas être présenté comme une preuve de protection ?</summary>
 
-En mode `complain`, AppArmor ne fait que journaliser les violations du profil, mais NE les bloque PAS - une opération qui devrait être interdite s'exécutera quand même, une entrée apparaîtra simplement dans le journal. En `enforce`, l'opération est réellement bloquée. La tâche 1 exige explicitement de passer le profil en `enforce`, car la démonstration « voici une violation dans le log » en `complain` ne prouve pas la protection - le processus a tout de même pu effectuer l'action.
+En mode `complain`, AppArmor ne fait que journaliser les violations du profil, mais NE les bloque PAS - une opération qui devrait être interdite s'exécutera quand même, une entrée apparaîtra simplement dans le journal. En `enforce`, l'opération est réellement bloquée. La tâche 2 exige explicitement de passer le profil en `enforce`, car la démonstration « voici une violation dans le log » en `complain` ne prouve pas la protection - le processus a tout de même pu effectuer l'action.
 </details>
 
 <details>
@@ -63,7 +63,7 @@ L'environnement est déployé via Terragrunt dans AWS `eu-central-1`.
 Pour économiser les ressources, le control-plane est le seul workload-node : le
 `NoSchedule` taint lui a été retiré. Il est marqué par le label
 `security.cks.io/localhost-profiles-106=true`. Tous les Pod de ce lab doivent choisir précisément
-ce nœud - le plan-profil n'est pas transféré par le planificateur (scheduler) vers un autre nœud.
+ce nœud - le profile Localhost n'existe que sur celui-ci, et le planificateur (scheduler) ne le transfère pas vers un autre nœud.
 
 Le bootstrap a préparé **uniquement** :
 
@@ -71,7 +71,7 @@ Le bootstrap a préparé **uniquement** :
 - sur la machine de travail (worker), dans `/opt/lab106-fixtures/` : les sources de `k8s-106-deny-write`
   (AppArmor profile) et `cks-106-deny-unshare.json` (seccomp profile custom).
 
-Ni l'AppArmor profile ni le seccomp profile ne sont préinstallés sur le workload-node ni
+**Ni** l'AppArmor profile **ni** le seccomp profile ne sont préinstallés sur le workload-node ni
 chargés dans son noyau - le transfert et le chargement initial de chacun d'eux font partie des tâches 1 et 5.
 Ne changez pas le chemin du seccomp profile et ne créez pas de profile à l'intérieur d'un Pod ordinaire : le transfert des
 fichiers vers le nœud, c'est vous qui l'effectuez en tant qu'administrateur du nœud via SSH, et non depuis l'intérieur du workload.
@@ -131,7 +131,7 @@ La commande `sudo apparmor_parser -r /etc/apparmor.d/k8s-106-deny-write` recharg
 N'utilisez pas `aa-enforce`/`aa-complain` pour ce profil tant que la tâche 9 n'est pas faite :
 ces outils Python d'`apparmor-utils`, avant leur travail principal, analysent
 (parsent) **tous** les fichiers de `/etc/apparmor.d/`, y compris le `k8s-106-broken-profile` encore cassé
-de la tâche 8, et échouent avec une erreur du parser sur un fichier étranger. Modifiez le flag `complain` dans le fichier
+de la tâche 9, et échouent avec une erreur du parser sur un fichier étranger. Modifiez le flag `complain` dans le fichier
 du profil directement (`sed`) et rechargez précisément CE fichier via `apparmor_parser -r` -
 ce binaire, contrairement à `aa-enforce`, n'analyse que le fichier qui lui est passé.
 </details>
@@ -139,8 +139,8 @@ ce binaire, contrairement à `aa-enforce`, n'analyse que le fichier qui lui est 
 ---
 | **3** | **Localhost AppArmor Pod et blocage de l'écriture** |
 | :---: | :--- |
-| Ce qu'on fait | Créez le namespace `security-106` et le Pod `apparmor-writer`. Le Pod doit choisir le label du nœud de l'infrastructure, désactiver l'automount du ServiceAccount token et, au niveau du Pod, définir `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Utilisez `busybox:1.36`, le conteneur `app`, la commande d'attente `sleep 3600` et un `emptyDir` monté dans `/work`. Après le démarrage, confirmez le profile effectif avec la commande `cat /proc/1/attr/current` (si l'interface est disponible), exécutez une opération de lecture autorisée, par exemple `cat /etc/hostname >/dev/null`, puis essayez d'écrire un fichier dans `/work` ; l'opération doit se terminer par un refus. Sur le nœud, consignez l'AppArmor denial pour le profile/process depuis `journalctl -k | grep -i apparmor` ou `dmesg | grep -i apparmor`. |
-| Critères d'acceptation | Le Pod est en cours d'exécution, utilise précisément le profile Localhost et le bon nodeSelector ; le profile effectif du processus montre `k8s-106-deny-write` en enforce mode (quand `/proc/.../attr/current` est disponible) ; l'opération de lecture autorisée dans `/work` passe, et le checker écrit independently son propre fichier unique (per-run) dans `/work` et reçoit un refus AppArmor. Dans le kernel journal/audit log, il y a un événement `apparmor="DENIED"` avec ce profile se rapportant précisément à CETTE tentative (par le nom unique du fichier) - cela exclut un false pass dû à un événement denial périmé dans le journal. |
+| Ce qu'on fait | Créez le namespace `security-106` et le Pod `apparmor-writer`. Le Pod doit choisir le label du nœud de l'infrastructure, désactiver l'automount du ServiceAccount token et, au niveau du Pod, définir `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Utilisez `busybox:1.36`, le conteneur `app`, la commande d'attente `sleep 3600` et un `emptyDir` monté dans `/work`. Après le démarrage, confirmez le profile effectif avec la commande `cat /proc/1/attr/current` (si l'interface est disponible), exécutez une opération de lecture autorisée, par exemple `cat /etc/hostname >/dev/null`, puis essayez d'écrire un fichier dans `/work` ; l'opération doit se terminer par un refus. Sur le nœud, consignez l'AppArmor denial pour le profile/process depuis `journalctl -k \| grep -i apparmor` ou `dmesg \| grep -i apparmor`. |
+| Critères d'acceptation | Le Pod est en cours d'exécution, utilise précisément le profile Localhost et le bon nodeSelector ; le profile effectif du processus montre `k8s-106-deny-write` en enforce mode (quand `/proc/.../attr/current` est disponible) ; l'opération de lecture autorisée (par exemple, `cat /etc/hostname` ou `ls /work`) passe, et le checker écrit indépendamment son propre fichier unique (per-run) dans `/work` et reçoit un refus AppArmor. Dans le kernel journal/audit log, il y a un événement `apparmor="DENIED"` avec ce profile se rapportant précisément à CETTE tentative (par le nom unique du fichier) - cela exclut un false pass dû à un événement denial périmé dans le journal. |
 
 <details>
 <summary>💡 Indice pour la tâche 3</summary>
@@ -152,7 +152,7 @@ ce binaire, contrairement à `aa-enforce`, n'analyse que le fichier qui lui est 
 | **4** | **Baseline sûr seccomp RuntimeDefault** |
 | :---: | :--- |
 | Ce qu'on fait | Créez dans `security-106` le Pod `runtime-default` avec `busybox:1.36` et `sleep 3600`. Au niveau du Pod, indiquez explicitement `securityContext.seccompProfile.type: RuntimeDefault` ; le Pod doit aussi choisir le nœud préparé. Vérifiez dans le conteneur `/proc/1/status` : on attend `Seccomp: 2`. |
-| Critères d'acceptation | Le Pod `Running`, dans son securityContext au niveau du Pod `RuntimeDefault` est choisi, et le processus est en seccomp filter mode. |
+| Critères d'acceptation | Le Pod est `Running`, `RuntimeDefault` est choisi dans son securityContext au niveau du Pod, et le processus est en seccomp filter mode. |
 
 <details>
 <summary>💡 Indice pour la tâche 4</summary>
@@ -210,24 +210,24 @@ Pour un workload ordinaire, utilisez `capabilities.drop: ["ALL"]` et, séparéme
 | **7** | **User namespaces : `hostUsers: false` et traduction des UID via `uid_map`** |
 | :---: | :--- |
 | Ce qu'on fait | Les User namespaces sont GA dans Kubernetes v1.36 (voir le [chapitre 03](../../course/03/fr.md), le [chapitre 18](../../course/18/fr.md) et le Security Delta v1.36). La théorie explique que `hostUsers: false` traduit le root du conteneur en un host UID non privilégié ; ici, il faut le démontrer sur un processus vivant. Créez dans `security-106` un Pod `userns-probe` sur le nœud préparé avec `spec.hostUsers: false`, l'image `busybox:1.36`, la commande `sleep 3600` ; ne définissez pas `runAsUser` au niveau du Pod, afin que le processus démarre en UID 0 **à l'intérieur** du conteneur. Confirmez `id` dans le conteneur (`uid=0`). Déterminez le host PID du processus du conteneur via `crictl inspect` (par analogie avec le lab 112) ou via `kubectl get pod -o jsonpath` + `crictl ps`, puis sur le nœud lisez `/proc/<host PID>/uid_map`. Enregistrez les deux sorties (`id` dans le conteneur et le contenu de `uid_map`) dans `/var/work/tests/artifacts/6/userns.txt`. |
-| Critères d'acceptation | Le Pod `Running`, `spec.hostUsers == false`, choisit le nœud préparé ; `id` dans le conteneur montre `uid=0(root)` ; `/proc/<host PID>/uid_map` sur le nœud contient une ligne de la forme `0 <host-uid> <length>`, où `<host-uid>` **n'est pas égal à 0** (le root du conteneur est traduit en un host UID non privilégié) et `<length>` vaut au moins `65536` (la plage standard d'UID par Pod) ; l'artefact contient les deux parties de l'evidence. |
+| Critères d'acceptation | Le Pod est `Running`, `spec.hostUsers == false`, il choisit le nœud préparé ; `id` dans le conteneur montre `uid=0(root)` ; `/proc/<host PID>/uid_map` sur le nœud contient une ligne de la forme `0 <host-uid> <length>`, où `<host-uid>` **n'est pas égal à 0** (le root du conteneur est traduit en un host UID non privilégié) et `<length>` vaut au moins `65536` (la plage standard d'UID par Pod) ; l'artefact contient les deux parties de l'evidence. |
 
 <details>
 <summary>💡 Indice pour la tâche 7</summary>
 
-`id` À L'INTÉRIEUR du conteneur affichera `uid=0(root)` indépendamment de `hostUsers` - c'est attendu, le conteneur voit SON propre namespace, où son root est bien l'UID 0 dans ce namespace. La vraie protection ne se voit que DEPUIS L'EXTÉRIEUR : sur le nœud lui-même, dans `/proc/<host PID>/uid_map`, où l'UID 0 dans le conteneur est traduit en un grand UID non privilégié sur l'hôte. Pour trouver le host PID, utilisez `crictl inspect <container-id>` - précisément de là, et non de `kubectl get pod`, qui ne connaît que l'objet Kubernetes, et non le PID au niveau de l'hôte du processus.
+`id` À L'INTÉRIEUR du conteneur affichera `uid=0(root)` indépendamment de `hostUsers` - c'est attendu, le conteneur voit SON propre namespace, où son root est bien l'UID 0 dans ce namespace. La vraie protection ne se voit que DEPUIS L'EXTÉRIEUR : sur le nœud lui-même, dans `/proc/<host PID>/uid_map`, où l'UID 0 dans le conteneur est traduit en un grand UID non privilégié sur l'hôte. Pour trouver le host PID, utilisez `crictl inspect <container-id>` - précisément de là, et non de `kubectl get pod`, qui ne connaît que l'objet Kubernetes, et non le PID du processus au niveau de l'hôte.
 </details>
 
 ---
 | **8** | **`seccompDefault: true` au niveau du kubelet : baseline sans profil explicite** |
 | :---: | :--- |
 | Ce qu'on fait | Tous les Pod des tâches 4–6 indiquent explicitement `seccompProfile` dans le manifest. En réalité, un développeur peut oublier ce champ - alors, sans node-level baseline, le Pod reçoit `Unconfined`. Sur le nœud, activez `seccompDefault: true` dans `/var/lib/kubelet/config.yaml` et redémarrez le kubelet (`systemctl restart kubelet`). Créez un Pod `no-seccomp-field` dans `security-106` sur le nœud préparé à partir de `busybox:1.36` (`sleep 3600`), **sans indiquer du tout securityContext.seccompProfile**, ni au niveau du Pod ni au niveau du conteneur. Via `/proc/1/status` dans le conteneur, confirmez que le kubelet a appliqué `RuntimeDefault` automatiquement (`Seccomp: 2`), et n'a pas laissé `Unconfined` (`Seccomp: 0`). |
-| Critères d'acceptation | La configuration effective (appliquée) du kubelet - via `/api/v1/nodes/<node>/proxy/configz`, champ `.kubeletconfig.seccompDefault` - est égale à `true` ; `systemctl is-active kubelet` renvoie `active`, le nœud reste `Ready` ; le Pod `no-seccomp-field` n'a pas de `seccompProfile` à aucun niveau de sa spécification ; `/proc/1/status` dans le conteneur montre `Seccomp: 2`. |
+| Critères d'acceptation | La configuration effective (appliquée) du kubelet - via `/api/v1/nodes/<node>/proxy/configz`, champ `.kubeletconfig.seccompDefault` - est égale à `true` ; `systemctl is-active kubelet` renvoie `active`, le nœud reste `Ready` ; le Pod `no-seccomp-field` n'a de `seccompProfile` à aucun niveau de sa spécification ; `/proc/1/status` dans le conteneur montre `Seccomp: 2`. |
 
 <details>
 <summary>💡 Indice pour la tâche 8</summary>
 
-L'exigence clé est que le Pod ne mentionne RÉELLEMENT pas du tout `seccompProfile`, ni au niveau du Pod ni au niveau du conteneur. Si vous copiez le manifest de la tâche 3 et oubliez simplement de supprimer ce champ - le test ne démontrera pas ce qu'il doit : que c'est précisément le `seccompDefault` au niveau du nœud (et non l'indication explicite dans le manifest) qui a assuré `Seccomp: 2`.
+L'exigence clé est que le Pod ne mentionne RÉELLEMENT pas du tout `seccompProfile`, ni au niveau du Pod ni au niveau du conteneur. Si vous copiez le manifest des tâches 4–6 et oubliez simplement de supprimer ce champ - le test ne démontrera pas ce qu'il doit : que c'est précisément le `seccompDefault` au niveau du nœud (et non l'indication explicite dans le manifest) qui a assuré `Seccomp: 2`.
 
 La vérification s'appuie sur la configuration RÉELLEMENT APPLIQUÉE du kubelet, et non sur le texte du fichier sur
 le disque : `curl`/`kubectl get --raw /api/v1/nodes/<node>/proxy/configz | jq .kubeletconfig.seccompDefault`.
@@ -252,13 +252,13 @@ profil obtenu sur stdout, sans garantir à lui seul l'absence d'effets de bord e
 destiné précisément à vérifier la syntaxe. Utilisez `-Q`/`--skip-kernel-load`
 (exécute la compilation/vérification complète, mais ne charge pas dans le noyau) ou `-d`/`--debug`
 (une seule fois - uniquement la vérification de la correction syntaxique) pour trouver EN TOUTE SÉCURITÉ
-l'erreur de syntaxe sans effets de bord. Ce n'est qu'après avoir corrigé le fichier que vous utilisez
+l'erreur de syntaxe sans effets de bord. Ce n'est qu'après avoir corrigé le fichier qu'il faut utiliser
 `-r` (reload/load) pour le chargement réel dans le noyau. La syntaxe AppArmor exige une virgule comme
 séparateur de règles à l'intérieur du bloc - étudiez la sortie du parser pour trouver quel caractère
 manque et où exactement.
 
 Exécutez `apparmor_parser` via `sudo`, même avec `-Q`/`-d` : sur le nœud du lab (apparmor 3.0.4,
-Ubuntu), sans privilèges le parser à chaque lancement tente de configurer la policy cache dans
+Ubuntu), sans privilèges, le parser tente à chaque lancement de configurer le policy cache dans
 `/var/cache/apparmor` et échoue avec "Failed setting up policy cache: Permission denied" AVANT
 la vérification de la syntaxe - vous obtiendrez une erreur trompeuse de droits au lieu de la vraie
 erreur de syntaxe du profil. Cela a été vérifié sur le nœud lui-même (y compris sur un profil délibérément cassé).

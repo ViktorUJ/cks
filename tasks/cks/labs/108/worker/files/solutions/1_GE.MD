@@ -4,7 +4,7 @@
 
 > ყველა ბრძანება სრულდება სამუშაო მანქანაზე. კონტექსტი უკვე გამართულია; namespace
 > `policy-108` შექმნილია საწყისი სკრიპტით. ჯერ დააყენეთ Kyverno და დაელოდეთ
-> webhook-ს: შემდგომი CEL-based policies სხვაგვარად admission-მოთხოვნებს არ შეამოწმებენ.
+> webhook-ს: წინააღმდეგ შემთხვევაში შემდგომი CEL-based policies admission-მოთხოვნებს არ შეამოწმებენ.
 
 ```bash
 export KUBECONFIG=/home/ubuntu/.kube/config
@@ -25,7 +25,7 @@ kubectl get crd validatingpolicies.policies.kyverno.io
 kubectl get crd mutatingpolicies.policies.kyverno.io
 ```
 
-დაელოდეთ, სანამ `kyverno`-ში სულ მცირე ერთ Deployment-ს აქვს `AVAILABLE > 0`.
+დაელოდეთ, სანამ `kyverno`-ში სულ მცირე ერთ Deployment-ს არ ექნება `AVAILABLE > 0`.
 
 > **Migration note.** `kyverno.io/v1` `Policy`/`ClusterPolicy` ძველი მაგალითები სასარგებლოა
 > მხოლოდ არსებული კლასტერების მხარდაჭერისას. Kyverno `1.19`-ში ისინი deprecated-ია,
@@ -192,11 +192,11 @@ kubectl apply -f allow-approved-registries.yaml
 untrusted-მნიშვნელობაა; შეამოწმეთ, რომ policy მართლაც ALLOWLIST-ია (კრძალავს ნებისმიერ
 registry-ს ორი დაშვებულის გარდა), და არა უბრალოდ `docker.io`-ს denylist სიტყვასიტყვითი სტრიქონით -
 წინააღმდეგ შემთხვევაში unqualified image, სხვა მესამე მხარის registry ან მსგავსი დაწერილობის host ადვილად
-გაიპარება:
+გაიპარება.
 
 Positive controls უნდა ფარავდეს ორივე დაშვებულ prefix-ს (`registry.k8s.io/` და
-`ghcr.io/cks-lab/`) `containers`-ში, `initContainers`-სა და `ephemeralContainers`-ში; registry-ებიდან ერთ-ერთი
-მხოლოდ ჩვეულებრივი კონტეინერებით ნუ შემოიფარგლებით.
+`ghcr.io/cks-lab/`) `containers`-ში, `initContainers`-სა და `ephemeralContainers`-ში; ნუ შემოფარგლავთ registry-ებიდან ერთ-ერთს
+მხოლოდ ჩვეულებრივი კონტეინერებით:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -373,8 +373,8 @@ EOF
 # მოსალოდნელია: external (mutation უკვე მითითებულ მნიშვნელობას არ გადაწერს)
 ```
 
-გაუშვით `check_result`. ეტაპი 5 ნაჩვენებია შემოწმებაში, მაგრამ ის არასავალდებულოა: mutation
-policy-ის არარსებობამ პირველი ოთხი ეტაპის ჩათვლა არ უნდა გააუქმოს.
+გაუშვით `check_result`. დავალება 5 ნაჩვენებია შემოწმებაში, მაგრამ ის არასავალდებულოა: mutation
+policy-ის არარსებობა გავლენას არ ახდენს დავალებების 1–4, 6 და 7-ის ჩათვლაზე.
 
 ## 6. ImagePolicyWebhook: გარე backend
 
@@ -399,7 +399,7 @@ kubectl create configmap image-policy-backend-src -n image-policy \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-შექმენით Service Deployment-მდე - სერტიფიკატში სწორი SAN-ისთვის საჭიროა `ClusterIP`:
+შექმენით Service **Deployment-მდე** - სერტიფიკატში სწორი SAN-ისთვის საჭიროა `ClusterIP`:
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
@@ -596,10 +596,10 @@ latest-ს; `policy-108`-ს მთლიანად აკონტროლ�
 ImageReview forwarding annotations ავთენტურობის შემოწმება არ არის.
 
 `defaultAllow: false` ნიშნავს fail-closed-ს: თუ backend მიუწვდომელია, ახალი Pod/image
-იკრძალება, და არა ნებადართულია. შეამოწმეთ ეს აშკარად - მაგრამ `image-policy-backend`-ს
+იკრძალება, და არა დაიშვება. შეამოწმეთ ეს აშკარად - მაგრამ `image-policy-backend`-ს
 0 replica-მდე ნუ დაამასშტაბებთ: `ImagePolicyWebhook` - cluster-wide admission
 plugin-ია namespace-ის მიხედვით გამონაკლისის გარეშე ჩვენს კონფიგურაციაში, ამიტომ ის თავად backend-ის Pod-საც ამოწმებს.
-თუ ყველა replica დროებით მოიხსნება, შემდეგ კი მათი უკან დაბრუნება შეეცდებით, ახალი backend Pod-ის შექმნა თავად
+თუ ყველა replica დროებით მოიხსნება, შემდეგ კი მათ უკან დაბრუნებას შეეცდებით, ახალი backend Pod-ის შექმნა თავად
 გაივლის იმავე (ამ მომენტში მიუწვდომელ) ImagePolicyWebhook-ს და სწორი `defaultAllow: false`-ის დროს უარყოფილი იქნება -
 მიიღებთ deadlock-ს, საიდანაც `kubectl rollout status` ვერ გამოვა. ამის ნაცვლად
 Service backend-ისგან გათიშეთ, `selector`-ის არარსებულ მნიშვნელობაზე შეცვლით - ეს
@@ -626,7 +626,7 @@ kubectl get endpoints image-policy-backend -n image-policy -w
 # ხელახალი აწყობა/ხელახალი შექმნა საჭირო არ გამხდარა
 ```
 
-ეს იგივე პრინციპული fail-closed გადაწყვეტილებაა, რაც თავში 26 არის აღწერილი
+ეს იგივე პრინციპული fail-closed გადაწყვეტილებაა, რაც [კურსის თავში 26](../../../../../course/26/ge.md) არის აღწერილი
 ImagePolicyWebhook-ის production-კონფიგურაციისთვის.
 
 ## 7. Gatekeeper: Rego blocklist-ის დამატება ConstraintTemplate-ში
@@ -709,9 +709,9 @@ EOF
 # მოსალოდნელია: წარმატება (admission-ის არანაირი შეცდომა)
 ```
 
-დარწმუნდით, რომ უარყოფა მართლაც Gatekeeper-გან (`validation.gatekeeper.sh`) მოვიდა, და
+დარწმუნდით, რომ უარყოფა მართლაც Gatekeeper-ისგან (`validation.gatekeeper.sh`) მოვიდა, და
 არა დავალებებიდან 2-4 Kyverno `ValidatingPolicy`-ებიდან ერთ-ერთისგან - შეცდომის შეტყობინება აშკარად
-ასახელებს webhook-სა და თქვენი Constraint-ის სახელს. დავალებას `Constraint.spec.parameters`-ით ნუ ამოხსნით
-- policy-ის ამ ვერსიაში Constraint მათ საერთოდ არ იყენებს.
+ასახელებს webhook-სა და თქვენი Constraint-ის სახელს. დავალებას `Constraint.spec.parameters`-ით ნუ ამოხსნით -
+policy-ის ამ ვერსიაში Constraint მათ საერთოდ არ იყენებს.
 
 გაუშვით `check_result`.

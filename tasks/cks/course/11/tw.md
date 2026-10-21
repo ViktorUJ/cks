@@ -185,7 +185,7 @@ kubectl -n cks-104 create token app-sa --duration=10m
 
 在本課程中，應把這種 Secret 視為例外，而不是常見的 credential 發放方式：優先使用 short-lived TokenRequest、OIDC 或 federation。若特定 integration 無法使用有限 lifetime，請記錄例外原因、最小 RBAC、Secret 保護與 rotation/revocation procedure。不要把這種 Secret 當成賦予 Pod API 存取權的一般方法：它沒有自動的短期 rotation，且洩漏時會大幅增加損害。
 
-> 🔬 **Kubernetes v1.37：X.509 workload identity。** Bound ServiceAccount token 仍是本章主要的 JWT identity model。Kubernetes v1.37 也將 Pod Certificates 與 ClusterTrustBundles 穩定化，它們是發放與 rotation X.509 workload credentials 的 built-in primitives。這是 production-current extension，並非 CKS Core 的替代品：請見 [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_TW.md)。
+> 🔬 **Kubernetes v1.37：X.509 workload identity。** Bound ServiceAccount token 仍是本章主要的 JWT identity model。Kubernetes v1.37 也將 Pod Certificates 與 ClusterTrustBundles 穩定化，它們是發放與 rotation X.509 workload credentials 的 built-in primitives。這是 production-current extension，並非 CKS Core 的替代品：請見 [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
 
 ## 11.4. 專用 ServiceAccount 與最小化 RBAC
 

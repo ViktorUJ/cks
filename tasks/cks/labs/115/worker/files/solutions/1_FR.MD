@@ -3,7 +3,7 @@
 # Lab 115 - solution brève
 
 > Advanced/production track. Les versions/flags exacts de la CLI peuvent différer entre les
-> releases de Cilium - vérifiez `cilium install --help`/`cilium upgrade --help`,
+> releases de Cilium - vérifiez `cilium install --help`/`cilium upgrade --help`
 > si quelque chose ci-dessous ne fonctionne pas littéralement.
 
 ## 1. Baseline
@@ -93,7 +93,7 @@ Trois paramètres en plus des paramètres minimaux de la tâche sont nécessaire
 - `authentication.enabled=true` - sans lui, le chart rejette `spire.enabled=true`
   (`SPIRE integration requires .Values.authentication.enabled=true ...`).
 - `install.server.dataStorage.enabled=false` - dans le cluster, il n'y a pas de StorageClass, donc le PVC
-  `spire-data-spire-server-0` reste indéfiniment `Pending`, et `spire-server-0` aussi - `Pending`
+  `spire-data-spire-server-0` reste indéfiniment `Pending`, et `spire-server-0` reste lui aussi `Pending`
   (pour le lab, un stockage éphémère suffit).
 - `install.server.securityContext.runAsUser=0` - l'image `spire-server` démarre sous l'uid 1000 et
   ne peut pas créer `api.sock` dans le répertoire hostPath `root:755` ; le serveur ferme silencieusement les
@@ -199,7 +199,7 @@ SRC IDENTITY   DST IDENTITY   REMOTE NODE ID   AUTH TYPE   EXPIRATION
 
 `client` de `ingress-115` réussit la mutual authentication (l'entrée `spire` dans `auth list`) et
 reçoit `200` ; `intruder` de `app-115` - transport deny (pas d'allow pour son identity).
-La première requête d'un nouveau client peut prendre quelques secondes : le SYN est rejeté pendant le
+La première requête d'un nouveau client peut prendre quelques secondes : le SYN est abandonné (drop) pendant le
 SPIFFE-handshake, puis la retransmission passe.
 
 ---

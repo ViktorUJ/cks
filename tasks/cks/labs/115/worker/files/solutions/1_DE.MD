@@ -33,7 +33,7 @@ kubectl get nodes
 ```
 
 > `cilium status` aus cilium-cli 0.19 gibt die Zeilen `KubeProxyReplacement`/`Encryption` nicht aus;
-> sie zeigt `cilium-dbg status` innerhalb des Pods des agent (so prüft es auch der Checker).
+> sie zeigt `cilium-dbg status` innerhalb des Agent-Pods (so prüft es auch der Checker).
 
 ```
 KubeProxyReplacement:   True   [ens5 10.115.1.x (Direct Routing)]
@@ -51,7 +51,7 @@ kubectl exec svc-check -- curl -sSk -o /dev/null -w 'api HTTP:%{http_code}\n' -m
 api HTTP:403
 ```
 
-`403` (nicht `000`) - bedeutet, dass TCP/TLS zur API über den Service ClusterIP tatsächlich ohne
+`403` (nicht `000`) bedeutet, dass TCP/TLS zur API über den Service ClusterIP tatsächlich ohne
 kube-proxy funktioniert; `403` ist hier erwartet, da die Anfrage ohne Token erfolgt, die bloße Tatsache einer Antwort genügt.
 
 ## 3. WireGuard encryption
@@ -69,7 +69,7 @@ cilium status --wait
 kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status | grep Encryption
 ```
 
-> `cilium upgrade` ändert nur das ConfigMap: Der agent übernimmt `encryption.*` nach dem Neustart
+> `cilium upgrade` ändert nur die ConfigMap: Der agent übernimmt `encryption.*` nach dem Neustart
 > (davor `Encryption: Disabled`).
 
 ```
@@ -94,7 +94,7 @@ Drei Parameter über die minimalen aus der Aufgabe hinaus werden gerade in diese
   (`SPIRE integration requires .Values.authentication.enabled=true ...`).
 - `install.server.dataStorage.enabled=false` - im Cluster gibt es keine StorageClass, daher bleibt die PVC
   `spire-data-spire-server-0` für immer `Pending`, und `spire-server-0` ist `Pending`
-  (für die Lab genügt ephemerer Speicher).
+  (für das Lab genügt ephemerer Speicher).
 - `install.server.securityContext.runAsUser=0` - das Image `spire-server` startet als uid 1000 und
   kann `api.sock` im hostPath-Verzeichnis `root:755` nicht erstellen; der Server beendet die
   endpoints stillschweigend und wird von der liveness-probe getötet (`Waiting for spire-server to start...` in `cilium-init`).

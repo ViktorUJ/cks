@@ -832,7 +832,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
   შესაძლებელს ხდის node stack-ის აგებას, სადაც kubelet და დაკავშირებული node
   components მუშაობს host-root-ის გარეშე user namespace-ის მეშვეობით. არ აურიოთ ეს
   `spec.hostUsers: false`-თან, რომელიც იზოლირებს Pod-ს. იხილეთ [Kubernetes v1.37
-  Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_GE.md).
+  Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 - **Baseline განისაზღვრება როგორც კოდი.** პაკეტების სია, enabled services, systemd
   drop-in, firewall და socket-ის შემოწმება შედის immutable image-ში, Ansible/Cloud-Init-ში
   ან სხვა IaC-ში. ხელით emergency fix შემდეგ გადადის ჭეშმარიტების წყაროში.

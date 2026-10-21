@@ -16,13 +16,13 @@ la procédure officielle `kubeadm upgrade` et le basculement du dépôt de paque
 <details>
 <summary>1. Pourquoi `kubeadm upgrade` exige-t-il d'upgrader le control-plane STRICTEMENT avant les workers, et non dans n'importe quel ordre ?</summary>
 
-`kubeadm upgrade apply` sur le control-plane met à jour la version de l'API server et des other composants du control-plane, ainsi que la version skew policy du cluster. Un nœud worker avec un kubelet trop récent par rapport à l'API server peut enfreindre le skew pris en charge (le kubelet ne doit pas être plus récent que kube-apiserver). Mettre à jour le control-plane en premier garantit que l'API server est déjà à la version cible lorsque le worker passe à cette même version - ce n'est pas une recommandation arbitraire, mais une exigence de la version skew policy de Kubernetes.
+`kubeadm upgrade apply` sur le control-plane met à jour la version de l'API server et des autres composants du control-plane ; c'est à partir de cette version que se calcule la version skew policy du cluster. Un nœud worker avec un kubelet trop récent par rapport à l'API server peut enfreindre le skew pris en charge (le kubelet ne doit pas être plus récent que kube-apiserver). Mettre à jour le control-plane en premier garantit que l'API server est déjà à la version cible lorsque le worker passe à cette même version - ce n'est pas une recommandation arbitraire, mais une exigence de la version skew policy de Kubernetes.
 </details>
 
 <details>
 <summary>2. Pourquoi le basculement du dépôt apt `pkgs.k8s.io` est-il obligatoire lors du passage à un nouveau minor, alors que les mises à jour de patch fonctionnent sans lui ?</summary>
 
-Depuis la migration depuis `packages.cloud.google.com`/`apt.kubernetes.io`, `pkgs.k8s.io` est organisé comme un **dépôt distinct pour chaque version minor** (`core:/stable:/v1.35`, `core:/stable:/v1.36`, etc.), et non comme un dépôt unique avec toutes les versions. Dans le repo `v1.35` déjà connecté, seules les releases de patch `1.35.x` sont disponibles. Pour que `apt install kubeadm=1.36.x-*` voie les versions `1.36`, il faut d'abord connecter (`sources.list.d/kubernetes.list`) et signer (`Release.key`) précisément le repo `core:/stable:/v1.36`.
+Depuis la migration à partir de `packages.cloud.google.com`/`apt.kubernetes.io`, `pkgs.k8s.io` est organisé comme un **dépôt distinct pour chaque version minor** (`core:/stable:/v1.35`, `core:/stable:/v1.36`, etc.), et non comme un dépôt unique avec toutes les versions. Dans le repo `v1.35` déjà connecté, seules les releases de patch `1.35.x` sont disponibles. Pour que `apt install kubeadm=1.36.x-*` voie les versions `1.36`, il faut d'abord ajouter dans `sources.list.d/kubernetes.list` précisément le repo `core:/stable:/v1.36` (seule la version change dans l'URL ; le keyring avec la clé de signature `Release.key` reste le même).
 </details>
 
 <details>
@@ -57,7 +57,7 @@ Le namespace `upgrade-113` avec le Deployment `canary` (2 répliques) est déjà
 indicateur d'absence de downtime. Pendant toute la durée de l'upgrade, au moins une réplique doit
 rester `Available` ; après l'`uncordon` de chaque nœud et à la fin, le Deployment doit
 revenir à `2/2`. Le bootstrap répartit à l'avance les deux répliques sur des
-nodes différents (required `podAntiAffinity`) et crée un `PodDisruptionBudget` avec `minAvailable: 1`.
+nœuds différents (required `podAntiAffinity`) et crée un `PodDisruptionBudget` avec `minAvailable: 1`.
 
 ## Déploiement
 
@@ -86,7 +86,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 | **1** | **Upgrade du control-plane vers le minor cible** |
 | :---: | :--- |
 | Ce qu'on fait | • Connectez-vous à `k8s113_controlPlane_1` (`ssh`, puis `sudo -i`).<br/>• Basculez le dépôt apt `pkgs.k8s.io` de `core:/stable:/v1.35` vers `core:/stable:/v1.36` : dans `/etc/apt/sources.list.d/kubernetes.list`, seule la version dans l'URL change (c'est ainsi que le décrit la documentation Kubernetes, le keyring reste le même).<br/>• Mettez à jour le paquet `kubeadm` vers `1.36.x`, exécutez `kubeadm upgrade plan`, puis `kubeadm upgrade apply v1.36.x`.<br/>• Seulement après un `apply` réussi, exécutez `kubectl drain` sur ce nœud.<br/>• Mettez à jour les paquets `kubelet`/`kubectl` vers `1.36.x`, redémarrez `kubelet`, puis exécutez `kubectl uncordon`. |
-| Critères d'acceptation | • `kubeadm version`, `kubelet --version`, le `kubectl version --client` local et la version de l'API server (`kubectl version`) sur le control-plane indiquent `v1.36.x`.<br/>• Le nœud `k8s113_controlPlane_1` est au statut `Ready`.<br/>• La sortie complète de la commande `kubeadm upgrade apply` (avec la ligne `SUCCESS` et la version cible) est enregistrée littéralement dans `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt` sur la machine de travail (la commande s'exécute sur le nœud, la sortie est écrite dans un fichier sur le nœud, puis copiée par `scp`). |
+| Critères d'acceptation | • `kubeadm version`, `kubelet --version`, le `kubectl version --client` local et la version de l'API server (`kubectl version`) sur le control-plane indiquent `v1.36.x`.<br/>• Le nœud control-plane (`<cp-nom>` de `kubectl get no`) est au statut `Ready`.<br/>• La sortie complète de la commande `kubeadm upgrade apply` (avec la ligne `SUCCESS` et la version cible) est enregistrée littéralement dans `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt` sur la machine de travail (la commande s'exécute sur le nœud, la sortie est écrite dans un fichier sur le nœud, puis copiée par `scp`). |
 
 <details>
 <summary>💡 Indice pour la tâche 1</summary>
@@ -115,14 +115,14 @@ L'ordre est fondamental : d'abord `apt-mark unhold kubeadm` → mettre à jour l
 <details>
 <summary>💡 Indice pour la tâche 3</summary>
 
-Si vous avez déjà commencé (et, a fortiori, terminé) l'upgrade du worker avant le control-plane - arrêtez-vous : faire revenir le worker en arrière vers le téléchargement des paquets `1.35.x` n'est pas possible par un moyen simple, mais la bonne voie consiste à terminer l'upgrade du control-plane, puis à poursuivre/répéter l'upgrade du worker. L'essentiel est que le prochain upgrade du worker (quel que soit le moment où il est lancé) ait lieu après l'upgrade du control-plane entièrement terminé. Ne commencez pas la tâche 2 tant que `kubectl get node k8s113_controlPlane_1` n'affiche pas `v1.36.x` et `Ready`.
+Si vous avez déjà commencé (et, a fortiori, terminé) l'upgrade du worker avant le control-plane - arrêtez-vous : faire revenir le worker en arrière vers le téléchargement des paquets `1.35.x` n'est pas possible par un moyen simple, mais la bonne voie consiste à terminer l'upgrade du control-plane, puis à poursuivre/répéter l'upgrade du worker. L'essentiel est que le prochain upgrade du worker (quel que soit le moment où il est lancé) ait lieu après l'upgrade du control-plane entièrement terminé. Ne commencez pas la tâche 2 tant que `kubectl get node <cp-nom>` n'affiche pas `v1.36.x` et `Ready`.
 </details>
 
 ---
 | **4** | **Démontrer l'absence de downtime de la charge existante** |
 | :---: | :--- |
 | Ce qu'on fait | • Pendant que vous exécutez les tâches 1-2, lancez dans une session distincte sur la machine de travail une boucle qui interroge la disponibilité du Deployment `canary` dans le namespace `upgrade-113` toutes les quelques secondes.<br/>• Ajoutez chaque ligne d'interrogation à `/var/work/tests/artifacts/4/canary-availability.log` dans un format contenant `available=N` (par exemple `available=2`).<br/>• Poursuivez l'interrogation pendant toute la durée de l'upgrade des deux nœuds. |
-| Critères d'acceptation | • Le Deployment `canary` a à la fin `2/2` répliques disponibles, le Deployment/PDB d'origine et la required Pod anti-affinity sont conservés.<br/>• L'absence de downtime est vérifiée par le checker-owned monitor via Pod Ready et les conteneurs CRI précisément de `upgrade-113` ; les erreurs API/SSH/CRI sont comptées comme UNKNOWN, et non comme zéro.<br/>• Le fichier student `/var/work/tests/artifacts/4/canary-availability.log` contient au moins deux lignes au format `<unix_timestamp> available=N` ou `<unix_timestamp> available=api-unreachable`, avec des observations avant l'upgrade du control-plane et après le début de l'upgrade du worker. |
+| Critères d'acceptation | • Le Deployment `canary` a à la fin `2/2` répliques disponibles, le Deployment/PDB d'origine et la required Pod anti-affinity sont conservés.<br/>• L'absence de downtime est vérifiée par le checker-owned monitor via Pod Ready et les conteneurs CRI précisément de `upgrade-113` ; les erreurs API/SSH/CRI sont comptées comme UNKNOWN, et non comme zéro.<br/>• Le fichier de l'étudiant `/var/work/tests/artifacts/4/canary-availability.log` contient au moins deux lignes au format `<unix_timestamp> available=N` ou `<unix_timestamp> available=api-unreachable`, avec des observations avant l'upgrade du control-plane et après le début de l'upgrade du worker. |
 
 <details>
 <summary>💡 Indice pour la tâche 4</summary>
@@ -138,7 +138,7 @@ check_result
 
 La vérification contient `0 Init` et cinq tests obligatoires. Les tests 1-2 vérifient les versions de
 `kubeadm`/`kubelet`/du `kubectl` local et le statut `Ready` sur le control-plane et sur le worker
-respectivement, ainsi que le fichier d'evidence littéral avec la sortie de `kubeadm upgrade`. Le test 3
+respectivement, ainsi que le fichier de preuve contenant la sortie littérale de `kubeadm upgrade`. Le test 3
 vérifie l'ordre de l'upgrade d'après le checker-owned monitor de l'état du cluster, et non d'après
 la date de modification des fichiers. Le test 4 vérifie que la charge `canary` n'a pas connu d'interruption,
 en utilisant le même checker-owned monitor comme source de vérité. Le test 5 est la vérification

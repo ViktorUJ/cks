@@ -73,7 +73,7 @@ NOTBEFORE=notBefore=Jan  1 00:00:00 2026 GMT
 NOTAFTER=notAfter=Apr  6 00:00:00 2028 GMT
 ```
 
-Este certificado nunca se usa para la autenticación: `cluster9-admin` no tiene permisos en el clúster,
+Este certificado nunca se usa para la autenticación: `cluster9-admin` no tiene permisos en el clúster;
 la tarea trata solo de la lectura y el análisis del certificado.
 
 ## 3. Baseline: NodePort exposure
@@ -97,7 +97,7 @@ curl -sS -o /dev/null -w 'external HTTP:%{http_code}\n' -m5 "http://$node_ip:301
 kubectl -n cks-114 run probe --image=curlimages/curl:8.10.1 --restart=Never --command -- sleep 300
 kubectl -n cks-114 wait --for=condition=Ready pod/probe --timeout=60s
 kubectl -n cks-114 exec probe -- curl -sS -o /dev/null -w 'in-cluster HTTP:%{http_code}\n' -m5 http://kubernetes-public.cks-114.svc.cluster.local/
-# Antes de la Task 4 espera a que el monitor registre de forma independiente los probes de NodePort y DNS.
+# Antes de la tarea 4 espera a que el monitor registre de forma independiente los probes de NodePort y DNS.
 for i in $(seq 1 60); do
   test -s /var/lib/cks-lab114-checker/nodeport-phase-seen && break
   sleep 3
@@ -112,8 +112,8 @@ in-cluster HTTP:200
 
 ## 4. Reduce exposure: NodePort -> ClusterIP
 
-`kubectl patch` sobre el array `ports` **no elimina** `nodePort` por sí solo: hay que reemplazar todo el array
-sin este campo (o `kubectl edit` a mano y quitar la línea):
+Quitamos `nodePort` explícitamente: un solo JSON patch cambia el tipo y elimina `/spec/ports/0/nodePort`
+(o `kubectl edit` a mano y quitar la línea):
 
 ```bash
 kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
@@ -122,7 +122,7 @@ kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
 ]'
 ```
 
-Comprobamos la misma pareja de comprobaciones (kube-proxy también quita las reglas de NodePort no al instante, por eso primero
+Repetimos el mismo par de comprobaciones (kube-proxy tampoco elimina las reglas de NodePort al instante, por eso primero
 esperamos a que el puerto deje de responder):
 
 ```bash

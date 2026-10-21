@@ -1,9 +1,9 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
 
-# Lab 107 - solución de referencia: Pod Security Admission e immutable root filesystem
+# Lab 107 - solución de referencia: Pod Security Admission y read-only root filesystem
 
 > Ejecuta los comandos en la máquina de trabajo. El contexto `cluster1-admin@cluster1` ya está
-> configurado. Los namespace `psa-restricted-107` y `psa-observe-107` los creó el script
+> configurado. Los namespaces `psa-restricted-107`, `psa-observe-107` y `psa-controller-107` los creó el script
 > de arranque, pero deliberadamente no tienen PSA labels.
 
 ## 1. Enforce restricted y comprobación de la denegación
@@ -84,7 +84,7 @@ kubectl get pod restricted-app -n psa-restricted-107
 
 Demuestra ambos resultados con una llamada en vivo, y no solo leyendo el YAML: el contenedor funciona con
 `runAsUser: 1000` con un root read-only, por lo que la escritura fuera de `/tmp` debe terminar con
-un error del sistema de archivos, y la escritura en el `emptyDir` montado - tener éxito:
+un error del sistema de archivos, y la escritura en el `emptyDir` montado, tener éxito:
 
 ```bash
 kubectl exec -n psa-restricted-107 restricted-app -- sh -c 'touch /root-write-test.txt'
@@ -305,14 +305,14 @@ reciben un Deny de más.
 
 ## 7. Controller-driven admission denial
 
-Primero un Deployment sencillo, no hardened: PSA todavía no es enforce, todo pasa:
+Primero un Deployment sencillo, no hardened (PSA todavía no es enforce, todo pasa):
 
 ```bash
 kubectl -n psa-controller-107 create deployment controller-app --image=busybox:1.36 -- sh -c "sleep 3600"
 kubectl -n psa-controller-107 rollout status deployment/controller-app
 ```
 
-Habilitamos enforce: el Pod existente no se toca:
+Habilitamos enforce (el Pod existente no se toca):
 
 ```bash
 kubectl label namespace psa-controller-107 \
@@ -332,7 +332,7 @@ kubectl -n psa-controller-107 get deploy controller-app
 # controller-app   0/1     1            0           ...   <- READY 0/1, AVAILABLE 0
 ```
 
-Arreglamos el template: añadimos los mismos campos de hardening que en la tarea 2:
+Arreglamos el template añadiendo los mismos campos de hardening que en la tarea 2:
 
 ```bash
 kubectl -n psa-controller-107 edit deployment controller-app

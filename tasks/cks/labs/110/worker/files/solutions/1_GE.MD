@@ -6,7 +6,7 @@
 > node-ზე (containerd, tcpdump) - თავად node-ზე: შედით მასზე `ssh <node>`-ით, გადადით root-ზე
 > (`sudo -i`), შეასრულეთ ბრძანებები და გამოდით (`exit`, `exit`). სახელები `gvisor-sandbox`,
 > `runc-baseline`, `gvisor-echo`, `market-api`, `market-client`, `mesh-outside` და artifacts-ის გზები
-> ლაბის შემოწმებადი კონტრაქტის ნაწილია.
+> ლაბის შესამოწმებელი კონტრაქტის ნაწილია.
 
 ## სად ვიპოვოთ მაგალითები დოკუმენტაციაში
 
@@ -28,7 +28,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6}
 
 Node `k8s110_node_gvisor` უკვე მიწოდებულია როგორც dedicated pool დაყენებული `runsc`-ით, მაგრამ
 bootstrap-მა განზრახ ამოიღო runtime-სექცია `runsc` `/etc/containerd/config.toml`-იდან -
-გამოცდის ტიპური სიტუაცია, როცა binary არის, მაგრამ containerd მის შესახებ არაფერი იცის.
+გამოცდის ტიპური სიტუაცია, როცა binary არის, მაგრამ containerd-ს მის შესახებ არაფერი იცის.
 
 ```bash
 ssh k8s110_node_gvisor
@@ -53,8 +53,8 @@ exit   # root-იდან
 exit   # gVisor-node-იდან
 ```
 
-Kubelet-ის გადატვირთვა საჭირო არ არის: `RuntimeClass` containerd runtime handler-ს
-სახელით იძახებს Pod-ის ყოველი შექმნისას, და არა kubelet-ის გაშვებისას.
+Kubelet-ის გადატვირთვა საჭირო არ არის: kubelet `RuntimeClass`-იდან handler-ის სახელს containerd-ს
+გადასცემს Pod-ის ყოველი შექმნისას, და არა kubelet-ის გაშვებისას.
 
 ```yaml
 # runtimeclass-gvisor.yaml
@@ -80,10 +80,10 @@ printf 'RuntimeClass gvisor: handler runsc\n' \
   > /var/work/tests/artifacts/1/runsc-runtime.txt
 ```
 
-`scheduling.nodeSelector` - მნიშვნელოვანი საზღვარია: scheduler `runsc` workload-ს არ მიანიჭებს
-control-plane-ს, სადაც ასეთი handler არ არის. gVisor-node ამასთან მონიშნულია taint-ით
+`scheduling.nodeSelector` - მნიშვნელოვანი საზღვარია: scheduler `runsc` workload-ს არ განათავსებს
+control-plane-ზე, სადაც ასეთი handler არ არის. gVisor-node ამასთან მონიშნულია taint-ით
 `sandbox.runtime/gvisor=true:NoSchedule` (`kubectl describe node <gvisor-node> | grep Taints`):
-მასზე ვერც ერთი Pod ვერ მოხვდება, გარდა იმათი, რომლებიც მას იტანენ. `scheduling.tolerations` RuntimeClass-ში
+მასზე ვერც ერთი Pod ვერ მოხვდება, გარდა იმათისა, რომლებიც მას იტანენ. `scheduling.tolerations` RuntimeClass-ში
 ავტომატურად ემატება ამ კლასის ყველა Pod-ს, ამიტომ `gvisor-sandbox` იქ ხვდება,
 დანარჩენები - არა.
 
@@ -92,12 +92,12 @@ control-plane-ს, სადაც ასეთი handler არ არის. 
 `busybox httpd` ერთდროულად იძლევა shell-ს `uname`-ისთვის და პატარა HTTP endpoint-ს
 WireGuard-ის node-თაშორისი ცდისთვის. `runtimeClassName` გამოყენებულია Pod-ზე, და არა კონტეინერზე.
 
-`nodeSelector` და `tolerations` Pod-ში აშკარად არის მითითებული: ასე ჩანს, რომელ node-ზე და რატომ ხვდება ის.
+`nodeSelector` და `tolerations` Pod-ში ცხადად არის მითითებული: ასე ჩანს, რომელ node-ზე და რატომ ხვდება ის.
 ეს იგივეა, რაც თავად `RuntimeClass`-ის `scheduling`-შია აღწერილი. თუ Pod-ში მათ არ მიუთითებთ,
 არაფერი გაფუჭდება: `runtimeClassName`-ით Pod-ის შექმნისას Kubernetes თავად **ამატებს** მასში
 `nodeSelector`-სა და `tolerations`-ს `RuntimeClass.scheduling`-იდან (შესამოწმებლად: `kubectl -n sandbox-110 get
 pod gvisor-sandbox -o jsonpath='{.spec.nodeSelector}'`). მაგრამ მაშინ manifest-ში ეს არ ჩანს, ხოლო RuntimeClass-ში
-`scheduling`-ის გარეშე Pod-ს შეეძლო მოხვედრა node-ზე `runsc`-ის გარეშე და ვერ გაშვებულიყო.
+`scheduling`-ის გარეშე Pod შეიძლებოდა მოხვედრილიყო node-ზე `runsc`-ის გარეშე და ვერ გაშვებულიყო.
 
 ```yaml
 # gvisor-sandbox.yaml
@@ -159,8 +159,9 @@ cat /var/work/tests/artifacts/2/gvisor-kernel.txt
 kubectl get pod -n sandbox-110 gvisor-sandbox -o wide
 ```
 
-gVisor Sentry workload-ს უჩვენებს სინთეტიკურ kernel view-ს; `dmesg` შეიძლება შეზღუდული იყოს.
-ეს მოსალოდნელია და კონტეინერისთვის ზედმეტი privileges-ის გაცემის მიზეზი არ არის.
+gVisor Sentry workload-ს უჩვენებს სინთეტიკურ kernel view-ს; `dmesg` გამოიტანს არა node-ის ბირთვის ლოგს,
+არამედ მოკლე სინთეტიკურ ლოგს, რომელიც იწყება სტრიქონით `Starting gVisor...` (სწორედ მას ელოდება
+checker). ეს მოსალოდნელია და კონტეინერისთვის ზედმეტი privileges-ის გაცემის მიზეზი არ არის.
 
 ## 3. ჩვეულებრივი runc Pod შედარებისთვის
 
@@ -225,20 +226,20 @@ cat /var/work/tests/artifacts/4/tool-versions.txt
 ```
 
 კლასტერი განთავსებულია ბრძანებით `cilium install`, რომელიც Cilium-ს აყენებს **Helm-ით**.
-გრძელვადიანი source of truth — release `cilium`-ის Helm values; ვიყენებთ pinned Cilium CLI upgrade-ს და მის შემდეგ ვამოწმებთ live ConfigMap-სა და agents-ს:
+გრძელვადიანი source of truth - release `cilium`-ის Helm values; ვიყენებთ pinned Cilium CLI upgrade-ს და მის შემდეგ ვამოწმებთ live ConfigMap-სა და agents-ს:
 
 ```bash
 cilium upgrade --version 1.20.1 \
   --set encryption.enabled=true --set encryption.type=wireguard --wait
 # Helm მხოლოდ ConfigMap-ს ცვლის: DaemonSet-ის შაბლონი არ იცვლება, ამიტომ აგენტები თავად
-# არ გადაიტვირთებიან და WireGuard-ის გარეშე აგრძელებენ მუშაობას - გადატვირთეთ ისინი აშკარად.
+# არ გადაიტვირთებიან და WireGuard-ის გარეშე აგრძელებენ მუშაობას - გადატვირთეთ ისინი ხელით.
 kubectl -n kube-system rollout restart daemonset/cilium
 kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
 test "$(kubectl -n kube-system get cm cilium-config -o jsonpath='{.data.enable-wireguard}')" = true
 cilium status --wait
 ```
 
-დაშიფვრის სტატუსს ვკითხულობთ აგენტთან `cilium-dbg`-ით: ეს in-pod debug CLI-ია, რომელიც Cilium agent-ს მოჰყვება. ლოკალური `cilium` CLI რჩება install/cluster-level ინსტრუმენტად და მას Pod-ის შიგნით არ ანაცვლებს. `cilium-dbg status`-ს ფლაგი `--all-encryption` არ აქვს (1.20.x-ში ხელმისაწვდომია მხოლოდ `--all-addresses`, `--all-clusters`, `--all-controllers`, `--all-health`, `--all-nodes`, `--all-redirects`, `--verbose`) - peer/allowed-IP/remote-node evidence-ის დეტალურ მონაცემებს ვიღებთ `cilium-dbg debuginfo --output json`-ით, და არა არარსებული ფლაგით.
+დაშიფვრის სტატუსს ვკითხულობთ აგენტიდან `cilium-dbg`-ით: ეს in-pod debug CLI-ია, რომელიც Cilium agent-ს მოჰყვება. ლოკალური `cilium` CLI რჩება install/cluster-level ინსტრუმენტად და მას Pod-ის შიგნით არ ანაცვლებს. `cilium-dbg status`-ს ფლაგი `--all-encryption` არ აქვს (1.20.x-ში ხელმისაწვდომია მხოლოდ `--all-addresses`, `--all-clusters`, `--all-controllers`, `--all-health`, `--all-nodes`, `--all-redirects`, `--verbose`) - peer/allowed-IP/remote-node evidence-ის დეტალურ მონაცემებს ვიღებთ `cilium-dbg debuginfo --output json`-ით, და არა არარსებული ფლაგით.
 
 ```bash
 agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0].metadata.name}')
@@ -289,7 +290,7 @@ ip route get $remote_ip
 # 10.110.2.172 dev ens5 src 10.110.1.x   <- ინტერფეისი (ens5), და არა any / cilium_* / lxc* / veth*
 ```
 
-**Baseline: WireGuard გამორთულია.** დროებით ვთიშავთ WireGuard-ს და ვიმეორებთ იგივე მოთხოვნას იგივე
+**Baseline: WireGuard გამორთულია.** დროებით ვთიშავთ WireGuard-ს და ვიმეორებთ იმავე მოთხოვნას იმავე
 capture scope-ით. ბოლოს აუცილებლად დავაბრუნებთ `enable-wireguard: "true"`-ს.
 
 ```bash
@@ -315,7 +316,7 @@ kubectl exec -n sandbox-110 runc-baseline -- \
 grep CKS110-WIREGUARD-MARKER /tmp/wireguard-baseline.txt
 ```
 
-**შემდეგ: WireGuard ჩართულია.** ვაბრუნებთ WireGuard-ს და ვიმეორებთ იგივე მოთხოვნას იგივე capture
+**შემდეგ: WireGuard ჩართულია.** ვაბრუნებთ WireGuard-ს და ვიმეორებთ იმავე მოთხოვნას იმავე capture
 scope-ით: ახლა უნდა ჩანდეს WireGuard UDP/51871 და marker არ უნდა იყოს.
 
 ```bash
@@ -349,8 +350,8 @@ exit   # control-plane-იდან
 scp k8s110_controlPlane_1:/tmp/wireguard-tcpdump.txt /var/work/tests/artifacts/5/wireguard-tcpdump.txt
 ```
 
-დასკვნა `tcpdump`-ზე Pod netns-ში ნუ გამოიტანთ: იქ ტრაფიკი Cilium encryption point-მდე ჯერ კიდევ შეიძლება
-plaintext იყოს. დადასტურება აქ - გადასვლაა ხილული marker-იდან (WireGuard გამორთულია) მის
+Pod netns-ში გაშვებული `tcpdump`-ის მიხედვით დასკვნას ნუ გამოიტანთ: იქ ტრაფიკი Cilium encryption point-მდე ჯერ კიდევ შეიძლება
+plaintext იყოს. დადასტურება აქ გადასვლაა ხილული marker-იდან (WireGuard გამორთულია) მის
 არარსებობამდე (WireGuard ჩართულია) ერთსა და იმავე capture scope-ზე.
 
 ## 6. Istio და PeerAuthentication STRICT
@@ -358,7 +359,7 @@ plaintext იყოს. დადასტურება აქ - გადა�
 ვაყენებთ მხოლოდ Istio control plane-ს minimal profile-ში. Namespace მომზადებული იყო
 `istio-injection=enabled`-ით, ამიტომ workloads `market`-ში შექმნისას იღებენ Envoy sidecar-ს.
 `market-api` თავსდება gVisor worker-ზე, client - control-plane-ზე, რაც
-მოთხოვნასაც node-თაშორისს ხდის.
+მოთხოვნასაც node-თაშორისად ხდის.
 
 ```bash
 istioctl install --set profile=minimal -y
@@ -501,7 +502,7 @@ cat /var/work/tests/artifacts/6/market-outside.txt
 ```
 
 `PeerAuthentication` მართავს inbound server mode-ს. შიდა client იღებს
-სერტიფიკატს და mTLS-ს ავტომატურად იყენებს; Pod `default`-ში sidecar-ს არ აქვს და აგზავნის
+სერტიფიკატს და mTLS-ს ავტომატურად იყენებს; Pod-ს `default`-ში sidecar არ აქვს და აგზავნის
 plaintext-ს, ამიტომ Envoy server `STRICT`-ის დროს კავშირს წყვეტს. დაასრულეთ:
 
 ```bash

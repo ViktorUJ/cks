@@ -53,7 +53,7 @@ exit   # из root
 exit   # с gVisor-ноды
 ```
 
-Kubelet не нужно перезапускать: `RuntimeClass` вызывает containerd runtime handler по
+Kubelet не нужно перезапускать: kubelet передаёт имя handler из `RuntimeClass` в containerd по
 имени при каждом создании Pod, а не при старте kubelet.
 
 ```yaml
@@ -159,8 +159,9 @@ cat /var/work/tests/artifacts/2/gvisor-kernel.txt
 kubectl get pod -n sandbox-110 gvisor-sandbox -o wide
 ```
 
-gVisor Sentry показывает workload синтетический kernel view; `dmesg` может быть
-ограничен. Это ожидаемо и не является причиной выдавать контейнеру лишние privileges.
+gVisor Sentry показывает workload синтетический kernel view; `dmesg` выводит не лог ядра
+ноды, а короткий синтетический лог, начинающийся строкой `Starting gVisor...` (её и ждёт
+checker). Это ожидаемо и не является причиной выдавать контейнеру лишние privileges.
 
 ## 3. Обычный runc Pod для сравнения
 
@@ -225,7 +226,7 @@ cat /var/work/tests/artifacts/4/tool-versions.txt
 ```
 
 Кластер развёрнут командой `cilium install`, которая устанавливает Cilium **через Helm**.
-Долговременный source of truth — Helm values release `cilium`; используем pinned Cilium CLI upgrade и после него проверяем live ConfigMap и agents:
+Долговременный source of truth - Helm values release `cilium`; используем pinned Cilium CLI upgrade и после него проверяем live ConfigMap и agents:
 
 ```bash
 cilium upgrade --version 1.20.1 \
@@ -456,7 +457,7 @@ kubectl rollout status -n market deployment/market-client --timeout=180s
 kubectl wait -n default --for=condition=Ready pod/mesh-outside --timeout=180s
 kubectl get pods -n market
 
-# Baseline (STRICT еще не применена): plaintext client вне mesh должен получить 200 -
+# Baseline (STRICT ещё не применена): plaintext client вне mesh должен получить 200 -
 # это доказывает, что связность в принципе работает и любой последующий отказ будет
 # вызван именно STRICT mTLS, а не независимой DNS/network-проблемой.
 kubectl exec -n default mesh-outside -- \
@@ -502,7 +503,7 @@ cat /var/work/tests/artifacts/6/market-outside.txt
 
 `PeerAuthentication` управляет inbound server mode. Внутренний client получает
 сертификат и использует mTLS автоматически; Pod в `default` не имеет sidecar и посылает
-plaintext, поэтому Envoy server при `STRICT` сбрасывает соединение. Завершите работой:
+plaintext, поэтому Envoy server при `STRICT` сбрасывает соединение. В конце выполните проверку:
 
 ```bash
 check_result

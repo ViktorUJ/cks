@@ -1,9 +1,9 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
 
-# Lab 105 - ეტალონური ამოხსნა: System Hardening ოპერაციული სისტემის და Docker-ის
+# Lab 105 - ეტალონური ამოხსნა: ოპერაციული სისტემისა და Docker-ის System Hardening
 
-> როგორ ვიმუშაოთ: ერთხელ ვუერთდებით node-ს `ssh`-ით და ბრძანებებს პირდაპირ მასზე ვასრულებთ (
-> `sudo -i`-ით, რომ ყოველ ბრძანებამდე `sudo` არ დავწეროთ) - ეს უფრო სწრაფია, ვიდრე
+> როგორ ვიმუშაოთ: ერთხელ ვუერთდებით node-ს `ssh`-ით და ბრძანებებს პირდაპირ მასზე ვასრულებთ
+> (`sudo -i`-ით, რომ ყოველ ბრძანებამდე `sudo` არ დავწეროთ) - ეს უფრო სწრაფია, ვიდრე
 > თითოეული ბრძანების ცალკე `ssh`-ით გაგზავნა, და გამოცდაზეც სწორედ ასე ღირს მუშაობა.
 > control-plane node-ის სახელს ვხედავთ `kubectl get no`-თი:
 >
@@ -26,7 +26,7 @@
 > node-ზე და შედეგის სწრაფი შემოწმება. ბრძანებები გამოტანას ფაილში ინახავენ (`>`), შიგთავსს ვუყურებთ
 > ცალკე `cat <ფაილი>`-ით - მოსალოდნელი შედეგი მითითებულია კომენტარებში `# ...` ბლოკის ქვემოთ.
 >
-> Docker-ჰოსტზე შედიან ანალოგიურად: `ssh docker-host`, შემდეგ `sudo -i`.
+> Docker-ჰოსტზე ანალოგიურად შევდივართ: `ssh docker-host`, შემდეგ `sudo -i`.
 
 ## 1. არასაჭირო systemd-სერვისის გამორთვა
 
@@ -203,7 +203,7 @@ declared vs effective შემოწმება: `ufw show added` - დეკ�
 `### tuple ###` მეტამონაცემებიდან, რომლებსაც ufw თავად წერს `user.rules`-ში წესის CLI-ით
 დამატებისას. ბირთვის რეალური მდგომარეობა `ufw reload`-ის შემდეგ კი ის არის, რასაც აჩვენებს
 `ufw show user-rules`. შეადარეთ არა მხოლოდ სტრიქონების რაოდენობა, არამედ მათი შიგთავსიც
-(source/port/proto): `ufw-user-input` უნდა აჩვენებდეს loopback-ს (all, lo) და სამ tcp
+(source/port/proto): `ufw-user-input` უნდა აჩვენებდეს loopback-ს (all, lo) და ოთხ tcp
 dpt:22/6443 წესს ზუსტი source-მისამართებით, ხოლო `ufw6-user-input` - ზუსტად ერთ სტრიქონს, იგივე
 loopback ACCEPT-ს v6-ისთვის (`ufw allow in on lo` - წესია ინტერფეისის მიხედვით აშკარა IP-ის გარეშე,
 ამიტომ ufw ყოველთვის ქმნის როგორც v4-, ისე v6-ვერსიას). ნებისმიერი სხვა/დამატებითი სტრიქონი იქ -
@@ -243,7 +243,7 @@ ssh "$CP" "stat -c '%U %G %a' /etc/kubernetes/admin.conf" \
 # root root 600
 ```
 
-## 5. root login-ის პირდაპირი აკრძალვა SSH-ით
+## 5. პირდაპირი root login-ის აკრძალვა SSH-ით
 
 ვცვლით კონფიგურაციას, reload-მდე ვამოწმებთ სინტაქსს და ვიყენებთ მიმდინარე
 სესიის გაწყვეტის გარეშე.
@@ -260,13 +260,13 @@ sshd -t && systemctl reload ssh
 
 მიმდინარე სესია `reload ssh`-ისას არ წყდება. მაგრამ sshd-ის გადატვირთვის დროს control-plane-ზე ახალმა
 დაკავშირებამ შეიძლება 1-2 წამით მიიღოს `Connection refused` - ეს
-ნორმალურია და არ ნიშნავს, რომ კონფიგურაცია გაფუჭებულია (მას უკვე `sshd -t` ამოწმებდა), უბრალოდ
+ნორმალურია და არ ნიშნავს, რომ კონფიგურაცია გაფუჭებულია (ის უკვე შეამოწმა `sshd -t`-მ), უბრალოდ
 გაიმეორეთ ბრძანება.
 
 `sshd -T` connection context-ის გარეშე `Match`-ბლოკებს საერთოდ არ იყენებს - man `sshd(8)`
 პირდაპირ ამბობს, რომ `Match` test mode-ში გამოიყენება მხოლოდ მაშინ, როცა `-C` არის გადაცემული. ამიტომ
 ვამოწმებთ `-C`-ით, worker-იდან რეალური root-კავშირის სიმულაციით (მისამართებს ვიღებთ
-`preflight.txt`-დან დავალება 3-იდან):
+დავალება 3-ის `preflight.txt`-დან):
 
 ```bash
 sshd -T -C 'user=root,addr=<worker_ip>,laddr=<node_ip>,lport=22' | grep -i permitrootlogin
@@ -330,7 +330,7 @@ systemctl cat docker.socket                          # ... SocketGroup=root ... 
 `docker.socket` არ უნდა შეიცავდეს TCP `ListenStream`-ს:
 
 ```bash
-ss -ltnp | grep -E 'dockerd|docker\.socket'    # ცარიელი გამოტანა
+ss -ltnp | grep dockerd                        # ცარიელი გამოტანა (systemd-ის TCP-სოკეტს docker.socket-იდან შემდეგი სტრიქონი იჭერს)
 systemctl cat docker.socket | grep ListenStream # მხოლოდ /run/docker.sock (და ცარიელი reset)
 stat -c '%U %G %a' /var/run/docker.sock         # root root 660
 sudo -u developer docker ps                     # permission denied
@@ -360,7 +360,7 @@ ssh docker-host 'if sudo -u developer docker ps >/dev/null 2>&1; then echo "deve
 უკვე ჩატვირთული მოდულის გამოტვირთვას, შემდეგ ნებისმიერ შემთხვევაში განმეორებით ჩატვირთვას ვბლოკავთ
 როგორც `blacklist`-ით, ისე `install` override-ით. ორივე დირექტივა მოქმედებს
 `modprobe`-ის დონეზე (alias resolution და აშკარა `modprobe sctp`) და ჩატვირთვის ჩვეულებრივ გზას აღმოფხვრის;
-ისინი kernel-level enforcement-ს არ ანაცვლებენ (`insmod` ჩადებს მოდულს პირდაპირ syscall-ით
+ისინი kernel-level enforcement-ს არ ანაცვლებენ (`insmod` მოდულს პირდაპირ ტვირთავს syscall-ით
 და `modprobe.d`-ს არ კითხულობს, ხოლო `modprobe --ignore-install`-ს შეუძლია `install`-ის გვერდის ავლა თანაბარი
 root-წვდომის დროს) - ამ ლაბისთვის მნიშვნელოვანია სწორედ მოსალოდნელი ავტოჩატვირთვის გზის აღმოფხვრა, და არა
 იმ მომხმარებლისგან დაცვის მოდელირება, რომელსაც node-ზე უკვე აქვს root.
@@ -370,7 +370,7 @@ root-წვდომის დროს) - ამ ლაბისთვის �
 per-network-namespace მითითებას (`try_module_get` pernet-ინიციალიზაციაში) ყოველი netns-ისთვის,
 რომელიც მოდულის ჩატვირთვის მომენტში უკვე არსებობდა - ამ node-ზე უკვე მუშაობს Pod-ები
 (calico, coredns, kube-system), ამიტომ `sctp` შეიძლება დარჩეს მდგომარეობაში `in use`
-არანულოვანი refcount-ით და ცარიელი `/sys/module/sctp/holders`-ით (ანუ არ ფლობს სხვა მოდული -
+არანულოვანი refcount-ით და ცარიელი `/sys/module/sctp/holders`-ით (ანუ მას სხვა მოდული არ ფლობს -
 რეკურსიულად გამოსატვირთი არაფერია). ამის გასწორება ყველა ამ Pod-ის გაჩერების გარეშე შეუძლებელია, რაც
 დავალებაში არ შედის. მნიშვნელოვანია და სწორედ მოწმდება ის, რაც სტუდენტის კონტროლის ქვეშაა:
 მოდული ხელახლა ვეღარ ჩაიტვირთება.
@@ -435,7 +435,7 @@ Node უნდა დარჩეს `Ready` (`worker`-იდან):
 kubectl get no
 ```
 
-თუ kubelet ამ ნაბიჯის შემდეგ არ ადგება - შეამოწმეთ სწორედ თანმიმდევრობა: sysctl
+თუ kubelet ამ ნაბიჯის შემდეგ არ ეშვება - შეამოწმეთ სწორედ თანმიმდევრობა: sysctl
 უნდა იყოს გამოყენებული (`sysctl --system`), და არა მხოლოდ ფაილში ჩაწერილი, სანამ kubelet
 გაშვებისას მათ შეამოწმებს.
 
@@ -458,7 +458,7 @@ grep cks-lab105-suid-tool /var/work/tests/artifacts/9/suid-before.txt
 ```
 
 SUID-ბიტს ვუხსნით მხოლოდ სასწავლო ფაილს (control-plane-ზე) და ვრწმუნდებით, რომ სისტემური
-SUID-binary-ები არ შეხებია - `sudo`/`passwd` უნდა დარჩეს SUID-ბიტით, წინააღმდეგ შემთხვევაში ოპერაციული სისტემის ბაზისური
+SUID-binary-ები ხელუხლებელი დარჩა - `sudo`/`passwd` უნდა დარჩეს SUID-ბიტით, წინააღმდეგ შემთხვევაში ოპერაციული სისტემის ბაზისური
 ფუნქციონალობა ირღვევა:
 
 ```bash
@@ -483,17 +483,17 @@ ssh "$CP" "stat -c '%a' /usr/local/bin/cks-lab105-suid-tool" \
 
 ## 10. Core dumps-ის გამორთვა და SUID-პროცესების დაცვა
 
-Core dump-ს შეუძლია შეიცავდეს secrets-სა და გასაღებებს პროცესის მეხსიერებიდან crash-ის მომენტში - მისი
+Core dump შეიძლება შეიცავდეს secrets-სა და გასაღებებს პროცესის მეხსიერებიდან crash-ის მომენტში - მისი
 აკრძალვა საჭიროა როგორც ჩვეულებრივი, ისე SUID-პროცესებისთვის. `fs.suid_dumpable`-ს ვამატებთ იმავე
 ფაილში `/etc/sysctl.d/99-kubernetes.conf`, რომელიც დავალება 8-ში უკვე შეიქმნა - ცალკე
 კონფლიქტურ კონფიგს არ ვქმნით.
 
-Ubuntu-ზე `ulimit -c 0` და `fs.suid_dumpable=0` core dump-ის არარსებობას **არ გარანტირებენ**:
+Ubuntu-ზე `ulimit -c 0` და `fs.suid_dumpable=0` core dump-ის არარსებობის გარანტიას **არ იძლევიან**:
 `man 5 core` პირდაპირ აფიქსირებს, რომ `RLIMIT_CORE` ბირთვის მიერ უგულებელყოფილია, თუ
 `kernel.core_pattern` dump-ს userspace-handler-ზე pipe-ით მიმართავს (`|program`).
 Ubuntu ნაგულისხმევად სწორედ ასეა გამართული - crash-ს Apport იჭერს და ინახავს
 `/var/lib/apport/coredump/`-ში პროცესის `ulimit -c`-ის მიუხედავად. ერთადერთი საიმედო
-გზა - თავად `kernel.core_pattern`-ის გადაფარვა ცნობილად არამომუშავე handler-ით.
+გზა - თავად `kernel.core_pattern`-ის გადაფარვა განზრახ არამომუშავე handler-ით.
 
 Core dump-ის ზომას ასევე ვზღუდავთ პროცესების ლიმიტების დონეზე - ეს `suid_dumpable`/`core_pattern`-ისგან
 ცალკე მექანიზმია (soft limit ჩვეულებრივი crash-ებისთვის კლასიკური
@@ -520,8 +520,8 @@ exit
 ```
 
 Artifact `coredump.txt` (`worker`-ზე). მოიცავს controlled crash probe-ს: ვადასტურებთ, რომ
-რეალური `SIGSEGV`-ის შემდეგ არ ჩნდება ახალი retained core dump - არც სტანდარტულ
-მიმდინარე დირექტორიაში, არც Apport-ით:
+რეალური `SIGSEGV`-ის შემდეგ არ ჩნდება ახალი retained core dump Apport-ის დირექტორიებში
+(`/var/lib/apport/coredump`, `/var/crash`):
 
 ```bash
 ssh "$CP" "sysctl -n fs.suid_dumpable; cat /proc/sys/kernel/core_pattern; sudo su - ubuntu -c 'ulimit -c'" \

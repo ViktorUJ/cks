@@ -386,7 +386,7 @@ those checks are performed separately in the next section.
 
 > 🎯 Istio mTLS binds a certificate to workload identity; distinguish `PeerAuthentication: STRICT` from `DestinationRule` with `ISTIO_MUTUAL`, and check the proxy/injection.
 
-> 🔬 **Upstream identity primitive.** Kubernetes v1.37 stabilized Pod Certificates and ClusterTrustBundles. They provide X.509 primitives at the Kubernetes level, but do not automatically make the Istio/SPIFFE identity plane unnecessary: signer, trust model, and mesh enforcement are separate architectural decisions. See [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA.md).
+> 🔬 **Upstream identity primitive.** Kubernetes v1.37 stabilized Pod Certificates and ClusterTrustBundles. They provide X.509 primitives at the Kubernetes level, but do not automatically make the Istio/SPIFFE identity plane unnecessary: signer, trust model, and mesh enforcement are separate architectural decisions. See [Kubernetes v1.37 Security Delta (Russian original)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 23.6. Istio: sidecar, SPIFFE workload identity, and `PeerAuthentication`
 

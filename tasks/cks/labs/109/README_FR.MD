@@ -20,11 +20,11 @@ une rotation automatisée de la clé. Pour la production, choisissez le provider
 
 Encryption at rest protège contre un storage compromise : supposons qu'un attaquant ait obtenu un accès read-only à un snapshot d'etcd ou à la couche de stockage, par exemple via un backup ou un volume snapshot, mais n'ait pas d'accès autorisé à l'API. La tâche 1 démontre précisément ce risque initial via une lecture raw d'etcd.
 
-Après l'activation de encryption at rest, les tâches 2–4 réduisent le blast radius d'un tel accès : les données lues directement ne doivent pas révéler le Secret. Ce n'est pas une protection universelle ni un substitut au contrôle d'accès à l'API.
+Après l'activation de l'encryption at rest, les tâches 2–4 réduisent le blast radius d'un tel accès : les données lues directement ne doivent pas révéler le Secret. Ce n'est pas une protection universelle ni un substitut au contrôle d'accès à l'API.
 
 Si l'attaquant a un accès légitime à l'API avec des droits de lecture des Secret, encryption at rest ne protège pas de cette menace : l'API renverra la valeur après déchiffrement. C'est pourquoi la tâche 5 restreint séparément RBAC et automount, réduisant le blast radius de l'identity d'un workload ayant de tels droits.
 
-## Vérifiez-vous avant de commencer
+## Testez-vous avant de commencer
 
 <details>
 <summary>1. Pourquoi base64 dans `Secret.data` n'est-il pas du chiffrement ?</summary>
@@ -84,13 +84,13 @@ check_result
 ---
 | **1** | **Démontrer le Secret plaintext initial** |
 | :---: | :--- |
-| Ce qu'on fait | • Avant d'activer le chiffrement, demandez l'enregistrement raw `/registry/secrets/encryption-109/legacy-secret` avec l'`etcdctl get ... --print-value-only` standard<br/>• Entrez sur le control-plane (`ssh control-plane`) et travaillez dessus, comme à l'examen : passez la sortie par `strings` et enregistrez le résultat dans un fichier sur le control-plane (`/tmp/plaintext-proof.txt`), puis copiez-le sur la machine de travail avec la commande `scp` vers `/var/work/109/plaintext-proof.txt` |
+| Ce qu'on fait | • Avant d'activer le chiffrement, demandez l'enregistrement raw `/registry/secrets/encryption-109/legacy-secret` avec l'`etcdctl get ... --print-value-only` standard<br/>• Connectez-vous au control-plane (`ssh control-plane`) et travaillez dessus, comme à l'examen : passez la sortie par `strings` et enregistrez le résultat dans un fichier sur le control-plane (`/tmp/plaintext-proof.txt`), puis copiez-le sur la machine de travail avec la commande `scp` vers `/var/work/109/plaintext-proof.txt` |
 | Critères d'acceptation | • Le fichier contient la sortie complète de `strings` de l'enregistrement raw d'origine (coïncide avec l'instantané du bootstrap, y compris le marker `cks-109-legacy-plaintext`) et ne contient pas `k8s:enc:`<br/>• Une chaîne saisie à la main n'est pas acceptée<br/>• C'est la preuve de l'état initial : `Secret.data` est du base64, pas de l'encryption at rest |
 
 <details>
 <summary>💡 Indice pour la tâche 1</summary>
 
-Cette tâche doit être réalisée EN PREMIER, avant la tâche 2 : dès que vous activez EncryptionConfiguration et réécrivez le Secret, la preuve plaintext disparaît et vous ne pourrez plus l'enregistrer post-hoc. La commande `etcdctl` avec les flags `--cacert/--cert/--key` se prend dans la documentation officielle de Kubernetes (la section « Verify that newly written data is encrypted » de la page Encrypting Confidential Data at Rest) ; les chemins des certificats kubeadm : `/etc/kubernetes/pki/etcd/ca.crt`, `server.crt`, `server.key`. Les liens exacts figurent dans la section « Où trouver des exemples dans la documentation » de la solution de référence.
+Cette tâche doit être réalisée EN PREMIER, avant la tâche 2 : dès que vous activez EncryptionConfiguration et réécrivez le Secret, la preuve plaintext disparaît et vous ne pourrez plus l'enregistrer post-hoc. La commande `etcdctl` avec les flags `--cacert/--cert/--key` se trouve dans la documentation officielle de Kubernetes (la section « Verify that newly written data is encrypted » de la page Encrypting Confidential Data at Rest) ; les chemins des certificats kubeadm : `/etc/kubernetes/pki/etcd/ca.crt`, `server.crt`, `server.key`. Les liens exacts figurent dans la section « Où trouver des exemples dans la documentation » de la solution de référence.
 </details>
 
 ---
@@ -102,7 +102,7 @@ Cette tâche doit être réalisée EN PREMIER, avant la tâche 2 : dès que vous
 <details>
 <summary>💡 Indice pour la tâche 2</summary>
 
-Générez la clé via `head -c 32 /dev/urandom | base64` - précisément 32 OCTETS (et non 32 caractères de la chaîne base64, qui sera plus longue à cause de l'encodage). Vérifiez-vous : `echo -n "<votre-clé-base64>" | base64 -d | wc -c` doit renvoyer exactement `32`.
+Générez la clé via `head -c 32 /dev/urandom | base64` - précisément 32 OCTETS (et non 32 caractères de la chaîne base64, qui sera plus longue à cause de l'encodage). Pour vérifier : `echo -n "<votre-clé-base64>" | base64 -d | wc -c` doit renvoyer exactement `32`.
 </details>
 
 ---
@@ -120,8 +120,8 @@ Trois modifications distinctes sont nécessaires à la fois : le flag `--encrypt
 ---
 | **4** | **Re-encrypt et démontrer le ciphertext** |
 | :---: | :--- |
-| Ce qu'on fait | • Une fois l'API server prêt, créez dans `encryption-109` le Secret `encrypted-secret` avec le literal `token=cks-109-fresh-ciphertext`<br/>• Réécrivez tous les Secret existants auparavant via l'API (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`)<br/>• Vérifiez les deux Secret via l'API et raw etcd<br/>• Ce n'est qu'après cette vérification que vous supprimez le fallback temporaire `identity`, redémarrez le kube-apiserver static et revérifiez `/readyz` et la lecture des deux Secret |
-| Critères d'acceptation | • `legacy-secret` et `encrypted-secret` se lisent via l'API avec les valeurs d'origine<br/>• Le raw value de chacun commence par `k8s:enc:aescbc:v1:`<br/>• Le legacy marker n'est plus visible dans raw etcd<br/>• Les payload/UID d'origine de tout le bootstrap Secret corpus sont conservés, tous les enregistrements sont chiffrés avec la première clé active<br/>• La clé du fichier final est capable de déchiffrer le ciphertext des deux canary Secret<br/>• Dans la configuration finale, il n'y a pas d'`identity`, API healthy |
+| Ce qu'on fait | • Une fois l'API server prêt, créez dans `encryption-109` le Secret `encrypted-secret` avec le literal `token=cks-109-fresh-ciphertext`<br/>• Réécrivez tous les Secret existants auparavant via l'API (`kubectl get secrets --all-namespaces -o json \| kubectl replace -f -`)<br/>• Vérifiez les deux Secret via l'API et raw etcd<br/>• Ce n'est qu'après cette vérification que vous supprimez le fallback temporaire `identity`, redémarrez le kube-apiserver static et revérifiez `/readyz` et la lecture des deux Secret |
+| Critères d'acceptation | • `legacy-secret` et `encrypted-secret` se lisent via l'API avec les valeurs d'origine<br/>• La valeur raw de chacun commence par `k8s:enc:aescbc:v1:`<br/>• Le legacy marker n'est plus visible dans raw etcd<br/>• Les payload/UID d'origine de tout le bootstrap Secret corpus sont conservés, tous les enregistrements sont chiffrés avec la première clé active<br/>• La clé du fichier final est capable de déchiffrer le ciphertext des deux canary Secret<br/>• Dans la configuration finale, il n'y a pas d'`identity`, API healthy |
 
 <details>
 <summary>💡 Indice pour la tâche 4</summary>
@@ -148,7 +148,7 @@ check_result
 ```
 
 La vérification contient Init et cinq tests obligatoires. Le test 4 vérifie non seulement la présence du
-fichier de configuration, mais le ciphertext réel `k8s:enc:aescbc:v1:` pour l'enregistrement nouveau et ancien
+fichier de configuration, mais aussi le ciphertext réel `k8s:enc:aescbc:v1:` pour le nouvel et l'ancien enregistrement
 d'etcd, et l'absence de l'`identity` migration-only dans la configuration finale. Avant un re-encryption de masse dans un environnement réel, il faut un snapshot, un plan de
 rotation des clés et une fenêtre contrôlée ; ce lab n'est pas un runbook de production.
 
@@ -169,7 +169,7 @@ provider `kms` dans `EncryptionConfiguration` ; son endpoint est un Unix socket 
 du provider reçoit un nom stable, par exemple `kms-v2-primary`. Dans KMS v2, l'API server obtient via le plugin un seed chiffré (wrapped sous le
 **KEK** externe) et en dérive les clés de chiffrement des objets individuels. KMS v2
 utilise le seed/DEK au niveau de l'API server, et non un appel distinct à KMS pour chaque Secret.
-Dans etcd sont conservés le ciphertext du Secret et les données nécessaires au rétablissement de la clé. Ainsi, le KEK ne se trouve pas dans etcd ; la availability, les ACL et le backup de KMS font
+Dans etcd sont conservés le ciphertext du Secret et les données nécessaires au rétablissement de la clé. Ainsi, le KEK ne se trouve pas dans etcd ; la disponibilité (availability), les ACL et le backup du KMS font
 partie du modèle de sécurité. Un provider minimal **illustratif** (l'endpoint doit
 correspondre au plugin installé) ressemble à ceci :
 
@@ -186,14 +186,14 @@ resources:
 Ajoutez le provider en premier pour les nouveaux enregistrements, montez le socket dans le `kube-apiserver` static
 et attendez la health du plugin avant le re-encryption. Pour une configuration réelle, utilisez
 un plugin pris en charge et le format actuel de `kms` v2 de la documentation de la version
-de Kubernetes utilisée ; ce lab ne lève pas de KMS-plugin et ne fournit pas de socket opérationnel.
+de Kubernetes utilisée ; ce lab ne déploie pas de KMS-plugin et ne fournit pas de socket opérationnel.
 
 **Rotation complète de la clé du provider.** La migration de plaintext vers la première clé
 `aescbc` réalisée dans la tâche 4 n'est pas une rotation complète de la clé. Pour celle-ci : (1) faites un snapshot protégé d'etcd et
 vérifiez que l'ancienne clé est conservée et disponible pour le rollback ; (2) ajoutez la nouvelle clé
 en premier dans `aescbc.keys`, en laissant l'ancienne en second, puis redémarrez l'API server ; (3)
 réécrivez les Secret existants via l'API, afin qu'ils soient chiffrés avec la nouvelle première clé ;
-(4) pour des enregistrements raw d'etcd, d'abord sélectionnés puis tous, confirmez le préfixe
+(4) d'abord sur un échantillon d'enregistrements raw d'etcd, puis sur tous, confirmez le préfixe
 `k8s:enc:aescbc:v1:<nom-de-la-nouvelle-clé>:` ; (5) ce n'est qu'après la migration complète, le backup et
 la vérification de lecture que vous supprimez l'ancienne clé, redémarrez l'API server et revérifiez `/readyz`
 et les Secret. Pour KMS v2, de façon équivalente, on change d'abord le KEK/plugin primary, on réalise le

@@ -87,7 +87,7 @@ que también ejecuta workload. El worker debe tener acceso SSH y API; el Pod CID
 nodo, acceso API. Aquí no hay flows kubelet/CNI entre nodos. No abrimos `22`/`6443` a
 `Anywhere`.
 
-En el `worker` miramos los valores necesarios a simple vista:
+En el `worker` revisamos manualmente los valores necesarios:
 
 ```bash
 kubectl get no -o wide                                      # INTERNAL-IP del nodo
@@ -143,7 +143,7 @@ realmente añadiste (NO está garantizada la forma/orden original de los comando
 mostrarlos). La comprobación compara precisamente esta lista con el allowlist esperado: guárdala
 también, es la evidence más fiable del exact allow-set. Gestiona el firewall solo mediante `ufw`:
 NO edites `/etc/ufw/before*.rules` ni `/etc/ufw/after*.rules` a mano, son
-framework-files con las default-reglas comunes, y no un lugar para source-scoped rules; el checker
+framework-files con las reglas default comunes, y no un lugar para source-scoped rules; el checker
 contrasta su hash con el bootstrap-baseline propiedad del checker y detectará la edición directa.
 
 ```bash
@@ -158,7 +158,7 @@ sudo ufw disable
 sudo ufw status verbose
 # corregir las allow rules estrechas, comprobar source IP/CIDR
 sudo ufw --force enable
-# Si las reglas están dañadas por completo, solo mediante la console/recovery channel:
+# Si las reglas están dañadas por completo, solo mediante la consola/el recovery channel:
 sudo ufw --force reset
 EOF
 ```
@@ -203,10 +203,10 @@ Comprobación declared vs effective: `ufw show added` es la lista declarativa, r
 a partir de los metadatos `### tuple ###`, que el propio ufw escribe en `user.rules` al añadir una regla
 mediante la CLI. El estado real del kernel tras `ufw reload` es lo que muestra
 `ufw show user-rules`. Compara no solo la CANTIDAD de líneas, sino también su CONTENIDO
-(source/port/proto): `ufw-user-input` debe mostrar el loopback (all, lo) y tres reglas tcp
+(source/port/proto): `ufw-user-input` debe mostrar el loopback (all, lo) y cuatro reglas tcp
 dpt:22/6443 con las source-direcciones exactas, y `ufw6-user-input` - EXACTAMENTE una línea, el mismo
 loopback ACCEPT para v6 (`ufw allow in on lo` es una regla por interfaz sin una IP explícita,
-por eso ufw siempre crea tanto la versión v4 como la v6). Cualquier OTRA línea/adicional allí es
+por eso ufw siempre crea tanto la versión v4 como la v6). Cualquier línea DISTINTA o adicional allí es
 un bypass ajeno:
 
 ```bash
@@ -290,7 +290,7 @@ TCP/2375 no tiene TLS ni autenticación: el acceso a él es prácticamente igual
 host. Eliminamos el systemd override de laboratorio con el TCP listener, establecemos el propietario del unix-socket
 mediante un socket override y eliminamos a `developer` del grupo `docker`.
 
-Aplicamos los cambios mediante un `daemon-reload` completo + restart de **ambas** unit; es un
+Aplicamos los cambios mediante un `daemon-reload` completo + restart de **ambas** units; es un
 paso obligatorio, y no simplemente "releer la configuración": sin un restart real se puede por casualidad
 "pasar" la comprobación si Docker simplemente dejó de responder (entonces TCP/2375 está cerrado no porque
 se haya quitado `-H tcp://`, sino porque el daemon no funciona en absoluto).
@@ -330,7 +330,7 @@ El contrato de la tarea es más amplio que el puerto 2375: la Docker API no debe
 `docker.socket` no debe contener TCP `ListenStream`:
 
 ```bash
-ss -ltnp | grep -E 'dockerd|docker\.socket'    # salida vacía
+ss -ltnp | grep dockerd                        # salida vacía (el socket TCP de systemd de docker.socket lo detecta la línea siguiente)
 systemctl cat docker.socket | grep ListenStream # solo /run/docker.sock (y un reset vacío)
 stat -c '%U %G %a' /var/run/docker.sock         # root root 660
 sudo -u developer docker ps                     # permission denied
@@ -442,7 +442,7 @@ los compruebe al arrancar.
 ## 9. Encontrar y neutralizar un binario SUID innecesario
 
 `find` mostrará tanto los binarios SUID del sistema (`sudo`, `passwd`, `mount`: no los tocamos) como
-el `/usr/local/bin/cks-lab105-suid-tool` de laboratorio, que no necesita ningún componente de
+el `/usr/local/bin/cks-lab105-suid-tool` de laboratorio, que no es necesario para ningún componente de
 Kubernetes en este nodo.
 
 `/var/lib/containerd` se excluye de la salida: sus rutas de snapshot de overlayfs son el contenido de
@@ -520,8 +520,8 @@ exit
 ```
 
 Artefacto `coredump.txt` (en el `worker`). Incluye un controlled crash probe: confirmamos que
-tras un `SIGSEGV` real no aparece NINGÚN core dump retenido NUEVO, ni en el directorio actual
-estándar ni mediante Apport:
+tras un `SIGSEGV` real no aparece NINGÚN core dump retenido NUEVO en los directorios de Apport
+(`/var/lib/apport/coredump`, `/var/crash`):
 
 ```bash
 ssh "$CP" "sysctl -n fs.suid_dumpable; cat /proc/sys/kernel/core_pattern; sudo su - ubuntu -c 'ulimit -c'" \

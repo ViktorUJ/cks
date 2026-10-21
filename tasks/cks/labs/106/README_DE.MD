@@ -19,16 +19,16 @@ Placement des Pods und das tatsächliche Verhalten des Prozesses prüfen.
 
 Nehmen wir RCE im Container an. Die Frage nach dem compromise lautet nicht „konnte der Angreifer eine shell erhalten“, sondern „was kann diese shell als Nächstes tun“ und wie groß ihr blast radius ist.
 
-AppArmor in den Aufgaben 1–2 begrenzt Objekte und Operationen: Das Profil wird in enforce überführt, und dann wird die Ablehnung des Schreibens belegt. So erhält ein bereits kompromittierter Prozess keine unbegrenzte Aktion nur deshalb, weil er in einem Container läuft.
+AppArmor in den Aufgaben 1–3 begrenzt Objekte und Operationen: Das Profil wird in enforce überführt, und dann wird die Ablehnung des Schreibens belegt. So erhält ein bereits kompromittierter Prozess keine unbegrenzte Aktion nur deshalb, weil er in einem Container läuft.
 
-seccomp in den Aufgaben 3–5 begrenzt den verfügbaren Systemaufruf: Zuerst wird die Baseline angewendet, dann das custom profile, und dann wird die tatsächliche Ablehnung von `unshare(2)` geprüft. Aufgabe 5 enthält bereits einen negative control über den Pod `sysadmin-control`: Bei derselben capability ohne seccomp filter geht der Aufruf durch, daher zeigt der Vergleich gerade die Grenze nach dem compromise.
+seccomp in den Aufgaben 4–6 begrenzt den verfügbaren Systemaufruf: Zuerst wird die Baseline angewendet, dann das custom profile, und dann wird die tatsächliche Ablehnung von `unshare(2)` geprüft. Aufgabe 6 enthält bereits einen negative control über den Pod `sysadmin-control`: Bei derselben capability ohne seccomp filter geht der Aufruf durch, daher zeigt der Vergleich gerade die Grenze nach dem compromise.
 
 ## Prüfe dich vor dem Start
 
 <details>
 <summary>1. Wie unterscheidet sich `complain` von `enforce` in AppArmor, und warum darf `complain` nicht als Beleg für Schutz gezeigt werden?</summary>
 
-Im Modus `complain` protokolliert AppArmor Verletzungen des Profils nur, blockiert sie aber NICHT - eine Operation, die verboten sein sollte, wird trotzdem ausgeführt, es erscheint lediglich ein Eintrag im Journal. In `enforce` wird die Operation tatsächlich blockiert. Aufgabe 1 verlangt ausdrücklich, das Profil in `enforce` zu überführen, weil die Demonstration "hier ist die Verletzung im Log" bei `complain` den Schutz nicht belegt - der Prozess konnte die Aktion trotzdem ausführen.
+Im Modus `complain` protokolliert AppArmor Verletzungen des Profils nur, blockiert sie aber NICHT - eine Operation, die verboten sein sollte, wird trotzdem ausgeführt, es erscheint lediglich ein Eintrag im Journal. In `enforce` wird die Operation tatsächlich blockiert. Aufgabe 2 verlangt ausdrücklich, das Profil in `enforce` zu überführen, weil die Demonstration „hier ist die Verletzung im Log“ bei `complain` den Schutz nicht belegt - der Prozess konnte die Aktion trotzdem ausführen.
 </details>
 
 <details>
@@ -62,8 +62,8 @@ Die Umgebung wird über Terragrunt in AWS `eu-central-1` ausgerollt.
 
 Zur Ressourcenschonung ist die control-plane der einzige workload-Node: Von ihr wurde der
 `NoSchedule` taint entfernt. Sie ist mit dem Label
-`security.cks.io/localhost-profiles-106=true` markiert. Alle Pods dieser Lab müssen gerade diesen
-Node auswählen - das plan-Profil wird vom Scheduler (scheduler) nicht auf einen anderen Node übertragen.
+`security.cks.io/localhost-profiles-106=true` markiert. Alle Pods dieser Lab müssen genau diesen
+Node auswählen - das Localhost-Profil existiert nur auf diesem Node, und der Scheduler überträgt es nicht auf einen anderen Node.
 
 Der Bootstrap hat **nur** vorbereitet:
 
@@ -71,7 +71,7 @@ Der Bootstrap hat **nur** vorbereitet:
 - auf der Arbeitsmaschine (worker), in `/opt/lab106-fixtures/`: die Quellen `k8s-106-deny-write`
   (AppArmor profile) und `cks-106-deny-unshare.json` (custom seccomp profile).
 
-Weder das AppArmor profile noch das seccomp profile sind auf dem workload-Node **vorinstalliert** und
+**Weder** das AppArmor profile **noch** das seccomp profile sind auf dem workload-Node vorinstalliert oder
 in dessen Kernel geladen - der Transfer und das erstmalige Laden jedes von ihnen sind Teil der Aufgaben 1 und 5.
 Ändere nicht den Pfad des seccomp profile und erstelle kein profile innerhalb eines gewöhnlichen Pods: Der Transfer
 der Dateien auf den Node erfolgt durch dich als Node-Administrator per SSH und nicht aus dem workload heraus.
@@ -103,7 +103,7 @@ ls -la /opt/lab106-fixtures/
 ---
 | **1** | **AppArmor profile übertragen und laden** |
 | :---: | :--- |
-| Was wir tun | Die Quelle des profile `k8s-106-deny-write` liegt nur auf der Arbeitsmaschine, in `/opt/lab106-fixtures/k8s-106-deny-write`. Kopiere sie auf den Node `control-plane` nach `/etc/apparmor.d/k8s-106-deny-write` (zum Beispiel per `scp`) und lade sie über `sudo apparmor_parser -r` in den Kernel. Das profile enthält bereits das Flag `complain` - es muss nicht ein zweites Mal aktiviert werden, das ist die Aufgabe von Aufgabe 2. |
+| Was wir tun | Die Quelle des profile `k8s-106-deny-write` liegt nur auf der Arbeitsmaschine, in `/opt/lab106-fixtures/k8s-106-deny-write`. Kopiere sie auf den Node `control-plane` nach `/etc/apparmor.d/k8s-106-deny-write` (zum Beispiel per `scp`) und lade sie über `sudo apparmor_parser -r` in den Kernel. Das profile enthält bereits das Flag `complain` - es muss nicht ein zweites Mal aktiviert werden, das ist Gegenstand von Aufgabe 2. |
 | Abnahmekriterien | `/etc/apparmor.d/k8s-106-deny-write` ist auf dem Node vorhanden; `/sys/kernel/security/apparmor/profiles` enthält eine Zeile mit dem Namen `k8s-106-deny-write` (in jedem Modus - `complain` oder `enforce`), das heißt, das profile ist tatsächlich in den Kernel geladen und nicht einfach nur auf die Platte kopiert. |
 
 <details>
@@ -121,7 +121,7 @@ Schritt bietet die Datei auf der Platte überhaupt keinen Schutz und erscheint n
 | **2** | **AppArmor profile in enforce überführen** |
 | :---: | :--- |
 | Was wir tun | Überführe auf dem Node `control-plane` das in Aufgabe 1 geladene profile `k8s-106-deny-write` in den Modus `enforce`. Der ursprüngliche Modus `complain` protokolliert Verletzungen, ist aber kein Schutz. Lösche das profile nicht und ändere seinen Namen nicht. |
-| Abnahmekriterien | Der Node mit dem Label `security.cks.io/localhost-profiles-106=true` existiert; `/etc/apparmor.d/k8s-106-deny-write` ist verfügbar; `/sys/kernel/security/apparmor/profiles` enthält die Zeile `k8s-106-deny-write (enforce)`. Die checker-owned bootstrap-Baseline (VOR der Ausgabe der Lab festgehalten, an einer transitiven Kopie desselben profile, solange es noch in `complain` war) bestätigt, dass ein dem Muster `/work/**` dieses profile entsprechendes Schreiben damals tatsächlich durchging - ohne dies lässt sich nicht belegen, dass gerade der Übergang nach `enforce` die spätere Ablehnung verursacht hat. |
+| Abnahmekriterien | Der Node mit dem Label `security.cks.io/localhost-profiles-106=true` existiert; `/etc/apparmor.d/k8s-106-deny-write` ist verfügbar; `/sys/kernel/security/apparmor/profiles` enthält die Zeile `k8s-106-deny-write (enforce)`. Die checker-owned bootstrap-Baseline (VOR der Ausgabe der Lab festgehalten, an einer Zwischenkopie desselben profile, solange sie noch in `complain` war) bestätigt, dass ein dem Muster `/work/**` dieses profile entsprechendes Schreiben damals tatsächlich durchging - ohne dies lässt sich nicht belegen, dass gerade der Übergang nach `enforce` die spätere Ablehnung verursacht hat. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 2</summary>
@@ -131,7 +131,7 @@ Der Befehl `sudo apparmor_parser -r /etc/apparmor.d/k8s-106-deny-write` lädt ei
 Verwende `aa-enforce`/`aa-complain` für dieses Profil nicht, bevor Aufgabe 9 erledigt ist:
 Diese Python-Werkzeuge aus `apparmor-utils` parsen vor ihrer eigentlichen Arbeit
 **alle** Dateien in `/etc/apparmor.d/`, einschließlich des noch defekten `k8s-106-broken-profile`
-aus Aufgabe 8, und scheitern mit einem Parser-Fehler an einer fremden Datei. Bearbeite das Flag `complain` in der Datei
+aus Aufgabe 9, und scheitern mit einem Parser-Fehler an einer fremden Datei. Bearbeite das Flag `complain` in der Datei
 des Profils direkt (`sed`) und lade gerade DIESE Datei über `apparmor_parser -r` neu -
 diese Binärdatei parst im Unterschied zu `aa-enforce` nur die ihr übergebene Datei.
 </details>
@@ -140,7 +140,7 @@ diese Binärdatei parst im Unterschied zu `aa-enforce` nur die ihr übergebene D
 | **3** | **Localhost AppArmor Pod und Schreibblockade** |
 | :---: | :--- |
 | Was wir tun | Erstelle den Namespace `security-106` und den Pod `apparmor-writer`. Der Pod muss das Node-Label aus der Infrastruktur auswählen, das automount des ServiceAccount token deaktivieren und auf Pod-Ebene `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write` setzen. Verwende `busybox:1.36`, den Container `app`, den Sleep-Befehl `sleep 3600` und ein `emptyDir`, das nach `/work` gemountet ist. Bestätige nach dem Start das effektive profile mit dem Befehl `cat /proc/1/attr/current` (falls die Schnittstelle verfügbar ist), führe eine erlaubte Leseoperation aus, zum Beispiel `cat /etc/hostname >/dev/null`, und versuche dann, eine Datei nach `/work` zu schreiben; die Operation muss mit einer Ablehnung enden. Halte auf dem Node den AppArmor denial für profile/process aus `journalctl -k \| grep -i apparmor` oder `dmesg \| grep -i apparmor` fest. |
-| Abnahmekriterien | Der Pod läuft, verwendet gerade das Localhost profile und den richtigen nodeSelector; das effektive profile des Prozesses zeigt `k8s-106-deny-write` im enforce mode (wenn `/proc/.../attr/current` verfügbar ist); die erlaubte Leseoperation in `/work` geht durch, während der Checker unabhängig seine eigene eindeutige (per-run) Datei nach `/work` schreibt und eine AppArmor-Ablehnung erhält. Im kernel journal/audit log gibt es ein Ereignis `apparmor="DENIED"` mit diesem profile, das sich gerade auf DIESEN Versuch bezieht (anhand des eindeutigen Dateinamens) - das schließt einen false pass durch ein veraltetes denial-Ereignis im Journal aus. |
+| Abnahmekriterien | Der Pod läuft, verwendet genau das Localhost profile und den richtigen nodeSelector; das effektive profile des Prozesses zeigt `k8s-106-deny-write` im enforce mode (wenn `/proc/.../attr/current` verfügbar ist); die erlaubte Leseoperation (zum Beispiel `cat /etc/hostname` oder `ls /work`) geht durch, während der Checker unabhängig seine eigene eindeutige (per-run) Datei nach `/work` schreibt und eine AppArmor-Ablehnung erhält. Im kernel journal/audit log gibt es ein Ereignis `apparmor="DENIED"` mit diesem profile, das sich genau auf DIESEN Versuch bezieht (anhand des eindeutigen Dateinamens) - das schließt einen false pass durch ein veraltetes denial-Ereignis im Journal aus. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 3</summary>
@@ -157,7 +157,7 @@ diese Binärdatei parst im Unterschied zu `aa-enforce` nur die ihr übergebene D
 <details>
 <summary>💡 Hinweis zu Aufgabe 4</summary>
 
-`Seccomp: 2` in `/proc/1/status` bedeutet "filter mode aktiv" (SECCOMP_MODE_FILTER) - das ist es, was du sehen sollst. `Seccomp: 0` würde das Fehlen eines seccomp filter überhaupt bedeuten (`Unconfined`). Das ist die einfachste Aufgabe der fünf in dieser Gruppe - wenn sie nicht besteht, liegt das Problem sehr wahrscheinlich im nodeSelector und nicht im seccompProfile selbst.
+`Seccomp: 2` in `/proc/1/status` bedeutet "filter mode aktiv" (SECCOMP_MODE_FILTER) - das ist es, was du sehen sollst. `Seccomp: 0` würde das Fehlen eines seccomp filter überhaupt bedeuten (`Unconfined`). Das ist die einfachste Aufgabe der fünf in dieser Gruppe - wenn sie fehlschlägt, liegt das Problem sehr wahrscheinlich im nodeSelector und nicht im seccompProfile selbst.
 </details>
 
 ---
@@ -169,7 +169,7 @@ diese Binärdatei parst im Unterschied zu `aa-enforce` nur die ihr übergebene D
 <details>
 <summary>💡 Hinweis zu Aufgabe 5</summary>
 
-Der Pfad `profiles/cks-106-deny-unshare.json` ist relativ zum kubelet seccomp root `/var/lib/kubelet/seccomp/`, das heißt, die tatsächliche Datei auf dem Node muss unter der Adresse `/var/lib/kubelet/seccomp/profiles/cks-106-deny-unshare.json` liegen - gerade dorthin muss sie von der Arbeitsmaschine kopiert werden (zum Beispiel `scp /opt/lab106-fixtures/cks-106-deny-unshare.json control-plane:/tmp/`, dann `sudo mkdir -p` und `sudo mv` auf dem Node). Schreibe im Manifest nicht den vollständigen absoluten Pfad - das kubelet fügt den root selbst hinzu. `SYS_ADMIN` wird hier GERADE für das Experiment vergeben (es wird eine capability gebraucht, die es grundsätzlich erlaubt, `unshare` aufzurufen) und nicht als empfohlene Praxis - verwechsle das Lernszenario nicht mit der production-Baseline.
+Der Pfad `profiles/cks-106-deny-unshare.json` ist relativ zum kubelet seccomp root `/var/lib/kubelet/seccomp/`, das heißt, die tatsächliche Datei auf dem Node muss unter dem Pfad `/var/lib/kubelet/seccomp/profiles/cks-106-deny-unshare.json` liegen - gerade dorthin muss sie von der Arbeitsmaschine kopiert werden (zum Beispiel `scp /opt/lab106-fixtures/cks-106-deny-unshare.json control-plane:/tmp/`, dann `sudo mkdir -p` und `sudo mv` auf dem Node). Schreibe im Manifest nicht den vollständigen absoluten Pfad - das kubelet fügt den root selbst hinzu. `SYS_ADMIN` wird hier EIGENS für das Experiment vergeben (es wird eine capability gebraucht, die es grundsätzlich erlaubt, `unshare` aufzurufen) und nicht als empfohlene Praxis - verwechsle das Lernszenario nicht mit der production-Baseline.
 </details>
 
 ---
@@ -181,7 +181,7 @@ Der Pfad `profiles/cks-106-deny-unshare.json` ist relativ zum kubelet seccomp ro
 <details>
 <summary>💡 Hinweis zu Aufgabe 6</summary>
 
-Verwende gerade `unshare -n true` (unshare network namespace, `CLONE_NEWNET`) und NICHT
+Verwende genau `unshare -n true` (unshare network namespace, `CLONE_NEWNET`) und NICHT
 `unshare -m true`. `-m` (mount namespace) erfordert ebenso wie `-n` `CAP_SYS_ADMIN`, aber
 BusyBox `unshare -m` führt nach erfolgreichem `unshare(2)` zusätzlich einen ZWEITEN,
 eigenständigen `mount(2)` syscall aus (`mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL)`
@@ -191,7 +191,7 @@ aufgerufen, nur mit Null-Flags). Das default AppArmor-Profil von containerd (`Ru
 das ein Pod ohne explizites `securityContext.appArmorProfile` erhält) enthält `deny mount,`
 OHNE irgendwelche Bedingungen an Flags - dieses Verbot gilt unabhängig von capabilities und von
 seccomp. Deshalb kann `unshare -m true` wegen AppArmor mit `EPERM` scheitern, SELBST wenn
-seccomp `unshare` überhaupt nicht einschränkt, was einen solchen Probe zu einem unzuverlässigen Beleg
+seccomp `unshare` überhaupt nicht einschränkt, was einen solchen Test zu einem unzuverlässigen Beleg
 gerade für eine seccomp-Ablehnung macht. `unshare -n` (`CLONE_NEWNET`) ruft NUR den
 syscall `unshare(2)` selbst ohne nachfolgendes `mount()` auf - und `localhost-seccomp` sowie
 `sysadmin-control` verwenden dasselbe `SYS_ADMIN`, daher erklärt sich der Unterschied im Ergebnis
@@ -209,13 +209,13 @@ Verwende für einen gewöhnlichen workload `capabilities.drop: ["ALL"]` und sepa
 ---
 | **7** | **User namespaces: `hostUsers: false` und UID-Übersetzung über `uid_map`** |
 | :---: | :--- |
-| Was wir tun | User namespaces sind in Kubernetes v1.36 GA (siehe [Kapitel 03](../../course/03/de.md), [Kapitel 18](../../course/18/de.md) und Security Delta v1.36). Die Theorie erklärt, dass `hostUsers: false` das root des Containers in eine unprivilegierte host UID übersetzt; hier musst du das an einem laufenden Prozess belegen. Erstelle in `security-106` auf dem vorbereiteten Node einen Pod `userns-probe` mit `spec.hostUsers: false`, dem Image `busybox:1.36`, dem Befehl `sleep 3600`; setze kein Pod-level `runAsUser`, damit der Prozess als UID 0 **innerhalb** des Containers startet. Bestätige `id` im Container (`uid=0`). Bestimme die host PID des Container-Prozesses über `crictl inspect` (analog zu Lab 112) oder über `kubectl get pod -o jsonpath` + `crictl ps`, lies dann auf dem Node `/proc/<host PID>/uid_map`. Speichere beide Ausgaben (`id` im Container und den Inhalt von `uid_map`) in `/var/work/tests/artifacts/6/userns.txt`. |
-| Abnahmekriterien | Der Pod ist `Running`, `spec.hostUsers == false`, wählt den vorbereiteten Node aus; `id` im Container zeigt `uid=0(root)`; `/proc/<host PID>/uid_map` auf dem Node enthält eine Zeile der Form `0 <host-uid> <length>`, wobei `<host-uid>` **nicht gleich 0** ist (das root des Containers wurde in eine unprivilegierte host UID übersetzt) und `<length>` mindestens `65536` beträgt (der standardmäßige per-Pod UID-Bereich); das artifact enthält beide Teile der evidence. |
+| Was wir tun | User namespaces sind in Kubernetes v1.36 GA (siehe [Kapitel 03](../../course/03/de.md), [Kapitel 18](../../course/18/de.md) und Security Delta v1.36). Die Theorie erklärt, dass `hostUsers: false` den Root-Benutzer des Containers in eine unprivilegierte host UID übersetzt; hier musst du das an einem laufenden Prozess belegen. Erstelle in `security-106` auf dem vorbereiteten Node einen Pod `userns-probe` mit `spec.hostUsers: false`, dem Image `busybox:1.36`, dem Befehl `sleep 3600`; setze kein Pod-level `runAsUser`, damit der Prozess als UID 0 **innerhalb** des Containers startet. Bestätige `id` im Container (`uid=0`). Bestimme die host PID des Container-Prozesses über `crictl inspect` (analog zu Lab 112) oder über `kubectl get pod -o jsonpath` + `crictl ps`, lies dann auf dem Node `/proc/<host PID>/uid_map`. Speichere beide Ausgaben (`id` im Container und den Inhalt von `uid_map`) in `/var/work/tests/artifacts/6/userns.txt`. |
+| Abnahmekriterien | Der Pod ist `Running`, `spec.hostUsers == false`, wählt den vorbereiteten Node aus; `id` im Container zeigt `uid=0(root)`; `/proc/<host PID>/uid_map` auf dem Node enthält eine Zeile der Form `0 <host-uid> <length>`, wobei `<host-uid>` **nicht gleich 0** ist (der Root-Benutzer des Containers wurde in eine unprivilegierte host UID übersetzt) und `<length>` mindestens `65536` beträgt (der standardmäßige per-Pod UID-Bereich); das artifact enthält beide Teile der evidence. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 7</summary>
 
-`id` INNERHALB des Containers zeigt unabhängig von `hostUsers` `uid=0(root)` - das ist erwartet, der Container sieht SEINEN eigenen Namespace, in dem sein root tatsächlich UID 0 in diesem Namespace ist. Der echte Schutz ist nur von AUSSEN sichtbar: auf dem Node selbst, in `/proc/<host PID>/uid_map`, wo die UID 0 im Container in eine große unprivilegierte UID auf dem Host übersetzt wird. Um die host PID zu finden, verwende `crictl inspect <container-id>` - gerade von dort und nicht von `kubectl get pod`, der nur das Kubernetes-Objekt kennt, aber nicht die host-level PID des Prozesses.
+`id` INNERHALB des Containers zeigt unabhängig von `hostUsers` `uid=0(root)` - das ist zu erwarten, der Container sieht SEINEN eigenen Namespace, in dem sein root tatsächlich UID 0 in diesem Namespace ist. Der echte Schutz ist nur von AUSSEN sichtbar: auf dem Node selbst, in `/proc/<host PID>/uid_map`, wo die UID 0 im Container in eine große unprivilegierte UID auf dem Host übersetzt wird. Um die host PID zu finden, verwende `crictl inspect <container-id>` - gerade von dort und nicht von `kubectl get pod`, der nur das Kubernetes-Objekt kennt, aber nicht die host-level PID des Prozesses.
 </details>
 
 ---
@@ -227,7 +227,7 @@ Verwende für einen gewöhnlichen workload `capabilities.drop: ["ALL"]` und sepa
 <details>
 <summary>💡 Hinweis zu Aufgabe 8</summary>
 
-Die Kernanforderung ist, dass der Pod `seccompProfile` WIRKLICH überhaupt nicht erwähnen darf, weder auf Pod- noch auf Container-Ebene. Wenn du das Manifest aus Aufgabe 3 kopierst und einfach vergisst, dieses Feld zu entfernen, beweist der Test nicht, was er beweisen soll: dass gerade das node-level `seccompDefault` (und nicht die explizite Angabe im Manifest) `Seccomp: 2` bewirkt hat.
+Die Kernanforderung ist, dass der Pod `seccompProfile` WIRKLICH überhaupt nicht erwähnen darf, weder auf Pod- noch auf Container-Ebene. Wenn du das Manifest aus den Aufgaben 4–6 kopierst und einfach vergisst, dieses Feld zu entfernen, beweist der Test nicht, was er beweisen soll: dass gerade das node-level `seccompDefault` (und nicht die explizite Angabe im Manifest) `Seccomp: 2` bewirkt hat.
 
 Die Prüfung orientiert sich an der TATSÄCHLICH ANGEWENDETEN Konfiguration des kubelet und nicht am Text der Datei auf
 der Platte: `curl`/`kubectl get --raw /api/v1/nodes/<node>/proxy/configz | jq .kubeletconfig.seccompDefault`.
@@ -247,8 +247,8 @@ Starte das kubelet nach dem Bearbeiten der Datei unbedingt neu - die Konfigurati
 
 `apparmor_parser -p` (`--preprocess`) ist KEIN sicherer dry-run/Syntaxprüfungs-Modus - das ist
 lediglich preprocessing: Es expandiert `#include`-Direktiven und gibt das entstandene
-Profil auf stdout aus, garantiert an sich keine Abwesenheit von Nebenwirkungen und ist nicht
-gerade zur Prüfung der Syntax gedacht. Verwende `-Q`/`--skip-kernel-load`
+Profil auf stdout aus, garantiert an sich nicht, dass keine Nebenwirkungen auftreten und ist nicht
+speziell zur Prüfung der Syntax gedacht. Verwende `-Q`/`--skip-kernel-load`
 (führt die vollständige Kompilierung/Prüfung aus, lädt aber nicht in den Kernel) oder `-d`/`--debug`
 (einmalig - nur Prüfung der syntaktischen Korrektheit), um den Syntaxfehler SICHER und ohne Nebenwirkungen
 zu finden. Erst nach der Korrektur der Datei verwende
@@ -259,7 +259,7 @@ fehlt und wo genau.
 Starte `apparmor_parser` über `sudo`, auch mit `-Q`/`-d`: Auf dem Lab-Node (apparmor 3.0.4,
 Ubuntu) versucht der Parser ohne Privilegien bei jedem Start, den policy cache in
 `/var/cache/apparmor` einzurichten, und scheitert mit "Failed setting up policy cache: Permission denied" VOR
-der Syntaxprüfung - du erhältst einen irreführenden Fehler zu Rechten statt des echten Syntaxfehlers
+der Syntaxprüfung - du erhältst eine irreführende Berechtigungsfehlermeldung statt des echten Syntaxfehlers
 des Profils. Das wurde auf dem Node selbst verifiziert (auch an einem nachweislich defekten Profil).
 Wenn du ohne `sudo` starten musst, füge `-K` hinzu (`--skip-cache`: kein Caching) -
 `apparmor_parser -Q -K` ohne Privilegien gelangt bis zum Parsen des Profils und zeigt den echten

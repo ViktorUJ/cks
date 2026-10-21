@@ -819,7 +819,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 
 ## 14.9. Comment ceci est appliqué en production
 
-- **Chemin de nœud rootless Kubernetes v1.37.** `KubeletInUserNamespace` est devenu Beta et permet de construire une pile de nœud où kubelet et les composants de nœud associés s'exécutent sans host-root grâce à un user namespace. Ne confondez pas cela avec `spec.hostUsers: false`, qui isole un Pod. Voir [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_FR.md).
+- **Chemin de nœud rootless Kubernetes v1.37.** `KubeletInUserNamespace` est devenu Beta et permet de construire une pile de nœud où kubelet et les composants de nœud associés s'exécutent sans host-root grâce à un user namespace. Ne confondez pas cela avec `spec.hostUsers: false`, qui isole un Pod. Voir [Kubernetes v1.37 Security Delta (uniquement en russe)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 - **Le baseline est défini comme du code.** La liste des paquets, les services enabled, les drop-ins
   systemd, le firewall et la vérification des sockets font partie de l'image immutable,
   d'Ansible/Cloud-Init ou d'un autre IaC. Une correction d'urgence manuelle est ensuite portée dans

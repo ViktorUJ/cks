@@ -9,10 +9,10 @@
 
 ## 概要
 
-この実習の control-plane は `kubeadm init --skip-phases=addon/kube-proxy` で立ち上げられており - `kube-proxy` の
+この実習の control-plane は `kubeadm init --skip-phases=addon/kube-proxy` で立ち上げられており、`kube-proxy` の
 DaemonSet も、**CNI もインストールされていません**。Node は、あなた自身が Cilium をインストールするまで `NotReady` のままです。
 これは意図的なものです：この実習全体が、kube-proxy の完全な代替 (`kubeProxyReplacement`) としての Cilium の手動インストール、
-WireGuard の transparent encryption の段階的な有効化、SPIRE を基盤とする Cilium Mutual Authentication を扱い -
+WireGuard の transparent encryption の段階的な有効化、SPIRE を基盤とする Cilium Mutual Authentication を扱います。
 各ステップは、すでに用意されたものとして渡されるのではなく、個別にインストールして確認します。
 
 `cilium`/`hubble` CLI はすでに worker にインストールされており、実際のクラスター
@@ -56,7 +56,7 @@ WireGuard encryption を有効にし、Cilium Mutual Authentication (SPIRE) を�
 
 |           **2**           | **kube-proxy の代替としての Cilium のインストール** |
 | :-----: | :----- |
-|       やること       | • worker にインストールされている `cilium` CLI バージョン `v0.19.7` で、Cilium の agent/chart バージョン `1.20.1` を、`kubeProxyReplacement=true` と、本物の API server を指す明示的な `k8sServiceHost`/`k8sServicePort` (Service の ClusterIP ではありません - kube-proxy がないと、Cilium 自身が起動する前にクラスターは `kubernetes.default` を解決できません) でインストールします |
+|       やること       | • worker にインストールされている `cilium` CLI バージョン `v0.19.7` で、Cilium の agent/chart バージョン `1.20.1` を、`kubeProxyReplacement=true` と、本物の API server を指す明示的な `k8sServiceHost`/`k8sServicePort` (Service の ClusterIP ではありません - kube-proxy がないと、Cilium 自身が起動するまで、ClusterIP `kubernetes.default` への通信は API server に届きません) でインストールします |
 | 受け入れ基準 | • `KubeProxyReplacement: True/Strict` (agent の `cilium-dbg status` で)<br/>• Node が `Ready` になる<br/>• ClusterIP Service に kube-proxy なしで到達できる |
 |        検証        | `cilium status --wait`、`kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status \| grep KubeProxyReplacement`、続いて `kubectl get nodes` -> `Ready`。テスト用の Pod から：`curl https://kubernetes.default.svc.cluster.local/` が HTTP response (connection error ではない) を受け取る必要があります。 |
 
@@ -87,14 +87,14 @@ WireGuard encryption を有効にし、Cilium Mutual Authentication (SPIRE) を�
 |           **5**           | **必須の mutual authentication を持つ CiliumNetworkPolicy** |
 | :-----: | :----- |
 |       やること       | • `ingress-115` (client) と `app-115` (backend、label `app=backend`、Service `backend`) を作成します<br/>• `app-115` に `CiliumNetworkPolicy backend-auth-required` を作成します：`app=backend` に対する `endpointSelector`、namespace `ingress-115` からの ingress のみ、そしてその ingress ルールに `authentication.mode: required` |
-| 受け入れ基準 | • Policy が backend を正確に選択し、TCP/80 で `ingress-115` からの ingress ルールを 1 つだけ含み、`authentication.mode: required` を持つ<br/>• 追加の ingress ルールや迂回経路がない<br/>• 分離された Lab 115 の環境には、backend に影響を与える他の namespaced/global の network policies がない<br/>• Service `backend` が Ready な Pod `backend` を指している |
+| 受け入れ基準 | • Policy が backend を正確に選択し、`authentication.mode: required` を持つ、TCP/80 での `ingress-115` からの ingress ルールを 1 つだけ含む<br/>• 追加の ingress ルールや迂回経路がない<br/>• 分離された Lab 115 の環境には、backend に影響を与える他の namespaced/global の network policies がない<br/>• Service `backend` が Ready な Pod `backend` を指している |
 |        検証        | `kubectl -n app-115 get ciliumnetworkpolicy backend-auth-required -o yaml` - `ingress[0]` 内の `authentication.mode: required` を確認します。 |
 
 ---
 
 |           **6**           | **Positive/negative control: 認証された identity は許可され、無関係なものは許可されない** |
 | :-----: | :----- |
-|       やること       | • policy の効果を live のトラフィックで確認します：`ingress-115` の client は、(SPIRE ベースの mutual auth handshake の成功の後に) `backend` に到達できる必要があります<br/>• 「誤った」namespace (`ingress-115` ではなく `app-115`；backend 自身へのトラフィックは Cilium が常に通します) の別の Pod は、ブロックされる必要があります |
+|       やること       | • policy の効果を実際のトラフィックで確認します：`ingress-115` の client は、(SPIRE ベースの mutual auth handshake の成功の後に) `backend` に到達できる必要があります<br/>• 「誤った」namespace (`ingress-115` ではなく `app-115`；backend 自身へのトラフィックは Cilium が常に通します) の別の Pod は、ブロックされる必要があります |
 | 受け入れ基準 | • 分離されたミラーの backend では、baseline が両方の client を許可し、policy のコピーを適用した後は `ingress-115` のみが許可される<br/>• 稼働中の backend が、許可された client には応答し、`app-115` と新しい独立した namespace の client は拒否する<br/>• Cilium の BPF auth map に、client/backend の identity の正確なペアについて `spire` が含まれている |
 |        検証        | `ingress-115` の client Pod から `http://backend.app-115.svc.cluster.local/` への `curl` -> HTTP response。client の label を持たない `app-115` の Pod からの同じ curl -> connection error。 |
 

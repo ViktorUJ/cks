@@ -30,7 +30,7 @@ in der Historie der Schichten zugänglich bleiben.
 
 Die Bedrohung durch mutable-tag tampering besteht darin, dass nach dem Deployment bei einer unveränderten Referenz mit
 Tag ein anderes, bösartiges Image untergeschoben werden kann. Genau deshalb ist digest pinning in den
-Aufgaben 3–5 wichtig: Er legt den konkreten Inhalt des Images fest und nicht nur seinen Namen und Tag.
+Aufgaben 3–5 wichtig: Es legt den konkreten Inhalt des Images fest und nicht nur seinen Namen und Tag.
 
 Die Signaturprüfung in Aufgabe 7 belegt, dass ein konkreter digest von einem vertrauenswürdigen
 key/identity signiert ist (signature integrity), während der Trivy scan in Aufgabe 1 bei der aktuellen vulnerability DB keine
@@ -90,7 +90,7 @@ Die Umgebung wird von Terragrunt in AWS `eu-central-1` erstellt.
 | `k8s-1` | Ein-Node-kubeadm Kubernetes `1.36.0`, containerd und **Calico** |
 | `worker` | Arbeitsstation für die Analyse, `kubectl`, `check_result` und security tools |
 
-Die Infrastruktur ist CKA-style: Die einzige control-plane-Node ist für workloads erlaubt und
+Die Infrastruktur ist CKA-style: Der einzige control-plane-Node ist für workloads erlaubt und
 mit `cks.io/lab=111` markiert. Die wichtigsten Befehle und security tools werden auf dem worker gestartet.
 Der Kubernetes-Cluster wird als Zielumgebung zur Prüfung des hardened workload und der
 admission-time signature policy verwendet: Aufgabe 4 rollt `catalog` aus, und die Aufgaben 9b/9c
@@ -117,9 +117,8 @@ offizielle Unterstützung - hebe diese Ausnahme beim Update von Kyverno auf.
 
 ## Voraussetzungen und Einschränkungen
 
-**podman und registry sind auf dem Stand bereits eingerichtet.** Verwende zum Bauen und Veröffentlichen von Images `podman`
-(ein Werkzeug aus der Liste der Prüfung; rootless, als Benutzer `ubuntu`). Die Aufgaben 3 und 9c erfordern, ein Image zu bauen und zu
-**veröffentlichen** in einer Registry, die sowohl vom worker als auch aus dem Cluster erreichbar ist (die immutable-Referenz
+**podman und registry sind in der Lab-Umgebung bereits eingerichtet.** Verwende zum Bauen und Veröffentlichen von Images `podman`
+(ein Werkzeug aus der Liste der in der CKS-Prüfung erlaubten Werkzeuge; rootless, als Benutzer `ubuntu`). Die Aufgaben 3 und 9c erfordern, ein Image zu bauen und in einer Registry zu **veröffentlichen**, die sowohl vom worker als auch aus dem Cluster erreichbar ist (die immutable-Referenz
 `repo@sha256:...` stammt aus der Registry, eine lokale image ID passt nicht). Eine solche Registry -
 `registry:2` auf der control-plane - wurde vom bootstrap hochgefahren:
 
@@ -142,7 +141,7 @@ Wenn Docker Hub trotzdem `TOOMANYREQUESTS` zurückgibt, warte (das Limit-Fenster
 `podman login docker.io` mit deinem eigenen Konto aus.
 
 **Cosign und Passwort des Schlüssels.** `cosign generate-key-pair` und `cosign sign --key` fragen nach dem Passwort des
-Schlüssels; für ein Lern-Paar kannst du es leer lassen (`export COSIGN_PASSWORD=""`), damit die Befehle
+Schlüssels; für ein Übungs-Schlüsselpaar kannst du es leer lassen (`export COSIGN_PASSWORD=""`), damit die Befehle
 nicht auf Eingabe warten.
 
 **`trivy sbom` und SBOM ohne OS (Aufgabe 8).** Das SPDX von `bom` enthält für ein multi-arch Image keine
@@ -175,7 +174,7 @@ nur in `/var/work/tests/artifacts/<Nummer>/`.
 | **1** | **Trivy: Bericht über Schwachstellen des Images** |
 | :---: | :--- |
 | Was wir tun | • Scanne das immutable `$IMAGE` mit Trivy, einschließlich OS und library vulnerabilities.<br/>• Speichere das strukturierte JSON in `/var/work/tests/artifacts/1/trivy-report.json`. |
-| Abnahmekriterien | • **Datei:** nicht leer, das JSON wird von `jq` geparst, enthält `Results` und die immutable reference des analysierten Images.<br/>• **Frische Prüfung:** Der Checker wiederholt `trivy image` für dasselbe Image selbstständig und verlangt, dass dieser frische Scan erfolgreich in `ArtifactName` übereinstimmt.<br/>• Ein von Hand geschriebenes, aber syntaktisch gültiges JSON besteht nicht. |
+| Abnahmekriterien | • **Datei:** nicht leer, das JSON wird von `jq` geparst, enthält `Results` und die immutable reference des analysierten Images.<br/>• **Frische Prüfung:** Der Checker wiederholt `trivy image` für dasselbe Image selbstständig und verlangt, dass dieser frische Scan erfolgreich ist und in `ArtifactName` übereinstimmt.<br/>• Ein von Hand geschriebenes, aber syntaktisch gültiges JSON besteht nicht. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 1</summary>
@@ -186,7 +185,7 @@ nur in `/var/work/tests/artifacts/<Nummer>/`.
 ---
 | **1b** | **Multi-image CVE triage: das Image mit einer konkreten CVE finden** |
 | :---: | :--- |
-| Was wir tun | • Öffne `~/cks-111/candidates.txt` - dort stehen drei immutable image references (`CANDIDATE_1/2/3`) und das Ziel `TARGET_CVE`, individuell für deine Instanz der Lab während des bootstrap bestimmt.<br/>• Scanne **alle drei** Images mit Trivy und finde heraus, welches davon tatsächlich `TARGET_CVE` enthält.<br/>• Speichere den JSON-Bericht gerade dieses Images in `/var/work/tests/artifacts/1b/target-scan.json`.<br/>• Speichere die Zeile `OFFENDING_IMAGE=<vollständige Referenz dieses Images>` in `/var/work/tests/artifacts/1b/answer.txt`. |
+| Was wir tun | • Öffne `~/cks-111/candidates.txt` - dort stehen drei immutable image references (`CANDIDATE_1/2/3`) und die Ziel-CVE `TARGET_CVE`, individuell für deine Instanz der Lab während des bootstrap bestimmt.<br/>• Scanne **alle drei** Images mit Trivy und finde heraus, welches davon tatsächlich `TARGET_CVE` enthält.<br/>• Speichere den JSON-Bericht gerade dieses Images in `/var/work/tests/artifacts/1b/target-scan.json`.<br/>• Speichere die Zeile `OFFENDING_IMAGE=<vollständige Referenz dieses Images>` in `/var/work/tests/artifacts/1b/answer.txt`. |
 | Abnahmekriterien | • **Antwort:** `answer.txt` nennt genau das `CANDIDATE_N`, dessen echter Trivy-Scan `TARGET_CVE` enthält.<br/>• **Bericht:** `target-scan.json` ist die echte Ausgabe von Trivy für dasselbe Image (der Checker wiederholt den Scan selbst und vergleicht). |
 
 <details>
@@ -196,21 +195,21 @@ nur in `/var/work/tests/artifacts/<Nummer>/`.
 </details>
 
 ---
-| **1c** | **Workload image triage nach CRITICAL severity** |
+| **1c** | **Auswertung der workload images nach Schweregrad CRITICAL** |
 | :---: | :--- |
-| Was wir tun | • Im Namespace `cks-111` sind bereits 4 Deployments ausgerollt (Label `cks.io/task=1c`), jedes mit einem immutable digest-pinned image.<br/>• Hole die image references aus diesen LIVE Deployments (rate nicht anhand des Tag-Namens), scanne **alle 4** Images mit Trivy mit `--severity CRITICAL` und zähle die Anzahl der eindeutigen CRITICAL `VulnerabilityID` für jedes.<br/>• Bestimme das Deployment mit der größten Anzahl CRITICAL ("das verwundbarste") und die zwei Deployments mit der geringsten Anzahl ("die zwei am wenigsten verwundbaren"). Schreibe ihre Namen in `/var/work/tests/artifacts/1c/ranking.txt` als `MOST_VULNERABLE=<deployment-name>`, `LEAST_VULNERABLE_1=<deployment-name>`, `LEAST_VULNERABLE_2=<deployment-name>`.<br/>• Erzeuge für das Image des verwundbarsten Deployments ein CycloneDX SBOM **gerade mit Trivy** (`trivy image --format cyclonedx`) in `1c/cyclonedx.json`.<br/>• Dann remediate: Lasse `replicas > 0` nur bei den zwei am wenigsten verwundbaren Deployments, skaliere die übrigen zwei (einschließlich des verwundbarsten) auf `replicas: 0`. |
+| Was wir tun | • Im Namespace `cks-111` sind bereits 4 Deployments ausgerollt (Label `cks.io/task=1c`), jedes mit einem immutable digest-pinned image.<br/>• Hole die image references aus diesen LIVE Deployments (rate nicht anhand des Tag-Namens), scanne **alle 4** Images mit Trivy mit `--severity CRITICAL` und zähle die Anzahl der eindeutigen CRITICAL `VulnerabilityID` für jedes.<br/>• Bestimme das Deployment mit der größten Anzahl CRITICAL ("das verwundbarste") und die zwei Deployments mit der geringsten Anzahl ("die zwei am wenigsten verwundbaren"). Schreibe ihre Namen in `/var/work/tests/artifacts/1c/ranking.txt` als `MOST_VULNERABLE=<deployment-name>`, `LEAST_VULNERABLE_1=<deployment-name>`, `LEAST_VULNERABLE_2=<deployment-name>`.<br/>• Erzeuge für das Image des verwundbarsten Deployments ein CycloneDX SBOM **ausdrücklich mit Trivy** (`trivy image --format cyclonedx`) in `1c/cyclonedx.json`.<br/>• Dann remediate: Lasse `replicas > 0` nur bei den zwei am wenigsten verwundbaren Deployments, skaliere die übrigen zwei (einschließlich des verwundbarsten) auf `replicas: 0`. |
 | Abnahmekriterien | • **Ranking:** Der Checker wiederholt den Trivy CRITICAL-Scan aller 4 live images selbst und berechnet das Ranking neu - `ranking.txt` muss mit diesem frischen Scan übereinstimmen und nicht mit einem veralteten/geratenen.<br/>• **SBOM:** `cyclonedx.json` ist ein gültiges CycloneDX-Dokument gerade von Trivy, das sich auf das Image des tatsächlich verwundbarsten Deployments bezieht.<br/>• **Remediation:** genau 2 Deployments (die nach frischem Scan am wenigsten verwundbaren) haben `replicas > 0`, die übrigen 2 - `replicas: 0`. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 1c</summary>
 
-Hole die image references mit einem Befehl der Form `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jsonpath=...` - versuche nicht, am Namen des Deployments zu erraten, welches Image "neuer" oder "sicherer" ist. Befehl zum Zählen: `trivy image --scanners vuln --severity CRITICAL --format json <ref>`, dann `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length'`. Für CycloneDX verwende gerade `trivy image --format cyclonedx --output <file> <ref>` - nicht Syft (Syft wird bereits in Aufgabe 7 für ein anderes Image verwendet, hier wird ausdrücklich Trivy verlangt). Das Skalieren erfolgt über `kubectl scale deployment/<name> -n cks-111 --replicas=0` (oder `--replicas=1` für die zu behaltenden).
+Hole die image references mit einem Befehl der Form `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jsonpath=...` - versuche nicht, am Namen des Deployments zu erraten, welches Image "neuer" oder "sicherer" ist. Befehl zum Zählen: `trivy image --scanners vuln --severity CRITICAL --format json <ref>`, dann `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length'`. Für CycloneDX verwende ausdrücklich `trivy image --format cyclonedx --output <file> <ref>` - nicht Syft (Syft wird bereits in Aufgabe 7 für ein anderes Image verwendet, hier wird ausdrücklich Trivy verlangt). Das Skalieren erfolgt über `kubectl scale deployment/<name> -n cks-111 --replicas=0` (oder `--replicas=1` für die zu behaltenden).
 </details>
 
 ---
 | **2** | **Ursprüngliche Berichte der statischen Analyse** |
 | :---: | :--- |
-| Was wir tun | • VOR den Korrekturen (ohne eine dieser drei Dateien nach Beginn von Aufgabe 3 anzufassen) speichere die Ergebnisse: Hadolint in `2/hadolint-before.txt`, kubesec JSON in `2/kubesec-before.json`, kube-linter JSON in `2/kube-linter-before.json`.<br/>• Starte sie direkt gegen die URSPRÜNGLICHEN Start-`Dockerfile`/`deployment.yaml`.<br/>• Verstecke Fehler in den Berichtsdateien nicht über `|| true`: Ein Exit-Code ungleich null des Linters ist erwartet. |
+| Was wir tun | • VOR den Korrekturen (ohne eine dieser drei Dateien nach Beginn von Aufgabe 3 anzufassen) speichere die Ergebnisse: Hadolint in `2/hadolint-before.txt`, kubesec JSON in `2/kubesec-before.json`, kube-linter JSON in `2/kube-linter-before.json`.<br/>• Starte sie direkt gegen die URSPRÜNGLICHEN Start-`Dockerfile`/`deployment.yaml`.<br/>• Verstecke Fehler in den Berichtsdateien nicht über `\|\| true`: Ein Exit-Code ungleich null des Linters wird erwartet. |
 | Abnahmekriterien | • **Artifacts:** alle drei existieren; Hadolint enthält findings, kubesec enthält `scoring`, kube-linter ist ein gültiges KubeLinter-JSON-Objekt mit den Feldern `Reports` und `Summary`; vor den Korrekturen enthält `Reports` findings.<br/>• **Abgleich mit der Baseline:** Der Checker vergleicht den Inhalt aller drei artifacts mit seiner eigenen Baseline, die beim provisioning gegen die ursprünglichen Startdateien aufgenommen wurde, BEVOR sie dem Teilnehmer ausgegeben wurden.<br/>• Ein von Hand geschriebener, aber syntaktisch gültiger Bericht besteht nicht. |
 
 <details>
@@ -228,19 +227,19 @@ Ein Exit-Code ungleich null vom Linter bei gefundenen Problemen ist ERWARTETES V
 <details>
 <summary>💡 Hinweis zu Aufgabe 3</summary>
 
-`ARG`/`LABEL` für `CKS_SIGNATURE_TEST` kann mit den aktuellen findings von Hadolint nicht zusammenhängend erscheinen - das wird extra hier vorab hinzugefügt, damit Aufgabe 9c (viel später) über `--build-arg` ein physisch anderes Image bauen kann, ohne das Dockerfile erneut umzuschreiben. Füge diese beiden Zeilen jetzt hinzu, auch wenn ihr Nutzen erst in 9c klar wird.
+`ARG`/`LABEL` für `CKS_SIGNATURE_TEST` kann scheinbar nichts mit den aktuellen findings von Hadolint zu tun haben - das wird extra hier vorab hinzugefügt, damit Aufgabe 9c (viel später) über `--build-arg` ein physisch anderes Image bauen kann, ohne das Dockerfile erneut umzuschreiben. Füge diese beiden Zeilen jetzt hinzu, auch wenn ihr Nutzen erst in 9c klar wird.
 </details>
 
 ---
 | **4** | **Workload YAML anhand von kubesec und kube-linter korrigieren** |
 | :---: | :--- |
 | Was wir tun | • Baue und veröffentliche zuerst das hardened image aus Aufgabe 3 und gib dann in `deployment.yaml` seine immutable manifest reference `registry/.../catalog@sha256:<manifest-digest>` an (nicht das upstream nginx).<br/>• Füge auf Pod-Ebene `automountServiceAccountToken: false`, `runAsNonRoot: true`, `seccompProfile: RuntimeDefault` hinzu.<br/>• Setze im Container `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`, requests/limits für CPU und memory.<br/>• Mounte für nginx ein beschreibbares `emptyDir`/tmpfs in temp-, pid/run-, cache- und config-Pfade und bereite die config vor dem Start vor.<br/>• Entferne `privileged`, wende das Deployment an, bestätige Ready/Available und einen erfolgreichen HTTP request.<br/>• Speichere die neuen Berichte `4/kubesec-after.json` und `4/kube-linter-after.json`. |
-| Abnahmekriterien | • **Image:** Das YAML verwendet ein digest-pinned hardened image mit `USER 101` und nicht das upstream nginx.<br/>• **Manifest:** Die erforderlichen Felder und beschreibbaren mounts sind vorhanden; `privileged` fehlt.<br/>• **Funktionsfähigkeit:** Das Deployment ist Available und der HTTP request erfolgreich.<br/>• **Berichte:** Beide finalen Berichte sind gültiges JSON. |
+| Abnahmekriterien | • **Image:** Das YAML verwendet ein digest-pinned hardened image mit `USER 101` und nicht das upstream nginx.<br/>• **Manifest:** Die erforderlichen Felder, der init container `prepare-nginx-config` und die beschreibbaren mounts sind vorhanden; `privileged` fehlt.<br/>• **Funktionsfähigkeit:** Das Deployment ist Available und der HTTP request erfolgreich.<br/>• **Berichte:** Beide finalen Berichte sind gültiges JSON. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 4</summary>
 
-`readOnlyRootFilesystem: true` erfordert beschreibbare Pfade für JEDES Verzeichnis, in das nginx gewöhnlich schreibt: `/tmp`, `/var/run` (PID-Datei), `/var/cache/nginx` (Cache) und `/etc/nginx/conf.d` (wenn die config beim Start erzeugt wird). Lässt man auch nur einen aus - startet der Container, scheitert aber beim ersten Versuch von nginx, dort etwas zu schreiben. Der Init container `prepare-nginx-config` wird gebraucht, um die Standardkonfiguration in ein separates beschreibbares Volume zu kopieren, BEVOR der Hauptcontainer startet - genau deshalb wird er in den Abnahmekriterien gesondert erwähnt.
+`readOnlyRootFilesystem: true` erfordert beschreibbare Pfade für JEDES Verzeichnis, in das nginx gewöhnlich schreibt: `/tmp`, `/var/run` (PID-Datei), `/var/cache/nginx` (Cache) und `/etc/nginx/conf.d` (wenn die config beim Start erzeugt wird). Lässt man auch nur einen aus, startet der Container zwar, scheitert aber beim ersten Versuch von nginx, dort etwas zu schreiben. Der Init container `prepare-nginx-config` wird gebraucht, um die Standardkonfiguration in ein separates beschreibbares Volume zu kopieren, BEVOR der Hauptcontainer startet - genau deshalb wird er in den Abnahmekriterien gesondert erwähnt.
 </details>
 
 ---
@@ -256,10 +255,10 @@ Das Flag heißt genau `--list-all-pkgs` und nicht `--list-packages` oder eine ä
 </details>
 
 ---
-| **5b** | **Find a package version in workload images and remove offending containers** |
+| **5b** | **Eine Paketversion in workload images finden und problematische Container entfernen** |
 | :---: | :--- |
 | Was wir tun | • Im Namespace `cks-111` ist bereits das Deployment `pkg-audit-app` mit drei Containern (`c1`, `c2`, `c3`) ausgerollt, jeder mit seinem eigenen immutable digest-pinned image.<br/>• In genau zwei der drei Images ist ein und dasselbe Paket einer konkreten Version vorhanden - die für deine Instanz der Lab vorgegebenen `TARGET_PACKAGE`/`TARGET_VERSION` werden beim provisioning dynamisch bestimmt, es gibt keine fest eingetragenen Werte.<br/>• Hole alle drei image references aus dem live Deployment und führe für jede `bom generate` aus (speichere jedes SBOM separat in `/var/work/tests/artifacts/5b/bom/`).<br/>• Bestimme, welche zwei Container tatsächlich dasselbe package/version enthalten, und schreibe das gefundene Paar in `5b/answer.txt` als `TARGET_PACKAGE=<name>` und `TARGET_VERSION=<version>`.<br/>• Entferne GENAU diese zwei offending Container aus dem Deployment (über `kubectl edit`/`kubectl apply` eines korrigierten Manifests), so dass nur der "saubere" Container übrig bleibt und das Deployment `Available` bleibt. |
-| Abnahmekriterien | • **Antwort:** `answer.txt` nennt ein echtes package/version, das gerade in zwei der drei ursprünglichen Images vorhanden ist (nicht geraten). Diese beiden Images haben viele gemeinsame Pakete: Jedes eine Paar `name=version`, das im dritten Image nicht vorhanden ist, passt.<br/>• **SBOM:** In `5b/bom/` gibt es mindestens eine echte Ausgabe von `bom generate`, die diesen Fund bestätigt.<br/>• **Unabhängige Prüfung:** Der Checker führt `bom generate` unabhängig für die ursprünglichen candidate images (beim provisioning gespeichert) aus und gleicht deine Antwort mit diesem unabhängigen Lauf ab.<br/>• **Deployment:** Das finale Deployment enthält nur den "sauberen" Container und bleibt `Available`. |
+| Abnahmekriterien | • **Antwort:** `answer.txt` nennt ein echtes package/version, das gerade in zwei der drei ursprünglichen Images vorhanden ist (nicht geraten). Diese beiden Images haben viele gemeinsame Pakete: Es passt jedes beliebige einzelne Paar `name=version`, das im dritten Image nicht vorhanden ist.<br/>• **SBOM:** In `5b/bom/` gibt es mindestens eine echte Ausgabe von `bom generate`, die diesen Fund bestätigt.<br/>• **Unabhängige Prüfung:** Der Checker führt `bom generate` unabhängig für die ursprünglichen candidate images (beim provisioning gespeichert) aus und gleicht deine Antwort mit diesem unabhängigen Lauf ab.<br/>• **Deployment:** Das finale Deployment enthält nur den "sauberen" Container und bleibt `Available`. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 5b</summary>
@@ -283,7 +282,7 @@ Der Befehl `bom generate -o <output.json> -i <image>` - unbedingt mit dem Flag `
 | **7** | **CycloneDX SBOM über Syft und Cosign-Prüfung** |
 | :---: | :--- |
 | Was wir tun | • Erzeuge ein CycloneDX JSON SBOM von Syft für dasselbe immutable `$IMAGE` (`nginx:1.27.3-alpine@sha256:<manifest-digest>`) aus Aufgabe 1 und speichere es in `7/syft.cdx.json`.<br/>• Prüfe dann die Signatur des öffentlichen Images `gcr.io/distroless/static-debian13:nonroot` über keyless Cosign und speichere die vollständige erfolgreiche Ausgabe in `7/cosign-verify.txt`.<br/>• Verwende für Distroless den issuer `https://accounts.google.com` und die identity `keyless@distroless.iam.gserviceaccount.com`. |
-| Abnahmekriterien | • **Syft SBOM:** `bomFormat: CycloneDX`, nicht leeres `components`, `metadata.component.type == "container"` und `metadata.component.version` gleich dem manifest digest desselben `$IMAGE` aus Aufgabe 1 - ein SBOM für ein anderes Image (bare tag, alpine, busybox usw.) besteht nicht.<br/>• **Cosign:** ein echter Befehl `cosign verify` für `gcr.io/distroless/static-debian13:nonroot` (der aktuelle unterstützte Tag - `gcr.io/distroless/static:nonroot` ohne das Suffix `-debian13` gilt laut dem offiziellen README von Distroless als deprecated und wird nicht mehr aktualisiert) mit den angegebenen issuer/identity endet mit exit code `0`, und die vollständige Ausgabe ist in `7/cosign-verify.txt` gespeichert.<br/>• **Frische Prüfung:** Der Checker erzeugt das SBOM zusätzlich selbstständig mit demselben Syft für dasselbe Image neu und verlangt, dass die Menge der Komponenten (`name`/`version`) in deinem SBOM mit diesem frischen Lauf übereinstimmt - ein von Hand geschriebenes minimales CycloneDX-Dokument mit einer top-level Komponente besteht nicht. |
+| Abnahmekriterien | • **Syft SBOM:** `bomFormat: CycloneDX`, nicht leeres `components`, `metadata.component.type == "container"` und `metadata.component.version` gleich dem manifest digest desselben `$IMAGE` aus Aufgabe 1 - ein SBOM für ein anderes Image (bare tag, alpine, busybox usw.) besteht nicht.<br/>• **Cosign:** ein echter Befehl `cosign verify` für `gcr.io/distroless/static-debian13:nonroot` (das ist der aktuelle unterstützte Tag; `gcr.io/distroless/static:nonroot` ohne das Suffix `-debian13` gilt laut dem offiziellen README von Distroless als deprecated und wird nicht mehr aktualisiert) mit den angegebenen issuer/identity endet mit exit code `0`, und die vollständige Ausgabe ist in `7/cosign-verify.txt` gespeichert.<br/>• **Frische Prüfung:** Der Checker erzeugt das SBOM zusätzlich selbstständig mit demselben Syft für dasselbe Image neu und verlangt, dass die Menge der Komponenten (`name`/`version`) in deinem SBOM mit diesem frischen Lauf übereinstimmt - ein von Hand geschriebenes minimales CycloneDX-Dokument mit einer top-level Komponente besteht nicht. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 7</summary>
@@ -294,7 +293,7 @@ Syft erzeugt CycloneDX über das Flag `-o cyclonedx-json` (nicht mit der SPDX-Au
 ---
 | **8** | **`trivy sbom`: Scan einer fertigen SBOM-Datei auf Schwachstellen** |
 | :---: | :--- |
-| Was wir tun | • Das CycloneDX SBOM aus Aufgabe 7 (`7/syft.cdx.json`) beschreibt die Zusammensetzung des Images und seines OS, enthält aber von sich aus keine Aussage zu Schwachstellen.<br/>• Scanne gerade diese SBOM-Datei (nicht das image direkt) mit dem Werkzeug `trivy sbom` und speichere das strukturierte JSON in `/var/work/tests/artifacts/8/sbom-scan.json`.<br/>• Der Befehl muss die SBOM-Datei explizit als Eingabe akzeptieren und nicht `$IMAGE` neu scannen. |
+| Was wir tun | • Das CycloneDX SBOM aus Aufgabe 7 (`7/syft.cdx.json`) beschreibt die Zusammensetzung des Images und seines OS, enthält aber von sich aus keine Aussage zu Schwachstellen.<br/>• Scanne genau diese SBOM-Datei (nicht das image direkt) mit dem Werkzeug `trivy sbom` und speichere das strukturierte JSON in `/var/work/tests/artifacts/8/sbom-scan.json`.<br/>• Der Befehl muss die SBOM-Datei explizit als Eingabe akzeptieren und nicht `$IMAGE` neu scannen; speichere seinen Text in `/var/work/tests/artifacts/8/sbom-scan-command.txt`. |
 | Abnahmekriterien | • **Datei:** nicht leer, das JSON wird von `jq` geparst, `ArtifactType` = `cyclonedx`, `Results` ist nicht leer und enthält gefundene Schwachstellen.<br/>• **Befehl:** `sbom-scan-command.txt` enthält den Befehl `trivy sbom` mit dem Pfad zu `7/syft.cdx.json`.<br/>• **Frische Prüfung:** Der Checker wiederholt `trivy sbom` für diese Datei selbst. |
 
 <details>
@@ -306,19 +305,19 @@ Der Befehl ist `trivy sbom <Pfad-zur-sbom-Datei>` und NICHT `trivy image <Pfad-z
 ---
 | **9a** | **Kyverno: installieren und `ImageValidatingPolicy` auf trusted signature erstellen** |
 | :---: | :--- |
-| Was wir tun | • Installiere Kyverno über `install-kyverno` und warte auf die Bereitschaft des `admission controller`.<br/>• Erzeuge ein lokales Schlüsselpaar `cosign generate-key-pair` (Lern-Paar, kein production key).<br/>• Signiere dein **eigenes** hardened image aus Aufgabe 4 (`$HARDENED_IMAGE`, nicht das upstream nginx) mit deinem private key und speichere die Ausgabe von `cosign sign` in `9a/cosign-sign.txt`.<br/>• Erstelle die `ImageValidatingPolicy` `require-signed-catalog-images`, die `verifyImageSignatures` mit deinem public key für alle Pods mit einem Image im repository deines `$HARDENED_IMAGE` prüft, einschließlich `pods/ephemeralcontainers` UPDATE und aller container lists, und unsignierte/ungültig signierte Images **ablehnt** (`validationActions: [Deny]`). |
+| Was wir tun | • Installiere Kyverno über `install-kyverno` und warte auf die Bereitschaft des `admission controller`.<br/>• Erzeuge ein lokales Schlüsselpaar `cosign generate-key-pair` (Übungs-Schlüsselpaar, kein production key).<br/>• Signiere dein **eigenes** hardened image aus Aufgabe 4 (`$HARDENED_IMAGE`, nicht das upstream nginx) mit deinem private key und speichere die Ausgabe von `cosign sign` in `9a/cosign-sign.txt`.<br/>• Erstelle die `ImageValidatingPolicy` `require-signed-catalog-images`, die `verifyImageSignatures` mit deinem public key für alle Pods mit einem Image im repository deines `$HARDENED_IMAGE` prüft, einschließlich `pods/ephemeralcontainers` UPDATE und aller container lists, und unsignierte/ungültig signierte Images **ablehnt** (`validationActions: [Deny]`). |
 | Abnahmekriterien | • **Kyverno:** installiert, sein admission controller ist `Available`.<br/>• **Signatur:** `9a/cosign-sign.txt` enthält die erfolgreiche Ausgabe der Signierung gerade von `$HARDENED_IMAGE`; der echte Befehl `cosign verify --key cosign.pub "$HARDENED_IMAGE"` endet erfolgreich.<br/>• **Policy:** Die angewendete `ImageValidatingPolicy require-signed-catalog-images` existiert, hat `apiVersion: policies.kyverno.io/v1`, `validationActions: [Deny]`, public key und `verifyImageSignatures`.<br/>• **Geltungsbereich:** Ihre `matchImageReferences` sind gerade auf `$HARDENED_REPO:*` und `$HARDENED_REPO@*` begrenzt und nicht auf das unsichere Präfix `$HARDENED_REPO*`. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 9a</summary>
 
-`cosign generate-key-pair` erstellt `cosign.key`/`cosign.pub` im aktuellen Verzeichnis - ein Lern-Paar, das an keinen OIDC issuer gebunden ist, anders als die keyless verification aus Aufgabe 7. Speichere den private key außerhalb von `/home/ubuntu/cks-111`, weil dieses Verzeichnis in Aufgabe 9c erneut als Docker build context verwendet wird - ein darin zurückgelassenes `cosign.key` gelangt über `COPY . /usr/share/nginx/html` direkt in das Dateisystem des veröffentlichten Images. `matchImageReferences` in der policy muss ihre Wirkung GENAU auf dein repository (`$HARDENED_REPO`) begrenzen und nicht auf den gesamten Cluster - sonst blockiert die policy ALLE Pods ohne Signatur, einschließlich der Systemkomponenten von Kubernetes.
+`cosign generate-key-pair` erstellt `cosign.key`/`cosign.pub` im aktuellen Verzeichnis - ein Übungs-Schlüsselpaar, das an keinen OIDC issuer gebunden ist, anders als die keyless verification aus Aufgabe 7. Speichere den private key außerhalb von `/home/ubuntu/cks-111`, weil dieses Verzeichnis in Aufgabe 9c erneut als Docker build context verwendet wird - ein darin zurückgelassenes `cosign.key` gelangt über `COPY . /usr/share/nginx/html` direkt in das Dateisystem des veröffentlichten Images. `matchImageReferences` in der policy muss ihre Wirkung GENAU auf dein repository (`$HARDENED_REPO`) begrenzen und nicht auf den gesamten Cluster - sonst blockiert die policy ALLE Pods ohne Signatur, einschließlich der Systemkomponenten von Kubernetes.
 </details>
 
 ---
 | **9b** | **Fresh signed ALLOW: neuer Pod nach dem Erstellen der policy** |
 | :---: | :--- |
-| Was wir tun | • Die policy aus Aufgabe 9a muss das signierte `$HARDENED_IMAGE` zulassen - aber ein erneutes `kubectl apply` eines bereits vorhandenen Deployments **beweist** das **nicht**: Wenn sich das template nicht geändert hat, wird möglicherweise kein neues ReplicaSet/Pod erstellt, und `Running` ist einfach der alte Pod, der vor der policy erstellt wurde.<br/>• Erstelle ein **neues**, zuvor nicht existierendes Objekt: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 300`.<br/>• Speichere `creationTimestamp` dieses Pods, `creationTimestamp` der policy aus 9a und den finalen `status.phase`/`Ready` condition in `9b/signed-admission-check.json`. |
+| Was wir tun | • Die policy aus Aufgabe 9a muss das signierte `$HARDENED_IMAGE` zulassen - aber ein erneutes `kubectl apply` eines bereits vorhandenen Deployments **beweist** das **nicht**: Wenn sich das template nicht geändert hat, wird möglicherweise kein neues ReplicaSet/Pod erstellt, und `Running` ist einfach der alte Pod, der vor der policy erstellt wurde.<br/>• Erstelle ein **neues**, zuvor nicht existierendes Objekt: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`.<br/>• Speichere `creationTimestamp` dieses Pods, `creationTimestamp` der policy aus 9a und den finalen `status.phase`/`Ready` condition in `9b/signed-admission-check.json`. |
 | Abnahmekriterien | • **Pod:** `signed-admission-check` existiert und verwendet gerade `$HARDENED_IMAGE`; für ihn läuft `cosign verify --key cosign.pub "$HARDENED_IMAGE"` erfolgreich, `status.phase` ist nicht `Failed`, und die `Ready`-Bedingung erreicht `True`.<br/>• **Artifact:** `9b/signed-admission-check.json` enthält dieses Image und `creationTimestamp` des Pods **später** als `creationTimestamp` der `ImageValidatingPolicy require-signed-catalog-images`.<br/>• Das belegt die fresh post-policy admission gerade eines nachprüfbar signierten Images und nicht eines die policy überlebenden alten Pods. |
 
 <details>
@@ -331,7 +330,7 @@ Verwende das Deployment `catalog` aus Aufgabe 4 für diese Prüfung nicht erneut
 | **9c** | **Signature-specific DENY: unsigned digest, der tatsächlich im selben repository existiert** |
 | :---: | :--- |
 | Was wir tun | • Baue und veröffentliche einen **zweiten** tag im selben repository wie `$HARDENED_IMAGE` (zum Beispiel `${HARDENED_TAG%:*}:unsigned-1.0`), ohne ihn zu signieren.<br/>• Dieses Image muss ein **physisch anderes artifact** sein und nicht derselbe digest wie das bereits signierte `$HARDENED_IMAGE`: Wenn man dasselbe `Dockerfile`/denselben context ohne Änderungen baut, kann ein reproducible/cached build einen identischen digest ergeben, und dann zeigt der "unsigned" Tag tatsächlich auf ein bereits signiertes artifact, und `cosign verify` besteht unerwartet.<br/>• Führe über build-arg einen kontrollierten Unterschied ein (zum Beispiel `--build-arg CKS_SIGNATURE_TEST=unsigned-1` mit entsprechendem `ARG`/`LABEL` im Dockerfile) und speichere den Nachweis `$UNSIGNED_DIGEST != $HARDENED_DIGEST` explizit in `9c/digest-comparison.txt`.<br/>• Hole den registry manifest digest auf dieselbe Weise wie in Aufgabe 3 (`podman push --digestfile`), bilde `$UNSIGNED_IMAGE` im selben repository.<br/>• Belege explizit, dass dieser digest **existiert und pullable ist** (die Anfrage `GET /v2/catalog/manifests/<digest>` an die Registry ist erfolgreich) und **keine** gültige Signatur mit deinem Schlüssel hat (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` endet mit einem Fehler) - speichere beide Ausgaben in `9c/unsigned-exists.txt` und `9c/unsigned-not-signed.txt`.<br/>• Erstelle dann den Pod `catalog-unsigned-probe` mit diesem `$UNSIGNED_IMAGE` und speichere das admission denial in `9c/admission-deny.txt`. |
-| Abnahmekriterien | • **Artifact:** `9c/digest-comparison.txt` enthält `hardened_digest=`, `unsigned_digest=` und `unsigned_image=` (vollständige `tag@digest`-Referenz im selben repository wie `$HARDENED_IMAGE`, mit genuinely anderem digest).<br/>• **Prüfung des Checkers:** Er löst `unsigned_image` selbst in der Registry auf, bestätigt das Fehlen einer gültigen Signatur über sein eigenes `cosign verify`, erstellt SEINEN eigenen neuen Pod mit diesem Image und verlangt die eindeutige validation message seiner eigenen policy: `catalog image must have a valid release signature`.<br/>• Ein generischer admission/signature-Fehler einer anderen policy gilt nicht als PASS, und auch nicht irgendein admission-Fehler (`manifest unknown`/registry lookup genügen nicht).<br/>• Von Hand geschriebene evidence-Dateien ohne echte admission control ergeben kein PASS - der Checker vertraut keinen Textdateien, außer `unsigned_image=` als Zeiger auf ein echtes zu prüfendes Image. |
+| Abnahmekriterien | • **Artifact:** `9c/digest-comparison.txt` enthält `hardened_digest=`, `unsigned_digest=` und `unsigned_image=` (vollständige `tag@digest`-Referenz im selben repository wie `$HARDENED_IMAGE`, mit genuinely anderem digest).<br/>• **Prüfung des Checkers:** Er löst `unsigned_image` selbst in der Registry auf, bestätigt das Fehlen einer gültigen Signatur über sein eigenes `cosign verify`, erstellt SEINEN eigenen neuen Pod mit diesem Image und verlangt die eindeutige validation message seiner eigenen policy: `catalog image must have a valid release signature`.<br/>• Nur diese Meldung zählt, nicht irgendein admission-Fehler: Ein generischer admission/signature-Fehler einer anderen policy ergibt kein PASS, `manifest unknown`/registry-lookup-Fehler genügen ebenfalls nicht.<br/>• Von Hand geschriebene evidence-Dateien ohne echte admission control ergeben kein PASS - der Checker vertraut keinen Textdateien, außer `unsigned_image=` als Zeiger auf ein echtes zu prüfendes Image. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 9c</summary>
@@ -347,7 +346,7 @@ check_result
 
 Die Prüfung enthält `Init` und vierzehn unabhängige Bewertungstests (Aufgabe 9 ist in 9a/9b/9c aufgeteilt). Sie prüft den Inhalt der Dateien und
 JSON und nicht nur das Vorhandensein von Namen. Externe Registry-Anfragen sind für Trivy, SBOM und
-Cosign erforderlich; wenn die Registry vorübergehend nicht verfügbar ist, wiederhole gerade den entsprechenden Befehl.
+Cosign erforderlich; wenn die Registry vorübergehend nicht verfügbar ist, wiederhole genau den entsprechenden Befehl.
 
 ## Lösung
 

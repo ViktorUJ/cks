@@ -19,7 +19,7 @@
 | ფლაგი `--encryption-provider-config` და ფაილის მიმაგრება kube-apiserver-ის static Pod-ში | [Encrypting Confidential Data at Rest - Use the new encryption configuration file](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#use-the-new-encryption-configuration-file) |
 | ყველა Secret-ის გადაწერა (`kubectl get secrets --all-namespaces -o json \| kubectl replace -f -`) | [Encrypting Confidential Data at Rest - Ensure all relevant data are encrypted](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#ensure-all-secrets-are-encrypted) |
 | გასაღების როტაცია (ნაბიჯები 1-7) და ძველი გასაღების წაშლა | [Encrypting Confidential Data at Rest - Rotate a decryption key](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key) |
-| სად ვიპოვოთ etcd-ის სერტიფიკატების გზები, თუ არ გახსოვთ: «`trusted-ca-file`, `cert-file` და `key-file` შეიძლება მიღებულ იქნას etcd Pod-ის აღწერიდან» (`kubectl -n kube-system describe pod etcd-<node>` ან `/etc/kubernetes/manifests/etcd.yaml`) | [Operating etcd clusters for Kubernetes - Snapshot using etcdctl options](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/) |
+| სად ვიპოვოთ etcd-ის სერტიფიკატების გზები, თუ არ გახსოვთ: „`trusted-ca-file`, `cert-file` და `key-file` შეიძლება მიღებულ იქნას etcd Pod-ის აღწერიდან“ (`kubectl -n kube-system describe pod etcd-<node>` ან `/etc/kubernetes/manifests/etcd.yaml`) | [Operating etcd clusters for Kubernetes - Snapshot using etcdctl options](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/) |
 | Role/RoleBinding და ServiceAccount (`automountServiceAccountToken`) | [Using RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), [Configure Service Accounts for Pods](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) |
 
 სერტიფიკატების გზები kubeadm-კლასტერში: `/etc/kubernetes/pki/etcd/ca.crt`,
@@ -37,8 +37,8 @@ kubectl config use-context "$CTX"
 
 `Secret.data` API-ში base64-ით კოდირდება, და არ იშიფრება. Bootstrap-მა შექმნა უსაფრთხო
 canary EncryptionConfiguration-ის გამოჩენამდე. ჯერ ვუყურებთ etcd-ის raw-ჩანაწერს ბრძანებით
-დოკუმენტაციიდან, შემდეგ ვინახავთ სტრიქონულ დადასტურებას ფაილში `/var/work/109/plaintext-proof.txt`
-control-plane-ზე (`/tmp/plaintext-proof.txt`), შემდეგ ვაკოპირებთ მას სამუშაო მანქანაზე
+დოკუმენტაციიდან, შემდეგ ვინახავთ სტრიქონულ დადასტურებას ფაილში `/tmp/plaintext-proof.txt`
+control-plane-ზე, შემდეგ ვაკოპირებთ მას სამუშაო მანქანაზე
 `/var/work/109/plaintext-proof.txt`-ში (დირექტორია bootstrap-მა შექმნა): შემოწმება კითხულობს ფაილს სამუშაო მანქანაზე.
 
 შედით control-plane-ზე და შეასრულეთ მასზე (ამ ბრძანებაში ყველაფერი დოკუმენტაციიდანაა, გარდა გასაღებისა
@@ -87,7 +87,7 @@ manager-ისთვის გამოიყენეთ KMS v2; ლოკა�
 და როტაციის პროცედურით.
 
 დავაგენერიროთ 32-byte AES-256 გასაღები, დავაკოდიროთ base64-ით და შევქმნათ კონფიგურაცია control-plane-ზე.
-`aescbc` პირველადაა: მისით ჩაიწერება ახალი Secret-ები. `identity` ბოლოს აძლევს API
+`aescbc` პირველია: მისით ჩაიწერება ახალი Secret-ები. `identity` ბოლოს აძლევს API
 server-ს ძველი plaintext ჩანაწერის წაკითხვის საშუალებას მხოლოდ მიგრაციამდე. ფაილის მაგალითი - დოკუმენტაციის
 გვერდზე (ბმული ამოხსნის დასაწყისში).
 
@@ -128,10 +128,10 @@ exit   # control-plane-იდან
 Pod-ად კითხულობს ამ დირექტორიის ყველა არაფარულ ფაილს, `*.bak`-ის ჩათვლით. ორიგინალი manifest-ის ასლი
 დირექტორიის შიგნით - ეს იმავე სახელის მქონე მეორე static Pod-ია; kubelet შეიძლება სწორედ მის გაშვებას აგრძელებდეს
 (ძველი კონფიგურაცია `--encryption-provider-config`-ის გარეშე), ხოლო ძირითადი ფაილის შესწორება ჩუმად ძალაში
-არ შევა, და დაშიფვრა გამორთული დარჩება გარეგნულად ჯანსაღი API server-ის დროს.
+არ შევა, და დაშიფვრა გამორთული დარჩება, მაშინ როცა API server გარეგნულად ჯანსაღია.
 control-plane-ზე გახსენით სწორედ არსებული static-Pod
 manifest და **არსებულ** `command`-ს, `volumeMounts`-სა და `volumes`-ს დაამატეთ ეს ელემენტები;
-მთელი ფაილი შაბლონით ნუ ჩაანაცვლებთ.
+მთელ ფაილს შაბლონით ნუ ჩაანაცვლებთ.
 
 ```bash
 ssh control-plane
@@ -224,8 +224,8 @@ API plaintext-ს უბრუნებს ავტორიზებულ კ
 ძველი და ახალი ჩანაწერისთვის და legacy marker-ს აღარ შეიცავს.
 
 ახლა migration fallback აღარ არის საჭირო. ვშლით `identity`-ს, ვაიძულებთ
-static kube-apiserver-ის გადატვირთვას CRI-ს გავლით და კიდევ ერთხელ ვამოწმებთ ჯანმრთელობასა და წაკითხვას. ამას აკეთებთ მხოლოდ
-snapshot-ის შემდეგ და ყველა შესაბამისი ტიპის რესურსების ciphertext-ის დადასტურების შემდეგ.
+static kube-apiserver-ის გადატვირთვას CRI-ს გავლით და კიდევ ერთხელ ვამოწმებთ ჯანმრთელობასა და წაკითხვას. ეს გააკეთეთ მხოლოდ
+snapshot-ის შემდეგ და ყველა შესაბამისი ტიპის რესურსის ciphertext-ის დადასტურების შემდეგ.
 
 ```bash
 ssh control-plane
@@ -246,8 +246,8 @@ until kubectl get --raw=/readyz 2>/dev/null | grep -qx ok; do sleep 2; done
 kubectl -n "$NS" get secret legacy-secret encrypted-secret
 ```
 
-ამ ლაბის საბოლოო მდგომარეობა: encrypted provider პირველი და ერთადერთია, `identity`
-წაშლილია. დროებითი fallback მუდმივ «დაზღვევად» არ უნდა დარჩეს.
+ამ ლაბის საბოლოო მდგომარეობა: მაშიფრებელი provider (`aescbc`) პირველი და ერთადერთია, `identity`
+წაშლილია. დროებითი fallback მუდმივ „დაზღვევად“ არ უნდა დარჩეს.
 
 ## 5. API-წვდომის შეზღუდვა და token automount-ის გამორთვა
 
@@ -335,9 +335,9 @@ KMS v2-სთვის API server იყენებს დაშიფრულ
 ### aescbc key-ის როტაციის სრული lifecycle
 
 გადასვლა `identity -> aescbc` დავალება 4-ში - ეს migration-ია, და არა უკვე
-დაშიფრული გასაღების როტაცია. როტაციამდე გააკეთეთ დაშიფრული etcd snapshot და შეინახეთ
-ძველი გასაღები rollback-ისთვის. დაამატეთ ახალი გასაღები **პირველად**, ხოლო ძველი დროებით დატოვეთ
-მეორედ: providers იკითხება თანმიმდევრობით, ხოლო ახალი ჩანაწერები იწერება პირველი გასაღებით.
+დაშიფრული მონაცემებისთვის გასაღების როტაცია. როტაციამდე გააკეთეთ დაშიფრული etcd snapshot და შეინახეთ
+ძველი გასაღები rollback-ისთვის. დაამატეთ ახალი გასაღები **პირველ ადგილზე**, ხოლო ძველი დროებით დატოვეთ
+მეორე ადგილზე: providers იკითხება თანმიმდევრობით, ხოლო ახალი ჩანაწერები იწერება პირველი გასაღებით.
 
 ```yaml
 - aescbc:

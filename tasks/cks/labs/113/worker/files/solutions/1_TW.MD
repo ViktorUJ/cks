@@ -1,28 +1,28 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [日本語版](1_JP.MD)
 
-# Lab 113 - 參考解答:kubeadm minor upgrade
+# Lab 113 - 參考解答：kubeadm minor upgrade
 
-> 像考試中一樣工作:`kubectl` 在工作機上執行,而對節點的操作(apt、kubeadm、
-> kubelet)- 在節點本身上執行:用 `ssh <節點>` 登入,切換到 root(`sudo -i`),
-> 執行指令,然後離開(`exit`、`exit`)。叢集的起始版本為 `1.35.x`,目標版本為
-> `1.36.x`。節點名稱(`<cp-name>`、`<worker-name>`)取自 `kubectl get no`;在考試中它們是不同的,在本實驗中 ssh 別名是:`k8s113_controlPlane_1` 與 `k8s113_node_worker1`。
+> 像考試中一樣工作：`kubectl` 在工作機上執行，而對節點的操作(apt、kubeadm、
+> kubelet)- 在節點本身上執行：用 `ssh <節點>` 登入，切換到 root(`sudo -i`),
+> 執行指令，然後離開(`exit`、`exit`)。叢集的起始版本為 `1.35.x`，目標版本為
+> `1.36.x`。節點名稱(`<cp-name>`、`<worker-name>`)取自 `kubectl get no`；在考試中它們是不同的，在本實驗中 ssh 別名是：`k8s113_controlPlane_1` 與 `k8s113_node_worker1`。
 
 ## 在文件中哪裡可以找到指令
 
 | 需要什麼 | 頁面與章節 |
 | :--- | :--- |
-| 把 apt repository 切換到下一個 minor(只更改檔案 `/etc/apt/sources.list.d/kubernetes.list` 中 URL 的版本,keyring 保持不變) | [Changing the Kubernetes package repository - Switching to another Kubernetes package repository](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/change-package-repository/#switching-to-another-kubernetes-package-repository) |
+| 把 apt repository 切換到下一個 minor(只更改檔案 `/etc/apt/sources.list.d/kubernetes.list` 中 URL 的版本，keyring 保持不變) | [Changing the Kubernetes package repository - Switching to another Kubernetes package repository](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/change-package-repository/#switching-to-another-kubernetes-package-repository) |
 | 選擇版本(`apt-cache madison kubeadm`) | [Upgrading kubeadm clusters - Determine which version to upgrade to](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#determine-which-version-to-upgrade-to) |
 | 升級 `kubeadm`、`kubeadm upgrade plan`、在第一個 control-plane 上執行 `kubeadm upgrade apply v1.xx.x` | [Upgrading kubeadm clusters - Upgrading control plane nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#upgrading-control-plane-nodes) |
 | `kubectl drain <node> --ignore-daemonsets` | [Upgrading kubeadm clusters - Drain the node](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#drain-the-node) |
 | 升級 `kubelet` 與 `kubectl`、`systemctl daemon-reload`、`restart kubelet` | [Upgrading kubeadm clusters - Upgrade kubelet and kubectl](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#upgrade-kubelet-and-kubectl) |
 | `kubectl uncordon <node>` | [Upgrading kubeadm clusters - Uncordon the node](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#uncordon-the-node) |
-| Worker 節點:`kubeadm upgrade node` | [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) |
+| Worker 節點：`kubeadm upgrade node` | [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) |
 
-在 Ubuntu 節點上,`needrestart` 被設定為「只列出」模式(沒有 OK/Cancel 對話框),因此
+在 Ubuntu 節點上，`needrestart` 被設定為「只列出」模式(沒有 OK/Cancel 對話框)，因此
 `apt-get install` 不會因為提問而停住。
 
-指令中的 `1.36.x`,請代入來自 `apt-cache madison kubeadm` 以及
+指令中的 `1.36.x`，請代入來自 `apt-cache madison kubeadm` 以及
 `kubeadm upgrade plan` 輸出中的真實 patch。
 
 ```bash
@@ -33,12 +33,12 @@ kubectl get no
 ```
 
 請記住 `kubectl get no` 中的節點名稱(`ip-10-...`):`drain` 與 `uncordon` 會用到。下面
-`<cp-name>` - control-plane 的名稱,`<worker-name>` - worker 節點的名稱。
+`<cp-name>` 代表 control-plane 的名稱，`<worker-name>` 代表 worker 節點的名稱。
 
 ## 步驟 0。同時啟動 availability 輪詢(任務 4)
 
-在升級之前,在工作機上打開單獨的工作階段(`tmux`),並讓輪詢 Deployment
-`canary` 的迴圈在接下來所有步驟期間持續運作:
+在升級之前，在工作機上打開單獨的工作階段(`tmux`)，並讓輪詢 Deployment
+`canary` 的迴圈在接下來所有步驟期間持續運作：
 
 ```bash
 while true; do
@@ -70,8 +70,8 @@ apt update
 apt-cache madison kubeadm | head -3
 ```
 
-升級 kubeadm(用真實的 patch 取代 `x`)。**請單獨執行這個指令:**`apt-get`
-會清空終端機的輸入緩衝區,因此緊接在它之後貼上的幾行會遺失。
+升級 kubeadm(用真實的 patch 取代 `x`)。**請單獨執行這個指令：**`apt-get`
+會清空終端機的輸入緩衝區，因此緊接在它之後貼上的幾行會遺失。
 
 ```bash
 # 在 control-plane 上(root)
@@ -84,7 +84,7 @@ kubeadm version -o short
 kubeadm upgrade plan
 ```
 
-從 `plan` 的輸出中取得具體的版本並執行升級,同時儲存**完整的**輸出:
+從 `plan` 的輸出中取得具體的版本並執行升級，同時儲存**完整的**輸出：
 
 ```bash
 # 在 control-plane 上(root)
@@ -100,7 +100,7 @@ exit   # 離開 control-plane
 scp <cp-name>:/tmp/kubeadm-upgrade-apply.txt /var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt
 ```
 
-只有現在,在 `kubeadm upgrade apply` 成功「之後」,才 drain 節點並升級 kubelet/kubectl:
+只有現在，在 `kubeadm upgrade apply` 成功「之後」，才 drain 節點並升級 kubelet/kubectl:
 
 ```bash
 # 在工作機上
@@ -200,20 +200,20 @@ kubectl get nodes
 
 ## 3. 檢查升級順序
 
-任務 3 不需要單獨的指令:順序由 checker-owned 監控器證明
-(工作機上的 `/var/lib/cks-lab113-checker/upgrade-monitor.log`),它從 bootstrap 起
-就一直在寫入。如果你依序執行了這些步驟(先完整做完第 1 節,再做第 2 節),
-log 中會有一行,其中 control-plane 已經在 `v1.36.x`、`Ready` 且 schedulable,而 worker 仍在
+任務 3 不需要單獨的指令：順序由 checker-owned 監控器證明
+(工作機上的 `/var/lib/cks-lab113-checker/upgrade-monitor.log`)，它從 bootstrap 起
+就一直在寫入。如果你依序執行了這些步驟(先完整做完第 1 節，再做第 2 節),
+日誌中會有一行，其中 control-plane 已經在 `v1.36.x`、`Ready` 且 schedulable，而 worker 仍在
 `v1.35.x`。
 
 ## 4. 檢查沒有 downtime
 
-> 在唯一的 control-plane 上執行 `kubeadm upgrade apply` 期間,API server 會重新啟動幾秒鐘,
+> 在唯一的 control-plane 上執行 `kubeadm upgrade apply` 期間，API server 會重新啟動幾秒鐘，
 > 輪詢迴圈中的 `kubectl` 不會回應。這樣的行被記錄為
-> `available=api-unreachable`,不計入最小值:API 無法連線 - 不是
-> `canary` 停機。證明 downtime 的是 checker 獨立的監控器(Pod Ready 以及透過 `crictl` 的容器)。
+> `available=api-unreachable`，不計入最小值：API 無法連線 - 不是
+> `canary` 停機。判定是否有 downtime 的是 checker 的獨立監控器(Pod Ready 以及透過 `crictl` 的容器)。
 
-停止步驟 0 的輪詢迴圈(在它的工作階段中按 `Ctrl+C`),並檢查 `available` 在整個執行期間
+停止步驟 0 的輪詢迴圈(在它的工作階段中按 `Ctrl+C`)，並檢查 `available` 在整個執行期間
 的最小值沒有降到 0:
 
 ```bash
@@ -221,9 +221,9 @@ grep -oE 'available=[0-9]+' /var/work/tests/artifacts/4/canary-availability.log 
 kubectl get deployment canary -n upgrade-113
 ```
 
-`canary` 的兩個 replica 被分散到不同的節點(required `podAntiAffinity`),並受
-帶有 `minAvailable: 1` 的 `PodDisruptionBudget` 保護,因此正確的連續 drain(先
-一個節點,然後另一個,在 uncordon 之後)不會讓 `available` 低於 `1`。
+`canary` 的兩個 replica 被分散到不同的節點(required `podAntiAffinity`)，並受
+帶有 `minAvailable: 1` 的 `PodDisruptionBudget` 保護，因此正確的連續 drain(先
+一個節點，然後另一個，在 uncordon 之後)不會讓 `available` 低於 `1`。
 
 ## 最終檢查
 
@@ -232,4 +232,4 @@ kubectl get nodes
 check_result
 ```
 
-兩個節點都必須在 `v1.36.x` 上為 `Ready`,且沒有任何一個是 `SchedulingDisabled`。
+兩個節點都必須在 `v1.36.x` 上為 `Ready`，且沒有任何一個是 `SchedulingDisabled`。

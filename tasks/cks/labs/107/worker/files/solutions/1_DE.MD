@@ -1,10 +1,10 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
 
-# Lab 107 - Referenzlösung: Pod Security Admission und immutable root filesystem
+# Lab 107 - Referenzlösung: Pod Security Admission und read-only root filesystem
 
 > Führe die Befehle auf der Arbeitsmaschine aus. Der Kontext `cluster1-admin@cluster1` ist bereits
-> eingerichtet. Die Namespaces `psa-restricted-107` und `psa-observe-107` wurden vom Start-
-> Skript erstellt, haben aber absichtlich keine PSA-Labels.
+> eingerichtet. Die Namespaces `psa-restricted-107`, `psa-observe-107` und `psa-controller-107` wurden vom Startskript
+> erstellt, haben aber absichtlich keine PSA-Labels.
 
 ## 1. Enforce restricted und Prüfung der Ablehnung
 
@@ -84,7 +84,7 @@ kubectl get pod restricted-app -n psa-restricted-107
 
 Belege beide Ausgänge durch einen Live-Aufruf und nicht nur durch das Lesen von YAML: Der Container läuft mit
 `runAsUser: 1000` und read-only root, daher muss ein Schreiben außerhalb von `/tmp` mit einem
-Dateisystemfehler enden, und ein Schreiben in das gemountete `emptyDir` - durchgehen:
+Dateisystemfehler enden, während ein Schreiben in das gemountete `emptyDir` gelingen muss:
 
 ```bash
 kubectl exec -n psa-restricted-107 restricted-app -- sh -c 'touch /root-write-test.txt'
@@ -122,10 +122,10 @@ kubectl label namespace psa-observe-107 \
 > Stand 2026-09-06 orientiert sich die offizielle CKS an `v1.35`; das ist ein
 > forward-looking Beispiel, und bei der Vorbereitung auf die Prüfung verwende `*-version=v1.35`.
 
-> **Grenze des audit-Nachweises.** Die Lab konfiguriert keinen audit-log sink, daher
+> **Grenze des audit-Nachweises.** Das Lab konfiguriert keinen audit-log sink, daher
 > lässt sich `pod-security.kubernetes.io/audit-violations` nicht mit dem Befehl `kubectl` abrufen.
-> Das tatsächlich prüfbare Ergebnis unten ist die PSA Warning und die erfolgreiche admission; die audit
-> annotation ist erklärt, aber in dieser Infrastruktur kein prüfbares artifact.
+> Als tatsächlich prüfbares Ergebnis dienen unten die PSA-Warnung und die erfolgreiche admission; die audit
+> annotation ist erklärt, aber in dieser Infrastruktur kein prüfbares Artefakt.
 
 ## 4. Sicherstellen, dass warn/audit den Pod nicht blockieren
 
@@ -206,7 +206,7 @@ das Feld muss ein DENY von genau dem Paar policy + binding erhalten, `false` mus
 `true` muss ein DENY von demselben Paar erhalten. Der erste Pod
 entspricht vollständig PSA `restricted` (non-root, seccomp, `allowPrivilegeEscalation:
 false`, `capabilities.drop: ["ALL"]`) - PSA selbst würde ihn akzeptieren, daher muss die Ablehnung
-gerade von der neuen policy kommen und nicht von `violates PodSecurity`:
+genau von der neuen policy kommen und nicht von `violates PodSecurity`:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'YAML'

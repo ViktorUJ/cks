@@ -3,14 +3,14 @@
 # Lab 111 - Referenzlösung
 
 Alle Befehle werden auf dem worker ausgeführt. Das sind gewöhnliche Befehle der Werkzeuge (trivy, kubesec,
-kube-linter, hadolint, podman, syft, bom, cosign), die es in der Prüfung gibt; es gibt keine Skripte, wo
-mehrere Ergebnisse verglichen werden müssen, geschieht das mit eigenen Augen anhand der Ausgabe. Lege zuerst die gemeinsamen
+kube-linter, hadolint, podman, syft, bom, cosign), die es in der Prüfung gibt; es gibt keine Skripte; wo
+mehrere Ergebnisse verglichen werden müssen, geschieht das per Sichtprüfung anhand der Ausgabe. Lege zuerst die gemeinsamen
 Variablen fest:
 
 ```bash
 export ROOT=/home/ubuntu/cks-111 ART=/var/work/tests/artifacts BASE_TAG=nginx:1.27.3-alpine
 cd $ROOT
-# Der Tag ist veränderlich: Wir erfahren einmal den manifest digest von Trivy und verwenden danach tag@digest.
+# Der Tag ist veränderlich: Wir ermitteln einmalig den manifest digest über Trivy und verwenden danach tag@digest.
 trivy image --format json $BASE_TAG > /tmp/cks-111-base.json
 export IMAGE=$BASE_TAG@$(jq -r '.Metadata.RepoDigests[0]' /tmp/cks-111-base.json | cut -d@ -f2)
 echo $IMAGE
@@ -18,7 +18,7 @@ echo $IMAGE
 
 ## 0. Vorbereitung: podman und registry
 
-Zum Bauen und Veröffentlichen von Images wird `podman` verwendet (er steht in der Liste der Werkzeuge der Prüfung;
+Zum Bauen und Veröffentlichen von Images wird `podman` verwendet (er steht in der Liste der in der CKS-Prüfung erlaubten Werkzeuge;
 rootless, läuft als `ubuntu`). Die Registry wurde bereits vom bootstrap hochgefahren: Das ist `registry:2` auf der control-plane
 (`<IP des Nodes>:5000`, plain HTTP innerhalb der VPC, Daten auf dem lokalen PV des Nodes). Podman auf dem worker ist
 darauf als insecure registry eingestellt (`/etc/containers/registries.conf.d/cks111.conf`), containerd auf dem
@@ -44,7 +44,7 @@ die Existenz des Manifests prüfen wir mit einer Anfrage an `/v2/`. `cosign` ver
 Images nur aus der Registry und wendet sich daher weiterhin an Docker Hub; wenn du
 `TOOMANYREQUESTS` siehst, warte oder führe `podman login docker.io` mit deinem eigenen Konto aus.
 
-## 1. Trivy report
+## 1. Trivy-Bericht
 
 ```bash
 mkdir -p "$ART/1"
@@ -83,7 +83,7 @@ cat $ART/1b/answer.txt
 # OFFENDING_IMAGE=python:3.9-slim@sha256:...
 ```
 
-## 1c. Workload image triage nach CRITICAL severity
+## 1c. Auswertung der workload images nach Schweregrad CRITICAL
 
 Die Images nehmen wir aus LIVE Deployments und scannen jedes; die Anzahl der eindeutigen CRITICAL wird neben dem
 Namen des Deployments ausgegeben:
@@ -107,7 +107,7 @@ MOST_VULNERABLE=dep-a
 LEAST_VULNERABLE_1=dep-b
 LEAST_VULNERABLE_2=dep-c
 EOF
-# dep-d - das vierte Deployment (das zweite nach der Anzahl CRITICAL), es wird nicht in ranking.txt geschrieben
+# dep-d - das vierte Deployment (Platz zwei nach der Anzahl CRITICAL), es wird nicht in ranking.txt geschrieben
 ```
 
 CycloneDX SBOM des verwundbarsten Deployments (das Image aus seinem Deployment) und scale der übrigen:
@@ -149,7 +149,7 @@ CMD ["nginx", "-g", "daemon off;"]
 EOF
 mkdir -p "$ART/3"
 hadolint "$ROOT/Dockerfile" > "$ART/3/hadolint-after.txt"
-# Ein sauberes Dockerfile ergibt eine LEERE Ausgabe von hadolint (Rückgabecode 0) - eine leere Datei ist hier erwartet und korrekt.
+# Ein sauberes Dockerfile ergibt eine LEERE Ausgabe von hadolint (Rückgabecode 0) - eine leere Datei ist hier zu erwarten und korrekt.
 grep -nE '^(FROM|COPY|USER)' "$ROOT/Dockerfile"
 ```
 
@@ -158,7 +158,7 @@ security-Eigenschaften (base image, non-root, Fehlen von Secrets) - das ist der 
 kontrollierten Unterschieds, der in Aufgabe 9c einen anderen manifest digest garantiert, ohne
 den Rest des Dockerfile zu überarbeiten.
 
-Baue das Image und **veröffentliche** es in einer für Kubernetes erreichbaren Registry; eine lokale image ID/DiffID allein passt nicht für digest pinning. Setze dein repository ein, hole dann den registry manifest digest und bilde die immutable reference:
+Baue das Image und **veröffentliche** es in einer für Kubernetes erreichbaren Registry; eine lokale image ID/DiffID allein eignet sich nicht für digest pinning. Setze dein repository ein, hole dann den registry manifest digest und bilde die immutable reference:
 
 ```bash
 export HARDENED_TAG="$REGISTRY/catalog:1.0"
@@ -171,7 +171,7 @@ printf '%s\n' "$HARDENED_IMAGE"   # <IP>:5000/catalog@sha256:<manifest-digest>
 
 ## 4. Deployment korrigieren
 
-`readOnlyRootFilesystem` erfordert beschreibbare runtime-Pfade von nginx. `emptyDir` liefert sie gezielt; der init container (ebenfalls ein hardened image mit `USER 101`) kopiert die default config in ein separates beschreibbares config volume. `$HARDENED_IMAGE` ist die in Aufgabe 3 gebaute und digest-pinned Referenz, kein upstream image.
+`readOnlyRootFilesystem` erfordert beschreibbare runtime-Pfade von nginx. `emptyDir` liefert sie gezielt; der init container (ebenfalls ein hardened image mit `USER 101`) kopiert die default config in ein separates beschreibbares config volume. `$HARDENED_IMAGE` ist die in Aufgabe 3 gebaute, per digest gepinnte Referenz, kein upstream image.
 
 ```bash
 cat > "$ROOT/deployment.yaml" <<EOF
@@ -259,7 +259,7 @@ trivy image --list-all-pkgs --format json "$IMAGE" > /tmp/cks-111/packages.json
 cat "$ART/5/version-search.txt"
 ```
 
-## 5b. Find a package version in workload images and remove offending containers
+## 5b. Eine Paketversion in workload images finden und problematische Container entfernen
 
 ```bash
 mkdir -p $ART/5b/bom
@@ -362,7 +362,7 @@ nichts (`Results` ist leer) - deshalb wird für diese Aufgabe CycloneDX genommen
 
 ## 9a. Kyverno und `ImageValidatingPolicy` auf trusted signature
 
-Installiere Kyverno genauso wie in Lab 108 und warte auf die Bereitschaft des admission controller.
+Installiere Kyverno genauso wie in Lab 108 und warte auf die Bereitschaft des admission controllers.
 
 ```bash
 sudo install-kyverno
@@ -393,9 +393,9 @@ cosign verify --key $KEYDIR/cosign.pub $HARDENED_IMAGE > $ART/9a/cosign-verify.t
 cat $ART/9a/cosign-verify.txt | head -3
 ```
 
-Erstelle die `ImageValidatingPolicy`, die auf den öffentlichen Schlüssel verweist, mit dem gerade
+Erstelle die `ImageValidatingPolicy`, die auf den öffentlichen Schlüssel des Schlüsselpaars verweist, mit dessen privatem Schlüssel gerade
 `$HARDENED_IMAGE` signiert wurde. `matchImageReferences` begrenzt die policy genau auf das repository
-deines Images: Für OCI references braucht man getrennte Trennzeichen `:` (tag) und `@` (digest),
+deines Images: Für OCI references braucht man separate Trennzeichen `:` (tag) und `@` (digest),
 sonst erfasst das Präfix `${HARDENED_REPO}*` zum Beispiel ein anderes repository mit demselben Anfang
 des Namens. Das verhindert, dass die policy die übrigen Pods des Clusters blockiert.
 
@@ -505,8 +505,8 @@ cat "$ART/9c/digest-comparison.txt"
 
 Das `$ROOT/Dockerfile` aus Aufgabe 3 muss dieses build-arg akzeptieren (zum Beispiel
 `ARG CKS_SIGNATURE_TEST=signed` und `LABEL cks.signature-test=$CKS_SIGNATURE_TEST` neben den
-vorhandenen Anweisungen) - dann unterscheidet sich das gebaute Image von `$HARDENED_IMAGE` genau
-durch ein sicheres Label, ohne die in den Aufgaben 3-4 geprüften security-Eigenschaften zu berühren.
+vorhandenen Anweisungen) - dann unterscheidet sich das gebaute Image von `$HARDENED_IMAGE` nur
+durch genau ein sicheres Label, ohne die in den Aufgaben 3-4 geprüften security-Eigenschaften zu berühren.
 
 Wir belegen explizit, dass dieser digest existiert und pullable ist, bevor wir die policy prüfen -
 sonst beweist das denial nichts. Das ist self-check evidence für dich: Der Checker für Aufgabe 9c

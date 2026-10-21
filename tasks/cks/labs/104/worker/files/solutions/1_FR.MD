@@ -33,13 +33,13 @@ acceptée par l'API server. Si `audience` est omise, le kubelet utilise l'identi
 l'API server par défaut. Une audience distincte ne peut être indiquée qu'après vérification de
 `--api-audiences` (ou du default de `--service-account-issuer`) sur le control-plane.
 `expirationSeconds` doit être dans la plage `600`-`3600` incluse - la Kubernetes API
-rejette comme invalid toute valeur inférieure à `600` secondes pour un `serviceAccountToken`
+rejette comme invalid toute valeur inférieure à `600` secondes pour une `serviceAccountToken`
 projected source, indépendamment de ce qui est écrit dans le manifest.
 
 La syntaxe exacte de `projected.sources[].serviceAccountToken` n'a pas à être rappelée de mémoire à l'examen :
 sur `kubernetes.io/docs`, elle se trouve dans la section Concepts → Storage →
 [Projected Volumes](https://kubernetes.io/docs/concepts/storage/projected-volumes/), sous le
-titre **"serviceAccountToken projected volumes"** (il y a un exemple tout prêt de Pod avec ce
+titre **« serviceAccountToken projected volumes »** (il y a un exemple tout prêt de Pod avec ce
 volume - prenez-en la structure, ne l'écrivez pas de zéro). `kubectl run` ne sait pas ajouter
 un tel volume via des flags - nous générons le squelette du Pod via `--dry-run=client -o yaml` et
 nous ajoutons dans `vim` uniquement les champs nécessaires, copiés de l'exemple de la documentation :
@@ -106,7 +106,7 @@ doit renvoyer `authenticated: true` et le username
 
 À l'examen, il n'est pas nécessaire d'exécuter `TokenReview` séparément, si l'énoncé de la tâche ne l'exige pas :
 il suffit d'y créer rapidement un projected token volume correct et de vérifier le résultat de la
-façon requise dans la tâche concrète. Ici, `TokenReview` est une verification-vérification pédagogique,
+façon requise dans la tâche donnée. Ici, `TokenReview` est une vérification pédagogique,
 qui correspond en même temps au critère d'acceptation du lab.
 
 ## 3. Pod sans token de l'API
@@ -165,7 +165,7 @@ k auth can-i get secrets -n security-104 \
   --as=system:serviceaccount:security-104:legacy-operator # doit être no
 ```
 
-## 5. Désactivation de anonymous-auth
+## 5. Désactivation d'anonymous-auth
 
 Un simple `--anonymous-auth=false` ne convient pas ici : kubeadm `release-1.36` génère le
 static Pod de kube-apiserver avec des HTTPS liveness/readiness/startup probes sur `/livez` et
@@ -235,8 +235,8 @@ les acceptent :
 ```bash
 SERVER=$(k config view --minify -o jsonpath='{.clusters[0].cluster.server}')
 curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/version" # 401 - anonymous access fermé
-curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/livez"   # 200 - le health probe fonctionne
-curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/readyz"  # 200 - le health probe fonctionne
+curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/livez"   # 200 - la health probe fonctionne
+curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/readyz"  # 200 - la health probe fonctionne
 ```
 
 Une requête authentifiée vers `/readyz` (via le kubectl context déjà configuré)
@@ -273,7 +273,7 @@ k get clusterrolebinding -o json | jq -r \
 non-resource URL `/livez`, `/readyz`, `/healthz`, `/version`, `/version/`, et non sur les
 ressources ordinaires de Kubernetes - c'est le default Kubernetes RBAC, une partie nécessaire du bootstrap, n'y touchez pas.
 Ce n'est pas la même chose que `anonymous.conditions` de cette même tâche : cette liste
-limite sur quels chemins la requête reçoit une anonymous identity à l'étape
+détermine les seuls chemins sur lesquels la requête reçoit une anonymous identity à l'étape
 d'authentication (là uniquement `/livez`/`/readyz`/`/healthz`) - `/version` renvoie `401` anonymement
 précisément parce qu'aucune anonymous identity n'y est attribuée, et non parce que
 `system:public-info-viewer` manque de droits à cet endroit. `lab104-unintended-anonymous-access` est une
@@ -377,7 +377,7 @@ k wait -n security-104 --for=condition=Ready po/app-vulnerable --timeout=120s
 ```
 
 Nous confirmons trois propriétés finales, et pas seulement « le secret n'est pas dans l'environment » : les droits
-du fichier sont exactement `400` (et pas simplement contiennent quelque part la sous-chaîne `400`) et, ce qui est plus important, l'application
+du fichier sont exactement `400` (et ne contiennent pas simplement quelque part la sous-chaîne `400`) et, ce qui est plus important, l'application
 peut encore RÉELLEMENT lire la valeur du secret - sinon le hardening pourrait casser sans qu'on s'en aperçoive
 la fonctionnalité même de l'application :
 
@@ -477,7 +477,7 @@ k auth can-i approve signers/kubernetes.io/kube-apiserver-client --as=system:ser
 
 ## 8. Baseline au niveau du namespace : SA `default` sans automount
 
-La tâche 3 désactivait l'automount de façon ponctuelle, pour un Pod concret et son propre SA. Ici,
+La tâche 3 désactivait l'automount de façon ponctuelle, pour un Pod précis et son propre SA. Ici,
 il faut un baseline systémique : nous modifions le SA `default` du namespace **avant** d'y créer le moindre
 Pod, afin qu'aucun nouveau workload ne reçoive le token par défaut, même si le développeur
 oublie le champ explicite dans le manifest.
@@ -501,7 +501,7 @@ Nous créons un Pod qui **ne** définit ni `serviceAccountName`, ni `automountSe
 c'est le cas le plus fréquent dans la réalité, quand le développeur ne pense simplement pas au SA. Le champ
 `automountServiceAccountToken` doit être ABSENT du spec du Pod - indiquer explicitement `false`
 ne démontrerait qu'une configuration ponctuelle du Pod lui-même (comme dans la tâche 3), et non que
-le namespace-level baseline fonctionne réellement :
+le namespace-level baseline fonctionne réellement.
 
 Ici, même `--dry-run` n'est pas nécessaire - puisqu'aucun champ sur SA/automount n'est ajouté au Pod,
 `kubectl run` sans flags crée exactement ce qu'il faut, directement :
@@ -520,14 +520,14 @@ k exec -n security-104-baseline implicit-default-sa -- \
   test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
 echo "exit code: $?"
 # exit code: 0 - le fichier est absent, et l'exec lui-même s'est exécuté avec succès (contrairement à un simple
-# "cat" sur un fichier inexistant, dont l'exit code de cat est aussi non nul, mais pour une autre
+# "cat" sur un fichier inexistant, dont l'exit code est aussi non nul, mais pour une autre
 # raison ; test ! -e fait précisément la vérification nécessaire, et son propre succès
 # doit être exigé séparément, et non simplement « toute erreur = le fichier est absent »)
 ```
 
 La valeur du SA n'agit que si le Pod ne la redéfinit pas lui-même. Si le même namespace
 a besoin d'un Pod avec un accès à l'API, ajoutez `automountServiceAccountToken: true` explicitement dans le
-manifest concret après avoir vérifié que l'accès est réellement nécessaire - ne remettez pas le baseline
+manifest en question après avoir vérifié que l'accès est réellement nécessaire - ne remettez pas le baseline
 du SA `default` à `true` pour tout le namespace. Ne montez pas non plus à la main un ancien
 (legacy) `Secret` avec `type: kubernetes.io/service-account-token` via `volumes[].secret` -
 cela donnerait au Pod un API-token valide indépendamment des réglages d'automount.
@@ -536,10 +536,10 @@ cela donnerait au Pod un API-token valide indépendamment des réglages d'automo
 
 ## 9. Tâche d'intégration : détection d'un changement RBAC dangereux → audit log → containment
 
-Les tâches 1-8 fermaient des chemins concrets d'élévation de privilèges, disponibles pour `build-agent` lui-même
+Les tâches 1-8 fermaient des chemins précis d'élévation de privilèges, disponibles pour `build-agent` lui-même
 (wildcard, impersonate/bind/escalate, automount). Ici, il faut une autre couche de protection -
 la détection d'un **RBAC grant dangereux délivré par un administrateur** (par erreur, à cause d'une
-automatisation compromise, ou malicieusement), et pas seulement un instantané actuel de RBAC.
+automatisation compromise, ou de manière malveillante), et pas seulement un instantané actuel de RBAC.
 Nous nous connectons au control-plane et préparons un audit backend minimal :
 
 ```bash
@@ -563,7 +563,7 @@ EOF
 La règle RBAC est la première - la règle plus spécifique doit précéder le catch-all
 général, sinon `Metadata` interceptera l'événement plus tôt. `omitStages: [RequestReceived]`
 au niveau de toute la policy supprime l'entrée superflue précédant le traitement de la requête - elle n'a pas
-de `requestObject`/`responseStatus`, que le checker filtre de toute façon (`stage ==
+de `requestObject`/`responseStatus`, et le checker écarte de toute façon de telles entrées (`stage ==
 "ResponseComplete"`), et avec la règle catch-all `Metadata` sur TOUTES les autres requêtes du cluster
 cette étape doublerait le volume d'audit.log sans bénéfice.
 
@@ -598,7 +598,7 @@ exit
 ```
 
 `systemctl restart kubelet` force la reconstruction immédiate du static Pod - comme dans la
-tâche 5, inutile d'attendre :
+tâche 5, c'est plus rapide que d'attendre que le kubelet remarque de lui-même la modification du fichier :
 
 ```bash
 k get po -n kube-system -l component=kube-apiserver
@@ -617,7 +617,7 @@ k create clusterrolebinding incident-simulated-escalation \
   --serviceaccount=security-104:build-agent
 ```
 
-D'abord, nous nous assurons simplement à l'œil que l'audit-règle fonctionne réellement et que l'événement est arrivé dans le
+D'abord, nous nous assurons simplement à l'œil que la règle d'audit fonctionne réellement et que l'événement est arrivé dans le
 log - à l'examen, c'est généralement précisément cette vérification qu'il faut, et non un artifact tout fait :
 
 ```bash
@@ -632,7 +632,7 @@ montre la ligne trouvée avec le nom et 30 lignes APRÈS elle - c'est suffisant 
 `requestObject.subjects` à l'œil, sans syntaxe jq particulière.
 
 Cela suffit pour un examen réel, mais ce lab exige en plus un fichier artifact avec
-l'événement - non pas parce que le checker se contenterait de savoir que la règle fonctionne (lui-même, indépendamment,
+l'événement - non pas parce qu'il ne suffirait pas au checker de savoir que la règle fonctionne (lui-même, indépendamment,
 lit `audit.log` sur le control-plane via SSH), mais pour vérifier une compétence distincte :
 extraire et enregistrer précisément une entrée RÉELLE comme forensic evidence, et non la raconter
 avec ses propres mots (le checker compare l'`auditID` de votre fichier avec l'`auditID` de l'entrée réelle dans le log).
@@ -649,12 +649,12 @@ ssh control-plane "sudo cat /var/log/kubernetes/audit/audit.log" \
 ```
 
 Nous enregistrons l'événement **en entier**, tel qu'il se trouve réellement dans l'audit log (y compris l'`auditID`) - nous ne
-le réécrivons pas et ne montons pas le JSON à la main, sinon l'artifact ne coïncidera pas avec l'entrée réelle
+le réécrivons pas et n'assemblons pas le JSON à la main, sinon l'artifact ne coïncidera pas avec l'entrée réelle
 dans le log lors de la vérification.
 
 Containment : nous supprimons le binding et confirmons que l'accès est réellement révoqué, et pas que
 l'objet est simplement devenu illisible. `can-i` sans `-n`/`-A` ne vérifie que le namespace courant du
-kubeconfig-contexte, et non tout le cluster - pour un RoleBinding namespaced dans `security-104`
+contexte du kubeconfig, et non tout le cluster - pour un RoleBinding namespaced dans `security-104`
 (contrairement au ClusterRoleBinding cluster-wide déjà supprimé), cela change le résultat,
 c'est pourquoi nous indiquons le namespace explicitement :
 
@@ -675,7 +675,7 @@ l'événement ne figure que comme destinataire des droits, et non comme auteur d
 
 À la fin, exécutez `check_result`.
 
-## 10. Decode, create and mount a Secret
+## 10. Décodage, création et montage d'un Secret
 
 `legacy-config` existe déjà. Nous lisons les deux valeurs via l'API, et ne devinons pas :
 
@@ -731,7 +731,7 @@ k exec -n security-104 secret-workflow -- cat /etc/rehydrated/SERVICE_TOKEN
 
 À la fin, exécutez `check_result`.
 
-## 11. Repair existing Role and bind it to an SA from another namespace
+## 11. Réparation du Role existant et liaison à un SA d'un autre namespace
 
 Le Role existant `pod-role` dans `rbac-a` autorise `get`, `list`, `delete` - nous retirons le
 `delete` superflu, nous ajoutons le `watch` nécessaire :
@@ -766,7 +766,7 @@ k run rbac-a-workload -n rbac-a --image=busybox:1.36 \
 
 À la fin, exécutez `check_result`.
 
-## 12. Client certificate user via CSR + namespaced RBAC
+## 12. Utilisateur avec certificat client via CSR + namespaced RBAC
 
 Nous générons une private key et un CSR avec `CN=john` - le RBAC pour un utilisateur basé sur certificat
 se lie via `kind: User`, et non `ServiceAccount`, et `User` n'a pas d'objet d'API

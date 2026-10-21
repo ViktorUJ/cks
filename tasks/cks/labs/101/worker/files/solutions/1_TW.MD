@@ -4,7 +4,7 @@
 
 我們使用 `k` 取代 `kubectl`(別名在考試中已經可用)。
 
-開始之前(如有需要),先刪除舊的 namespace:
+開始之前(如有需要)，先刪除舊的 namespace:
 ```bash
 k delete ns cks-101 cks-101-legacy imds-control --ignore-not-found
 ```
@@ -28,7 +28,7 @@ k -n cks-101 expose deployment backend --port=8080
 k -n cks-101 wait --for=condition=Available deploy/frontend deploy/backend --timeout=60s
 ```
 
-確認映像一致:
+確認映像一致：
 ```bash
 k -n cks-101 get deploy frontend backend -o yaml | grep 'image:'
 ```
@@ -76,7 +76,7 @@ spec:
 EOF
 ```
 
-在 default-deny 之後檢查:
+在 default-deny 之後檢查：
 ```bash
 # IMDS 被阻擋
 k -n cks-101 exec probe -- curl -sS -o /dev/null -w 'HTTP:%{http_code}\n' -m 5 http://169.254.169.254/
@@ -131,14 +131,14 @@ k -n cks-101 exec dns-probe -- \
   nslookup kubernetes.default.svc.cluster.local
 ```
 
-DNS 恢復之後,backend 此時仍必須保持封閉:
+DNS 恢復之後，backend 此時仍必須保持封閉：
 ```bash
 k -n cks-101 exec probe -- \
   curl -sS -o /dev/null -w 'HTTP:%{http_code}\n' -m 5 http://backend:8080/
 echo $?
 ```
 
-預期:
+預期：
 ```
 HTTP:000
 curl exit 7 或 28
@@ -188,7 +188,7 @@ spec:
 EOF
 ```
 
-透過 Service DNS 檢查:
+透過 Service DNS 檢查：
 
 ```bash
 k -n cks-101 exec probe -- \
@@ -196,7 +196,7 @@ k -n cks-101 exec probe -- \
 echo $?
 ```
 
-## 5. IMDS final verification
+## 5. IMDS 最終驗證
 
 ```bash
 # control:IMDS 可達
@@ -261,7 +261,7 @@ spec:
 EOF
 ```
 
-檢查:
+檢查：
 ```bash
 # 對 legacy 而言 IMDS 被阻擋
 k -n cks-101-legacy exec deploy/legacy-client -- curl -sS -o /dev/null -w 'HTTP:%{http_code}\n' -m 5 http://169.254.169.254/
@@ -271,7 +271,7 @@ echo $?
 k -n cks-101-legacy exec deploy/legacy-client -- curl -sS -m 5 http://backend.cks-101:8080/
 ```
 
-## 7. hostNetwork observation
+## 7. 觀察 hostNetwork
 
 ```bash
 k -n cks-101 run hostnetwork-probe --image=curlimages/curl:8.11.1 -l app=frontend \

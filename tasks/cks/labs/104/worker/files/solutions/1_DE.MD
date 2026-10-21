@@ -99,7 +99,7 @@ EOF
 # true system:serviceaccount:security-104:api-client
 ```
 
-Für die Lab ist diese Prüfung Pflicht: Das Vorhandensein der Datei beweist allein nicht,
+Für das Lab ist diese Prüfung Pflicht: Das Vorhandensein der Datei beweist allein nicht,
 dass der projected token gültig ist und sich als der erwartete ServiceAccount authentifiziert. `TokenReview`
 muss `authenticated: true` und den username
 `system:serviceaccount:security-104:api-client` zurückgeben.
@@ -107,7 +107,7 @@ muss `authenticated: true` und den username
 In der Prüfung muss `TokenReview` nicht separat ausgeführt werden, sofern es die Aufgabenstellung nicht verlangt:
 Dort genügt es, schnell ein korrektes projected token volume zu erstellen und das Ergebnis auf die
 Weise zu prüfen, die in der konkreten Aufgabe nötig ist. Hier ist `TokenReview` eine Lern-verification-Prüfung,
-die zugleich dem Abnahmekriterium der Lab entspricht.
+die zugleich dem Abnahmekriterium des Labs entspricht.
 
 ## 3. Pod ohne API-token
 
@@ -230,13 +230,13 @@ k get po -n kube-system -l component=kube-apiserver
 ```
 
 Prüfe alle drei Verhaltensweisen: `/version` lehnt anonyme Anfragen ab, während `/livez`/`/readyz`
-- sie annehmen:
+sie annehmen:
 
 ```bash
 SERVER=$(k config view --minify -o jsonpath='{.clusters[0].cluster.server}')
 curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/version" # 401 - anonymous access ist geschlossen
-curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/livez"   # 200 - der health probe funktioniert
-curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/readyz"  # 200 - der health probe funktioniert
+curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/livez"   # 200 - die health probe funktioniert
+curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/readyz"  # 200 - die health probe funktioniert
 ```
 
 Eine authentifizierte Anfrage an `/readyz` (über den bereits eingerichteten kubectl context)
@@ -277,7 +277,7 @@ begrenzt, auf welchen Pfaden eine Anfrage in der Phase authentication überhaupt
 (dort nur `/livez`/`/readyz`/`/healthz`) - `/version` liefert anonym
 `401` gerade deshalb, weil dort keine anonymous identity zugewiesen wird, und nicht deshalb, weil
 `system:public-info-viewer` dort zu wenige Rechte hat. `lab104-unintended-anonymous-access` -
-ist der absichtliche lab-owned Fund: Seine ClusterRole `lab104-anonymous-debug-access` gibt
+ist der absichtliche lab-owned Befund: Seine ClusterRole `lab104-anonymous-debug-access` gibt
 vollwertiges RBAC `get`/`list` auf `pods`/`secrets`/`configmaps` clusterweit, das heißt JEDE
 anonyme Anfrage kann sie lesen. Wir löschen beide Objekte, wie in den Aufgaben 4/7:
 
@@ -333,7 +333,7 @@ k exec -n security-104 app-vulnerable -- cat /proc/1/environ \
   | tr '\0' '\n' | grep DB_PASSWORD | tee /var/work/tests/artifacts/6/env-leak-before.txt
 ```
 
-Wir speichern gerade die Zeile `DB_PASSWORD=<echter Wert>` aus dem Prozess-environment und nicht
+Wir speichern genau die Zeile `DB_PASSWORD=<echter Wert>` aus dem Prozess-environment und nicht
 einfach das Wort `DB_PASSWORD` ohne Wert - der Checker gleicht sie selbst mit dem tatsächlichen Wert
 aus dem Secret `db-creds` ab, der Wert muss nicht separat berechnet und verglichen werden.
 
@@ -377,7 +377,7 @@ k wait -n security-104 --for=condition=Ready po/app-vulnerable --timeout=120s
 ```
 
 Wir bestätigen drei finale Eigenschaften und nicht nur "das Secret ist nicht im environment": Die Dateirechte
-sind genau `400` (und nicht irgendwo ein Substring `400` enthalten), und, was wichtiger ist, die Anwendung
+sind genau `400` (und enthalten nicht bloß irgendwo den Substring `400`), und, was wichtiger ist, die Anwendung
 kann den Wert des Secrets weiterhin TATSÄCHLICH lesen - sonst könnte das hardening unbemerkt die
 Funktionalität der Anwendung selbst brechen:
 
@@ -410,10 +410,9 @@ Führe am Ende `check_result` aus.
 `build-agent-hidden-privesc` enthält kein wildcard `*`, aber `impersonate`/`bind`/`escalate`/
 CSR-approval sind eine eigene Kategorie gefährlicher verbs: Sie erweitern die Liste der sichtbaren
 Ressourcen nicht, sondern geben die Möglichkeit, **im Namen eines anderen zu handeln** oder **sich selbst
-zusätzliche Rechte zu geben**. In dieser Version der fixture enthält die ClusterRole auch die Basis-
-`create`/`update` auf `clusterroles`/`clusterrolebindings` - ohne sie wären `bind`/`escalate`
+zusätzliche Rechte zu geben**. In dieser Version der fixture enthält die ClusterRole auch die Basis-`create`/`update` auf `clusterroles`/`clusterrolebindings` - ohne sie wären `bind`/`escalate`
 unvollständige escalation primitives (RBAC verlangt ENTWEDER, die Rechte aus der Rolle bereits zu haben, ODER
-`escalate`/`bind` explizit zu besitzen VOR DEM HINTERGRUND des Versuchs, eine Role/ein Binding tatsächlich zu erstellen/zu aktualisieren).
+`escalate`/`bind` explizit zu besitzen BEIM Versuch, eine Role/ein Binding tatsächlich zu erstellen/zu aktualisieren).
 Wir finden alle ClusterRoleBinding, deren ClusterRole eines der gefährlichen verbs erlaubt. Wir gehen nicht
 von den ClusterRole aus (davon gibt es im Cluster Dutzende, einschließlich der regulären `system:*`), sondern vom
 ClusterRoleBinding - `kubectl get clusterrolebinding` zeigt standardmäßig bereits die Spalte
@@ -436,7 +435,7 @@ k describe clusterrole build-agent-hidden-privesc
 # (auf certificatesigningrequests/approval) - mit bloßem Auge sieht man, dass die Rolle gefährlich ist
 ```
 
-Wir speichern den Namen des ClusterRoleBinding (nicht der ClusterRole - sie müssen nicht übereinstimmen, in dieser Lab
+Wir speichern den Namen des ClusterRoleBinding (nicht der ClusterRole - sie müssen nicht übereinstimmen, in diesem Lab
 stimmen sie zufällig überein) im artifact:
 
 ```bash
@@ -445,7 +444,7 @@ cat /var/work/tests/artifacts/7/dangerous-bindings-before.txt
 ```
 
 `build-agent-hidden-privesc` muss in der finalen Datei stehen (als Name des ClusterRoleBinding,
-nicht der ClusterRole). Wir löschen gerade dieses ClusterRoleBinding (und die ClusterRole, damit die Vorlage nicht
+nicht der ClusterRole). Wir löschen genau dieses ClusterRoleBinding (und die ClusterRole, damit die Vorlage nicht
 zur Wiederverwendung zurückbleibt) und fassen die `system:*` bindings nicht an, die den
 core-Komponenten von Kubernetes den notwendigen `impersonate`/CSR-Zugriff geben:
 
@@ -478,12 +477,12 @@ Führe am Ende `check_result` aus.
 ## 8. Namespace-level baseline: `default` SA ohne automount
 
 Aufgabe 3 hat automount punktuell deaktiviert, bei einem konkreten Pod und seinem eigenen SA. Hier
-brauchst du eine systemische Baseline: Wir ändern den `default` SA des Namespace **bevor** darin irgendwelche
+brauchst du eine systemische Baseline: Wir ändern den `default` SA des Namespace, **bevor** darin irgendwelche
 Pods erstellt werden, damit kein neuer workload standardmäßig einen token erhält, selbst wenn der Entwickler
 das explizite Feld im Manifest vergisst.
 
 Der ServiceAccount `default` wird von einem separaten Controller asynchron nach dem Erscheinen des
-Namespace erstellt - `kubectl wait` kann gerade auf das Erscheinen des Objekts warten (`--for=create`), nicht nur auf
+Namespace erstellt - `kubectl wait` kann ausdrücklich auf das Erscheinen des Objekts warten (`--for=create`), nicht nur auf
 seine condition, daher braucht es weder manuelles retry noch eine selbstgebaute Schleife:
 
 ```bash
@@ -501,7 +500,7 @@ Wir erstellen einen Pod, der **weder** `serviceAccountName` **noch** `automountS
 das ist der in der Realität häufigste Fall, wenn der Entwickler einfach nicht an den SA denkt. Das Feld
 `automountServiceAccountToken` muss in der spec des Pods FEHLEN - die explizite Angabe von `false`
 würde nur die punktuelle Einstellung des Pods selbst beweisen (wie in Aufgabe 3) und nicht, dass
-die namespace-level Baseline tatsächlich funktioniert:
+die namespace-level Baseline tatsächlich funktioniert.
 
 Hier braucht es nicht einmal `--dry-run` - da dem Pod kein einziges Feld zu SA/automount hinzugefügt wird,
 erstellt `kubectl run` ohne Flags genau das Benötigte direkt:
@@ -539,7 +538,7 @@ Führe am Ende `check_result` aus.
 Die Aufgaben 1-8 haben konkrete Pfade der privilege escalation geschlossen, die `build-agent` selbst zugänglich waren
 (wildcard, impersonate/bind/escalate, automount). Hier geht es um eine andere Schutzschicht -
 die Erkennung eines **gefährlichen RBAC grant, der von einem Administrator vergeben wurde** (versehentlich, durch
-kompromittierte Automatisierung oder böswillig) und nicht nur den aktuellen Snapshot von RBAC.
+kompromittierte Automatisierung oder böswillig) und nicht nur der aktuelle Snapshot von RBAC.
 Wir verbinden uns mit der control-plane und bereiten ein minimales audit backend vor:
 
 ```bash
@@ -563,8 +562,8 @@ EOF
 Die RBAC-Regel steht an erster Stelle - die spezifischere Regel muss dem allgemeinen
 catch-all vorausgehen, sonst fängt `Metadata` das Ereignis früher ab. `omitStages: [RequestReceived]`
 auf Ebene der gesamten policy entfernt den überflüssigen Eintrag vor der Verarbeitung der Anfrage - er hat kein
-`requestObject`/`responseStatus`, die der Checker ohnehin filtert (`stage ==
-"ResponseComplete"`), und mit dem catch-all `Metadata`-Regel auf ALLE übrigen Anfragen des Clusters
+`requestObject`/`responseStatus`, der Checker verwirft solche Einträge ohnehin (`stage ==
+"ResponseComplete"`), und mit der catch-all `Metadata`-Regel auf ALLE übrigen Anfragen des Clusters
 würde diese Stage das Volumen von audit.log ohne Nutzen verdoppeln.
 
 Wir bearbeiten das static manifest: Wir fügen `--audit-policy-file`/`--audit-log-path` und hostPath
@@ -597,8 +596,8 @@ exit
 exit
 ```
 
-`systemctl restart kubelet` erzwingt den sofortigen Neuaufbau des static Pods - genauso wie in
-Aufgabe 5, es ist schneller, nicht zu warten:
+`systemctl restart kubelet` erzwingt den sofortigen Neuaufbau des static Pods - ebenso wie in
+Aufgabe 5 ist es schneller, als zu warten, bis das kubelet die Änderung der Datei selbst bemerkt:
 
 ```bash
 k get po -n kube-system -l component=kube-apiserver
@@ -606,8 +605,8 @@ k get po -n kube-system -l component=kube-apiserver
 ```
 
 Wir kehren zur Arbeitsmaschine zurück (im Namen des Administrators `cluster1-admin`) und erstellen
-die gefährliche Bindung - das ist **kein** Eskalationsversuch von `build-agent` (er hat nach Aufgabe 7 bereits
-keine echten Pfade dorthin), sondern eine modellierte Administratoraktion,
+die gefährliche Bindung - das ist **kein** Eskalationsversuch von `build-agent` (er hat nach Aufgabe 7
+keine echten Pfade dorthin mehr), sondern eine modellierte Administratoraktion,
 die der audit log als reproduzierbare evidence darüber erfassen muss, wer genau dies
 getan hat und wem genau die Rechte vergeben wurden:
 
@@ -618,7 +617,7 @@ k create clusterrolebinding incident-simulated-escalation \
 ```
 
 Zuerst vergewissern wir uns einfach mit eigenen Augen, dass die audit-Regel tatsächlich funktioniert und das Ereignis im
-log gelandet ist - in der Prüfung wird gewöhnlich genau diese Prüfung gebraucht und kein fertiges artifact:
+log gelandet ist - in der CKS-Prüfung genügt gewöhnlich genau diese Kontrolle und kein fertiges artifact:
 
 ```bash
 ssh control-plane
@@ -631,8 +630,8 @@ zeigt die gefundene Zeile mit dem Namen und 30 Zeilen DANACH - das genügt, um `
 (der reale Auslöser), `requestObject.roleRef`, `requestObject.subjects` mit bloßem Auge zu sehen,
 ohne spezielle jq-Syntax.
 
-Für die echte Prüfung genügt das, aber diese Lab verlangt zusätzlich eine artifact-Datei mit dem
-Ereignis - nicht weil dem Checker reicht zu wissen, dass die Regel funktioniert (er liest `audit.log` auf der
+Für die echte Prüfung genügt das, aber dieses Lab verlangt zusätzlich eine artifact-Datei mit dem
+Ereignis - nicht, weil es dem Checker nicht reichen würde zu wissen, dass die Regel funktioniert (er liest `audit.log` auf der
 control-plane selbst, unabhängig, über SSH), sondern um eine separate Fähigkeit zu prüfen:
 gerade den ECHTEN Eintrag als forensic evidence zu extrahieren und zu speichern und ihn nicht mit
 eigenen Worten nachzuerzählen (der Checker gleicht die `auditID` deiner Datei mit der `auditID` des echten Eintrags im log ab).
@@ -675,7 +674,7 @@ Ereignis nur als Empfänger der Rechte und nicht als Urheber der Anfrage erschei
 
 Führe am Ende `check_result` aus.
 
-## 10. Decode, create and mount a Secret
+## 10. Ein Secret dekodieren, erstellen und mounten
 
 `legacy-config` existiert bereits. Wir lesen beide Werte über die API aus und raten nicht:
 
@@ -731,7 +730,7 @@ k exec -n security-104 secret-workflow -- cat /etc/rehydrated/SERVICE_TOKEN
 
 Führe am Ende `check_result` aus.
 
-## 11. Repair existing Role and bind it to an SA from another namespace
+## 11. Eine bestehende Role reparieren und an eine SA aus einem anderen Namespace binden
 
 Die vorhandene Role `pod-role` in `rbac-a` erlaubt `get`, `list`, `delete` - wir entfernen
 das überflüssige `delete` und fügen das benötigte `watch` hinzu:
@@ -743,7 +742,7 @@ k auth can-i delete pods -n rbac-a --as=system:serviceaccount:rbac-a:dev # no
 k auth can-i watch pods -n rbac-a --as=system:serviceaccount:rbac-a:dev  # yes
 ```
 
-`shared-config` existiert bereits in `rbac-b`. Wir erstellen eine NEUE Role+RoleBinding gerade in
+`shared-config` existiert bereits in `rbac-b`. Wir erstellen eine NEUE Role+RoleBinding genau in
 `rbac-b` - ein RoleBinding unterstützt ein subject aus einem anderen Namespace, aber die Rechte selbst
 gelten nur im Namespace des RoleBinding selbst:
 
@@ -766,11 +765,10 @@ k run rbac-a-workload -n rbac-a --image=busybox:1.36 \
 
 Führe am Ende `check_result` aus.
 
-## 12. Client certificate user via CSR + namespaced RBAC
+## 12. Benutzer mit Client-Zertifikat über CSR + namespaced RBAC
 
 Wir erzeugen einen private key und eine CSR mit `CN=john` - RBAC für einen zertifikatsbasierten Benutzer
-wird über `kind: User` gebunden und nicht über `ServiceAccount`, und ein `User` hat kein eigenes API-
-Objekt: Seine identity wird vollständig dadurch bestimmt, dass der CN im Client-Zertifikat
+wird über `kind: User` gebunden und nicht über `ServiceAccount`, und ein `User` hat kein eigenes API-Objekt: Seine identity wird vollständig dadurch bestimmt, dass der CN im Client-Zertifikat
 mit dem `name` im binding übereinstimmt.
 
 ```bash
@@ -782,7 +780,7 @@ openssl req -new -key /var/work/tests/artifacts/12/john.key \
 
 Wir reichen sie als Kubernetes `CertificateSigningRequest` mit demselben signer ein, der bereits
 in Aufgabe 7 für die Genehmigung von CSR verwendet wird (`kubernetes.io/kube-apiserver-client` -
-der korrekte signer gerade für ein client-auth Zertifikat, das Anfragen an den API server
+der korrekte signer speziell für ein client-auth Zertifikat, das Anfragen an den API server
 authentifizieren wird):
 
 ```bash
@@ -846,7 +844,7 @@ curl -s -o /dev/null -w '%{http_code}\n' --cacert /tmp/cluster-ca.crt \
 
 Derselbe Beweis, aber über das gewohnte `kubectl` und nicht über `curl` - wir bauen für John eine separate
 kubeconfig aus dem bereits ausgestellten Zertifikat (`set-credentials` mit `--client-certificate`/
-`--client-key` und nicht `--token`, weil die identity hier gerade ein client-cert ist und kein
+`--client-key` und nicht `--token`, weil die identity hier ein client-cert ist und kein
 ServiceAccount token):
 
 ```bash
@@ -869,7 +867,7 @@ k --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig get pods -n security
 # Error from server (Forbidden) - dasselbe 403 wie in der curl-Prüfung oben
 
 k --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig auth whoami
-# Username: john - bestätigt, dass sich die kubeconfig tatsächlich gerade als
+# Username: john - bestätigt, dass sich die kubeconfig tatsächlich als
 # john authentifiziert und nicht nur zufällig die benötigten Antwortcodes liefert
 ```
 

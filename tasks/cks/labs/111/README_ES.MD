@@ -24,23 +24,23 @@ Los secrets y tokens olvidados por accidente en un layer requieren una comprobac
 scanning (por ejemplo, Trivy secret scanning) e inspection del history de la imagen (`docker history`,
 extracción de capas). El SBOM resuelve otra tarea: el inventario de componentes y versiones de
 paquetes; ayuda a la supply-chain investigation (por ejemplo, a encontrar una biblioteca vulnerable),
-pero no es un mecanismo fiable para buscar secrets en el history de capas y no sustituye al secret
+pero no es un mecanismo fiable para buscar secrets en el historial de capas y no sustituye al secret
 scanning. Incluso si la configuración de trabajo ya no contiene el secret, este puede seguir
-accesible en el history de capas.
+accesible en el historial de capas.
 
-La amenaza de mutable-tag tampering consiste en que, tras el despliegue, con una referencia sin cambios
-con etiqueta se puede sustituir otra imagen, maliciosa. Precisamente por eso el digest pinning es importante en
+La amenaza de mutable-tag tampering consiste en que, tras el despliegue, detrás de la misma referencia con etiqueta, sin modificar,
+se puede colocar otra imagen maliciosa. Precisamente por eso el digest pinning es importante en
 las tareas 3–5: fija el contenido concreto de la imagen, y no solo su nombre y etiqueta.
 
 La verificación de la firma en la tarea 7 demuestra que un digest concreto está firmado por una
 key/identity de confianza (signature integrity), mientras que el Trivy scan de la tarea 1 no detecta
 vulnerabilidades conocidas que entren en su detection coverage con la vulnerability DB actual
-(el propio Trivy documenta un trade-off en favor de la precision, en el que son posibles falsos
+(el propio Trivy documenta un trade-off en favor de la precision, en el que son posibles false
 negatives: "0 findings" no es igual a una formal proof de ausencia de vulnerabilidades). Son ejes distintos de
 protección: ninguno sustituye al otro, ya que vulnerability != signature. La firma
 NO es lo mismo que provenance/attestation
 (por ejemplo, build metadata de estilo SLSA sobre de qué y cómo se construyó el artifact): `cosign
-verify` confirma la autenticidad de la firma, y no el history completo de la build; para attestation
+verify` confirma la autenticidad de la firma, y no el historial completo de la build; para attestation
 Sigstore ofrece comandos aparte `cosign attest`/`cosign verify-attestation`, no
 utilizados en este laboratorio.
 
@@ -64,13 +64,13 @@ por un manifest ausente en el registry, y no por la ausencia de firma.
 <details>
 <summary>1. ¿Por qué el SBOM no es un mecanismo fiable para buscar secrets olvidados en un image layer?</summary>
 
-El SBOM resuelve la tarea de inventario de COMPONENTES y versiones de paquetes (qué está instalado, qué versión): es un análisis estructural de los metadatos del gestor de paquetes, y no una búsqueda de cadenas/secrets arbitrarios en el contenido de los archivos de las capas. Un secret dejado, por ejemplo, en una variable de entorno ENV o en un archivo temporal durante la build, puede permanecer en el history de capas incluso después de que la capa final ya no lo contenga: para eso hace falta una herramienta aparte (secret scanning, `docker history`, extracción de capas), y no SBOM.
+El SBOM resuelve la tarea de inventario de COMPONENTES y versiones de paquetes (qué está instalado, qué versión): es un análisis estructural de los metadatos del gestor de paquetes, y no una búsqueda de cadenas/secrets arbitrarios en el contenido de los archivos de las capas. Un secret dejado, por ejemplo, en una variable de entorno ENV o en un archivo temporal durante la build, puede permanecer en el historial de capas incluso después de que la capa final ya no lo contenga: para eso hace falta una herramienta aparte (secret scanning, `docker history`, extracción de capas), y no SBOM.
 </details>
 
 <details>
 <summary>2. ¿Cuál es la diferencia entre lo que demuestra el Trivy scan (tarea 1) y lo que demuestra la firma de Cosign (tarea 9a-9c)?</summary>
 
-En el momento de la comprobación, con la vulnerability DB actual y la lógica de detección de Trivy, el escaneo NO DETECTÓ vulnerabilidades conocidas que entren en su detection coverage: eso trata de la calidad/seguridad del contenido de la imagen en la medida en que Trivy es capaz de verlo. La propia documentación de Trivy describe directamente un trade-off en favor de la precision (minimización de false positives), en el que son posibles false negatives; es decir, "0 findings" no equivale a la prueba formal de la ausencia total de vulnerabilidades. La firma de Cosign demuestra SIGNATURE INTEGRITY: que un digest concreto está firmado por una clave/identity de confianza, es decir, que alguien autorizado confirmó que este es precisamente el artifact que debe desplegarse. Esto NO es lo mismo que provenance/attestation (el history completo de la build: de qué, por quién y cómo se construyó el artifact): para attestation en Sigstore hay comandos aparte (`cosign attest`/`cosign verify-attestation`), no usados en este laboratorio. Una imagen puede ser completamente segura (0 CVE) y a la vez no estar firmada, o estar firmada, pero contener una vulnerabilidad desconocida. Son dos ejes independientes de protección.
+En el momento de la comprobación, con la vulnerability DB actual y la lógica de detección de Trivy, el escaneo NO DETECTÓ vulnerabilidades conocidas que entren en su detection coverage: eso trata de la calidad/seguridad del contenido de la imagen en la medida en que Trivy es capaz de verlo. La propia documentación de Trivy describe directamente un trade-off en favor de la precision (minimización de false positives), en el que son posibles false negatives; es decir, "0 findings" no equivale a la prueba formal de la ausencia total de vulnerabilidades. La firma de Cosign demuestra SIGNATURE INTEGRITY: que un digest concreto está firmado por una clave/identity de confianza, es decir, que alguien autorizado confirmó que este es precisamente el artifact que debe desplegarse. Esto NO es lo mismo que provenance/attestation (el historial completo de la build: de qué, por quién y cómo se construyó el artifact): para attestation en Sigstore hay comandos aparte (`cosign attest`/`cosign verify-attestation`), no usados en este laboratorio. Una imagen puede ser completamente segura (0 CVE) y a la vez no estar firmada, o estar firmada, pero contener una vulnerabilidad desconocida. Son dos ejes independientes de protección.
 </details>
 
 <details>
@@ -118,7 +118,7 @@ garantizado; al actualizar Kyverno, retira esta excepción.
 ## Requisitos previos y limitaciones
 
 **podman y el registry en el banco de pruebas ya están configurados.** Para construir y publicar imágenes usa `podman`
-(herramienta de la lista del examen; rootless, desde el usuario `ubuntu`). Las tareas 3 y 9c exigen construir y
+(herramienta de la lista del examen; rootless, como el usuario `ubuntu`). Las tareas 3 y 9c exigen construir y
 **publicar** una imagen en un registry accesible tanto desde el worker como desde el clúster (la referencia inmutable
 `repo@sha256:...` se toma del registry, un image ID local no sirve). Ese registry,
 `registry:2` en el control-plane, lo levantó el bootstrap:
@@ -138,7 +138,7 @@ Para que `check_result` no choque con él, el bootstrap descarga una sola vez la
 (`nginx:1.27.3-alpine` y los candidatos para las tareas 1b/1c), y Trivy y Syft en los escaneos repetidos toman la
 imagen de esa caché por la misma referencia `nombre@sha256:...`, sin acudir a Docker Hub. `bom` sabe
 leer la imagen solo desde el registry, por lo que sigue haciendo varias peticiones por ejecución.
-Si Docker Hub aun así devolvió `TOOMANYREQUESTS`, espera (la ventana del límite es deslizante) o ejecuta
+Si aun así Docker Hub devuelve `TOOMANYREQUESTS`, espera (la ventana del límite es deslizante) o ejecuta
 `podman login docker.io` con tu propia cuenta.
 
 **Cosign y la contraseña de la clave.** `cosign generate-key-pair` y `cosign sign --key` piden la contraseña de
@@ -174,7 +174,7 @@ solo en `/var/work/tests/artifacts/<número>/`.
 ---
 | **1** | **Trivy: informe de vulnerabilidades de la imagen** |
 | :---: | :--- |
-| Qué hacemos | • Escanea la `$IMAGE` inmutable con Trivy, incluidas las vulnerabilidades de OS y de librerías.<br/>• Guarda el JSON estructurado en `/var/work/tests/artifacts/1/trivy-report.json`. |
+| Qué hacemos | • Escanea la `$IMAGE` inmutable con Trivy, incluidas las vulnerabilidades de OS y de bibliotecas.<br/>• Guarda el JSON estructurado en `/var/work/tests/artifacts/1/trivy-report.json`. |
 | Criterios de aceptación | • **Archivo:** no vacío, el JSON lo analiza `jq`, contiene `Results` y la immutable reference de la imagen analizada.<br/>• **Comprobación nueva:** el checker repite por sí mismo `trivy image` para la misma imagen y exige que este escaneo nuevo coincida con éxito por `ArtifactName`.<br/>• Un JSON escrito a mano, pero sintácticamente válido, no pasa. |
 
 <details>
@@ -196,7 +196,7 @@ solo en `/var/work/tests/artifacts/<número>/`.
 </details>
 
 ---
-| **1c** | **Workload image triage by CRITICAL severity** |
+| **1c** | **Análisis de las imágenes de workload por nivel CRITICAL** |
 | :---: | :--- |
 | Qué hacemos | • En el namespace `cks-111` ya hay desplegados 4 Deployment (label `cks.io/task=1c`), cada uno con una sola image immutable fijada por digest.<br/>• Obtén las image references de estos Deployments LIVE (no adivines por el nombre del tag), escanea **las 4** imágenes con Trivy con `--severity CRITICAL` y cuenta el número de `VulnerabilityID` CRITICAL únicas de cada una.<br/>• Determina el Deployment con el mayor número de CRITICAL ("el más vulnerable") y los dos Deployment con el menor número ("los dos menos vulnerables"). Anota sus nombres en `/var/work/tests/artifacts/1c/ranking.txt` como `MOST_VULNERABLE=<deployment-name>`, `LEAST_VULNERABLE_1=<deployment-name>`, `LEAST_VULNERABLE_2=<deployment-name>`.<br/>• Para la imagen del Deployment más vulnerable genera un CycloneDX SBOM **precisamente de Trivy** (`trivy image --format cyclonedx`) en `1c/cyclonedx.json`.<br/>• Después remedia: deja `replicas > 0` solo en los dos Deployment menos vulnerables, y los otros dos (incluido el más vulnerable) escálalos a `replicas: 0`. |
 | Criterios de aceptación | • **Ranking:** el checker repite por sí mismo el escaneo CRITICAL de Trivy de las 4 live images y calcula el ranking de nuevo: `ranking.txt` debe coincidir con ese escaneo nuevo, y no con uno obsoleto/adivinado.<br/>• **SBOM:** `cyclonedx.json` es un documento CycloneDX válido precisamente de Trivy, referido a la imagen del Deployment realmente más vulnerable.<br/>• **Remediation:** exactamente 2 Deployment (los menos vulnerables según el escaneo nuevo) tienen `replicas > 0`, los otros 2, `replicas: 0`. |
@@ -210,7 +210,7 @@ Obtén las image references con un comando del tipo `kubectl -n cks-111 get depl
 ---
 | **2** | **Informes iniciales del análisis estático** |
 | :---: | :--- |
-| Qué hacemos | • ANTES de las correcciones (sin tocar ninguno de estos tres archivos después de empezar la tarea 3) guarda los resultados: Hadolint en `2/hadolint-before.txt`, kubesec JSON en `2/kubesec-before.json`, kube-linter JSON en `2/kube-linter-before.json`.<br/>• Ejecútalos directamente contra los `Dockerfile`/`deployment.yaml` iniciales ORIGINALES.<br/>• No ocultes los errores mediante `|| true` en los archivos de informes: un exit code distinto de cero del linter es lo esperado. |
+| Qué hacemos | • ANTES de las correcciones (sin tocar ninguno de estos tres archivos después de empezar la tarea 3) guarda los resultados: Hadolint en `2/hadolint-before.txt`, kubesec JSON en `2/kubesec-before.json`, kube-linter JSON en `2/kube-linter-before.json`.<br/>• Ejecútalos directamente contra los `Dockerfile`/`deployment.yaml` iniciales ORIGINALES.<br/>• No ocultes los errores mediante `\|\| true` en los archivos de informes: un exit code distinto de cero del linter es lo esperado. |
 | Criterios de aceptación | • **Artefactos:** existen los tres; Hadolint contiene findings, kubesec contiene `scoring`, kube-linter es un objeto JSON de KubeLinter válido con los campos `Reports` y `Summary`; antes de las correcciones `Reports` contiene findings.<br/>• **Contraste con el baseline:** el checker compara el contenido de los tres artefactos con su propio baseline, tomado durante el provisioning contra los archivos iniciales originales ANTES de que se entregaran al estudiante.<br/>• Un informe escrito a mano, pero sintácticamente válido, no pasa. |
 
 <details>
@@ -235,7 +235,7 @@ Un exit code distinto de cero del linter al detectar problemas es un comportamie
 | **4** | **Corregir el workload YAML según kubesec y kube-linter** |
 | :---: | :--- |
 | Qué hacemos | • Primero construye y publica la hardened image de la tarea 3, luego indica en `deployment.yaml` su immutable manifest reference `registry/.../catalog@sha256:<manifest-digest>` (no el nginx upstream).<br/>• A nivel de Pod añade `automountServiceAccountToken: false`, `runAsNonRoot: true`, `seccompProfile: RuntimeDefault`.<br/>• En el contenedor establece `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`, requests/limits de CPU y memory.<br/>• Para nginx monta un `emptyDir`/tmpfs writable en las rutas temp, pid/run, cache y config y prepara la config antes del arranque.<br/>• Elimina `privileged`, aplica el Deployment, confirma Ready/Available y una petición HTTP exitosa.<br/>• Guarda los nuevos informes `4/kubesec-after.json` y `4/kube-linter-after.json`. |
-| Criterios de aceptación | • **Imagen:** el YAML usa una hardened image fijada por digest con `USER 101`, y no el nginx upstream.<br/>• **Manifest:** los campos necesarios y los writable mounts están presentes; `privileged` está ausente.<br/>• **Funcionamiento:** el Deployment está Available y la petición HTTP tiene éxito.<br/>• **Informes:** ambos informes finales son JSON válido. |
+| Criterios de aceptación | • **Imagen:** el YAML usa una hardened image fijada por digest con `USER 101`, y no el nginx upstream.<br/>• **Manifest:** los campos necesarios, el init container `prepare-nginx-config` y los writable mounts están presentes; `privileged` está ausente.<br/>• **Funcionamiento:** el Deployment está Available y la petición HTTP tiene éxito.<br/>• **Informes:** ambos informes finales son JSON válido. |
 
 <details>
 <summary>💡 Pista para la tarea 4</summary>
@@ -256,7 +256,7 @@ El flag se llama precisamente `--list-all-pkgs`, y no `--list-packages` ni una v
 </details>
 
 ---
-| **5b** | **Find a package version in workload images and remove offending containers** |
+| **5b** | **Encontrar la versión de un paquete en las imágenes de workload y eliminar los contenedores problemáticos** |
 | :---: | :--- |
 | Qué hacemos | • En el namespace `cks-111` ya está desplegado el Deployment `pkg-audit-app` con tres contenedores (`c1`, `c2`, `c3`), cada uno con su propia image immutable fijada por digest.<br/>• Exactamente en dos de las tres images está presente un mismo paquete de una versión concreta: los `TARGET_PACKAGE`/`TARGET_VERSION` indicados para tu instancia del laboratorio se definen dinámicamente durante el provisioning, no hay valores fijos.<br/>• Obtén las tres image references del Deployment live, para cada una ejecuta `bom generate` (guarda cada SBOM por separado en `/var/work/tests/artifacts/5b/bom/`).<br/>• Determina qué dos contenedores realmente contienen el mismo package/version y anota el par encontrado en `5b/answer.txt` como `TARGET_PACKAGE=<name>` y `TARGET_VERSION=<version>`.<br/>• Elimina PRECISAMENTE estos dos contenedores offending del Deployment (mediante `kubectl edit`/`kubectl apply` de un manifest corregido) de modo que quede solo el contenedor "limpio", y el Deployment siga `Available`. |
 | Criterios de aceptación | • **Respuesta:** `answer.txt` nombra el package/version real, presente precisamente en dos de las tres images originales (no adivinado). Estas dos imágenes tienen muchos paquetes en común: sirve cualquier par `name=version` que no esté en la tercera imagen.<br/>• **SBOM:** en `5b/bom/` hay al menos una salida genuina de `bom generate` que confirma este hallazgo.<br/>• **Comprobación independiente:** el checker ejecuta de forma independiente `bom generate` para las candidate images originales (guardadas durante el provisioning) y contrasta tu respuesta con esa ejecución independiente.<br/>• **Deployment:** el Deployment final contiene solo el contenedor "limpio" y sigue `Available`. |
@@ -283,7 +283,7 @@ El comando `bom generate -o <output.json> -i <image>`: obligatoriamente con el f
 | **7** | **CycloneDX SBOM mediante Syft y verificación con Cosign** |
 | :---: | :--- |
 | Qué hacemos | • Genera un CycloneDX JSON SBOM de Syft para la misma `$IMAGE` inmutable (`nginx:1.27.3-alpine@sha256:<manifest-digest>`) de la tarea 1 y guárdalo en `7/syft.cdx.json`.<br/>• Después verifica la firma de la imagen pública `gcr.io/distroless/static-debian13:nonroot` mediante Cosign keyless y guarda la salida exitosa completa en `7/cosign-verify.txt`.<br/>• Para Distroless usa el issuer `https://accounts.google.com` y la identity `keyless@distroless.iam.gserviceaccount.com`. |
-| Criterios de aceptación | • **Syft SBOM:** `bomFormat: CycloneDX`, `components` no vacío, `metadata.component.type == "container"` y `metadata.component.version` igual al manifest digest de la misma `$IMAGE` de la tarea 1: un SBOM de otra imagen (bare tag, alpine, busybox, etc.) no pasa.<br/>• **Cosign:** un comando real `cosign verify` para `gcr.io/distroless/static-debian13:nonroot` (el tag soportado vigente: `gcr.io/distroless/static:nonroot` sin el sufijo `-debian13` se considera deprecated según el README oficial de Distroless y ya no se actualiza) con el issuer/identity indicados termina con exit code `0`, y la salida completa está guardada en `7/cosign-verify.txt`.<br/>• **Comprobación nueva:** el checker además regenera por sí mismo el SBOM con el mismo Syft para la misma imagen y exige que el conjunto de componentes (`name`/`version`) de tu SBOM coincida con esa ejecución nueva: un documento CycloneDX mínimo escrito a mano con un solo componente top-level no pasa. |
+| Criterios de aceptación | • **Syft SBOM:** `bomFormat: CycloneDX`, `components` no vacío, `metadata.component.type == "container"` y `metadata.component.version` igual al manifest digest de la misma `$IMAGE` de la tarea 1: un SBOM de otra imagen (bare tag, alpine, busybox, etc.) no pasa.<br/>• **Cosign:** un comando real `cosign verify` para `gcr.io/distroless/static-debian13:nonroot` (es el tag soportado vigente; `gcr.io/distroless/static:nonroot` sin el sufijo `-debian13` se considera deprecated según el README oficial de Distroless y ya no se actualiza) con el issuer/identity indicados termina con exit code `0`, y la salida completa está guardada en `7/cosign-verify.txt`.<br/>• **Comprobación nueva:** el checker además regenera por sí mismo el SBOM con el mismo Syft para la misma imagen y exige que el conjunto de componentes (`name`/`version`) de tu SBOM coincida con esa ejecución nueva: un documento CycloneDX mínimo escrito a mano con un solo componente top-level no pasa. |
 
 <details>
 <summary>💡 Pista para la tarea 7</summary>
@@ -294,7 +294,7 @@ Syft genera CycloneDX mediante el flag `-o cyclonedx-json` (no lo confundas con 
 ---
 | **8** | **`trivy sbom`: escanear un archivo SBOM ya hecho en busca de vulnerabilidades** |
 | :---: | :--- |
-| Qué hacemos | • El CycloneDX SBOM de la tarea 7 (`7/syft.cdx.json`) describe la composición de la image y su SO, pero por sí mismo no contiene conclusiones sobre vulnerabilidades.<br/>• Escanea precisamente este archivo SBOM (no la image directamente) con la herramienta `trivy sbom` y guarda el JSON estructurado en `/var/work/tests/artifacts/8/sbom-scan.json`.<br/>• El comando debe aceptar explícitamente el archivo SBOM como entrada, y no volver a escanear `$IMAGE`. |
+| Qué hacemos | • El CycloneDX SBOM de la tarea 7 (`7/syft.cdx.json`) describe la composición de la image y su SO, pero por sí mismo no contiene conclusiones sobre vulnerabilidades.<br/>• Escanea precisamente este archivo SBOM (no la image directamente) con la herramienta `trivy sbom` y guarda el JSON estructurado en `/var/work/tests/artifacts/8/sbom-scan.json`.<br/>• El comando debe aceptar explícitamente el archivo SBOM como entrada, y no volver a escanear `$IMAGE`; guarda su texto en `/var/work/tests/artifacts/8/sbom-scan-command.txt`. |
 | Criterios de aceptación | • **Archivo:** no vacío, el JSON lo analiza `jq`, `ArtifactType` = `cyclonedx`, `Results` no vacío y contiene las vulnerabilidades encontradas.<br/>• **Comando:** `sbom-scan-command.txt` contiene el comando `trivy sbom` con la ruta a `7/syft.cdx.json`.<br/>• **Comprobación nueva:** el checker repite por sí mismo `trivy sbom` sobre este archivo. |
 
 <details>
@@ -318,7 +318,7 @@ El comando es `trivy sbom <ruta-al-archivo-sbom>`, y NO `trivy image <ruta-al-ar
 ---
 | **9b** | **Fresh signed ALLOW: un Pod nuevo tras crear la policy** |
 | :---: | :--- |
-| Qué hacemos | • La policy de la tarea 9a debe admitir el `$HARDENED_IMAGE` firmado, pero un nuevo `kubectl apply` de un Deployment ya existente **no demuestra** esto: si el template no cambió, puede que no se cree un nuevo ReplicaSet/Pod, y `Running` resultará ser simplemente un Pod antiguo, creado antes de la policy.<br/>• Crea un objeto **nuevo**, que no existía antes: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 300`.<br/>• Guarda el `creationTimestamp` de este Pod, el `creationTimestamp` de la policy de 9a y el `status.phase`/condition `Ready` final en `9b/signed-admission-check.json`. |
+| Qué hacemos | • La policy de la tarea 9a debe admitir el `$HARDENED_IMAGE` firmado, pero un nuevo `kubectl apply` de un Deployment ya existente **no demuestra** esto: si el template no cambió, puede que no se cree un nuevo ReplicaSet/Pod, y `Running` resultará ser simplemente un Pod antiguo, creado antes de la policy.<br/>• Crea un objeto **nuevo**, que no existía antes: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`.<br/>• Guarda el `creationTimestamp` de este Pod, el `creationTimestamp` de la policy de 9a y el `status.phase`/condition `Ready` final en `9b/signed-admission-check.json`. |
 | Criterios de aceptación | • **Pod:** `signed-admission-check` existe, usa precisamente `$HARDENED_IMAGE`; para él se ejecuta con éxito `cosign verify --key cosign.pub "$HARDENED_IMAGE"`, `status.phase` no es `Failed`, y la condición `Ready` llega a `True`.<br/>• **Artefacto:** `9b/signed-admission-check.json` contiene esta image y el `creationTimestamp` del Pod **posterior** al `creationTimestamp` de la `ImageValidatingPolicy require-signed-catalog-images`.<br/>• Esto demuestra el fresh post-policy admission precisamente de una image verificablemente firmada, y no un Pod antiguo que sobrevivió a la policy. |
 
 <details>
@@ -331,7 +331,7 @@ No reutilices el Deployment `catalog` de la tarea 4 para esta comprobación: usa
 | **9c** | **Signature-specific DENY: un digest unsigned que realmente existe en el mismo repository** |
 | :---: | :--- |
 | Qué hacemos | • Construye y publica un **segundo** tag en el mismo repository que `$HARDENED_IMAGE` (por ejemplo, `${HARDENED_TAG%:*}:unsigned-1.0`), sin firmarlo.<br/>• Esta imagen debe ser un **artifact físicamente distinto**, y no el mismo digest que el `$HARDENED_IMAGE` ya firmado: si construyes el mismo `Dockerfile`/context sin cambios, un reproducible/cached build puede dar un digest idéntico, y entonces el tag "unsigned" en realidad apuntará a un artifact ya firmado, y `cosign verify` pasará inesperadamente.<br/>• Introduce una diferencia controlada mediante un build-arg (por ejemplo `--build-arg CKS_SIGNATURE_TEST=unsigned-1` con el correspondiente `ARG`/`LABEL` en el Dockerfile) y guarda explícitamente la prueba `$UNSIGNED_DIGEST != $HARDENED_DIGEST` en `9c/digest-comparison.txt`.<br/>• Obtén el registry manifest digest del mismo modo que en la tarea 3 (`podman push --digestfile`), forma `$UNSIGNED_IMAGE` en el mismo repository.<br/>• Demuestra explícitamente que este digest **existe y es pullable** (una petición `GET /v2/catalog/manifests/<digest>` al registry tiene éxito) y **no tiene** una firma válida con tu clave (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` termina con un error); guarda ambas salidas en `9c/unsigned-exists.txt` y `9c/unsigned-not-signed.txt`.<br/>• Después crea un Pod `catalog-unsigned-probe` con esta `$UNSIGNED_IMAGE` y guarda el admission denial en `9c/admission-deny.txt`. |
-| Criterios de aceptación | • **Artefacto:** `9c/digest-comparison.txt` contiene `hardened_digest=`, `unsigned_digest=` y `unsigned_image=` (una referencia `tag@digest` completa en el mismo repository que `$HARDENED_IMAGE`, con un digest genuinamente distinto).<br/>• **Comprobación del checker:** resuelve por sí mismo `unsigned_image` en el registry, confirma la ausencia de una firma válida mediante su propio `cosign verify`, crea SU nuevo Pod con esta imagen y exige el validation message único de su propia policy: `catalog image must have a valid release signature`.<br/>• Un error genérico de admission/signature de otra policy no cuenta como PASS, ni tampoco cualquier error de admission (`manifest unknown`/registry lookup no bastan).<br/>• Los archivos de evidence escritos a mano sin un admission control real no dan PASS: el checker no se fía de ningún archivo de texto, salvo `unsigned_image=` como indicador de la imagen real que hay que comprobar. |
+| Criterios de aceptación | • **Artefacto:** `9c/digest-comparison.txt` contiene `hardened_digest=`, `unsigned_digest=` y `unsigned_image=` (una referencia `tag@digest` completa en el mismo repository que `$HARDENED_IMAGE`, con un digest genuinamente distinto).<br/>• **Comprobación del checker:** resuelve por sí mismo `unsigned_image` en el registry, confirma la ausencia de una firma válida mediante su propio `cosign verify`, crea SU nuevo Pod con esta imagen y exige el validation message único de su propia policy: `catalog image must have a valid release signature`.<br/>• Solo cuenta este mensaje, y no cualquier error de admission: un error genérico de admission/signature de otra policy no da PASS, y `manifest unknown`/los errores de registry lookup tampoco bastan.<br/>• Los archivos de evidence escritos a mano sin un admission control real no dan PASS: el checker no se fía de ningún archivo de texto, salvo `unsigned_image=` como indicador de la imagen real que hay que comprobar. |
 
 <details>
 <summary>💡 Pista para la tarea 9c</summary>

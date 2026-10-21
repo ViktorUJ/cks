@@ -270,7 +270,7 @@ Rotation/Widerruf. Erstellen Sie ein solches Secret nicht als normalen Weg, eine
 zur API zu geben: Es erhält keine automatische kurze Rotation und vergrößert bei Leaks den
 Schaden stärker.
 
-> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount token bleibt das zentrale JWT-Identity-Modell dieses Kapitels. Kubernetes v1.37 hat außerdem Pod Certificates und ClusterTrustBundles stabilisiert - built-in primitives zur Ausgabe und Rotation von X.509 workload credentials. Dies ist eine production-current Erweiterung und kein Ersatz für CKS Core: siehe [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_DE.md).
+> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount token bleibt das zentrale JWT-Identity-Modell dieses Kapitels. Kubernetes v1.37 hat außerdem Pod Certificates und ClusterTrustBundles stabilisiert - built-in primitives zur Ausgabe und Rotation von X.509 workload credentials. Dies ist eine production-current Erweiterung und kein Ersatz für CKS Core: siehe [Kubernetes v1.37 Security Delta (nur auf Russisch)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 11.4. Dedizierter ServiceAccount und minimales RBAC
 

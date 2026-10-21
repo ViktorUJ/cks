@@ -35,11 +35,11 @@ base64 is just an encoding, reversible without a key: anyone who has access to t
 <details>
 <summary>2. Why must the `identity` provider go LAST in the list of providers, and not first?</summary>
 
-The providers in `EncryptionConfiguration` are tried in order for READING existing records, and the first provider is used for WRITING new data. If `identity` (that is, "no encryption") is first, all new records will be written UNencrypted, despite `aescbc` being in the list. With `identity` last you can read old (not yet migrated) plaintext records, but it is guaranteed that all new records are encrypted by the first provider.
+The providers in `EncryptionConfiguration` are tried in order for READING existing records, and the first provider is used for WRITING new data. If `identity` (that is, "no encryption") is first, all new records will be written UNencrypted, despite `aescbc` being in the list. Placing `identity` last lets you read old (not yet migrated) plaintext records while guaranteeing that all new records are encrypted by the first provider.
 </details>
 
 <details>
-<summary>3. Why can the old encryption key not simply be deleted right after adding a new one?</summary>
+<summary>3. Why can't you simply delete the old encryption key right after adding a new one?</summary>
 
 The existing records in etcd stay encrypted with the OLD key until they are explicitly rewritten (re-encryption). If you remove the old key from the active `EncryptionConfiguration` before all the records are rewritten with the new one, the API server will not be able to decrypt the remaining old records through the current provider chain - they become unreadable until the old key is put back into the configuration. Removing a key from the config does not physically destroy the key material: if the saved old key is added back into the provider chain, access is restored. Irreversible data loss occurs only if the key material itself is really lost or destroyed (for example, the key was not saved anywhere before deletion). The order: add the new key first → rewrite all Secrets → confirm that all records use the new key → keep the old key in a safe place for rollback → only then remove it from the config.
 </details>
@@ -53,7 +53,7 @@ The environment is deployed by Terragrunt in AWS `eu-central-1`:
 | `vpc` | VPC `10.10.0.0/16` with public subnets |
 | `ssh-keys` | SSH keys for the worker and the control-plane |
 | `k8s-1` | a single-node kubeadm control-plane: Kubernetes **1.36.0**, containerd, **Calico** |
-| `worker` | a work machine with `kubectl`; the standard `etcdctl` 3.6.0 is installed on the control-plane (`ssh control-plane`), as on the exam |
+| `worker` | a work machine with `kubectl`; the standard `etcdctl` 3.6.0 is installed on the control-plane (`ssh control-plane`), as in the exam |
 
 The control-plane deliberately accepts regular Pods - a separate Kubernetes worker is not created.
 Before the tasks start, the bootstrap creates the namespace `encryption-109` and a harmless
@@ -63,7 +63,7 @@ controlled proof of the plaintext state.
 Operations on the node are performed on the control-plane itself, as on the exam: log in to it
 (`ssh control-plane`), work there, and exit (`exit`); `kubectl` - from the work machine. A raw etcd record
 is read with the standard `etcdctl` from the Kubernetes documentation using the kubeadm certificates from
-`/etc/kubernetes/pki/etcd/` (`ca.crt`, `server.crt`, `server.key`). Ready examples of the commands are
+`/etc/kubernetes/pki/etcd/` (`ca.crt`, `server.crt`, `server.key`). Ready-made command examples are
 in the section "Where to find examples in the documentation" of the reference solution.
 
 ## Deployment
@@ -82,9 +82,9 @@ check_result
 ## Tasks
 
 ---
-| **1** | **Prove the initial plaintext of the Secret** |
+| **1** | **Prove that the Secret is initially stored in plaintext** |
 | :---: | :--- |
-| What to do | • Before enabling encryption request the raw record `/registry/secrets/encryption-109/legacy-secret` with the standard `etcdctl get ... --print-value-only`<br/>• Log in to the control-plane (`ssh control-plane`) and work on it, as on the exam: pass the output through `strings` and save the result to a file on the control-plane (`/tmp/plaintext-proof.txt`), then copy it to the work machine with `scp` to `/var/work/109/plaintext-proof.txt` |
+| What to do | • Before enabling encryption, request the raw record `/registry/secrets/encryption-109/legacy-secret` with the standard `etcdctl get ... --print-value-only`<br/>• Log in to the control-plane (`ssh control-plane`) and work on it, as on the exam: pass the output through `strings` and save the result to a file on the control-plane (`/tmp/plaintext-proof.txt`), then copy it to the work machine with `scp` to `/var/work/109/plaintext-proof.txt` |
 | Acceptance criteria | • The file contains the full `strings` output of the original raw record (matches the bootstrap snapshot, including the marker `cks-109-legacy-plaintext`) and does not contain `k8s:enc:`<br/>• A string typed by hand is not accepted<br/>• This is a proof of the initial state: `Secret.data` is base64, not encryption at rest |
 
 <details>
@@ -109,19 +109,19 @@ Generate the key via `head -c 32 /dev/urandom | base64` - exactly 32 BYTES (not 
 | **3** | **Connect the config to the static kube-apiserver** |
 | :---: | :--- |
 | What to do | • Carefully modify `/etc/kubernetes/manifests/kube-apiserver.yaml`: add the flag `--encryption-provider-config=/etc/kubernetes/enc/encryption-config.yaml`, a read-only `volumeMount` `/etc/kubernetes/enc`, and the corresponding `hostPath` volume `/etc/kubernetes/enc`<br/>• Save a backup of the manifest before editing |
-| Acceptance criteria | • The running manifest contains the flag, the mount, and the hostPath<br/>• After the restart of the static Pod `kubectl get --raw='/readyz'` returns `ok` |
+| Acceptance criteria | • The running manifest contains the flag, the mount, and the hostPath<br/>• After the static Pod restarts, `kubectl get --raw='/readyz'` returns `ok` |
 
 <details>
 <summary>💡 Hint for task 3</summary>
 
-Three separate changes are needed at the same time: the flag `--encryption-provider-config` itself, the `volumeMounts` (inside the container) AND the `volumes` (the hostPath at the level of the Pod spec) - forgetting any of the three leads either to CrashLoopBackOff (the flag points to a file that the container does not see), or to the flag simply not being passed. Save the backup **outside** `/etc/kubernetes/manifests`, for example `sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/kube-apiserver.yaml.bak-109`. The kubelet reads additional non-hidden files from the static manifests directory; a neighboring `kube-apiserver.yaml.bak` may be perceived as a second static Pod and block the application of the new configuration.
+Three separate changes are needed at the same time: the flag `--encryption-provider-config` itself, the `volumeMounts` (inside the container) AND the `volumes` (the hostPath at the level of the Pod spec) - forgetting any of the three leads either to CrashLoopBackOff (the flag points to a file that the container does not see), or to the flag simply not being passed. Save the backup **outside** `/etc/kubernetes/manifests`, for example `sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/kube-apiserver.yaml.bak-109`. The kubelet reads additional non-hidden files from the static manifests directory; a `kube-apiserver.yaml.bak` next to it may be picked up as a second static Pod and block the application of the new configuration.
 </details>
 
 ---
 | **4** | **Re-encrypt and prove the ciphertext** |
 | :---: | :--- |
-| What to do | • After the API server is ready, create in `encryption-109` a Secret `encrypted-secret` with the literal `token=cks-109-fresh-ciphertext`<br/>• Rewrite all previously existing Secrets through the API (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`)<br/>• Check both Secrets through the API and the raw etcd<br/>• Only after this check remove the temporary `identity` fallback, restart the static kube-apiserver, and check `/readyz` and the reading of both Secrets again |
-| Acceptance criteria | • `legacy-secret` and `encrypted-secret` are read through the API with the original values<br/>• The raw value of each starts with `k8s:enc:aescbc:v1:`<br/>• The legacy marker is no longer visible in the raw etcd<br/>• The original payload/UID of the whole bootstrap Secret corpus is preserved, all records are encrypted with the first effective key<br/>• The key from the final file is able to decrypt the ciphertext of both canary Secrets<br/>• `identity` is absent from the final configuration, the API is healthy |
+| What to do | • After the API server is ready, create in `encryption-109` a Secret `encrypted-secret` with the literal `token=cks-109-fresh-ciphertext`<br/>• Rewrite all previously existing Secrets through the API (`kubectl get secrets --all-namespaces -o json \| kubectl replace -f -`)<br/>• Check both Secrets through the API and the raw etcd<br/>• Only after this check remove the temporary `identity` fallback, restart the static kube-apiserver, and check `/readyz` again and verify that both Secrets can be read |
+| Acceptance criteria | • `legacy-secret` and `encrypted-secret` are read through the API with the original values<br/>• The raw value of each starts with `k8s:enc:aescbc:v1:`<br/>• The legacy marker is no longer visible in raw etcd data<br/>• The original payload/UID of the whole bootstrap Secret corpus is preserved, all records are encrypted with the first effective key<br/>• The key from the final file is able to decrypt the ciphertext of both canary Secrets<br/>• `identity` is absent from the final configuration, the API is healthy |
 
 <details>
 <summary>💡 Hint for task 4</summary>
@@ -132,8 +132,8 @@ The order is critical: create `encrypted-secret` → rewrite ALL the existing Se
 ---
 | **5** | **Minimize RBAC and disable automount** |
 | :---: | :--- |
-| What to do | • Create a ServiceAccount `secret-reader` in `encryption-109` with `automountServiceAccountToken: false`<br/>• The Role `secret-reader-109` must give only `get` of only the Secret `encrypted-secret`<br/>• Bind it with a RoleBinding of the same name<br/>• Create a Pod `secret-reader-109` with this ServiceAccount, `automountServiceAccountToken: false`, and the image `registry.k8s.io/pause:3.10` |
-| Acceptance criteria | • The effective RBAC for the ServiceAccount with its standard groups allows `get encrypted-secret` in `encryption-109` and forbids other Secret operations, including access to the Secrets of other namespaces<br/>• The Role/RoleBinding are exact<br/>• The Pod is Running with a single `pause:3.10`, without automatically or manually mounted ServiceAccount tokens and other credential-bearing sources (Secret/hostPath/CSI/PVC volumes, Secret env/envFrom)<br/>• Harmless emptyDir/ConfigMap volumes are allowed<br/>• `automountServiceAccountToken: false` in both the Pod and the ServiceAccount |
+| What to do | • Create a ServiceAccount `secret-reader` in `encryption-109` with `automountServiceAccountToken: false`<br/>• The Role `secret-reader-109` must grant only the `get` verb and only on the Secret `encrypted-secret`<br/>• Bind it with a RoleBinding of the same name<br/>• Create a Pod `secret-reader-109` with this ServiceAccount, `automountServiceAccountToken: false`, and the image `registry.k8s.io/pause:3.10` |
+| Acceptance criteria | • The effective RBAC for the ServiceAccount with its standard groups allows `get encrypted-secret` in `encryption-109` and forbids other Secret operations, including access to the Secrets of other namespaces<br/>• The Role/RoleBinding are exact<br/>• The Pod is Running with a single `pause:3.10`, without automatically or manually mounted ServiceAccount tokens or other credential-bearing sources (Secret/hostPath/CSI/PVC volumes, Secret env/envFrom)<br/>• Harmless emptyDir/ConfigMap volumes are allowed<br/>• `automountServiceAccountToken: false` in both the Pod and the ServiceAccount |
 
 <details>
 <summary>💡 Hint for task 5</summary>
@@ -148,28 +148,28 @@ check_result
 ```
 
 The check contains Init and five mandatory tests. Test 4 checks not only the presence of the
-configuration file but the real ciphertext `k8s:enc:aescbc:v1:` for the new and the former
-etcd record and the absence of the migration-only `identity` in the final configuration. Before a mass re-encryption in a real environment a snapshot, a key
+configuration file but also the real ciphertext `k8s:enc:aescbc:v1:` for both the new and the pre-existing
+etcd record and the absence of the migration-only `identity` in the final configuration. Before a mass re-encryption in a real environment, a snapshot, a key
 rotation plan, and a controlled window are required; this lab is not a production runbook.
 
 ## Solution
 
 Reference solution: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
 
-## Deletion
+## Cleanup
 
 ```bash
 TASK=109 make delete_cks_task
 ```
 
-## Additional: KMS v2 and the full rotation lifecycle
+## Additional material: KMS v2 and the full key rotation lifecycle
 
 **KMS v2 (an optional walkthrough).** An external KMS plugin is connected to the API server as the
 provider `kms` in `EncryptionConfiguration`; its endpoint is a local Unix socket, and the provider key
 gets a stable name, for example `kms-v2-primary`. In KMS v2 the API server receives through the plugin an encrypted seed (wrapped under an external
 **KEK**) and derives from it the keys for encrypting individual objects. KMS v2
 uses a seed/DEK at the API server level, and not a separate KMS call for each Secret.
-What is stored in etcd is the ciphertext of the Secret and the data needed to restore the key. Thus the KEK does not lie in etcd; the availability, ACL, and backup of the KMS become
+What is stored in etcd is the ciphertext of the Secret and the data needed to restore the key. Thus the KEK is not stored in etcd; the availability, ACL, and backup of the KMS become
 part of the security model. A minimal **illustrative** provider (the endpoint must
 correspond to the installed plugin) looks like this:
 
@@ -189,7 +189,7 @@ supported plugin and the current `kms` v2 format from the documentation of the v
 Kubernetes in use; this lab does not bring up a KMS plugin and does not provide a working socket.
 
 **Full rotation of the provider key.** The migration of plaintext to the first
-`aescbc` key performed in task 4 is not a full key rotation. For it: (1) make a protected etcd snapshot and
+`aescbc` key performed in task 4 is not a full key rotation. For a full rotation: (1) make a protected etcd snapshot and
 check that the old key is saved and available for rollback; (2) add the new key
 first in `aescbc.keys`, leaving the old one second, then restart the API server; (3)
 rewrite the existing Secrets through the API so that they are encrypted with the new first key;
@@ -197,4 +197,4 @@ rewrite the existing Secrets through the API so that they are encrypted with the
 `k8s:enc:aescbc:v1:<new-key-name>:`; (5) only after the full migration, backup, and
 read check, remove the old key, restart the API server, and check `/readyz`
 and the Secrets again. For KMS v2 the equivalent is to first switch the primary KEK/plugin, perform
-re-encryption, and only then withdraw the old KEK from use following the KMS procedure.
+re-encryption, and only then retire the old KEK following the KMS procedure.

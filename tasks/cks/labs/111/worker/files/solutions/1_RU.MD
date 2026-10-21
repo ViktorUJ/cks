@@ -45,7 +45,7 @@ Registry работает по HTTP: digest опубликованного об�
 образы только из registry, поэтому по-прежнему обращается к Docker Hub; если увидите
 `TOOMANYREQUESTS`, подождите или выполните `podman login docker.io` под своей учётной записью.
 
-## 1. Trivy report
+## 1. Отчёт Trivy
 
 ```bash
 mkdir -p "$ART/1"
@@ -84,7 +84,7 @@ cat $ART/1b/answer.txt
 # OFFENDING_IMAGE=python:3.9-slim@sha256:...
 ```
 
-## 1c. Workload image triage by CRITICAL severity
+## 1c. Разбор образов workload по уровню CRITICAL
 
 Образы берём из LIVE Deployments и сканируем каждый; число уникальных CRITICAL выводится рядом с
 именем Deployment:
@@ -260,7 +260,7 @@ trivy image --list-all-pkgs --format json "$IMAGE" > /tmp/cks-111/packages.json
 cat "$ART/5/version-search.txt"
 ```
 
-## 5b. Find a package version in workload images and remove offending containers
+## 5b. Найти версию пакета в образах workload и удалить проблемные контейнеры
 
 ```bash
 mkdir -p $ART/5b/bom
@@ -394,8 +394,8 @@ cosign verify --key $KEYDIR/cosign.pub $HARDENED_IMAGE > $ART/9a/cosign-verify.t
 cat $ART/9a/cosign-verify.txt | head -3
 ```
 
-Создайте `ImageValidatingPolicy`, ссылающуюся на публичный ключ, которым только что
-подписан `$HARDENED_IMAGE`. `matchImageReferences` ограничивает policy ровно repository
+Создайте `ImageValidatingPolicy`, ссылающуюся на публичный ключ той пары, закрытым ключом
+которой только что подписан `$HARDENED_IMAGE`. `matchImageReferences` ограничивает policy ровно repository
 вашего образа: для OCI references нужны отдельные разделители `:` (tag) и `@` (digest),
 иначе префикс `${HARDENED_REPO}*` захватит, например, другой repository с тем же началом
 имени. Это не даёт policy блокировать остальные Pod кластера.

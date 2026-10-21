@@ -39,7 +39,7 @@ key/identity によって署名されている (signature integrity) ことを�
 negatives がありえます - 「0 findings」は脆弱性がないことの formal proof ではありません)。これらは別の
 防御の軸です：どちらも他方の代わりにはなりません。脆弱性と署名は別のものだからです。署名は
 provenance/attestation
-(たとえば、artifact が何からどのように構築されたかについての SLSA 形式の build metadata) と同じでは「ありません」：`cosign
+(たとえば、artifact が何からどのように構築されたかについての SLSA 形式の build metadata) と同じでは**ありません**：`cosign
 verify` は署名の真正性を確認するのであって、ビルドの完全な履歴ではありません - attestation には
 Sigstore が別のコマンド `cosign attest`/`cosign verify-attestation` を提供しており、この実習では
 使用しません。
@@ -60,21 +60,21 @@ registry に manifest がないことを理由に拒否するかもしれませ�
 ## 開始前のセルフチェック
 
 <details>
-<summary>1. SBOM が、image layer に残された secret を見つけるための信頼できる仕組みではないのはなぜか?</summary>
+<summary>1. SBOM が、image layer に残された secret を見つけるための信頼できる仕組みではないのはなぜか？</summary>
 
 SBOM が解決するのは、コンポーネントとパッケージのバージョンの棚卸し (何がインストールされていて、どのバージョンか) です - これはパッケージマネージャーのメタデータの構造的な分析であり、layer のファイルの内容にある任意の文字列/secret を探すものではありません。たとえば、ビルド中に環境変数 ENV や一時ファイルに残された secret は、最終的な layer に含まれなくなった後でも layer の history に残る可能性があります - それには SBOM ではなく、別のツール (secret scanning、`docker history`、layer の抽出) が必要です。
 </details>
 
 <details>
-<summary>2. Trivy scan (課題 1) が証明することと、Cosign の署名 (課題 9a-9c) が証明することの違いは何か?</summary>
+<summary>2. Trivy scan (課題 1) が証明することと、Cosign の署名 (課題 9a-9c) が証明することの違いは何か？</summary>
 
-確認の時点で、現在の vulnerability DB と Trivy の検出ロジックの下では、スキャンは、その detection coverage に入る既知の脆弱性を検出しませんでした - これは、Trivy が見ることのできる範囲での image の内容の品質/安全性についてのものです。Trivy のドキュメント自体が、precision (false positives の最小化) を優先する trade-off を明示しており、false negatives がありえます - つまり「0 findings」は、脆弱性が完全にないことの formal な証明と同等ではありません。Cosign の署名が証明するのは signature integrity です - 特定の digest が信頼された鍵/identity によって署名されている、つまり権限のある誰かが、それがまさにデプロイされるべき artifact であることを確認した、ということです。これは provenance/attestation (完全なビルドの履歴 - 何から、誰によって、どのように artifact が構築されたか) と同じでは「ありません」：attestation には Sigstore に別のコマンド (`cosign attest`/`cosign verify-attestation`) があり、この実習では使いません。image は完全に安全 (0 CVE) でありながら署名されていないことも、署名されていながら未知の脆弱性を含むこともあります。これらは 2 つの独立した防御の軸です。
+確認の時点で、現在の vulnerability DB と Trivy の検出ロジックの下では、スキャンは、その detection coverage に入る既知の脆弱性を検出しませんでした - これは、Trivy が見ることのできる範囲での image の内容の品質/安全性についてのものです。Trivy のドキュメント自体が、precision (false positives の最小化) を優先する trade-off を明示しており、false negatives がありえます - つまり「0 findings」は、脆弱性が完全にないことの formal な証明と同等ではありません。Cosign の署名が証明するのは signature integrity です - 特定の digest が信頼された鍵/identity によって署名されている、つまり権限のある誰かが、それがまさにデプロイされるべき artifact であることを確認した、ということです。これは provenance/attestation (完全なビルドの履歴 - 何から、誰によって、どのように artifact が構築されたか) と同じでは**ありません**：attestation には Sigstore に別のコマンド (`cosign attest`/`cosign verify-attestation`) があり、この実習では使いません。image は完全に安全 (0 CVE) でありながら署名されていないことも、署名されていながら未知の脆弱性を含むこともあります。これらは 2 つの独立した防御の軸です。
 </details>
 
 <details>
-<summary>3. CI でのローカルの `cosign verify` が、誰かが署名されていない image を `kubectl apply` でデプロイすることを妨げないのはなぜか?</summary>
+<summary>3. CI でのローカルの `cosign verify` が、誰かが署名されていない image を `kubectl apply` でデプロイすることを妨げないのはなぜか？</summary>
 
-ローカル (たとえば CI pipeline) で実行される `cosign verify` は、署名を確認してその結果を呼び出した人に返す、単なる 1 つのコマンドです。これは Kubernetes API の admission の経路には組み込まれていません - クラスターにアクセスできる誰かが、CI を完全に迂回して、任意の image で単に `kubectl apply` を実行することを妨げるものは何もありません。クラスター自体に policy として組み込まれた admission-time の確認 (課題 9a-9c) だけが、署名を受け入れの 必須の条件にします - これが「確認した」と「クラスターが物理的に通さない」の違いです。
+ローカル (たとえば CI pipeline) で実行される `cosign verify` は、署名を確認してその結果を呼び出した人に返す、単なる 1 つのコマンドです。これは Kubernetes API の admission の経路には組み込まれていません - クラスターにアクセスできる誰かが、CI を完全に迂回して、任意の image で単に `kubectl apply` を実行することを妨げるものは何もありません。クラスター自体に policy として組み込まれた admission-time の確認 (課題 9a-9c) だけが、署名を受け入れの**必須の**条件にします - これが「確認した」と「クラスターが物理的に通さない」の違いです。
 </details>
 
 ## インフラ
@@ -86,7 +86,7 @@ SBOM が解決するのは、コンポーネントとパッケージのバージ
 | `vpc` | パブリックサブネットを持つ VPC `10.111.0.0/16` |
 | `ssh-keys` | ノードへのアクセス |
 | `k8s-1` | シングルノードの kubeadm Kubernetes `1.36.0`、containerd、**Calico** |
-| `worker` | 分析用の作業ステーション、`kubectl`、`check_result`、security tools |
+| `worker` | 分析用のワークステーション、`kubectl`、`check_result`、security tools |
 
 インフラは CKA スタイルです：唯一の control-plane ノードで workload が許可されており、
 `cks.io/lab=111` が付けられています。主なコマンドと security tools は worker で実行します。
@@ -124,7 +124,7 @@ control-plane 上の `registry:2` - は bootstrap によって立ち上げられ
   insecure registry として設定済みで (フラグ `--tls-verify=false` は不要です)、Kyverno の `ImageValidatingPolicy` には
   `credentials.allowInsecureRegistry: true` が必要です；
 - データはノードのローカル PV (`/var/lib/cks111-registry`) に保存されるため、registry の Pod の
-  再起動を生き残ります；
+  再起動後も保持されます；
 - 公開した image の digest は `podman push --digestfile` から取得し、manifest の存在は
   `/v2/` へのリクエストで確認してください (registry には `docker buildx imagetools` のような HTTPS 専用のツールはありません)；
 - コマンドの詳細な手順は、[解答](worker/files/solutions/1_JP.MD)のステップ「0. 準備」にあります。
@@ -171,24 +171,24 @@ check_result
 | **1** | **Trivy: image の脆弱性レポート** |
 | :---: | :--- |
 | やること | • immutable な `$IMAGE` を、OS と library の脆弱性を含めて Trivy でスキャンします。<br/>• 構造化された JSON を `/var/work/tests/artifacts/1/trivy-report.json` に保存します。 |
-| 受け入れ基準 | • **ファイル:** 空でなく、JSON が `jq` で解析でき、`Results` と、分析対象の image の immutable reference が含まれている。<br/>• **新規の確認:** checker が同じ image に対して `trivy image` を自分で繰り返し、この新しいスキャンが `ArtifactName` で一致して成功することを要求する。<br/>• 手書きで、構文的には有効な JSON は通らない。 |
+| 受け入れ基準 | • **ファイル：** 空でなく、JSON が `jq` で解析でき、`Results` と、分析対象の image の immutable reference が含まれている。<br/>• **新規の確認：** checker が同じ image に対して `trivy image` を自分で繰り返し、この新しいスキャンが `ArtifactName` で一致して成功することを要求する。<br/>• 手書きで、構文的には有効な JSON は通らない。 |
 
 <details>
 <summary>💡 課題 1 のヒント</summary>
 
-`$IMAGE` は 2 段階で作ります：まず `nginx:1.27.3-alpine` (通常の tag) をスキャンし、THIS の最初の JSON レポートから `Metadata.RepoDigests[0]` を取り出し、次に `nginx:1.27.3-alpine@sha256:<digest>` でコマンドを組み直して、immutable な参照をスキャンします - この 2 つ目のレポートを最終版として保存する必要があります。Trivy の出力の `ImageID`/`DiffID` を registry の digest の代わりに使わないでください - これらは ローカルな識別子で、registry の manifest digest とは一致しません。
+`$IMAGE` は 2 段階で作ります：まず `nginx:1.27.3-alpine` (通常の tag) をスキャンし、**この**最初の JSON レポートから `Metadata.RepoDigests[0]` を取り出し、次に `nginx:1.27.3-alpine@sha256:<digest>` でコマンドを組み直して、immutable な参照をスキャンします - この 2 つ目のレポートを最終版として保存する必要があります。Trivy の出力の `ImageID`/`DiffID` を registry の digest の代わりに使わないでください - これらは**ローカルな**識別子で、registry の manifest digest とは一致しません。
 </details>
 
 ---
 | **1b** | **Multi-image CVE triage: 特定の CVE を含む image を見つける** |
 | :---: | :--- |
 | やること | • `~/cks-111/candidates.txt` を開きます - そこには、実習の bootstrap 時に、あなたの実習のインスタンスごとに個別に決められた、3 つの immutable な image reference (`CANDIDATE_1/2/3`) と、目的の `TARGET_CVE` があります。<br/>• **3 つすべての** image を Trivy でスキャンし、どれが実際に `TARGET_CVE` を含んでいるかを見つけます。<br/>• まさにその image の JSON レポートを `/var/work/tests/artifacts/1b/target-scan.json` に保存します。<br/>• 行 `OFFENDING_IMAGE=<この image の完全な参照>` を `/var/work/tests/artifacts/1b/answer.txt` に保存します。 |
-| 受け入れ基準 | • **答え:** `answer.txt` が、実際の Trivy スキャンに `TARGET_CVE` が含まれる `CANDIDATE_N` をまさに指している。<br/>• **レポート:** `target-scan.json` が、同じ image についての本物の Trivy の出力である (checker 自身がスキャンを繰り返して比較する)。 |
+| 受け入れ基準 | • **答え：** `answer.txt` が、実際の Trivy スキャンに `TARGET_CVE` が含まれる `CANDIDATE_N` をまさに指している。<br/>• **レポート：** `target-scan.json` が、同じ image についての本物の Trivy の出力である (checker 自身がスキャンを繰り返して比較する)。 |
 
 <details>
 <summary>💡 課題 1b のヒント</summary>
 
-`TARGET_CVE` は実習のインスタンスごとに異なります - 事前に埋め込まれているのではなく、provisioning 時に live の Trivy vulnerability DB から計算されるため、このファイルにはあなた自身の答えがあります。タグの名前から推測しないでください (「一番古いものがおそらく脆弱」)- 3 つすべてを実際にスキャンし、JSON の中の `VulnerabilityID` の正確な一致を見つけてください。image ごとに 1 つのコマンド：`trivy image --format json "$ref" | tee scan.json`、続いて `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | index("<TARGET_CVE>")' scan.json` - `null` はその特定の CVE がこの image にないことを意味します (他の CVE が含まれていても構いません - それは確認されません)。
+`TARGET_CVE` は実習のインスタンスごとに異なります - 事前に埋め込まれているのではなく、provisioning 時に live の Trivy vulnerability DB から計算されるため、このファイルにはあなた自身の答えがあります。タグの名前から推測しないでください (「一番古いものがおそらく脆弱」) - 3 つすべてを実際にスキャンし、JSON の中の `VulnerabilityID` の正確な一致を見つけてください。image ごとに 1 つのコマンド：`trivy image --format json "$ref" | tee scan.json`、続いて `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | index("<TARGET_CVE>")' scan.json` - `null` はその特定の CVE がこの image にないことを意味します (他の CVE が含まれていても構いません - それは確認されません)。
 </details>
 
 ---
@@ -206,8 +206,8 @@ image references は `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jso
 ---
 | **2** | **静的解析の初期レポート** |
 | :---: | :--- |
-| やること | • 修正の前に (課題 3 の開始後はこれら 3 つのファイルのどれにも触れずに) 結果を保存します：Hadolint を `2/hadolint-before.txt` に、kubesec JSON を `2/kubesec-before.json` に、kube-linter JSON を `2/kube-linter-before.json` に。<br/>• これらは、元の初期の `Dockerfile`/`deployment.yaml` に対して直接実行してください。<br/>• レポートファイルでは `|| true` でエラーを隠さないでください：linter のゼロ以外の exit code は想定内です。 |
-| 受け入れ基準 | • **成果物:** 3 つとも存在する；Hadolint に findings があり、kubesec に `scoring` があり、kube-linter がフィールド `Reports` と `Summary` を持つ有効な KubeLinter の JSON オブジェクトである；修正前は `Reports` に findings が含まれる。<br/>• **baseline との照合:** checker が、3 つの成果物すべての内容を、provisioning 時に、受講者に渡される前の元の初期ファイルに対して取得した独自の baseline と比較する。<br/>• 手書きで、構文的には有効なレポートは通らない。 |
+| やること | • 修正の前に (課題 3 の開始後はこれら 3 つのファイルのどれにも触れずに) 結果を保存します：Hadolint を `2/hadolint-before.txt` に、kubesec JSON を `2/kubesec-before.json` に、kube-linter JSON を `2/kube-linter-before.json` に。<br/>• これらは、元の初期の `Dockerfile`/`deployment.yaml` に対して直接実行してください。<br/>• レポートファイルでは `\|\| true` でエラーを隠さないでください：linter のゼロ以外の exit code は想定内です。 |
+| 受け入れ基準 | • **成果物：** 3 つとも存在する；Hadolint に findings があり、kubesec に `scoring` があり、kube-linter がフィールド `Reports` と `Summary` を持つ有効な KubeLinter の JSON オブジェクトである；修正前は `Reports` に findings が含まれる。<br/>• **baseline との照合：** checker が、3 つの成果物すべての内容を、provisioning 時に、受講者に渡される前の元の初期ファイルに対して取得した独自の baseline と比較する。<br/>• 手書きで、構文的には有効なレポートは通らない。 |
 
 <details>
 <summary>💡 課題 2 のヒント</summary>
@@ -231,7 +231,7 @@ image references は `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jso
 | **4** | **kubesec と kube-linter に従って workload の YAML を修正する** |
 | :---: | :--- |
 | やること | • まず課題 3 の hardened image をビルドして公開し、次に `deployment.yaml` にその immutable な manifest reference `registry/.../catalog@sha256:<manifest-digest>` を指定します (upstream の nginx ではありません)。<br/>• Pod レベルで `automountServiceAccountToken: false`、`runAsNonRoot: true`、`seccompProfile: RuntimeDefault` を追加します。<br/>• コンテナで `allowPrivilegeEscalation: false`、`readOnlyRootFilesystem: true`、`capabilities.drop: ["ALL"]`、CPU と memory の requests/limits を設定します。<br/>• nginx については、temp、pid/run、cache、config のパスに writable な `emptyDir`/tmpfs をマウントし、起動前に config を準備します。<br/>• `privileged` を削除し、Deployment を適用して、Ready/Available と成功した HTTP リクエストを確認します。<br/>• 新しいレポート `4/kubesec-after.json` と `4/kube-linter-after.json` を保存します。 |
-| 受け入れ基準 | • **Image:** YAML が、upstream の nginx ではなく、`USER 101` を持つ digest 固定の hardened image を使用している。<br/>• **Manifest:** 必要なフィールドと writable な mounts が存在する；`privileged` がない。<br/>• **動作:** Deployment が Available で、HTTP リクエストが成功する。<br/>• **レポート:** 最終的な 2 つのレポートがどちらも有効な JSON である。 |
+| 受け入れ基準 | • **イメージ:** YAML が、upstream の nginx ではなく、`USER 101` を持つ digest 固定の hardened image を使用している。<br/>• **マニフェスト:** 必要なフィールド、init container `prepare-nginx-config`、writable な mounts が存在する；`privileged` がない。<br/>• **動作：** Deployment が Available で、HTTP リクエストが成功する。<br/>• **レポート：** 最終的な 2 つのレポートがどちらも有効な JSON である。 |
 
 <details>
 <summary>💡 課題 4 のヒント</summary>
@@ -243,7 +243,7 @@ image references は `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jso
 | **5** | **パッケージのバージョンの検索** |
 | :---: | :--- |
 | やること | • `$IMAGE` に対して、Trivy をすべてのパッケージの一覧モードで使用します。<br/>• コマンド、immutable な image reference、`Metadata.RepoDigests[0]` からの正規の `nginx@sha256:<manifest-digest>`、そして少なくとも 3 行の `名前=バージョン` を `/var/work/tests/artifacts/5/version-search.txt` に保存します。<br/>• 検索を手作業のリストで代用しないでください：evidence には、`trivy image --list-all-pkgs` を含むコマンドの行が含まれている必要があります。 |
-| 受け入れ基準 | • **成果物:** コマンド、immutable な `nginx:1.27.3-alpine@sha256:...`、Trivy からの `repo_digest=nginx@sha256:...`、そして少なくとも 3 組の package/version が含まれている。<br/>• **新規の確認:** checker が同じ image に対して `trivy image --list-all-pkgs` を自分で繰り返し、`repo_digest=` と、保存された少なくとも 3 組の `name=version` が、この新しいスキャンと一致することを要求する。<br/>• 手書きで、構文的にはもっともらしいリストは通らない。 |
+| 受け入れ基準 | • **成果物：** コマンド、immutable な `nginx:1.27.3-alpine@sha256:...`、Trivy からの `repo_digest=nginx@sha256:...`、そして少なくとも 3 組の package/version が含まれている。<br/>• **新規の確認：** checker が同じ image に対して `trivy image --list-all-pkgs` を自分で繰り返し、`repo_digest=` と、保存された少なくとも 3 組の `name=version` が、この新しいスキャンと一致することを要求する。<br/>• 手書きで、構文的にはもっともらしいリストは通らない。 |
 
 <details>
 <summary>💡 課題 5 のヒント</summary>
@@ -255,7 +255,7 @@ image references は `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jso
 | **5b** | **workload の image でパッケージのバージョンを見つけ、問題のあるコンテナを削除する** |
 | :---: | :--- |
 | やること | • namespace `cks-111` には、すでに 3 つのコンテナ (`c1`、`c2`、`c3`) を持つ Deployment `pkg-audit-app` がデプロイされており、それぞれが独自の immutable な digest 固定の image を使っています。<br/>• 3 つの image のうち、ちょうど 2 つに、特定のバージョンの同じパッケージが存在します - あなたの実習のインスタンスについての `TARGET_PACKAGE`/`TARGET_VERSION` は provisioning 時に動的に決められ、埋め込まれた値はありません。<br/>• live の Deployment から 3 つの image references をすべて取得し、それぞれに `bom generate` を実行します (各 SBOM は `/var/work/tests/artifacts/5b/bom/` に別々に保存してください)。<br/>• どの 2 つのコンテナが実際に同じ package/version を含んでいるかを特定し、見つけた組を `5b/answer.txt` に `TARGET_PACKAGE=<name>` と `TARGET_VERSION=<version>` として書きます。<br/>• まさにこの 2 つの問題のあるコンテナを Deployment から削除し (`kubectl edit`/修正した manifest の `kubectl apply` で)、「クリーンな」コンテナだけが残り、Deployment が `Available` のままであるようにします。 |
-| 受け入れ基準 | • **答え:** `answer.txt` が、元の 3 つの image のうちちょうど 2 つに存在する実際の package/version を挙げている (推測ではない)。この 2 つの image には共通のパッケージが多数あります：3 つ目の image にない任意の 1 組の `name=version` で構いません。<br/>• **SBOM:** `5b/bom/` に、この発見を裏付ける本物の `bom generate` の出力が少なくとも 1 つある。<br/>• **独立した確認:** checker が、元の candidate images (provisioning 時に保存されたもの) に対して独立に `bom generate` を実行し、あなたの答えをこの独立した実行と照合する。<br/>• **Deployment:** 最終的な Deployment に「クリーンな」コンテナだけが含まれ、`Available` のままである。 |
+| 受け入れ基準 | • **答え：** `answer.txt` が、元の 3 つの image のうちちょうど 2 つに存在する実際の package/version を挙げている (推測ではない)。この 2 つの image には共通のパッケージが多数ある：3 つ目の image にない任意の 1 組の `name=version` でよい。<br/>• **SBOM:** `5b/bom/` に、この発見を裏付ける本物の `bom generate` の出力が少なくとも 1 つある。<br/>• **独立した確認：** checker が、元の candidate images (provisioning 時に保存されたもの) に対して独立に `bom generate` を実行し、あなたの答えをこの独立した実行と照合する。<br/>• **Deployment:** 最終的な Deployment に「クリーンな」コンテナだけが含まれ、`Available` のままである。 |
 
 <details>
 <summary>💡 課題 5b のヒント</summary>
@@ -267,7 +267,7 @@ image references は `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jso
 | **6** | **bom による SPDX SBOM** |
 | :---: | :--- |
 | やること | • immutable な `$IMAGE` (課題 1 で使ったのと同じ `tag@digest` で、bare tag の `nginx:1.27.3-alpine` ではありません) に対して、ツール `bom` で SPDX JSON SBOM を生成します；`/var/work/tests/artifacts/6/bom.spdx.json` に保存します。<br/>• ファイル `6/bom-command.txt` に、正確な `--image $IMAGE` を持つ、実行したコマンドを書きます。 |
-| 受け入れ基準 | • **SBOM:** 有効な JSON で、`spdxVersion` を持ち、配列 `packages` を含む；`documentDescribes` が参照する top-level パッケージの 1 つが、課題 1 の `$IMAGE` と 同じ manifest digest を (`versionInfo`/`name` を通じて) 識別している。<br/>• **コマンド:** `bom-command.txt` に正確な immutable な `$IMAGE` が含まれ、`bom generate` を使っている。<br/>• 別の image (課題 1 の `$IMAGE` とは無関係なもの) の SBOM は、`bom-command.txt` が偽造されていても通らない。<br/>• **新規の確認:** checker がさらに、同じ image について同じ `bom` で SBOM を自分で再生成し、あなたの SBOM のパッケージの集合 (`name`/`versionInfo`) が、この新しい実行と一致することを要求する - top-level パッケージが 1 つだけの、最小限の手書きの SPDX ドキュメントは通らない。 |
+| 受け入れ基準 | • **SBOM:** 有効な JSON で、`spdxVersion` を持ち、配列 `packages` を含む；`documentDescribes` が参照する top-level パッケージの 1 つが、課題 1 の `$IMAGE` と**同じ** manifest digest を (`versionInfo`/`name` を通じて) 識別している。<br/>• **コマンド：** `bom-command.txt` に正確な immutable な `$IMAGE` が含まれ、`bom generate` を使っている。<br/>• 別の image (課題 1 の `$IMAGE` とは無関係なもの) の SBOM は、`bom-command.txt` が偽造されていても通らない。<br/>• **新規の確認：** checker がさらに、同じ image について同じ `bom` で SBOM を自分で再生成し、あなたの SBOM のパッケージの集合 (`name`/`versionInfo`) が、この新しい実行と一致することを要求する - top-level パッケージが 1 つだけの、最小限の手書きの SPDX ドキュメントは通らない。 |
 
 <details>
 <summary>💡 課題 6 のヒント</summary>
@@ -279,7 +279,7 @@ image references は `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jso
 | **7** | **Syft による CycloneDX SBOM と Cosign の検証** |
 | :---: | :--- |
 | やること | • 課題 1 と同じ immutable な `$IMAGE` (`nginx:1.27.3-alpine@sha256:<manifest-digest>`) に対して、Syft で CycloneDX JSON SBOM を生成し、`7/syft.cdx.json` に保存します。<br/>• 次に、公開 image `gcr.io/distroless/static-debian13:nonroot` の署名を keyless の Cosign で確認し、成功した完全な出力を `7/cosign-verify.txt` に保存します。<br/>• Distroless には issuer `https://accounts.google.com` と identity `keyless@distroless.iam.gserviceaccount.com` を使用します。 |
-| 受け入れ基準 | • **Syft SBOM:** `bomFormat: CycloneDX`、空でない `components`、`metadata.component.type == "container"`、そして課題 1 の同じ `$IMAGE` の manifest digest に等しい `metadata.component.version` - 別の image (bare tag、alpine、busybox など) の SBOM は通らない。<br/>• **Cosign:** `gcr.io/distroless/static-debian13:nonroot` に対する実際の `cosign verify` コマンド (現在サポートされているタグ - サフィックス `-debian13` のない `gcr.io/distroless/static:nonroot` は、Distroless の公式 README によれば deprecated で、もう更新されません) が、指定された issuer/identity で exit code `0` で終了し、完全な出力が `7/cosign-verify.txt` に保存されている。<br/>• **新規の確認:** checker がさらに、同じ image について同じ Syft で SBOM を自分で再生成し、あなたの SBOM のコンポーネントの集合 (`name`/`version`) が、この新しい実行と一致することを要求する - top-level コンポーネントが 1 つだけの、最小限の手書きの CycloneDX ドキュメントは通らない。 |
+| 受け入れ基準 | • **Syft SBOM:** `bomFormat: CycloneDX`、空でない `components`、`metadata.component.type == "container"`、そして課題 1 の同じ `$IMAGE` の manifest digest に等しい `metadata.component.version` - 別の image (bare tag、alpine、busybox など) の SBOM は通らない。<br/>• **Cosign:** `gcr.io/distroless/static-debian13:nonroot` に対する実際の `cosign verify` コマンド (これが現在サポートされているタグです。サフィックス `-debian13` のない `gcr.io/distroless/static:nonroot` は、Distroless の公式 README によれば deprecated で、もう更新されません) が、指定された issuer/identity で exit code `0` で終了し、完全な出力が `7/cosign-verify.txt` に保存されている。<br/>• **新規の確認：** checker がさらに、同じ image について同じ Syft で SBOM を自分で再生成し、あなたの SBOM のコンポーネントの集合 (`name`/`version`) が、この新しい実行と一致することを要求する - top-level コンポーネントが 1 つだけの、最小限の手書きの CycloneDX ドキュメントは通らない。 |
 
 <details>
 <summary>💡 課題 7 のヒント</summary>
@@ -290,8 +290,8 @@ Syft は、フラグ `-o cyclonedx-json` で CycloneDX を生成します (同�
 ---
 | **8** | **`trivy sbom`: 用意された SBOM ファイルの脆弱性をスキャンする** |
 | :---: | :--- |
-| やること | • 課題 7 の CycloneDX SBOM (`7/syft.cdx.json`) は、image の構成とその OS を記述していますが、それ自体には脆弱性についての結論は含まれていません。<br/>• まさにこの SBOM ファイルを (image を直接ではなく) ツール `trivy sbom` でスキャンし、構造化された JSON を `/var/work/tests/artifacts/8/sbom-scan.json` に保存します。<br/>• コマンドは、`$IMAGE` を再スキャンするのではなく、SBOM ファイルを入力として明示的に受け取る必要があります。 |
-| 受け入れ基準 | • **ファイル:** 空でなく、JSON が `jq` で解析でき、`ArtifactType` = `cyclonedx`、`Results` が空でなく、見つかった脆弱性を含んでいる。<br/>• **コマンド:** `sbom-scan-command.txt` に、`7/syft.cdx.json` へのパスを持つコマンド `trivy sbom` が含まれている。<br/>• **新規の確認:** checker がこのファイルに対して `trivy sbom` を自分で繰り返す。 |
+| やること | • 課題 7 の CycloneDX SBOM (`7/syft.cdx.json`) は、image の構成とその OS を記述していますが、それ自体には脆弱性についての結論は含まれていません。<br/>• まさにこの SBOM ファイルを (image を直接ではなく) ツール `trivy sbom` でスキャンし、構造化された JSON を `/var/work/tests/artifacts/8/sbom-scan.json` に保存します。<br/>• コマンドは、`$IMAGE` を再スキャンするのではなく、SBOM ファイルを入力として明示的に受け取る必要があります；そのコマンドのテキストを `/var/work/tests/artifacts/8/sbom-scan-command.txt` に保存します。 |
+| 受け入れ基準 | • **ファイル：** 空でなく、JSON が `jq` で解析でき、`ArtifactType` = `cyclonedx`、`Results` が空でなく、見つかった脆弱性を含んでいる。<br/>• **コマンド：** `sbom-scan-command.txt` に、`7/syft.cdx.json` へのパスを持つコマンド `trivy sbom` が含まれている。<br/>• **新規の確認：** checker がこのファイルに対して `trivy sbom` を自分で繰り返す。 |
 
 <details>
 <summary>💡 課題 8 のヒント</summary>
@@ -303,7 +303,7 @@ Syft は、フラグ `-o cyclonedx-json` で CycloneDX を生成します (同�
 | **9a** | **Kyverno: インストールして、trusted signature の `ImageValidatingPolicy` を作成する** |
 | :---: | :--- |
 | やること | • `install-kyverno` で Kyverno をインストールし、`admission controller` の準備ができるまで待ちます。<br/>• ローカルの鍵ペアを `cosign generate-key-pair` で生成します (学習用のペアで、production の鍵ではありません)。<br/>• 課題 4 の**自分の** hardened image (`$HARDENED_IMAGE`、upstream の nginx ではありません) に、あなたの private key で署名し、`cosign sign` の出力を `9a/cosign-sign.txt` に保存します。<br/>• `ImageValidatingPolicy` `require-signed-catalog-images` を作成します。これは、あなたの `$HARDENED_IMAGE` の repository にある image を持つすべての Pod (`pods/ephemeralcontainers` の UPDATE とすべての container lists を含む) に対して、あなたの public key で `verifyImageSignatures` を確認し、署名されていない/署名が無効な image を**拒否します** (`validationActions: [Deny]`)。 |
-| 受け入れ基準 | • **Kyverno:** インストールされ、その admission controller が `Available` である。<br/>• **署名:** `9a/cosign-sign.txt` に、まさに `$HARDENED_IMAGE` の署名の成功した出力が含まれている；実際のコマンド `cosign verify --key cosign.pub "$HARDENED_IMAGE"` が成功で終了する。<br/>• **Policy:** 適用された `ImageValidatingPolicy require-signed-catalog-images` が存在し、`apiVersion: policies.kyverno.io/v1`、`validationActions: [Deny]`、public key、`verifyImageSignatures` を持っている。<br/>• **適用範囲:** その `matchImageReferences` が、安全でないプレフィックス `$HARDENED_REPO*` ではなく、まさに `$HARDENED_REPO:*` と `$HARDENED_REPO@*` に限定されている。 |
+| 受け入れ基準 | • **Kyverno:** インストールされ、その admission controller が `Available` である。<br/>• **署名：** `9a/cosign-sign.txt` に、まさに `$HARDENED_IMAGE` の署名の成功した出力が含まれている；実際のコマンド `cosign verify --key cosign.pub "$HARDENED_IMAGE"` が成功で終了する。<br/>• **Policy:** 適用された `ImageValidatingPolicy require-signed-catalog-images` が存在し、`apiVersion: policies.kyverno.io/v1`、`validationActions: [Deny]`、public key、`verifyImageSignatures` を持っている。<br/>• **適用範囲：** その `matchImageReferences` が、安全でないプレフィックス `$HARDENED_REPO*` ではなく、まさに `$HARDENED_REPO:*` と `$HARDENED_REPO@*` に限定されている。 |
 
 <details>
 <summary>💡 課題 9a のヒント</summary>
@@ -314,8 +314,8 @@ Syft は、フラグ `-o cyclonedx-json` で CycloneDX を生成します (同�
 ---
 | **9b** | **Fresh signed ALLOW: policy の作成後の新しい Pod** |
 | :---: | :--- |
-| やること | • 課題 9a の policy は、署名された `$HARDENED_IMAGE` を許可する必要があります - しかし、すでに存在する Deployment を再度 `kubectl apply` しても、これは**証明されません**：template が変わっていなければ、新しい ReplicaSet/Pod は作成されないことがあり、`Running` は単に、policy の前に作成された古い Pod である可能性があります。<br/>• **新しい**、以前には存在しなかったオブジェクトを作成します：`kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 300`。<br/>• この Pod の `creationTimestamp`、9a の policy の `creationTimestamp`、そして最終的な `status.phase`/`Ready` condition を `9b/signed-admission-check.json` に保存します。 |
-| 受け入れ基準 | • **Pod:** `signed-admission-check` が存在し、まさに `$HARDENED_IMAGE` を使用している；それに対して `cosign verify --key cosign.pub "$HARDENED_IMAGE"` が成功し、`status.phase` が `Failed` ではなく、`Ready` 条件が `True` に達している。<br/>• **成果物:** `9b/signed-admission-check.json` にこの image が含まれ、Pod の `creationTimestamp` が `ImageValidatingPolicy require-signed-catalog-images` の `creationTimestamp` より**後**である。<br/>• これは、policy を生き延びた古い Pod ではなく、検証可能な形で署名された image の、policy の後の新しい admission を実証する。 |
+| やること | • 課題 9a の policy は、署名された `$HARDENED_IMAGE` を許可する必要があります - しかし、すでに存在する Deployment を再度 `kubectl apply` しても、これは**証明されません**：template が変わっていなければ、新しい ReplicaSet/Pod は作成されないことがあり、`Running` は単に、policy の前に作成された古い Pod である可能性があります。<br/>• **新しい**、以前には存在しなかったオブジェクトを作成します：`kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`。<br/>• この Pod の `creationTimestamp`、9a の policy の `creationTimestamp`、そして最終的な `status.phase`/`Ready` condition を `9b/signed-admission-check.json` に保存します。 |
+| 受け入れ基準 | • **Pod:** `signed-admission-check` が存在し、まさに `$HARDENED_IMAGE` を使用している；それに対して `cosign verify --key cosign.pub "$HARDENED_IMAGE"` が成功し、`status.phase` が `Failed` ではなく、`Ready` 条件が `True` に達している。<br/>• **成果物：** `9b/signed-admission-check.json` にこの image が含まれ、Pod の `creationTimestamp` が `ImageValidatingPolicy require-signed-catalog-images` の `creationTimestamp` より**後**である。<br/>• これは、policy を生き延びた古い Pod ではなく、検証可能な形で署名された image の、policy の後の新しい admission を実証する。 |
 
 <details>
 <summary>💡 課題 9b のヒント</summary>
@@ -327,7 +327,7 @@ Syft は、フラグ `-o cyclonedx-json` で CycloneDX を生成します (同�
 | **9c** | **Signature-specific DENY: 同じ repository に実際に存在する、署名されていない digest** |
 | :---: | :--- |
 | やること | • `$HARDENED_IMAGE` と同じ repository に、**2 つ目の** tag (たとえば `${HARDENED_TAG%:*}:unsigned-1.0`) をビルドして公開し、署名はしません。<br/>• この image は、すでに署名された `$HARDENED_IMAGE` と同じ digest ではなく、**物理的に異なる artifact** である必要があります：変更なしで同じ `Dockerfile`/context をビルドすると、reproducible/cached なビルドが同一の digest を生成することがあり、その場合「署名されていない」タグは実際にはすでに署名された artifact を指し、`cosign verify` が予期せず通ってしまいます。<br/>• build-arg (たとえば、Dockerfile の対応する `ARG`/`LABEL` を使った `--build-arg CKS_SIGNATURE_TEST=unsigned-1`) による制御された差異を加え、`$UNSIGNED_DIGEST != $HARDENED_DIGEST` の証明を `9c/digest-comparison.txt` に明示的に保存します。<br/>• registry の manifest digest を、課題 3 と同じ方法 (`podman push --digestfile`) で取得し、同じ repository の `$UNSIGNED_IMAGE` を組み立てます。<br/>• この digest が**存在して pullable である**こと (registry への `GET /v2/catalog/manifests/<digest>` リクエストが成功する) と、あなたの鍵による有効な署名を**持たない**こと (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` がエラーで終了する) を明示的に実証し、両方の出力を `9c/unsigned-exists.txt` と `9c/unsigned-not-signed.txt` に保存します。<br/>• その後、この `$UNSIGNED_IMAGE` を持つ Pod `catalog-unsigned-probe` を作成し、admission denial を `9c/admission-deny.txt` に保存します。 |
-| 受け入れ基準 | • **成果物:** `9c/digest-comparison.txt` に `hardened_digest=`、`unsigned_digest=`、`unsigned_image=` (`$HARDENED_IMAGE` と同じ repository の完全な `tag@digest` 参照で、本当に異なる digest を持つもの) が含まれている。<br/>• **checker の確認:** `unsigned_image` を registry で自分で解決し、自分の `cosign verify` で有効な署名がないことを確認し、この image を持つ独自の新しい Pod を作成して、自分の policy の一意の validation message `catalog image must have a valid release signature` を要求する。<br/>• 他の policy の一般的な admission/signature error は PASS とみなされず、任意の admission エラーでもない (`manifest unknown`/registry lookup では不十分)。<br/>• 実際の admission control を伴わない手書きの evidence ファイルは PASS にならない - checker は、確認する実際の image を指すものとしての `unsigned_image=` を除いて、どのテキストファイルも信用しない。 |
+| 受け入れ基準 | • **成果物：** `9c/digest-comparison.txt` に `hardened_digest=`、`unsigned_digest=`、`unsigned_image=` (`$HARDENED_IMAGE` と同じ repository の完全な `tag@digest` 参照で、本当に異なる digest を持つもの) が含まれている。<br/>• **checker の確認：** `unsigned_image` を registry で自分で解決し、自分の `cosign verify` で有効な署名がないことを確認し、この image を持つ独自の新しい Pod を作成して、自分の policy の一意の validation message `catalog image must have a valid release signature` を要求する。<br/>• このメッセージだけが有効とみなされ、任意の admission エラーでは不十分である：他の policy による一般的な admission/signature error は PASS にならず、`manifest unknown`/registry lookup のエラーも不十分である。<br/>• 実際の admission control を伴わない手書きの evidence ファイルは PASS にならない - checker は、確認する実際の image を指すものとしての `unsigned_image=` を除いて、どのテキストファイルも信用しない。 |
 
 <details>
 <summary>💡 課題 9c のヒント</summary>

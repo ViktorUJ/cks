@@ -29,7 +29,7 @@ Attendez qu'au moins un Deployment dans `kyverno` ait `AVAILABLE > 0`.
 
 > **Migration note.** Les anciens exemples de `kyverno.io/v1` `Policy`/`ClusterPolicy` ne restent
 > utiles que pour la maintenance de clusters existants. Dans Kyverno `1.19`, ils sont deprecated,
-> et leur suppression est prévue dans `1.20`. Les nouvelles policy de ce lab utilisent
+> et leur suppression est prévue dans `1.20`. Les nouvelles policies de ce lab utilisent
 > `policies.kyverno.io/v1`.
 
 ## 2. Interdire le tag `latest`
@@ -151,7 +151,7 @@ kubectl apply -f require-run-as-non-root.yaml
 ## 4. N'autoriser que les registry approuvés
 
 Sont autorisés `registry.k8s.io` et le chemin organisationnel dédié `ghcr.io/cks-lab`. CEL
-réunit les trois container lists et applique un seul allowlist à chaque image.
+réunit les trois container lists et applique une seule allowlist à chaque image.
 
 ```yaml
 # allow-approved-registries.yaml
@@ -189,14 +189,14 @@ kubectl apply -f allow-approved-registries.yaml
 ```
 
 Vérification sans créer de Pod et sans image pull. `docker.io` n'est qu'UNE valeur
-untrusted concrète ; vérifiez que la policy est bien un ALLOWLIST (interdit N'IMPORTE QUEL
+untrusted concrète ; vérifiez que la policy est bien une ALLOWLIST (interdit N'IMPORTE QUEL
 registry sauf les deux autorisés), et pas simplement une denylist de `docker.io` par la chaîne littérale -
 sinon une image unqualified, un autre registry tiers ou un host d'orthographe proche passeront
-facilement à côté :
+facilement à côté.
 
-Les positive controls doivent couvrir les deux prefix autorisés (`registry.k8s.io/` et
+Les positive controls doivent couvrir les deux préfixes autorisés (`registry.k8s.io/` et
 `ghcr.io/cks-lab/`) dans `containers`, `initContainers` et `ephemeralContainers` ; ne
-limitez pas l'un des registry aux seuls conteneurs ordinaires.
+limitez pas l'un des registry aux seuls conteneurs ordinaires :
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -301,9 +301,9 @@ Les deux commandes doivent se terminer par une erreur de l'admission policy. Pou
 ## 5. Optionnel : mutation d'un label
 
 Cette `MutatingPolicy` ne rejette pas le Pod, mais ajoute un label via CEL
-`ApplyConfiguration` - mais seulement si le label n'est pas encore défini. La tâche exige précisément une
+`ApplyConfiguration` - et seulement si le label n'est pas encore défini. La tâche exige précisément une
 sémantique de defaulting (« s'il est absent ») : un Pod qui porte déjà ce label avec une AUTRE
-valeur (par exemple, d'un autre propriétaire/outil) ne doit pas le recevoir
+valeur (par exemple, d'un autre propriétaire/outil) ne doit pas voir ce label
 écrasé de force.
 
 ```yaml
@@ -373,13 +373,13 @@ EOF
 # attendu : external (la mutation N'écrase PAS la valeur déjà définie)
 ```
 
-Exécutez `check_result`. L'étape 5 est affichée dans la vérification, mais elle est optionnelle : l'absence de la
-mutation policy ne doit pas annuler la réussite des quatre premières étapes.
+Exécutez `check_result`. La tâche 5 est affichée dans la vérification, mais elle est optionnelle : l'absence de la
+mutation policy n'affecte pas la réussite des tâches 1–4, 6 et 7.
 
 ## 6. ImagePolicyWebhook : backend externe
 
-Contrairement aux tâches 1-5, la décision sur l'image est ici prise par un backend HTTPS externe via l'
-API `ImageReview`, et non par une expression CEL à l'intérieur de Kyverno. La documentation upstream
+Contrairement aux tâches 1-5, la décision sur l'image est ici prise par un backend HTTPS externe via
+l'API `ImageReview`, et non par une expression CEL à l'intérieur de Kyverno. La documentation upstream
 d'ImagePolicyWebhook exige explicitement que la backend connection utilise TLS ("It is
 required that the backend communicate over TLS"), c'est pourquoi nous utilisons un certificat
 auto-signé, et non HTTP.
@@ -480,7 +480,7 @@ kubectl rollout status deployment/image-policy-backend -n image-policy --timeout
 
 Copiez le certificat CA (ici auto-signé, donc le certificat du serveur est à la fois sa
 propre CA) sur le `control-plane`, afin que kube-apiserver puisse vérifier la chaîne lors de la
-connexion au backend, et entrez sur le nœud :
+connexion au backend, et connectez-vous au nœud :
 
 ```bash
 CP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
@@ -564,7 +564,7 @@ spec:
       type: DirectoryOrCreate
 ```
 
-Après l'enregistrement, quittez le nœud ; le kubelet reprendra lui-même la modification du static Pod :
+Après l'enregistrement, quittez le nœud ; le kubelet prendra lui-même en compte la modification du static Pod :
 
 ```bash
 exit   # de root
@@ -594,7 +594,7 @@ dans `default` et les autres namespace (sauf `policy-108`), il interdit le lates
 explicite/implicite ; `policy-108` est entièrement contrôlé par les trois politiques Kyverno des tâches 2–4.
 C'est une isolation de mécanismes de lab, et non un pattern universel de production.
 L'annotation utilisateur `alpha.image-policy.k8s.io/break-glass` NE donne PAS l'autorisation :
-les annotations d'ImageReview forwarding ne sont pas une vérification d'authenticité.
+la transmission des annotations via ImageReview (forwarding) n'est pas une vérification d'authenticité.
 
 `defaultAllow: false` signifie fail-closed : si le backend est indisponible, les nouveaux Pod/image
 sont interdits, et non autorisés. Vérifiez-le explicitement - mais ne scalez PAS
@@ -602,7 +602,7 @@ sont interdits, et non autorisés. Vérifiez-le explicitement - mais ne scalez P
 plugin cluster-wide sans exception par namespace dans notre configuration, il vérifie donc aussi le Pod
 du backend lui-même. Si vous retirez temporairement toutes les répliques, puis essayez de les remettre,
 la création d'un NOUVEAU Pod backend passera ELLE-MÊME par le même ImagePolicyWebhook (à ce moment
-indisponible) et sera rejetée avec un `defaultAllow: false` correct -
+indisponible) et sera rejetée si `defaultAllow: false` est correctement configuré -
 il en résulte un deadlock dont `kubectl rollout status` ne sortira pas. À la place,
 déconnectez le Service du backend en changeant le `selector` pour une valeur inexistante - cela ne
 crée ni ne supprime aucun Pod, cela retire seulement temporairement les `Endpoints` :
@@ -628,10 +628,10 @@ kubectl get endpoints image-policy-backend -n image-policy -w
 # reconstruction/recréation n'a été nécessaire
 ```
 
-C'est la même décision fail-closed de principe que celle décrite dans le chapitre 26 pour la
+C'est la même décision fail-closed de principe que celle décrite dans le [chapitre 26 du cours](../../../../../course/26/fr.md) pour la
 configuration de production d'ImagePolicyWebhook.
 
-## 7. Gatekeeper : compléter le blocklist de Rego dans le ConstraintTemplate
+## 7. Gatekeeper : compléter la blocklist Rego dans le ConstraintTemplate
 
 Gatekeeper et le `ConstraintTemplate`/`Constraint` de départ (incomplets) sont déjà déployés
 par le bootstrap du cluster dans un namespace distinct `gatekeeper-108` - c'est un troisième admission
@@ -713,7 +713,7 @@ EOF
 
 Assurez-vous que le refus est réellement venu de Gatekeeper (`validation.gatekeeper.sh`), et
 non de l'une des `ValidatingPolicy` de Kyverno des tâches 2-4 - le message d'erreur nomme explicitement
-le webhook et le nom de votre Constraint. Ne résolvez pas la tâche via `Constraint.spec.parameters`
-- dans cette version de la policy, le Constraint ne les utilise pas du tout.
+le webhook et le nom de votre Constraint. Ne résolvez pas la tâche via `Constraint.spec.parameters` -
+dans cette version de la policy, le Constraint ne les utilise pas du tout.
 
 Exécutez `check_result`.

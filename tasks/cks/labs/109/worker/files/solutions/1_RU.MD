@@ -37,8 +37,8 @@ kubectl config use-context "$CTX"
 
 `Secret.data` в API кодируется base64, а не шифруется. Bootstrap создал безопасный
 canary до появления EncryptionConfiguration. Сначала посмотрим raw-запись etcd командой из
-документации, затем сохраним строковое доказательство в файл `/var/work/109/plaintext-proof.txt`
-на control-plane (`/tmp/plaintext-proof.txt`), затем скопируем его на рабочую машину в
+документации, затем сохраним строковое доказательство в файл `/tmp/plaintext-proof.txt`
+на control-plane, затем скопируем его на рабочую машину в
 `/var/work/109/plaintext-proof.txt` (каталог создан bootstrap-ом): проверка читает файл на рабочей машине.
 
 Зайдите на control-plane и выполните на нём (в этой команде всё из документации, кроме ключа в
@@ -246,7 +246,7 @@ until kubectl get --raw=/readyz 2>/dev/null | grep -qx ok; do sleep 2; done
 kubectl -n "$NS" get secret legacy-secret encrypted-secret
 ```
 
-Финальное состояние этой лабы: encrypted provider первый и единственный, `identity`
+Финальное состояние этой лабы: шифрующий provider (`aescbc`) первый и единственный, `identity`
 удалён. Временный fallback нельзя оставлять постоянной «страховкой».
 
 ## 5. Ограничить API-доступ и отключить token automount
@@ -334,8 +334,8 @@ check_result
 
 ### Полный lifecycle ротации aescbc key
 
-Переход `identity -> aescbc` в задании 4 - это migration, а не ротация уже
-зашифрованного ключа. Перед ротацией сделайте зашифрованный etcd snapshot и сохраните
+Переход `identity -> aescbc` в задании 4 - это migration, а не ротация ключа для уже
+зашифрованных данных. Перед ротацией сделайте зашифрованный etcd snapshot и сохраните
 старый ключ для rollback. Добавьте новый ключ **первым**, а старый временно оставьте
 вторым: providers читаются по порядку, а новые записи пишутся первым ключом.
 

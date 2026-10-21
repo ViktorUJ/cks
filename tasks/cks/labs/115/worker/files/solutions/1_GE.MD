@@ -32,8 +32,8 @@ kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status | gre
 kubectl get nodes
 ```
 
-> `cilium status` cilium-cli 0.19-დან სტრიქონებს `KubeProxyReplacement`/`Encryption` არ ბეჭდავს;
-> მათ აჩვენებს `cilium-dbg status` აგენტის Pod-ის შიგნით (ასევე ამოწმებს checker-იც).
+> cilium-cli 0.19-ის `cilium status` სტრიქონებს `KubeProxyReplacement`/`Encryption` არ ბეჭდავს;
+> მათ აჩვენებს `cilium-dbg status` აგენტის Pod-ის შიგნით (checker-იც ასე ამოწმებს).
 
 ```
 KubeProxyReplacement:   True   [ens5 10.115.1.x (Direct Routing)]
@@ -69,7 +69,7 @@ cilium status --wait
 kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status | grep Encryption
 ```
 
-> `cilium upgrade` მხოლოდ ConfigMap-ს ცვლის: აგენტი `encryption.*`-ს restart-ის შემდეგ იყენებს
+> `cilium upgrade` მხოლოდ ConfigMap-ს ცვლის: აგენტი `encryption.*`-ს გადატვირთვის შემდეგ იყენებს
 > (მანამდე `Encryption: Disabled`).
 
 ```
@@ -88,16 +88,16 @@ api HTTP:403
 
 ## 4. Cilium Mutual Authentication (SPIRE)
 
-დავალებიდან მინიმალურზე მეტი სამი პარამეტრი საჭიროა სწორედ ამ სტენდზე:
+დავალებაში მითითებული მინიმალური პარამეტრების გარდა, სწორედ ამ სტენდზე საჭიროა კიდევ სამი პარამეტრი:
 
 - `authentication.enabled=true` - მის გარეშე chart უარყოფს `spire.enabled=true`-ს
   (`SPIRE integration requires .Values.authentication.enabled=true ...`).
 - `install.server.dataStorage.enabled=false` - კლასტერში StorageClass არ არის, ამიტომ PVC
   `spire-data-spire-server-0` სამუდამოდ `Pending`-ში რჩება, ხოლო `spire-server-0` - `Pending`-ში
   (ლაბისთვის ეფემერული საცავი საკმარისია).
-- `install.server.securityContext.runAsUser=0` - image `spire-server` იწყება uid 1000-ით და
-  ვერ ქმნის `api.sock`-ს hostPath-დირექტორიაში `root:755`; სერვერი ჩუმად ასრულებს
-  endpoint-ებს და liveness-probe-ით კვდება (`Waiting for spire-server to start...` `cilium-init`-ში).
+- `install.server.securityContext.runAsUser=0` - image `spire-server` ეშვება uid 1000-ით და
+  ვერ ქმნის `api.sock`-ს hostPath-დირექტორიაში `root:755`; სერვერი ჩუმად ხურავს
+  endpoint-ებს და liveness-probe მას კლავს (`Waiting for spire-server to start...` `cilium-init`-ში).
 
 ```bash
 cilium upgrade --version 1.20.1 \
@@ -121,8 +121,8 @@ cilium-spire   spire-agent-xxxxx    1/1     Running   0    2m
 cilium-spire   spire-server-0       2/2     Running   0    2m
 ```
 
-SPIRE-ის Pod-ები ცხოვრობენ namespace `cilium-spire`-ში. დაყენებისთანავე გადატვირთეთ Cilium,
-რომ აგენტმა და ოპერატორმა identities ხელახლა დაარეგისტრირონ უკვე მომუშავე SPIRE-ში:
+SPIRE-ის Pod-ები განთავსებულია namespace `cilium-spire`-ში. დაყენებისთანავე გადატვირთეთ Cilium,
+რომ აგენტმა და ოპერატორმა identity-ები ხელახლა დაარეგისტრირონ უკვე მომუშავე SPIRE-ში:
 
 ```bash
 kubectl -n kube-system rollout restart deploy/cilium-operator ds/cilium
@@ -177,7 +177,7 @@ ciliumnetworkpolicy.cilium.io/backend-auth-required created
 
 ## 6. Positive/negative control
 
-Negative control - **ცალკე Pod** `app-115`-ში: Pod-ის ტრაფიკს საკუთარ თავზე (Service-ის გავლითაც) Cilium ყოველთვის
+ნეგატიური კონტროლი - **ცალკე Pod** `app-115`-ში: Pod-ის ტრაფიკს საკუთარი თავისკენ (Service-ის გავლითაც) Cilium ყოველთვის
 უშვებს, ამიტომ `exec` `backend`-ში არაფერს ამტკიცებს.
 
 ```bash

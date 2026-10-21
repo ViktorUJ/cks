@@ -1,6 +1,6 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD)
 
-# Lab 105 - 参考解答: System Hardening OS と Docker
+# Lab 105 - 参考解答：System Hardening OS と Docker
 
 > 作業の進め方：一度 `ssh` でノードに入り、コマンドをそのノード上で直接実行します (`sudo -i` の下で、
 > 各コマンドの前に `sudo` を書かなくて済むようにします) - これは各コマンドを個別の `ssh` で送るより
@@ -80,7 +80,7 @@ ssh "$CP" 'systemctl is-enabled cks-lab105-port.service; systemctl is-active cks
 echo 'tcp/8080: closed' > /var/work/tests/artifacts/2/port-8080.txt
 ```
 
-## 3. UFW で入力トラフィックを制限する
+## 3. UFW で受信トラフィックを制限する
 
 まず、トポロジーと必要な source を特定します。これはシングルノードの control-plane で、
 workload も実行します。Worker には SSH と API アクセスが必要です；Pod CIDR とノード自身には API アクセスが必要です。
@@ -156,7 +156,7 @@ cat > /var/work/tests/artifacts/3/recovery.txt <<'EOF'
 # API が失われた場合、まだ開いている SSH/console session から実行します:
 sudo ufw disable
 sudo ufw status verbose
-# 狭すぎる allow rules を修正し、source IP/CIDR を確認します
+# 限定された (狭い) allow rules を修正し、source IP/CIDR を確認します
 sudo ufw --force enable
 # ルールが完全に壊れた場合のみ、console/recovery channel 経由で:
 sudo ufw --force reset
@@ -203,10 +203,10 @@ declared と effective の比較：`ufw show added` は宣言的なリストで�
 ufw 自身が `user.rules` に書き込む `### tuple ###` メタデータから再構築されます。
 `ufw reload` の後の実際のカーネルの状態は、`ufw show user-rules` が示すものです。行の数だけでなく
 その内容 (source/port/proto) も比較してください：`ufw-user-input` には、loopback (all, lo) と、
-正確な source アドレスを持つ 3 つの tcp dpt:22/6443 ルールが表示されるはずで、`ufw6-user-input` には
+正確な source アドレスを持つ 4 つの tcp dpt:22/6443 ルールが表示されるはずで、`ufw6-user-input` には
 ちょうど 1 行、v6 の同じ loopback ACCEPT が表示されるはずです (`ufw allow in on lo` は明示的な IP のない
 interface ベースのルールなので、ufw は常に v4 と v6 の両方の版を作成します)。そこにあるその他の/追加の行は、
-外部からの bypass です：
+不正な bypass です：
 
 ```bash
 ssh "$CP" 'sudo ufw show user-rules'
@@ -214,7 +214,7 @@ ssh "$CP" 'sudo ufw show user-rules'
 
 出力には `Status: active`、`Default: deny (incoming)`、そして source を限定したルールが
 含まれている必要があります - `ufw status verbose` でも、宣言的なリスト `ufw show added` でも同様です。`/readyz`、nodes、calico-node、workload (reload の前後の Pod DNS を含む)、および
-`10250` への 2 つの否定的な確認 (`ufw reload` の前と後、同じ
+`10250` への 2 つの拒否の確認 (`ufw reload` の前と後、同じ
 CURL_EXIT/HTTPCODE の契約で) が期待される結果になるまで、元の SSH session を閉じないでください。
 
 ## 4. 管理者の kubeconfig を保護する
@@ -327,7 +327,7 @@ systemctl cat docker.socket                          # ... SocketGroup=root ... 
 `docker.socket` には TCP の `ListenStream` が含まれていてはなりません：
 
 ```bash
-ss -ltnp | grep -E 'dockerd|docker\.socket'    # 出力が空
+ss -ltnp | grep dockerd                        # 出力が空 (docker.socket による systemd の TCP ソケットは次の行で検出されます)
 systemctl cat docker.socket | grep ListenStream # /run/docker.sock のみ (と空のリセット)
 stat -c '%U %G %a' /var/run/docker.sock         # root root 660
 sudo -u developer docker ps                     # permission denied
@@ -367,9 +367,9 @@ root アクセスがあれば `install` を迂回できます) - この実習で
 すでに存在していた各 netns に対して、永続的な per-network-namespace の参照 (pernet の初期化における `try_module_get`) を
 受け取ります - このノードではすでに Pod (calico、coredns、kube-system) が動作しているため、`sctp` は
 refcount がゼロでなく、`/sys/module/sctp/holders` が空のまま `in use` の状態で残ることがあります (つまり、保持しているのは
-他のモジュールではなく、再帰的にアンロードできるものがありません)。これは、これらすべての Pod を停止しなければ修正できず、
+他のモジュールではないため、再帰的にアンロードできるものはありません)。これは、これらすべての Pod を停止しなければ修正できず、
 それは課題の範囲に含まれません。重要で、実際に確認されるのは、受講者がコントロールできる部分です：
-モジュールを再び**ロードし直せない**こと。
+モジュールを**再びロードできない**こと。
 
 control-plane で：
 
@@ -513,8 +513,8 @@ exit
 exit
 ```
 
-成果物 `coredump.txt` (`worker` で)。controlled crash probe を含みます：実際の `SIGSEGV` の後に、標準の
-カレントディレクトリにも Apport 経由でも、新しい retained な core dump が現れないことを
+成果物 `coredump.txt` (`worker` で)。controlled crash probe を含みます：実際の `SIGSEGV` の後に、Apport のディレクトリ
+(`/var/lib/apport/coredump`、`/var/crash`) に新しい retained な core dump が現れないことを
 確認します：
 
 ```bash

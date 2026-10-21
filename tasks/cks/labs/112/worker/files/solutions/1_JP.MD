@@ -1,12 +1,12 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD)
 
-# Lab 112 - 参考解答: Falco、audit ログ、immutability
+# Lab 112 - 参考解答：Falco、audit ログ、immutability
 
 試験と同じように作業します。**2 つのターミナル**を開き、実習の終わりまで両方を開いたままにしてください：
 
 - **ターミナル 1 - control-plane:** `ssh control-plane`、続いて `sudo -i` (以降、ノード上のすべてのコマンドは
   root で、`sudo` なしで実行します)。唯一の control plane ノードは workload も実行します。
-- **ターミナル 2 - 作業マシン:** ここで `kubectl`、`scp`、確認を行います。
+- **ターミナル 2 - 作業マシン：** ここで `kubectl`、`scp`、確認を行います。
 
 ノードで取得した成果物は、control-plane の `/tmp/art/<課題番号>/` に保存され、
 `scp` コマンドで作業マシンの `/var/work/tests/artifacts/<番号>/` にコピーされます。
@@ -65,7 +65,7 @@ cat > /etc/falco/config.d/engine-kind.yaml <<EOF
 engine:
   kind: modern_ebpf
 EOF
-# パッケージは unit falco-modern-bpf.service をインストールし、falco.service はそれへの alias にすぎません;
+# パッケージは unit falco-modern-bpf.service をインストールし、falco.service はそれへの alias にすぎません；
 # alias に対する `systemctl enable falco` はエラーで終了するため、実際の unit を有効にします。
 systemctl enable --now falco-modern-bpf
 falco --version; systemctl is-active falco; grep -R modern_ebpf /etc/falco
@@ -439,7 +439,7 @@ cat "$DIR/containment.txt"
 # exec_exit=1 (0 ではない)
 ```
 
-## 課題 7。upstream の macro の override と JSON/ファイルへの出力
+## 7. upstream の macro の override と JSON/ファイルへの出力
 
 標準のルール **Terminal shell in container** は、正当な
 ツールにも発火します。環境固有の例外を設けるための正しい場所は、ルール自体の編集ではなく、
@@ -554,7 +554,7 @@ tail -n 20 /var/log/falco/events.log \
 # {"pod": "immutable-app", "ns": "runtime-112"}
 ```
 
-## 課題 8。Audit webhook backend
+## 8. Audit webhook backend
 
 `audit-receiver` は起動スクリプトによってすでにデプロイされています。その Service を指す webhook の kubeconfig を
 作成します；実習では HTTP で構いません。production の webhook には HTTPS と client
@@ -600,10 +600,10 @@ vim /etc/kubernetes/manifests/kube-apiserver.yaml
 #   - --audit-webhook-batch-max-wait=1s
 ```
 
-API が復旧するまで待ち、監査される対象のリクエストを実行します：
+API が復旧するまで待ち、監査対象のリクエストを実行します：
 
 ```bash
-# ターミナル 2: readyz が "ok" を返すまで繰り返し、その後、監査される対象のリクエストを実行します
+# ターミナル 2: readyz が "ok" を返すまで繰り返し、その後、監査対象のリクエストを実行します
 kubectl get --raw=/readyz
 kubectl get configmap audit-config -n runtime-112 -o json >/dev/null
 ```
@@ -623,7 +623,7 @@ kubectl logs -n runtime-112 "$RECEIVER_POD" --tail=50 | grep -A5 objectRef
 check_result
 ```
 
-## 課題 9。統合課題: containerd 経由の admission の回避と Falco による検出
+## 9. 統合課題：containerd 経由の admission の回避と Falco による検出
 
 この課題は、Supply Chain Security (実習 111、第 26 章) を、この実習の Runtime Security と
 結びつけます：admission の確認 (Kyverno) は、コンテナが containerd を通じて直接、
@@ -787,7 +787,7 @@ cat /tmp/art/9/observed-trusted-repo.txt
 課題 3 と 7 のルールを失わないようファイルを上書きしません)。条件は、観察された `$TRUSTED_REPO` との**正確な**
 比較を使用し、`startswith`/prefix の確認は使いません：
 `not container.image.repository startswith "$TRUSTED_REPO"` は、
-`<TRUSTED_REPO>-evil` のような repository を通して (気づかずに) しまいます。その名前が単に許可された
+`<TRUSTED_REPO>-evil` のような repository を見逃して (通して) しまいます。その名前が単に許可された
 部分文字列で始まっているからです - つまり Falco はそれを allowlist の一部とみなしますが、実際には許可された
 repository の外です。これは、上の Kyverno policy が `startsWith` ではなく `==` で避けているのと同じ罠です；
 admission の条件と Falco の条件は、同じ repository の
@@ -799,7 +799,7 @@ security control として同等ではありません：
 cat >> /etc/falco/falco_rules.local.yaml <<EOF
 
 - rule: CKS112 Runtime Bypass of Admission
-  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via ctr/crictl directly)
+  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via crictl/CRI directly)
   condition: >
     spawned_process and
     container.id != host and
@@ -839,14 +839,14 @@ cks112-rm $BYPASS_1
 cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_2 'echo CKS112_CTR_BYPASS; sleep 5'
 sleep 3
 journalctl -u falco-modern-bpf --since "$START_TS" --no-pager | grep 'CKS112 runtime bypass of admission' > /tmp/art/9/falco-bypass-attempt.log
-cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-alpine.log
+cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-untrusted.log
 cks112-rm $BYPASS_2
 ```
 
 最後に、prefix-trap そのものを実証します：`${TRUSTED_REPO}-evil` として構築された repository は、
 許可された `$TRUSTED_REPO` と同じ部分文字列で始まりますが、それとは正確には等しくありません。
-Falco の condition が (このルールの以前の誤ったバージョンのように) `startswith` を使っていたら、この image は
-気づかれずに通ってしまいます - だからこそ、修正された `!=` の条件は、それを捕捉する必要があります。prefix-trap の image は
+Falco の condition が (このルールの素朴な書き方のように) `startswith` を使っていたら、この image は
+気づかれずに通ってしまっていたでしょう - だからこそ、修正された `!=` の条件は、それを捕捉する必要があります。prefix-trap の image は
 bootstrap が用意しています (`$CKS112_PREFIX_IMAGE`、
 別の digest)：
 
@@ -867,7 +867,7 @@ scp 'control-plane:/tmp/art/9/*' /var/work/tests/artifacts/9/
 > **課題 9 の evidence ファイルの構成。** `falco-bypass-attempt.log` は、自動的な受け入れが確認する
 > 主な統合された artifact です (untrusted と prefix-trap の両方のアラートを含み、trusted の repo のアラートは
 > 含んではなりません)。さらに、各 probe は手動の診断用に独自のファイルを書き込みます：`probe-trusted.log` (空で
-> あるべきです - これがまさに negative control です)、`probe-alpine.log`、`probe-prefix.log`。
+> あるべきです - これがまさに negative control です)、`probe-untrusted.log`、`probe-prefix.log`。
 
 この課題の重要な結論：admission での registry allowlist と runtime での Falco は、
 互いに置き換えられる層ではなく、互いに補完し合う層です。Admission は Kubernetes

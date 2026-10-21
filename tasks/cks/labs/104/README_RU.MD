@@ -22,9 +22,9 @@ namespace `development`. Это учебная конфигурация, а не
 
 Задание 4 устраняет wildcard cluster-wide права, а задание 5 - anonymous access. Каждый из этих путей по отдельности может расширить blast radius до Kubernetes API.
 
-Задание 6 закрывает отдельный путь утечки: секрет, переданный через environment variable, становится частью окружения процесса и может быть прочитан из `/proc/1/environ` любым процессом с доступом на `exec` в контейнер, а также может попасть в application logs, crash dump или другой diagnostic вывод, если сама программа или инструмент диагностики печатает environment. `kubectl describe pod` для `env`/`envFrom` с `secretKeyRef` показывает только ссылку на Secret и его ключ (`<set to the key ... in secret ...>`), а не resolved значение - не путайте эту ссылку с утечкой самого значения. Volume mount с `defaultMode: 0400` не устраняет доступ уполномоченного процесса контейнера к значению, но убирает секрет из окружения процесса и ограничивает файловые права на чтение только владельцем.
+Задание 6 закрывает отдельный путь утечки: секрет, переданный через environment variable, становится частью окружения процесса и может быть прочитан из `/proc/1/environ` любым процессом с доступом на `exec` в контейнер, а также может попасть в application logs, crash dump или другой diagnostic вывод, если сама программа или инструмент диагностики печатает environment. `kubectl describe pod` для `env` с `secretKeyRef` показывает только ссылку на Secret и его ключ (`<set to the key ... in secret ...>`), а для `envFrom` с `secretRef` - только имя Secret, а не resolved значение - не путайте эту ссылку с утечкой самого значения. Volume mount с `defaultMode: 0400` не устраняет доступ уполномоченного процесса контейнера к значению, но убирает секрет из окружения процесса и ограничивает файловые права на чтение только владельцем.
 
-Задание 7 закрывает скрытые пути RBAC privilege escalation: `impersonate`, `bind`/`escalate` и CSR approval не расширяют список доступных ресурсов напрямую, а дают возможность действовать от чужого имени или самостоятельно выдать себе более широкие права - это отдельная категория риска от wildcard `*` из задания 4. Задание 8 закрывает системную, а не точечную защиту: automount на уровне namespace/default SA работает даже для Pod, у которого разработчик забыл явно отключить токен.
+Задание 7 закрывает скрытые пути RBAC privilege escalation: `impersonate`, `bind`/`escalate` и CSR approval не расширяют список доступных ресурсов напрямую, а дают возможность действовать от чужого имени или самостоятельно выдать себе более широкие права - это отдельная категория риска от wildcard `*` из задания 4. Задание 8 обеспечивает системную, а не точечную защиту: automount на уровне namespace/default SA работает даже для Pod, у которого разработчик забыл явно отключить токен.
 
 Задание 9 показывает, что предотвращение (задания 1-8) и обнаружение - разные, взаимодополняющие слои. Даже если конкретные пути эскалации закрыты в задании 7, для будущего инцидента нужен способ увидеть **опасное RBAC-изменение** (например, ошибочную или злонамеренную выдачу `cluster-admin` кому-либо) без постоянного ручного `kubectl get`: audit log даёт воспроизводимое forensic evidence о том, кто именно инициировал изменение, а не просто текущий снимок RBAC-состояния.
 
@@ -111,7 +111,7 @@ check_result
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
 
-Точный синтаксис `projected.sources[].serviceAccountToken` не нужно помнить наизусть - на `kubernetes.io/docs` есть готовый пример: Concepts → Storage → [Projected Volumes](https://kubernetes.io/docs/concepts/storage/projected-volumes/), раздел **"serviceAccountToken projected volumes"**. Самая частая ошибка - явно задать `audience: kubernetes.default.svc`, предполагая, что это стандартное значение. Для kubeadm-кластера это НЕ гарантированный default - если задать audience, которую API server не принимает через `--api-audiences`, TokenReview вернёт `authenticated: false`. Просто не указывайте поле `audience` вообще - kubelet тогда запросит identifier API server по умолчанию, который сервер точно принимает. Также не забудьте `automountServiceAccountToken: false` на самом Pod - иначе Kubernetes добавит ещё и обычный (legacy-стиль) volume токена вдобавок к вашему projected volume. Ещё одна частая ошибка - выбрать слишком маленький `expirationSeconds` (например `300`): Kubernetes API требует минимум `600` секунд для `serviceAccountToken` projected volume - меньшее значение не соответствует API contract, даже если manifest применяется без явной ошибки на этапе `kubectl apply`.
+Точный синтаксис `projected.sources[].serviceAccountToken` не нужно помнить наизусть - на `kubernetes.io/docs` есть готовый пример: Concepts → Storage → [Projected Volumes](https://kubernetes.io/docs/concepts/storage/projected-volumes/), раздел **"serviceAccountToken projected volumes"**. Самая частая ошибка - явно задать `audience: kubernetes.default.svc`, предполагая, что это стандартное значение. Для kubeadm-кластера это НЕ гарантированный default - если задать audience, которую API server не принимает через `--api-audiences`, TokenReview вернёт `authenticated: false`. Просто не указывайте поле `audience` вообще - kubelet тогда запросит identifier API server по умолчанию, который сервер точно принимает. Также не забудьте `automountServiceAccountToken: false` на самом Pod - иначе Kubernetes добавит ещё и обычный (legacy-стиль) volume токена вдобавок к вашему projected volume. Ещё одна частая ошибка - выбрать слишком маленький `expirationSeconds` (например `300`): Kubernetes API требует минимум `600` секунд для `serviceAccountToken` projected volume - меньшее значение API server отклонит при `kubectl apply` как invalid (`must be at least 10 minutes`).
 </details>
 
 ---
@@ -123,7 +123,7 @@ check_result
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
 
-Отличие от задания 8: здесь достаточно отключить automount либо на SA, либо на Pod - но задание требует **оба** уровня одновременно (defence in depth), а не один из них. Проверьте себя: `kubectl get pod no-token -o jsonpath='{.spec.volumes}'` не должен содержать ничего похожего на `kube-api-access-*`. Если том всё же появился - проверьте, что вы отключили automount ДО создания Pod, а не после (изменение SA не влияет на уже созданные Pod). Отключённый automount не мешает вручную смонтировать старый (legacy) `Secret` с `type: kubernetes.io/service-account-token` через `volumes[].secret` - если вы сделаете это, Pod формально не имеет automounted-тома, но фактически всё равно получит валидный API-токен. Задание требует полного отсутствия токена, а не только отсутствия automount.
+Отличие от задания 8: технически хватило бы отключить automount на одном уровне (SA или Pod), но задание требует **оба** уровня одновременно (defence in depth). Проверьте себя: `kubectl get pod no-token -o jsonpath='{.spec.volumes}'` не должен содержать ничего похожего на `kube-api-access-*`. Если том всё же появился - проверьте, что вы отключили automount ДО создания Pod, а не после (изменение SA не влияет на уже созданные Pod). Отключённый automount не мешает вручную смонтировать старый (legacy) `Secret` с `type: kubernetes.io/service-account-token` через `volumes[].secret` - если вы сделаете это, Pod формально не имеет automounted-тома, но фактически всё равно получит валидный API-токен. Задание требует полного отсутствия токена, а не только отсутствия automount.
 </details>
 
 ---
@@ -200,7 +200,7 @@ Volume mount **не отбирает доступ у того, кто уже и�
 переменной, если у процесса есть право на чтение значения. Реальная разница - в путях
 утечки, которые срабатывают БЕЗ явного `exec`:
 - переменные окружения автоматически наследует **любой** дочерний процесс (`fork()`
-  копирует весь env) - сторонняя библиотека, плагin или случайный subprocess внутри
+  копирует весь env) - сторонняя библиотека, плагин или случайный subprocess внутри
   приложения получит `DB_PASSWORD`, даже если разработчик об этом не думал; файл так не
   передаётся - дочерний процесс должен явно знать путь и открыть его;
 - crash handler'ы и error-логгеры часто печатают весь `environ` процесса целиком при
@@ -264,7 +264,7 @@ CSR approval - отдельная категория от `impersonate`/`bind`/`
 </details>
 
 ---
-| **10** | **Decode, create and mount a Secret** |
+| **10** | **Декодирование, создание и монтирование Secret** |
 | :---: | :--- |
 | Что делаем | • В `security-104` уже существует Opaque Secret `legacy-config` с двумя ключами: `SERVICE_USER` и `SERVICE_TOKEN`. Прочитайте его через API и декодируйте оба значения из base64.<br/>• Создайте новый generic Secret `rehydrated-config` из literal-значений (`kubectl create secret generic ... --from-literal=...`), с ТЕМИ ЖЕ именами ключей и ТЕМИ ЖЕ декодированными значениями.<br/>• Создайте Pod `secret-workflow` из `busybox:1.36` (`sleep 3600`), который монтирует `rehydrated-config` как **read-only** volume в `/etc/rehydrated`.<br/>• Подтвердите, что оба файла внутри контейнера реально читаются и содержат ожидаемые значения. |
 | Критерии приёмки | • `rehydrated-config` существует и его декодированные `SERVICE_USER`/`SERVICE_TOKEN` совпадают с исходным `legacy-config`.<br/>• Pod `secret-workflow` монтирует именно этот Secret в `/etc/rehydrated` с `readOnly: true`.<br/>• `kubectl exec` внутри контейнера читает оба файла с правильным содержимым. |
@@ -272,7 +272,7 @@ CSR approval - отдельная категория от `impersonate`/`bind`/`
 <details>
 <summary>💡 Подсказка к заданию 10</summary>
 
-`kubectl get secret legacy-config -o jsonpath='{.data.SERVICE_USER}' \| base64 -d` даёт вам
+`kubectl get secret legacy-config -o jsonpath='{.data.SERVICE_USER}' | base64 -d` даёт вам
 реальное значение - не пишите произвольную строку в новый Secret, checker сам заново
 декодирует оригинал и сравнивает. `kubectl create secret generic rehydrated-config
 --from-literal=SERVICE_USER=... --from-literal=SERVICE_TOKEN=...` кодирует значения
@@ -282,7 +282,7 @@ CSR approval - отдельная категория от `impersonate`/`bind`/`
 </details>
 
 ---
-| **11** | **Repair existing Role and bind it to an SA from another namespace** |
+| **11** | **Исправление существующей Role и привязка её к SA из другого namespace** |
 | :---: | :--- |
 | Что делаем | • В namespace `rbac-a` уже существуют ServiceAccount `dev`, Role `pod-role` и RoleBinding `pod-role-binding`. Role сейчас разрешает `get`, `list`, `delete` на `pods` - `delete` здесь лишний (уберите), а `watch` отсутствует, хотя нужен (добавьте). Исправьте именно существующий Role, не создавайте новый.<br/>• Отдельно, в namespace `rbac-b` уже существует ConfigMap `shared-config`. Создайте в `rbac-b` новый Role и RoleBinding, дающие ServiceAccount `dev` **из namespace `rbac-a`** доступ `get`/`list` (и только его) на `configmaps` в `rbac-b`.<br/>• Создайте Pod в `rbac-a` с `serviceAccountName: dev`. |
 | Критерии приёмки | • Role `pod-role` в `rbac-a` разрешает ровно `get`, `list`, `watch` на `pods`.<br/>• `dev` не может `delete pods` в `rbac-a`.<br/>• `dev` может `get`/`list configmaps` в `rbac-b`, но не может `delete configmaps` и не может читать `secrets` там же.<br/>• В `rbac-a` существует Pod, использующий ServiceAccount `dev`. |
@@ -300,7 +300,7 @@ Kubernetes официально это поддерживает через `subj
 </details>
 
 ---
-| **12** | **Client certificate user via CSR + namespaced RBAC** |
+| **12** | **Пользователь с клиентским сертификатом через CSR + namespaced RBAC** |
 | :---: | :--- |
 | Что делаем | • Создайте нового Kubernetes-пользователя `john`, аутентифицируемого клиентским сертификатом: сгенерируйте private key, затем CSR (`openssl req -new`) с `CN=john`.<br/>• Отправьте его как Kubernetes `CertificateSigningRequest` `john-csr` с `signerName: kubernetes.io/kube-apiserver-client`; одобрите CSR (`kubectl certificate approve`).<br/>• Извлеките выданный сертификат из `status.certificate` (base64-decode) и сохраните его вместе с private key в `/var/work/tests/artifacts/12/john.crt` и `.../john.key`.<br/>• В namespace `development` (уже создан) создайте Role, разрешающую `create`/`list`/`get` на `pods`, и RoleBinding на subject `{kind: User, name: john}`.<br/>• Соберите для John отдельный kubeconfig (`kubectl config set-cluster`/`set-credentials --client-certificate/--client-key`/`set-context`) и сохраните его как `/var/work/tests/artifacts/12/john.kubeconfig`; убедитесь, что `kubectl --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig get pods -n development` реально работает, а тот же запрос в другой namespace получает `Forbidden` - это доказывает рабочий сертификат так же, как прямой TLS-запрос, но через привычный `kubectl`, а не `curl`.<br/>• Подтвердите живыми `kubectl auth can-i --as=john` проверками: John может `create`/`list`/`get` pods в `development`, не может `delete` их там же и не имеет тех же прав в другом namespace. |
 | Критерии приёмки | • `john-csr` использует правильный signer и `Approved`.<br/>• Выданный сертификат имеет `CN=john` и реально проверяется против CA этого кластера.<br/>• Role+RoleBinding в `development` дают John ровно `create`/`list`/`get` на `pods`.<br/>• John не может `delete` pods там же и не имеет доступа в других namespace.<br/>• Сохранённые `john.crt`/`john.key` реально принимаются API server при прямом TLS-запросе (а не только через `--as=john` impersonation).<br/>• Собранный kubeconfig существует по пути `/var/work/tests/artifacts/12/john.kubeconfig`, и `kubectl --kubeconfig=<этот файл> get pods -n development` реально работает, а тот же запрос в другой namespace завершается `Forbidden`. |

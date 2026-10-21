@@ -50,7 +50,7 @@ Kyverno is deliberately **not installed** in the initial state: this is part of 
 installer, which does not require choosing the chart by hand, is prepared on the work machine.
 The lab pins Kyverno `1.19` (Helm chart `3.9.0`) and uses the stable CEL-based APIs
 `policies.kyverno.io/v1`. The legacy `Policy`/`ClusterPolicy` in `kyverno.io/v1` are
-deprecated since this version and are considered only as migration material.
+deprecated as of this version and are considered migration material only.
 
 Unlike Kyverno, **Gatekeeper (OPA) for task 7 is already installed** by the cluster bootstrap,
 together with a starting (deliberately incomplete) `ConstraintTemplate` and `Constraint`.
@@ -84,7 +84,7 @@ check_result
 <details>
 <summary>💡 Hint for task 1</summary>
 
-`/usr/local/bin/install-kyverno` is already configured for the pinned version - do not try to install Kyverno via `helm install` by hand with a different chart, this may lead to an incompatible version of the CRDs. After the installation wait: the admission controller Pod must become `Available`, and this does not happen instantly.
+`/usr/local/bin/install-kyverno` is already configured for the pinned version - do not try to install Kyverno via `helm install` by hand with a different chart - this may lead to an incompatible CRD version. After installation, wait: the admission controller Pod must become `Available`, and this does not happen instantly.
 </details>
 
 <details>
@@ -230,7 +230,7 @@ admission error. Then check the positive control: the same Pod, but with
 <details>
 <summary>💡 Hint for task 4</summary>
 
-`startsWith('registry.k8s.io/')` is the most reliable prefix check, but make sure that both allowed registries are checked with OR (either of the two fits), and not AND (both at once, which is impossible for a single image). Check specifically an ALLOWLIST (an image is allowed ONLY if it matched one of the two prefixes), and not a denylist of `docker.io` specifically - a policy written as "if `docker.io` - deny, otherwise allow" will let through `quay.io`, unqualified images, and any other third-party registry. Also make sure that the prefix is compared with the TRAILING `/` (`registry.k8s.io/`, not just `registry.k8s.io`), otherwise a host with a similar spelling (`registry.k8s.io.evil.example`) could pass an incomplete or case-insensitive match. As in task 2, do not forget `ephemeralContainers` - this is the same pattern of checking three container lists.
+`startsWith('registry.k8s.io/')` is the most reliable prefix check, but make sure that both allowed registries are checked with OR (either of the two fits), and not AND (both at once, which is impossible for a single image). Make sure the check is specifically an ALLOWLIST (an image is allowed ONLY if it matched one of the two prefixes), and not a denylist of `docker.io` specifically - a policy written as "if `docker.io` - deny, otherwise allow" will let through `quay.io`, unqualified images, and any other third-party registry. Also make sure that the prefix is compared with the TRAILING `/` (`registry.k8s.io/`, not just `registry.k8s.io`), otherwise a host with a similar spelling (`registry.k8s.io.evil.example`) could pass an incomplete or case-insensitive match. As in task 2, do not forget `ephemeralContainers` - this is the same pattern of checking three container lists.
 </details>
 
 <details>
@@ -254,7 +254,7 @@ EOF
 ```
 
 Apply the policy, repeat the same manifest - now it must be denied. This is ONE
-specific untrusted value (`docker.io`), and not a proof of a full
+specific untrusted value (`docker.io`), and not proof of a full
 allowlist - a policy that simply forbids literally `docker.io`, but lets through,
 for example, an unqualified image (an implicit Docker Hub with no explicit host), `quay.io`, or
 a host with a similar spelling (`registry.k8s.io.evil.example`) will also pass this ONE
@@ -270,8 +270,8 @@ in the init and ephemeral containers, and not only in `containers`.
 ---
 | **5** | **Optional: mutate a label via Kyverno** |
 | :---: | :--- |
-| What to do | • Create a CEL-based `MutatingPolicy` `add-kyverno-managed-label` (`policies.kyverno.io/v1`) that adds to Pods of the namespace `policy-108` the label `security.cks.io/managed-by: kyverno` if it is missing.<br/>• Use mutation, not validation.<br/>• Do not mutate Pods in other namespaces. |
-| Acceptance criteria | • A server-side dry-run of a Pod with an allowed registry and `runAsNonRoot: true` that does NOT yet have this label gets it after mutation with the value `kyverno`<br/>• A Pod that ALREADY has the label set with a different value keeps the original value<br/>• A Pod in `default` stays without this label<br/>• This stage is shown in `check_result`, but skipping it is acceptable |
+| What to do | • Create a CEL-based `MutatingPolicy` `add-kyverno-managed-label` (`policies.kyverno.io/v1`) that adds the label `security.cks.io/managed-by: kyverno` to Pods in the namespace `policy-108` if it is missing.<br/>• Use mutation, not validation.<br/>• Do not mutate Pods in other namespaces. |
+| Acceptance criteria | • In a server-side dry-run, a Pod with an allowed registry and `runAsNonRoot: true` that does NOT yet have this label receives it with the value `kyverno` after mutation<br/>• A Pod that ALREADY has the label set with a different value keeps the original value<br/>• A Pod in `default` stays without this label<br/>• This stage is shown in `check_result`, but skipping it is acceptable |
 
 <details>
 <summary>💡 Hint for task 5</summary>
@@ -283,18 +283,18 @@ This stage is optional - if you have run out of time, you can skip it without ri
 | **6** | **ImagePolicyWebhook: an external backend instead of a CEL policy** |
 | :---: | :--- |
 | What to do | • On the work machine `/opt/image-policy-backend/server.py` is already prepared - a minimal HTTPS server implementing the `ImageReview` API (it rejects an image with the tag `:latest` or with no tag at all).<br/>• Deploy it as a Deployment in the namespace `image-policy`, behind a Service `image-policy-backend` on port `8443`. The backend must accept connections over TLS (the upstream `ImagePolicyWebhook` contract requires HTTPS, plain HTTP is not supported).<br/>• On the `control-plane` (`ssh`, then `sudo -i`) configure an `AdmissionConfiguration` for the plugin `ImagePolicyWebhook` (`defaultAllow: false`) and a kubeconfig pointing to your backend.<br/>• In the static manifest `kube-apiserver.yaml` **add** `ImagePolicyWebhook` to the already existing list `--enable-admission-plugins` (do not replace the whole list - otherwise you risk disabling the plugins that are already enabled) and enable `--runtime-config=imagepolicy.k8s.io/v1alpha1=true`.<br/>• After the API recovers, create a Pod with `:latest` - it must be rejected; then a Pod with a pinned tag - it must be created. |
-| Acceptance criteria | • `image-policy-backend` is Available<br/>• Kube-apiserver is healthy with the plugin added (not replaced) and `--runtime-config`<br/>• The backend kubeconfig uses HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy`<br/>• A Pod with `:latest` and an implicit latest (including a registry port with no tag) is rejected exactly by ImagePolicyWebhook in the namespace `default` — both in a regular Pod and in an init/ephemeral container<br/>• The user annotation `alpha.image-policy.k8s.io/break-glass: "true"` does not give an exception<br/>• The namespace `policy-108` is dedicated to the Kyverno of Tasks 2–4, so that the two independent admission mechanisms do not mask each other's denial<br/>• For this the backend, on `ImageReview.spec.namespace == policy-108`, delegates the decision to Kyverno, while in all the other namespaces ImagePolicyWebhook keeps working<br/>• A Pod with a pinned tag is created and Running<br/>• The Service really loses its Endpoints during a backend outage, the API denies because this endpoint is unavailable (`defaultAllow: false`), then the Service selector and admission are restored exactly to the original state |
+| Acceptance criteria | • `image-policy-backend` is Available<br/>• Kube-apiserver is healthy with the plugin added (not replaced) and `--runtime-config`<br/>• The backend kubeconfig uses HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy`<br/>• A Pod with `:latest` and an implicit latest (including a registry port with no tag) is rejected exactly by ImagePolicyWebhook in the namespace `default` - both in a regular Pod and in an init/ephemeral container<br/>• The user annotation `alpha.image-policy.k8s.io/break-glass: "true"` does not give an exception<br/>• The namespace `policy-108` is reserved for Kyverno from tasks 2–4, so that the two independent admission mechanisms do not mask each other's denial<br/>• To achieve this, when `ImageReview.spec.namespace == policy-108`, the backend delegates the decision to Kyverno, while in all the other namespaces ImagePolicyWebhook keeps working<br/>• A Pod with a pinned tag is created and Running<br/>• The Service really loses its Endpoints during a backend outage, the API denies because this endpoint is unavailable (`defaultAllow: false`), then the Service selector and admission are restored exactly to the original state |
 
 <details>
 <summary>💡 Hint for task 6</summary>
 
-`ImagePolicyWebhook` is a fundamentally different mechanism from the Kyverno of tasks 1-5: the decision is made by an external HTTPS backend through the `ImageReview` API, and not by a CEL expression inside the cluster. Copy the ready `/opt/image-policy-backend/server.py` to the `control-plane` (for example `scp`/`cat` over SSH) - the task checks understanding of the wiring of the admission plugin, the TLS contract, and the ImageReview API, and not the ability to write an HTTP server from scratch. For TLS: first create the Service (to learn the `ClusterIP`), then a self-signed certificate with this IP in the SAN (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`), then a Deployment that mounts both the code and the certificate. Do not replace the existing `--enable-admission-plugins` with a new value entirely - append `ImagePolicyWebhook` with a comma to the already enabled plugins (usually `NodeRestriction` is already there). Also do not forget `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` - without explicitly enabling this API the backend will not be called at all. The namespace `image-policy` is not created in advance - create it yourself before the Deployment/Service. If you are stuck on the detailed sequence of resources/paths/flags - the reference order of actions is given in the solution.
+`ImagePolicyWebhook` is a fundamentally different mechanism from the Kyverno of tasks 1-5: the decision is made by an external HTTPS backend through the `ImageReview` API, and not by a CEL expression inside the cluster. Use the ready `/opt/image-policy-backend/server.py` from the work machine (for example, package it into a ConfigMap for the backend Deployment; only the CA certificate for the webhook kubeconfig needs to be copied to the `control-plane`) - the task checks understanding of the wiring of the admission plugin, the TLS contract, and the ImageReview API, and not the ability to write an HTTP server from scratch. For TLS: first create the Service (to learn the `ClusterIP`), then a self-signed certificate with this IP in the SAN (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`), then a Deployment that mounts both the code and the certificate. Do not replace the existing `--enable-admission-plugins` with a new value entirely - append `ImagePolicyWebhook` with a comma to the already enabled plugins (usually `NodeRestriction` is already there). Also do not forget `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` - without explicitly enabling this API the backend will not be called at all. The namespace `image-policy` is not created in advance - create it yourself before the Deployment/Service. If you are stuck on the detailed sequence of resources/paths/flags - the reference order of actions is given in the solution.
 </details>
 
 ---
 | **7** | **Gatekeeper ConstraintTemplate: complete the Rego blocklist** |
 | :---: | :--- |
-| What to do | • The cluster already has **Gatekeeper** (OPA) installed, as well as a `ConstraintTemplate` `k8sblockedregistries` and a `Constraint` `K8sBlockedRegistries/deny-bad-registries`, restricted to the separate namespace `gatekeeper-108` (not `policy-108` - this is a separate range from the Kyverno tasks 1-5, so that Kyverno and Gatekeeper do not reject the same Pod at once).<br/>• The Rego inside the `ConstraintTemplate` already contains several blocked registries (`untrusted-registry.example`, `docker-fake.test`), but **deliberately does not contain** `very-bad-registry.test`.<br/>• Find `ConstraintTemplate.spec.targets[].rego` and add to it a rule for `very-bad-registry.test` - in the Rego exactly, and not in the `Constraint` parameters.<br/>• `deny-bad-registries` is already completely correct and does not use `spec.parameters` at all - you do not need to touch it. |
+| What to do | • The cluster already has **Gatekeeper** (OPA) installed, as well as a `ConstraintTemplate` `k8sblockedregistries` and a `Constraint` `K8sBlockedRegistries/deny-bad-registries`, restricted to the separate namespace `gatekeeper-108` (not `policy-108` - this is a sandbox separate from the Kyverno tasks 1-5, so that Kyverno and Gatekeeper do not reject the same Pod at once).<br/>• The Rego inside the `ConstraintTemplate` already contains several blocked registries (`untrusted-registry.example`, `docker-fake.test`), but **deliberately does not contain** `very-bad-registry.test`.<br/>• Find `ConstraintTemplate.spec.targets[].rego` and add to it a rule for `very-bad-registry.test` - specifically in the Rego, not in the `Constraint` parameters.<br/>• `deny-bad-registries` is already completely correct and does not use `spec.parameters` at all - you do not need to touch it. |
 | Acceptance criteria | • The `ConstraintTemplate k8sblockedregistries` and the original Constraint `K8sBlockedRegistries/deny-bad-registries` exist<br/>• The Rego keeps both original active rules (`untrusted-registry.example`, `docker-fake.test`) and contains a new active rule for `very-bad-registry.test`<br/>• A Pod with each of these three registries in `gatekeeper-108` is rejected exactly by the Constraint `deny-bad-registries`<br/>• A Pod with an image from the trusted `registry.k8s.io` passes<br/>• The Constraint stays Pod-only, restricted to `gatekeeper-108`, without parameters/selectors/exclusions<br/>• An additional Constraint of this kind is not created |
 
 <details>
@@ -417,10 +417,10 @@ TASK=108 make delete_cks_task
 The lab pins Kubernetes 1.36.0 and Kyverno 1.19 to get to know the new
 `policies.kyverno.io/v1` API. This is a **forward-looking / unsupported combination**: Kyverno
 1.19 is officially tested with Kubernetes 1.33–1.35, and not 1.36. Before applying outside the
-lab choose a supported version matrix and check the release notes.
+lab, choose a supported version matrix and check the release notes.
 
 In task 2 the "prohibition of `latest`" also means the prohibition of an implicit `latest`: `nginx`
-without a tag and digest is just as unacceptable as `nginx:latest`. Only images with an explicit
+without a tag or digest is just as unacceptable as `nginx:latest`. Only images with an explicit
 tag other than `latest`, or with a digest (`@sha256:...`), are allowed. The task does not give the exact CEL logic for this
 criterion ready-made - see the hint for task 2 if you need additional
 support.

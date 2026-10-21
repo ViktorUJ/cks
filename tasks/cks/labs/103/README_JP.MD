@@ -4,7 +4,7 @@
 
 ## 概要
 
-この実習では、2 ノードの Kubernetes クラスター (control-plane + worker) を、セキュリティエンジニアとして設定します。`kube-bench` をインストールし、その検出結果に基づいて (記憶に頼らずに) control-plane コンポーネントと worker ノードの kubelet の安全でないパラメータを修正し、Ingress を TLS のみで公開し、control plane の TLS を制限し、インストールされた Kubernetes バイナリの完全性を確認します。
+この実習では、2 ノードの Kubernetes クラスター (control-plane + worker) を、セキュリティエンジニアとして設定します。`kube-bench` を実行し (worker ノードにはご自身でインストールします)、その検出結果に基づいて (記憶に頼らずに) control-plane コンポーネントと両ノードの kubelet の安全でないパラメータを修正し、Ingress を TLS のみで公開し、control plane の TLS を制限し、インストールされた Kubernetes バイナリの完全性を確認します。
 
 これは CKA で扱う Kubernetes の基本設定の繰り返しではありません。ここで重要なのは、設定を適用する場所です：`KubeletConfiguration`、control plane の static Pod manifests、etcd の TLS パラメータ、そして検証可能な作業成果物。control plane ノードでの作業は、worker 上に用意された SSH 名 `control-plane` を使って行います。
 
@@ -12,26 +12,26 @@
 
 次のコース章の内容を定着させます：
 
-- [第 07 章。CIS Benchmark と kube-bench](../../course/07/jp.md)
-- [第 08 章。TLS を使った Secure Ingress](../../course/08/jp.md)
-- [第 09 章。コンポーネントの安全でない引数とバイナリの検証](../../course/09/jp.md)
+- [第 07 章 CIS Benchmark と kube-bench](../../course/07/jp.md)
+- [第 08 章 TLS を使った Secure Ingress](../../course/08/jp.md)
+- [第 09 章 コンポーネントの安全でない引数とバイナリの検証](../../course/09/jp.md)
 
 ## 開始前のセルフチェック
 
 <details>
-<summary>1. Kubernetes 1.36 で kube-bench をプロファイル `cis-1.12` で実行しても、authoritative な CIS compliance とは呼べないのはなぜか?</summary>
+<summary>1. Kubernetes 1.36 で kube-bench をプロファイル `cis-1.12` で実行しても、authoritative な CIS compliance とは呼べないのはなぜか？</summary>
 
 この実習で固定されている `kube-bench 0.16.0` には、1.36 用のプロファイルがそもそも含まれていません - 組み込みの version mapping は `"1.34": "cis-1.12"` (利用可能な最新のプロファイル) までしかありません。クラスター 1.36 で明示的に `--benchmark cis-1.12` を指定することで、最も近い既存のプロファイルを approximation として強制的に使用することになります。一部のチェックは新しいバージョンには関係がない可能性があり、1.36 固有の新しい security-relevant なパラメータは、このプロファイルではまだカバーされていません。これは実用上価値のあるシグナルですが、バージョン 1.36 に対する formal compliance statement ではありません。
 </details>
 
 <details>
-<summary>2. kube-apiserver の `--tls-cipher-suites` が、TLS 1.3 の暗号を設定しないのはなぜか?</summary>
+<summary>2. kube-apiserver の `--tls-cipher-suites` が、TLS 1.3 の暗号を設定しないのはなぜか？</summary>
 
 Go (kube-apiserver が書かれている言語) では、フラグ `--tls-cipher-suites` が制御するのは TLS バージョン ≤ 1.2 の cipher suites だけです。TLS 1.3 では Go 自身が、fixed でハードコードされたリストから暗号の組を選択します - このフラグでそれらを設定することはできません。そのため、ここで実質的な保護を与えるのは `--tls-min-version=VersionTLS13` (古いプロトコルをすべて禁止する) であり、`--tls-cipher-suites` は TLS 1.2 がまだ許可される場所 (たとえばこの実習の etcd) で意味を持ちます。
 </details>
 
 <details>
-<summary>3. 検証対象のファイル自体から計算したハッシュを、SHA-256 verification の基準として使ってはいけないのはなぜか?</summary>
+<summary>3. 検証対象のファイル自体から計算したハッシュを、SHA-256 verification の基準として使ってはいけないのはなぜか？</summary>
 
 ファイルの SHA-256 を計算して自分自身と比較すれば、検証は常に成功します - ファイルが悪意のあるものにすり替えられていたとしてもです。基準となる checksum は、独立した信頼できるソース - Kubernetes の公式リリースページ - から取得する必要があり、検証対象のローカルファイルから取得してはいけません。
 </details>
@@ -77,7 +77,7 @@ flowchart TB
 > **バージョンと試験。** 2026-09-06 時点で、公式の CKS exam は Kubernetes `v1.35` を前提としています。この実習は `1.36.0` を使用するため、このバージョンに関することはすべて forward-looking な学習シナリオであり、現在の試験バージョンについての主張ではありません。
 
 control-plane は taint が解除されているため、必要に応じて学習用の Pod を実行できます。
-課題 2、3、5 では、static Pods は、変更された manifest または設定を保存した後に kubelet によって自動的に再作成されます。
+課題 3、5、9 では、static Pods は、変更された manifest を保存した後に kubelet によって自動的に再作成されます。課題 2 と 10 では、`KubeletConfiguration` を編集した後に kubelet を手動で再起動する必要があります (`systemctl restart kubelet`)。
 control-plane の Pods を手動で削除しないでください。
 
 ## デプロイ
@@ -107,7 +107,7 @@ ssh control-plane hostname
 
 | **1** | **CIS Benchmark レポート** |
 | :---: | :--- |
-| やること | `control-plane` ノード上で、Kubernetes `1.36.0` に対して `kube-bench` を実行します。完全な evidence を `/var/work/tests/artifacts/1/kube-bench.txt` に保存します：`kubernetes_version`、`kube_bench_version`、選択した `benchmark`、`mapping_status`、続いてレポート本体。`kube-bench` は `control-plane` にすでにインストールされています (CIS Benchmark のツールがノード上にすでにある実際の試験と同様に) - インストールやコピーは不要で、チェックされるべきなのはまさにそのノードです。固定された `kube-bench 0.16.0` に組み込まれた version mapping は、エントリ `"1.34": "cis-1.12"` で終わっています - このバージョンには、それより新しいプロファイル (1.35/1.36 向けのいかなるプロファイルを含む) はまったくありません。そのため、`--benchmark cis-1.12` を明示的に指定して実行し、`1.36` での結果を、authoritative compliance ではなく `forced-approximate` と明記してください。**`cis-1.12` の targets を完全なセットで実行してください：** `--targets master,node,controlplane,etcd,policies` - これは kube-bench がプロファイル `cis-1.12` に対応付ける targets のマップです；いずれかを省略すると不完全なレポートになります。`--targets` を明示しない場合、kube-bench は現在のノードの種類を自分で判定し、そのリスト全体ではなくより狭いセットを使います - `etcd` と `policies` はそのような auto-detected な実行には含まれないため、`--targets` を明示しないレポートは不完全になります。 |
+| やること | `control-plane` ノード上で、Kubernetes `1.36.0` に対して `kube-bench` を実行します。完全な evidence を `/var/work/tests/artifacts/1/kube-bench.txt` に保存します：`kubernetes_version`、`kube_bench_version`、選択した `benchmark`、`mapping_status`、続いてレポート本体。`kube-bench` は `control-plane` にすでにインストールされています (CIS Benchmark のツールがノード上にすでにある実際の試験と同様に) - インストールやコピーは不要で、チェックされるべきなのはまさにそのノードです。固定された `kube-bench 0.16.0` に組み込まれた version mapping は、エントリ `"1.34": "cis-1.12"` で終わっています - このバージョンには、それより新しいプロファイル (1.35/1.36 向けのプロファイルも含めて) はまったくありません。そのため、`--benchmark cis-1.12` を明示的に指定して実行し、`1.36` での結果を、authoritative compliance ではなく `forced-approximate` と明記してください。**`cis-1.12` の targets を完全なセットで実行してください：** `--targets master,node,controlplane,etcd,policies` - これは kube-bench がプロファイル `cis-1.12` に対応付ける targets のマップです；いずれかを省略すると不完全なレポートになります。`--targets` を明示しない場合、kube-bench は現在のノードの種類を自分で判定し、そのリスト全体ではなくより狭いセットを使います - `etcd` と `policies` はそのような auto-detected な実行には含まれないため、`--targets` を明示しないレポートは不完全になります。 |
 | 受け入れ基準 | - evidence に 4 つの version/mapping フィールドがすべて含まれている；<br/>- `mapping_status=forced-approximate` が、`1.36` の公式カバレッジがないことを明示的に説明している；<br/>- レポートに、セクション `master`、`node`、`controlplane`、`etcd`、`policies` すべての結果がある (任意の `[PASS]`/`[WARN]`/`[FAIL]` の行だけではない)；<br/>- テキストが、その結果を Kubernetes `1.36` の authoritative CIS compliance として示していない。 |
 
 <details>
@@ -139,7 +139,7 @@ ssh control-plane hostname
 <details>
 <summary>💡 課題 3 のヒント</summary>
 
-課題 1 のレポートの `master` セクションで、check `1.2.15` (`--profiling`) を探してください。これには、static Pod manifest `/etc/kubernetes/manifests/kube-apiserver.yaml` の `command` にあるフラグ `--profiling=false` が対応します。Pod を `kubectl edit` で編集しないでください - これは static Pod であり、kubelet はディスク上の manifest ファイルから直接管理しており、API 経由の変更はすべて元に上書きされます。フラグをノード上の YAML ファイルに直接追加し、待ってください：kubelet がファイルの変更に気づくのは瞬時ではありません。
+課題 1 のレポートの `master` セクションで、check `1.2.15` (`--profiling`) を探してください。これには、static Pod manifest `/etc/kubernetes/manifests/kube-apiserver.yaml` の `command` にあるフラグ `--profiling=false` が対応します。Pod を `kubectl edit` で編集しないでください - これは static Pod であり、kubelet はディスク上の manifest ファイルから直接管理しており、API 経由の変更はすべてファイルの内容で上書きされ、元に戻されます。フラグをノード上の YAML ファイルに直接追加し、待ってください：kubelet がファイルの変更に気づくのは瞬時ではありません。
 </details>
 
 ---
@@ -200,7 +200,7 @@ etcd のフラグは `--cipher-suites` という名前です (先頭に `tls-` �
 | **6** | **kubelet と kubectl の完全性の確認** |
 | :---: | :--- |
 | やること | control-plane にインストールされている `kubelet` と、worker にインストールされている `kubectl` の SHA-256 を、公開されている Kubernetes `v1.36.0` の checksum と照合します。コマンドと `sha256sum -c` の結果を `/var/work/tests/artifacts/6/binaries.sha256.txt` に保存します。検証対象のファイルから計算したハッシュを基準として使用しないでください。 |
-| 受け入れ基準 | - 成果物が存在する；<br/>- `kubelet` と `kubectl` それぞれの成功した結果 (`OK`) が個別に含まれている；<br/>- 基準となる合計値が公式の release `v1.36.0` から取得されている。 |
+| 受け入れ基準 | - 成果物が存在する；<br/>- `kubelet` と `kubectl` それぞれの成功した結果 (`OK`) が個別に含まれている；<br/>- 基準となるチェックサムが公式の release `v1.36.0` から取得されている。 |
 
 <details>
 <summary>💡 課題 6 のヒント</summary>
@@ -244,7 +244,7 @@ etcd のフラグは `--cipher-suites` という名前です (先頭に `tls-` �
 <details>
 <summary>💡 課題 9 のヒント</summary>
 
-課題 7-8 と同じ操作の順序です：まず `[FAIL]` を持つ `before.txt`、次に manifest の修正、そして `[PASS]` を持つ `after.txt`。Pod を `kubectl edit` で編集しないでください - kubelet はそのような変更をすべて、ディスク上のファイルから上書きします。フラグをノード上の YAML に直接追加し、再作成を待ってください - それは瞬時には行われません。この課題を `protectKernelDefaults` (課題 10、worker ノードの別の kubelet パラメータ) と混同しないでください - ここで扱うのは、control-plane コンポーネントの HTTP profiling endpoint についてです。
+課題 7-8 と同じ操作の順序です：まず `[FAIL]` を持つ `before.txt`、次に manifest の修正、そして `[PASS]` を持つ `after.txt`。Pod を `kubectl edit` で編集しないでください - kubelet はそのような変更をすべて、ディスク上のファイルから上書きします。フラグをノード上の YAML に直接追加し、再作成を待ってください - それは瞬時には行われません。この課題を `protectKernelDefaults` (課題 10、worker ノードの別の kubelet パラメータ) と混同しないでください - ここで扱うのは、control-plane コンポーネントの HTTP profiling endpoint です。
 </details>
 
 ---
@@ -277,7 +277,7 @@ SSH 経由での control plane/worker ノードの状態と成果物によって
 
 参考解答：[worker/files/solutions/1_JP.MD](worker/files/solutions/1_JP.MD)。
 
-## クラスタとリソースの削除
+## クラスターとリソースの削除
 
 ```bash
 TASK=103 make delete_cks_task

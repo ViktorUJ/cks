@@ -257,7 +257,7 @@ Secret を一つのランダムな文字列で手動で置き換えることは�
 
 > 🎯 Istio mTLS は certificate を workload identity に結び付けます。`PeerAuthentication: STRICT` と `ISTIO_MUTUAL` を持つ `DestinationRule` を区別し、proxy/injection を確認してください。
 
-> 🔬 **Upstream identity primitive。** Kubernetes v1.37 は Pod Certificates と ClusterTrustBundles を stable にしました。それらは Kubernetes level の X.509 primitives を提供しますが、Istio/SPIFFE identity plane を自動的に不要にするわけではありません。signer、trust model、mesh enforcement は別個の architectural な決定です。[Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_JP.md) を参照してください。
+> 🔬 **Upstream identity primitive。** Kubernetes v1.37 は Pod Certificates と ClusterTrustBundles を stable にしました。それらは Kubernetes level の X.509 primitives を提供しますが、Istio/SPIFFE identity plane を自動的に不要にするわけではありません。signer、trust model、mesh enforcement は別個の architectural な決定です。[Kubernetes v1.37 Security Delta (ロシア語版のみ)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md) を参照してください。
 
 ## 23.6. Istio: sidecar、SPIFFE workload identity、`PeerAuthentication`
 

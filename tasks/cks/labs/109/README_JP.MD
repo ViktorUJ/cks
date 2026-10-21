@@ -26,21 +26,21 @@ encryption at rest を有効にした後、課題 2-4 は、そのようなア�
 ## 開始前のセルフチェック
 
 <details>
-<summary>1. `Secret.data` の base64 が暗号化ではないのはなぜか?</summary>
+<summary>1. `Secret.data` の base64 が暗号化ではないのはなぜか？</summary>
 
 base64 は単なるエンコーディングで、鍵なしで元に戻せます：バイト列自体にアクセスできる人は誰でも (たとえば etcd の raw 読み取りを通じて)、暗号操作なしで値を即座にデコードできます。暗号化には元に戻すための鍵が必要です - base64 にはその性質がまったくありません。
 </details>
 
 <details>
-<summary>2. `identity` provider が、最初ではなく providers のリストの最後に置かれる必要があるのはなぜか?</summary>
+<summary>2. `identity` provider が、最初ではなく providers のリストの最後に置かれる必要があるのはなぜか？</summary>
 
 `EncryptionConfiguration` の providers は、既存のレコードの読み取りのために順番に試され、最初の provider が新しいデータの書き込みに使われます。`identity` (つまり「暗号化なし」) が最初にあると、リストに `aescbc` があっても、すべての新しいレコードが暗号化されないまま書き込まれます。`identity` を最後に置けば、古い (まだ移行されていない) plaintext のレコードを読み取れる一方、すべての新しいレコードが最初の provider によって暗号化されることが保証されます。
 </details>
 
 <details>
-<summary>3. 新しい暗号化鍵を追加した直後に、古い鍵を単純に削除してはいけないのはなぜか?</summary>
+<summary>3. 新しい暗号化鍵を追加した直後に、古い鍵を単純に削除してはいけないのはなぜか？</summary>
 
-etcd の既存のレコードは、明示的に書き直される (re-encryption) までは古い鍵で暗号化されたままです。すべてのレコードが新しい鍵で書き直される前に古い鍵を active な `EncryptionConfiguration` から外すと、API server は現在の provider chain で残っている古いレコードを復号できず - 古い鍵が設定に戻されるまで、読み取れなくなります。設定から鍵を削除しても、key material が物理的に破壊されるわけではありません：保存しておいた古い鍵を provider chain に再び追加すれば、アクセスは回復します。データの不可逆的な喪失が起こるのは、key material 自体が本当に失われた、または破壊された場合のみです (たとえば、削除する前に鍵がどこにも保存されていなかった場合)。順序：新しい鍵を最初に追加 → すべての Secret を書き直す → すべてのレコードが新しい鍵を使っていることを確認 → rollback のために古い鍵を安全な場所に保存 → その後で初めて設定から外す。
+etcd の既存のレコードは、明示的に書き直される (re-encryption) までは古い鍵で暗号化されたままです。すべてのレコードが新しい鍵で書き直される前に古い鍵を active な `EncryptionConfiguration` から外すと、API server は現在の provider chain で残っている古いレコードを復号できなくなり、それらのレコードは古い鍵が設定に戻されるまで読み取れなくなります。設定から鍵を削除しても、key material が物理的に破壊されるわけではありません：保存しておいた古い鍵を provider chain に再び追加すれば、アクセスは回復します。データの不可逆的な喪失が起こるのは、key material 自体が本当に失われた、または破壊された場合のみです (たとえば、削除する前に鍵がどこにも保存されていなかった場合)。順序：新しい鍵を最初に追加 → すべての Secret を書き直す → すべてのレコードが新しい鍵を使っていることを確認 → rollback のために古い鍵を安全な場所に保存 → その後で初めて設定から外す。
 </details>
 
 ## インフラ
@@ -101,7 +101,7 @@ check_result
 <details>
 <summary>💡 課題 2 のヒント</summary>
 
-鍵は `head -c 32 /dev/urandom | base64` で生成してください - まさに 32 バイトです (32 文字の base64 文字列ではありません。エンコーディングにより長くなります)。自己確認します：`echo -n "<あなたの-base64-鍵>" | base64 -d | wc -c` はちょうど `32` を返す必要があります。
+鍵は `head -c 32 /dev/urandom | base64` で生成してください - まさに 32 バイトです (32 文字の base64 文字列ではありません。エンコーディングにより長くなります)。自己確認してください：`echo -n "<あなたの-base64-鍵>" | base64 -d | wc -c` はちょうど `32` を返す必要があります。
 </details>
 
 ---
@@ -119,7 +119,7 @@ check_result
 ---
 | **4** | **Re-encrypt して ciphertext を実証する** |
 | :---: | :--- |
-| やること | • API server の準備ができた後、`encryption-109` に literal `token=cks-109-fresh-ciphertext` を持つ Secret `encrypted-secret` を作成します<br/>• 以前に存在していたすべての Secret を API 経由で書き直します (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`)<br/>• 両方の Secret を API と raw etcd で確認します<br/>• この確認の後にのみ、一時的な `identity` fallback を削除し、static kube-apiserver を再起動して、`/readyz` と両方の Secret の読み取りを再び確認します |
+| やること | • API server の準備ができた後、`encryption-109` に literal `token=cks-109-fresh-ciphertext` を持つ Secret `encrypted-secret` を作成します<br/>• 以前に存在していたすべての Secret を API 経由で書き直します (`kubectl get secrets --all-namespaces -o json \| kubectl replace -f -`)<br/>• 両方の Secret を API と raw etcd で確認します<br/>• この確認の後にのみ、一時的な `identity` fallback を削除し、static kube-apiserver を再起動して、`/readyz` と両方の Secret の読み取りを再び確認します |
 | 受け入れ基準 | • `legacy-secret` と `encrypted-secret` が、元の値で API 経由で読み取れる<br/>• それぞれの raw value が `k8s:enc:aescbc:v1:` で始まる<br/>• Legacy marker が raw etcd にもう見えない<br/>• bootstrap の Secret 全体の元の payload/UID が保持されており、すべてのレコードが最初の有効な鍵で暗号化されている<br/>• 最終ファイルの鍵が、両方の canary Secret の ciphertext を復号できる<br/>• 最終的な設定に `identity` がなく、API が healthy である |
 
 <details>
@@ -137,7 +137,7 @@ check_result
 <details>
 <summary>💡 課題 5 のヒント</summary>
 
-Role で `resourceNames: ["encrypted-secret"]` を使用してください - このフィールドがないと、リソース `secrets` に対する `get`/`list` は、`legacy-secret` を含む namespace のすべての Secret へのアクセスを与え、least-privilege の要件に反します。`pause:3.10` は Kubernetes API をまったく必要としないダミーの image なので、automount は 2 つのレベル (SA と Pod) で、機能への影響なしに無効にされます。
+Role で `resourceNames: ["encrypted-secret"]` を使用してください - このフィールドがないと、リソース `secrets` に対する `get`/`list` は、`legacy-secret` を含む namespace のすべての Secret へのアクセスを与え、least-privilege の要件に反します。`pause:3.10` は Kubernetes API をまったく必要としないダミーのイメージ なので、automount は 2 つのレベル (SA と Pod) で、機能への影響なしに無効にされます。
 </details>
 
 ## 検証
@@ -148,7 +148,7 @@ check_result
 
 チェックには Init と 5 個の必須テストが含まれます。テスト 4 は、設定ファイルの存在だけでなく、新しい etcd レコードと以前の
 etcd レコードの実際の ciphertext `k8s:enc:aescbc:v1:` と、最終的な設定に migration 専用の `identity` がないことを確認します。実際の環境での大量の re-encryption の前には、snapshot、鍵の
-ローテーション計画、制御されたウィンドウが必要です；この実習は production の runbook ではありません。
+ローテーション計画、管理されたメンテナンスウィンドウが必要です；この実習は production の runbook ではありません。
 
 ## 解答
 
@@ -160,7 +160,7 @@ etcd レコードの実際の ciphertext `k8s:enc:aescbc:v1:` と、最終的な
 TASK=109 make delete_cks_task
 ```
 
-## 追加: KMS v2 と鍵ローテーションの完全なライフサイクル
+## 追加：KMS v2 と鍵ローテーションの完全なライフサイクル
 
 **KMS v2 (オプションの walkthrough)。** 外部の KMS-plugin は、`EncryptionConfiguration` の
 provider `kms` として API server に接続されます；その endpoint はローカルの Unix socket で、provider の鍵には

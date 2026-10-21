@@ -16,7 +16,7 @@ full replacement for kube-proxy (`kubeProxyReplacement`), the incremental enabli
 transparent encryption, and Cilium Mutual Authentication based on SPIRE - each step is
 installed and verified separately, and not handed to you ready-made.
 
-The `cilium`/`hubble` CLI are already installed on the worker and point to the real cluster
+The `cilium`/`hubble` CLIs are already installed on the worker and point to the real cluster
 (`~/.kube/config`), but the installation of Cilium into the cluster itself is done by you.
 
 ## Deployment
@@ -25,7 +25,7 @@ The `cilium`/`hubble` CLI are already installed on the worker and point to the r
 TASK=115 make run_cks_task
 ```
 
-After the deployment connect over SSH with the command from the Terraform output (`worker_pc_ssh`).
+After the deployment, connect over SSH with the command from the Terraform output (`worker_pc_ssh`).
 The node will be `NotReady` right after login - this is the expected baseline, and not an error.
 
 ## Goal
@@ -58,7 +58,7 @@ two namespaces.
 
 | **2** | **Installing Cilium as a kube-proxy replacement** |
 | :---: | :--- |
-| What to do | • Install the Cilium agent/chart version `1.20.1` via the `cilium` CLI version `v0.19.7` installed on the worker, with `kubeProxyReplacement=true` and explicitly set `k8sServiceHost`/`k8sServicePort` that point to the real API server (not the Service ClusterIP - without kube-proxy the cluster cannot resolve `kubernetes.default` until Cilium itself comes up) |
+| What to do | • Install the Cilium agent/chart version `1.20.1` via the `cilium` CLI version `v0.19.7` installed on the worker, with `kubeProxyReplacement=true` and explicitly set `k8sServiceHost`/`k8sServicePort` that point to the real API server (not the Service ClusterIP - without kube-proxy, traffic to the ClusterIP `kubernetes.default` does not reach the API server until Cilium itself comes up) |
 | Acceptance criteria | • `KubeProxyReplacement: True/Strict` (in the `cilium-dbg status` of the agent)<br/>• The node becomes `Ready`<br/>• A ClusterIP Service is reachable without kube-proxy |
 | Verification | `cilium status --wait`, `kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status \| grep KubeProxyReplacement`, then `kubectl get nodes` -> `Ready`. From a test Pod: `curl https://kubernetes.default.svc.cluster.local/` must get an HTTP response (not a connection error). |
 
@@ -80,7 +80,7 @@ two namespaces.
 
 > **Lab environment specifics.** The cluster has no StorageClass, so the SPIRE server needs ephemeral
 > storage (`authentication.mutual.spire.install.server.dataStorage.enabled=false`). The
-> `spire-server` image runs as uid 1000 and cannot create a socket in the hostPath directory `root:755` -
+> `spire-server` image runs as uid 1000 and cannot create a socket in a hostPath directory owned by `root` with mode `755` -
 > run it as root (`authentication.mutual.spire.install.server.securityContext.runAsUser=0`).
 > The chart also requires `authentication.enabled=true`. The details are in the reference solution.
 

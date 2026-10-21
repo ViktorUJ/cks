@@ -17,30 +17,30 @@ placement del Pod y el comportamiento real del proceso.
 
 ## Threat model
 
-Supongamos un RCE en el contenedor. La pregunta tras el compromise no es «¿pudo el atacante obtener una shell», sino «qué puede hacer esa shell a continuación» y qué tan grande es su blast radius.
+Supongamos un RCE en el contenedor. La pregunta tras el compromise no es «¿pudo el atacante obtener una shell?», sino «¿qué puede hacer esa shell a continuación?» y qué tan grande es su blast radius.
 
-AppArmor en las tareas 1–2 limita los objetos y las operaciones: el perfil se pasa a enforce y después se demuestra la denegación de escritura. Así, un proceso ya comprometido no obtiene una acción ilimitada solo porque se ejecuta en un contenedor.
+AppArmor en las tareas 1–3 limita los objetos y las operaciones: el perfil se pasa a enforce y después se demuestra la denegación de escritura. Así, un proceso ya comprometido no obtiene libertad de acción ilimitada solo porque se ejecuta en un contenedor.
 
-seccomp en las tareas 3–5 limita la llamada al sistema disponible: primero se aplica el baseline, después el perfil custom y luego se comprueba la denegación real de `unshare(2)`. La tarea 5 ya contiene un negative control mediante el Pod `sysadmin-control`: con la misma capability sin seccomp filter la llamada pasa, por lo que la comparación muestra precisamente el límite tras el compromise.
+seccomp en las tareas 4–6 limita la llamada al sistema disponible: primero se aplica el baseline, después el perfil custom y luego se comprueba la denegación real de `unshare(2)`. La tarea 6 ya contiene un negative control mediante el Pod `sysadmin-control`: con la misma capability sin seccomp filter la llamada pasa, por lo que la comparación muestra precisamente el límite tras el compromise.
 
 ## Compruébate antes de empezar
 
 <details>
 <summary>1. ¿En qué se diferencia `complain` de `enforce` en AppArmor y por qué `complain` no se puede presentar como prueba de protección?</summary>
 
-En modo `complain` AppArmor solo registra en el log las violaciones del perfil, pero NO las bloquea: una operación que debería estar prohibida se ejecutará igualmente, simplemente aparecerá una entrada en el journal. En `enforce` la operación se bloquea de verdad. La tarea 1 exige explícitamente pasar el perfil a `enforce`, porque la demostración "aquí hay una violación en el log" en `complain` no prueba la protección: el proceso aun así pudo ejecutar la acción.
+En modo `complain` AppArmor solo registra en el log las violaciones del perfil, pero NO las bloquea: una operación que debería estar prohibida se ejecutará igualmente, simplemente aparecerá una entrada en el journal. En `enforce` la operación se bloquea de verdad. La tarea 2 exige explícitamente pasar el perfil a `enforce`, porque la demostración "aquí hay una violación en el log" en `complain` no prueba la protección: el proceso aun así pudo ejecutar la acción.
 </details>
 
 <details>
 <summary>2. ¿Por qué `allowPrivilegeEscalation: false` no quita la capability `SYS_ADMIN` ya concedida?</summary>
 
-`allowPrivilegeEscalation: false` activa el kernel-flag `no_new_privs`, que prohíbe al proceso obtener privilegios NUEVOS mediante `execve` (por ejemplo, mediante un binario setuid o file capabilities). Esto no afecta a los privilegios que el proceso YA tiene en su effective/bounding set: si el contenedor se ejecuta con la capability `SYS_ADMIN` explícita en el manifest, esa capability sigue disponible con independencia del valor de `allowPrivilegeEscalation`.
+`allowPrivilegeEscalation: false` activa el flag del kernel `no_new_privs`, que prohíbe al proceso obtener privilegios NUEVOS mediante `execve` (por ejemplo, mediante un binario setuid o file capabilities). Esto no afecta a los privilegios que el proceso YA tiene en su effective/bounding set: si el contenedor se ejecuta con la capability `SYS_ADMIN` explícita en el manifest, esa capability sigue disponible con independencia del valor de `allowPrivilegeEscalation`.
 </details>
 
 <details>
 <summary>3. ¿Por qué `localhostProfile` en el manifest del Pod se indica como una ruta relativa y no absoluta?</summary>
 
-El kubelet resuelve por sí mismo la ruta relativa respecto de su seccomp root (por defecto `/var/lib/kubelet/seccomp/`). Si se indica una ruta absoluta, el kubelet buscará el archivo POR ESA RUTA ABSOLUTA dentro del seccomp root, lo que casi siempre no coincidirá con la ubicación real del archivo: el Pod obtendrá `CreateContainerError`.
+El kubelet resuelve por sí mismo la ruta relativa respecto de su seccomp root (por defecto `/var/lib/kubelet/seccomp/`). Si se indica una ruta absoluta, el kubelet buscará el archivo POR ESA RUTA ABSOLUTA dentro del seccomp root, lo que casi nunca coincidirá con la ubicación real del archivo: el Pod obtendrá `CreateContainerError`.
 </details>
 
 ## Relación con el curso
@@ -63,7 +63,7 @@ El entorno se despliega mediante Terragrunt en AWS `eu-central-1`.
 Para ahorrar recursos, el control-plane es el único workload-node: se le ha quitado el
 `NoSchedule` taint. Está marcado con el label
 `security.cks.io/localhost-profiles-106=true`. Todos los Pod de este laboratorio deben elegir precisamente
-este nodo: el plan-perfil no se traslada por el planificador (scheduler) a otro nodo.
+este nodo: el perfil Localhost existe solo en él, y el planificador (scheduler) no lo traslada a otro nodo.
 
 El bootstrap preparó **únicamente**:
 
@@ -131,7 +131,7 @@ El comando `sudo apparmor_parser -r /etc/apparmor.d/k8s-106-deny-write` recarga 
 No uses `aa-enforce`/`aa-complain` para este perfil mientras no esté hecha la tarea 9:
 estas herramientas de Python de `apparmor-utils`, antes de su trabajo principal, analizan
 (parsean) **todos** los archivos de `/etc/apparmor.d/`, incluido el aún roto `k8s-106-broken-profile`
-de la tarea 8, y fallan con un error del parser en un archivo ajeno. Edita el flag `complain` en el archivo
+de la tarea 9, y fallan con un error del parser en un archivo ajeno. Edita el flag `complain` en el archivo
 del perfil directamente (`sed`) y recarga precisamente ESE archivo mediante `apparmor_parser -r`:
 este binario, a diferencia de `aa-enforce`, analiza solo el archivo que se le pasa.
 </details>
@@ -139,8 +139,8 @@ este binario, a diferencia de `aa-enforce`, analiza solo el archivo que se le pa
 ---
 | **3** | **Localhost AppArmor Pod y bloqueo de escritura** |
 | :---: | :--- |
-| Qué hacemos | Crea el namespace `security-106` y el Pod `apparmor-writer`. El Pod debe elegir el label del nodo de la infraestructura, desactivar el automount del ServiceAccount token y, a nivel de Pod, establecer `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Usa `busybox:1.36`, el contenedor `app`, el comando de espera `sleep 3600` y un `emptyDir` montado en `/work`. Tras el arranque, confirma el profile efectivo con el comando `cat /proc/1/attr/current` (si la interfaz está disponible), ejecuta una operación de lectura permitida, por ejemplo `cat /etc/hostname >/dev/null`, y después intenta escribir un archivo en `/work`; la operación debe terminar con una denegación. En el nodo registra el AppArmor denial para el profile/process mediante `journalctl -k | grep -i apparmor` o `dmesg | grep -i apparmor`. |
-| Criterios de aceptación | El Pod está en ejecución, usa precisamente el profile Localhost y el nodeSelector correcto; el profile efectivo del proceso muestra `k8s-106-deny-write` en enforce mode (cuando `/proc/.../attr/current` está disponible); la operación de lectura permitida en `/work` pasa, y el checker independently escribe su propio archivo único (per-run) en `/work` y recibe una denegación de AppArmor. En el kernel journal/audit log hay un evento `apparmor="DENIED"` con este profile que se refiere precisamente a ESTE intento (por el nombre único del archivo): esto excluye un false pass por un evento denial obsoleto en el journal. |
+| Qué hacemos | Crea el namespace `security-106` y el Pod `apparmor-writer`. El Pod debe elegir el label del nodo de la infraestructura, desactivar el automount del ServiceAccount token y, a nivel de Pod, establecer `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Usa `busybox:1.36`, el contenedor `app`, el comando de espera `sleep 3600` y un `emptyDir` montado en `/work`. Tras el arranque, confirma el profile efectivo con el comando `cat /proc/1/attr/current` (si la interfaz está disponible), ejecuta una operación de lectura permitida, por ejemplo `cat /etc/hostname >/dev/null`, y después intenta escribir un archivo en `/work`; la operación debe terminar con una denegación. En el nodo registra el AppArmor denial para el profile/process mediante `journalctl -k \| grep -i apparmor` o `dmesg \| grep -i apparmor`. |
+| Criterios de aceptación | El Pod está en ejecución, usa precisamente el profile Localhost y el nodeSelector correcto; el profile efectivo del proceso muestra `k8s-106-deny-write` en enforce mode (cuando `/proc/.../attr/current` está disponible); la operación de lectura permitida (por ejemplo, `cat /etc/hostname` o `ls /work`) pasa, y el checker independently escribe su propio archivo único (per-run) en `/work` y recibe una denegación de AppArmor. En el kernel journal/audit log hay un evento `apparmor="DENIED"` con este profile que se refiere precisamente a ESTE intento (por el nombre único del archivo): esto excluye un false pass por un evento denial obsoleto en el journal. |
 
 <details>
 <summary>💡 Pista para la tarea 3</summary>
@@ -152,7 +152,7 @@ este binario, a diferencia de `aa-enforce`, analiza solo el archivo que se le pa
 | **4** | **Baseline seguro de seccomp RuntimeDefault** |
 | :---: | :--- |
 | Qué hacemos | Crea en `security-106` el Pod `runtime-default` con `busybox:1.36` y `sleep 3600`. A nivel de Pod indica explícitamente `securityContext.seccompProfile.type: RuntimeDefault`; el Pod también debe elegir el nodo preparado. Comprueba en el contenedor `/proc/1/status`: se espera `Seccomp: 2`. |
-| Criterios de aceptación | El Pod `Running`, en su securityContext a nivel de Pod está elegido `RuntimeDefault`, y el proceso está en seccomp filter mode. |
+| Criterios de aceptación | El Pod está en `Running`, en su securityContext a nivel de Pod se ha seleccionado `RuntimeDefault` y el proceso está en seccomp filter mode. |
 
 <details>
 <summary>💡 Pista para la tarea 4</summary>
@@ -169,7 +169,7 @@ este binario, a diferencia de `aa-enforce`, analiza solo el archivo que se le pa
 <details>
 <summary>💡 Pista para la tarea 5</summary>
 
-La ruta `profiles/cks-106-deny-unshare.json` es relativa al kubelet seccomp root `/var/lib/kubelet/seccomp/`, es decir, el archivo real en el nodo debe estar en la dirección `/var/lib/kubelet/seccomp/profiles/cks-106-deny-unshare.json`: allí es donde hay que copiarlo desde la máquina de trabajo (por ejemplo, `scp /opt/lab106-fixtures/cks-106-deny-unshare.json control-plane:/tmp/`, luego `sudo mkdir -p` y `sudo mv` en el nodo). No escribas en el manifest la ruta absoluta completa: el kubelet añadirá la raíz por sí mismo. `SYS_ADMIN` se concede aquí PRECISAMENTE para el experimento (hace falta una capability que permita llamar a `unshare` en principio), y no como práctica recomendada: no confundas el escenario didáctico con un baseline de producción.
+La ruta `profiles/cks-106-deny-unshare.json` es relativa al kubelet seccomp root `/var/lib/kubelet/seccomp/`, es decir, el archivo real en el nodo debe estar en la ruta `/var/lib/kubelet/seccomp/profiles/cks-106-deny-unshare.json`: allí es donde hay que copiarlo desde la máquina de trabajo (por ejemplo, `scp /opt/lab106-fixtures/cks-106-deny-unshare.json control-plane:/tmp/`, luego `sudo mkdir -p` y `sudo mv` en el nodo). No escribas en el manifest la ruta absoluta completa: el kubelet añadirá la raíz por sí mismo. `SYS_ADMIN` se concede aquí PRECISAMENTE para el experimento (hace falta una capability que permita llamar a `unshare` en principio), y no como práctica recomendada: no confundas el escenario didáctico con un baseline de producción.
 </details>
 
 ---
@@ -210,7 +210,7 @@ Para un workload normal usa `capabilities.drop: ["ALL"]` y, por separado,
 | **7** | **User namespaces: `hostUsers: false` y traducción de UID mediante `uid_map`** |
 | :---: | :--- |
 | Qué hacemos | Los User namespaces son GA en Kubernetes v1.36 (consulta el [capítulo 03](../../course/03/es.md), el [capítulo 18](../../course/18/es.md) y el Security Delta v1.36). La teoría explica que `hostUsers: false` traduce el root del contenedor a un host UID sin privilegios; aquí hay que demostrarlo sobre un proceso vivo. Crea en `security-106` un Pod `userns-probe` en el nodo preparado con `spec.hostUsers: false`, la imagen `busybox:1.36`, el comando `sleep 3600`; no establezcas `runAsUser` a nivel de Pod, para que el proceso arranque como UID 0 **dentro** del contenedor. Confirma `id` dentro del contenedor (`uid=0`). Determina el host PID del proceso del contenedor mediante `crictl inspect` (por analogía con el laboratorio 112) o mediante `kubectl get pod -o jsonpath` + `crictl ps`, después en el nodo lee `/proc/<host PID>/uid_map`. Guarda ambas salidas (`id` dentro del contenedor y el contenido de `uid_map`) en `/var/work/tests/artifacts/6/userns.txt`. |
-| Criterios de aceptación | El Pod `Running`, `spec.hostUsers == false`, elige el nodo preparado; `id` dentro del contenedor muestra `uid=0(root)`; `/proc/<host PID>/uid_map` en el nodo contiene una línea del tipo `0 <host-uid> <length>`, donde `<host-uid>` **no es igual a 0** (el root del contenedor está traducido a un host UID sin privilegios) y `<length>` es como mínimo `65536` (el rango estándar de UID por Pod); el artefacto contiene ambas partes de la evidence. |
+| Criterios de aceptación | El Pod está en `Running`, `spec.hostUsers == false`, elige el nodo preparado; `id` dentro del contenedor muestra `uid=0(root)`; `/proc/<host PID>/uid_map` en el nodo contiene una línea del tipo `0 <host-uid> <length>`, donde `<host-uid>` **no es igual a 0** (el root del contenedor está traducido a un host UID sin privilegios) y `<length>` es como mínimo `65536` (el rango estándar de UID por Pod); el artefacto contiene ambas partes de la evidence. |
 
 <details>
 <summary>💡 Pista para la tarea 7</summary>
@@ -227,7 +227,7 @@ Para un workload normal usa `capabilities.drop: ["ALL"]` y, por separado,
 <details>
 <summary>💡 Pista para la tarea 8</summary>
 
-El requisito clave es que el Pod REALMENTE no mencione `seccompProfile` en absoluto, ni a nivel de Pod ni a nivel de contenedor. Si copias el manifest de la tarea 3 y simplemente olvidas eliminar este campo, el test no demostrará lo que debe: que precisamente el `seccompDefault` a nivel de nodo (y no la indicación explícita en el manifest) proporcionó `Seccomp: 2`.
+El requisito clave es que el Pod REALMENTE no mencione `seccompProfile` en absoluto, ni a nivel de Pod ni a nivel de contenedor. Si copias el manifest de las tareas 4–6 y simplemente olvidas eliminar este campo, el test no demostrará lo que debe: que precisamente el `seccompDefault` a nivel de nodo (y no la indicación explícita en el manifest) proporcionó `Seccomp: 2`.
 
 La comprobación se guía por la configuración REALMENTE APLICADA del kubelet, y no por el texto del archivo en
 el disco: `curl`/`kubectl get --raw /api/v1/nodes/<node>/proxy/configz | jq .kubeletconfig.seccompDefault`.
@@ -247,7 +247,7 @@ archivo: la configuración no se recoge al vuelo.
 <summary>💡 Pista para la tarea 9</summary>
 
 `apparmor_parser -p` (`--preprocess`) NO es un modo safe dry-run/syntax-check: es
-simplemente un preprocessing: expande las directivas `#include` e imprime el
+simplemente un preprocessing, que expande las directivas `#include` e imprime el
 perfil resultante en stdout, sin garantizar por sí mismo la ausencia de efectos secundarios y sin estar
 pensado precisamente para comprobar la sintaxis. Usa `-Q`/`--skip-kernel-load`
 (ejecuta la compilación/comprobación completa, pero no carga en el kernel) o `-d`/`--debug`

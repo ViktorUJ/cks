@@ -37,11 +37,11 @@ kubectl config use-context "$CTX"
 
 `Secret.data` dans l'API est encodé en base64, et non chiffré. Le bootstrap a créé un
 canary sûr avant l'apparition de l'EncryptionConfiguration. D'abord, nous regardons l'enregistrement raw d'etcd avec la commande de la
-documentation, puis nous enregistrons la preuve sous forme de chaîne dans le fichier `/var/work/109/plaintext-proof.txt`
-sur le control-plane (`/tmp/plaintext-proof.txt`), puis nous la copions sur la machine de travail dans
+documentation, puis nous enregistrons la preuve sous forme de chaîne dans le fichier `/tmp/plaintext-proof.txt`
+sur le control-plane, puis nous la copions sur la machine de travail dans
 `/var/work/109/plaintext-proof.txt` (le répertoire a été créé par le bootstrap) : la vérification lit le fichier sur la machine de travail.
 
-Entrez sur le control-plane et exécutez dessus (dans cette commande tout vient de la documentation, sauf la clé dans
+Connectez-vous au control-plane et exécutez-y (dans cette commande tout vient de la documentation, sauf la clé dans
 etcd : `/registry/secrets/<namespace>/<name>`) :
 
 ```bash
@@ -128,7 +128,7 @@ Nous enregistrons d'abord le manifest **en dehors** du répertoire `/etc/kuberne
 Pod chaque fichier non caché de ce répertoire, y compris `*.bak`. Une copie du manifest d'origine à l'intérieur du
 répertoire est un second static Pod du même nom ; le kubelet peut continuer à lancer précisément cette copie
 (l'ancienne configuration sans `--encryption-provider-config`), et la modification du fichier principal ne
-prendra silencieusement pas effet, et le chiffrement restera désactivé avec un API server en apparence sain.
+prendra pas effet, sans aucun message d'erreur, si bien que le chiffrement restera désactivé avec un API server en apparence sain.
 Sur le control-plane, ouvrez précisément le manifest existant du static Pod
 et ajoutez **aux** `command`, `volumeMounts` et `volumes` existants ces éléments ;
 ne remplacez pas tout le fichier par un modèle.
@@ -219,13 +219,13 @@ exit   # de root
 exit   # du control-plane
 ```
 
-L'API renvoie le plaintext à un client autorisé - c'est normal et ne démontre pas le
+L'API renvoie le plaintext à un client autorisé - c'est normal et cela ne démontre pas le
 chiffrement at rest. Ici, la preuve est que raw etcd contient `k8s:enc:aescbc:v1:` pour
 l'ancien et le nouvel enregistrement et ne contient plus le legacy marker.
 
 Maintenant, le migration fallback n'est plus nécessaire. Nous supprimons `identity`, redémarrons de force le
-kube-apiserver static via CRI et revérifions la santé et la lecture. Ne le faites qu'
-après un snapshot et la confirmation du ciphertext de tous les types de ressources concernés.
+kube-apiserver static via CRI et revérifions la santé et la lecture. Ne le faites
+qu'après un snapshot et la confirmation du ciphertext de tous les types de ressources concernés.
 
 ```bash
 ssh control-plane
@@ -246,13 +246,13 @@ until kubectl get --raw=/readyz 2>/dev/null | grep -qx ok; do sleep 2; done
 kubectl -n "$NS" get secret legacy-secret encrypted-secret
 ```
 
-État final de ce lab : l'encrypted provider est le premier et le seul, `identity`
+État final de ce lab : le provider de chiffrement (`aescbc`) est le premier et le seul, `identity`
 est supprimé. Le fallback temporaire ne doit pas être laissé comme « assurance » permanente.
 
 ## 5. Restreindre l'accès à l'API et désactiver le token automount
 
 Encryption at rest ne remplace pas RBAC : un sujet avec `get` sur Secret verra le plaintext via l'API.
-Nous créerons un ServiceAccount auquel est accessible exactement un Secret, et un Pod de diagnostic sans
+Nous créerons un ServiceAccount qui n'a accès qu'à un seul Secret, et un Pod de diagnostic sans
 service-account token monté.
 
 ```yaml
@@ -318,7 +318,7 @@ check_result
 `automountServiceAccountToken: false` réduit la credential surface disponible du Pod, mais ne
 limite pas le RBAC du ServiceAccount lui-même si l'application obtient d'autres credentials.
 
-## En complément : à quoi ressemble KMS v2 et la rotation complète de la clé
+## En complément : à quoi ressemblent KMS v2 et la rotation complète de la clé
 
 ### KMS v2 : envelope encryption sans clé locale dans la config
 
@@ -334,8 +334,8 @@ comparez le format de KMS v2 et les exigences de health/ACL avec la documentatio
 
 ### Cycle de vie complet de la rotation de la clé aescbc
 
-La transition `identity -> aescbc` de la tâche 4 est une migration, et non la rotation d'une clé déjà
-chiffrée. Avant la rotation, faites un snapshot chiffré d'etcd et conservez
+La transition `identity -> aescbc` de la tâche 4 est une migration, et non la rotation d'une clé pour des données déjà
+chiffrées. Avant la rotation, faites un snapshot chiffré d'etcd et conservez
 l'ancienne clé pour le rollback. Ajoutez la nouvelle clé **en premier**, et laissez temporairement l'ancienne
 en second : les providers sont lus dans l'ordre, et les nouveaux enregistrements sont écrits avec la première clé.
 
@@ -349,7 +349,7 @@ en second : les providers sont lus dans l'ordre, et les nouveaux enregistrements
 ```
 
 Après le redémarrage de l'API server, réécrivez les ressources et vérifiez précisément le nom de la nouvelle key dans le ciphertext
-raw, et pas seulement le prefix général `k8s:enc` :
+raw, et pas seulement le préfixe général `k8s:enc` :
 
 ```bash
 # sur la machine de travail

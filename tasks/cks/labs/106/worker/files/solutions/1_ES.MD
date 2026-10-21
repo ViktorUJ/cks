@@ -2,8 +2,8 @@
 
 # Lab 106 - solución de referencia: AppArmor y seccomp
 
-> Los comandos de Kubernetes (`kubectl`) ejecútalos en la máquina de trabajo (`worker`). Todo lo relativo a
-> el propio nodo (AppArmor, kubelet, `crictl`) hazlo **directamente en el nodo**: entra por `ssh` una
+> Los comandos de Kubernetes (`kubectl`) ejecútalos en la máquina de trabajo (`worker`). Todo lo relativo al
+> propio nodo (AppArmor, kubelet, `crictl`) hazlo **directamente en el nodo**: entra por `ssh` una
 > sola vez y conviértete en root (`sudo -i`); es más rápido que enviar cada comando con un
 > `ssh control-plane '...'` aparte, y así es como hay que trabajar en el examen. El namespace
 > `security-106` se crea en la tarea 3.
@@ -24,7 +24,7 @@
 
 El perfil está solo en la máquina de trabajo. Lo copiamos al nodo (desde el `worker`), luego en el nodo
 lo colocamos en su sitio y lo cargamos en el kernel. El archivo ya contiene el flag `complain`, por lo que
-basta con un solo `apparmor_parser -r` para la carga inicial (sin `aa-complain` que, igual que
+basta con un solo `apparmor_parser -r` para la carga inicial (sin `aa-complain`, que, igual que
 `aa-enforce`, analiza todos los archivos de `/etc/apparmor.d/` y fallaría con el aún roto
 `k8s-106-broken-profile` de la tarea 9):
 
@@ -219,11 +219,11 @@ necesidad demostrada. En Kubernetes la capability se escribe como `SYS_ADMIN`, s
 Usamos `unshare -n` (network namespace, `CLONE_NEWNET`), y NO `unshare -m` (mount
 namespace). Ambas operaciones requieren la misma `CAP_SYS_ADMIN`, pero BusyBox `unshare -m`
 tras un `unshare(2)` exitoso ejecuta además un syscall `mount(2)` independiente
-para la forced private propagation, y el AppArmor-perfil por defecto de containerd (`RuntimeDefault`,
+para la forced private propagation, y el perfil de AppArmor por defecto de containerd (`RuntimeDefault`,
 que recibe este Pod, ya que aquí no se indica un `appArmorProfile` explícito) contiene
 `deny mount,` sin ninguna condición sobre los flags, con independencia de las capabilities/seccomp. Por eso
 `unshare -m true` puede fallar con `EPERM` por AppArmor, aunque seccomp no
-limite `unshare` en absoluto: un probe así mezclaría dos security control distintos. `unshare -n`
+limite `unshare` en absoluto: un probe así mezclaría dos security controls distintos. `unshare -n`
 llama solo al propio syscall `unshare(2)`, sin un `mount()` colateral.
 
 ```yaml

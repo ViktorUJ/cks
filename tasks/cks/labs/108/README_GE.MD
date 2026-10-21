@@ -23,7 +23,7 @@ policy-ს, და არ წერთ CEL-ს Kyverno-ს შიგნით. �
 </details>
 
 <details>
-<summary>2. რატომ უნდა შეამოწმოს validating policy-მ `ephemeralContainers` `containers`/`initContainers`-გან ცალკე?</summary>
+<summary>2. რატომ უნდა შეამოწმოს validating policy-მ `ephemeralContainers` `containers`/`initContainers`-ისგან ცალკე?</summary>
 
 `kubectl debug` ამატებს ephemeral container-ს უკვე არსებულ Pod-ში ცალკე subresource API-ით (`pods/ephemeralcontainers`), და არა Pod-ის ჩვეულებრივი CREATE/UPDATE-ით. თუ policy ემთხვევა მხოლოდ რესურს `pods`-ს ამ subresource-ის აშკარა ჩართვის გარეშე, შეუმოწმებელი/untrusted ephemeral container-ის დამატების ცდამ შეიძლება ჩვეულებრივი containers-ისთვის დაწერილი ყველა validating policy-ის გვერდით ჩაუაროს.
 </details>
@@ -36,7 +36,7 @@ policy-ს, და არ წერთ CEL-ს Kyverno-ს შიგნით. �
 
 ## ინფრასტრუქტურა
 
-გარემო იშლება Terragrunt-ით AWS `eu-central-1`-ში:
+გარემო განთავსდება Terragrunt-ით AWS `eu-central-1`-ში:
 
 | კომპონენტი | დანიშნულება |
 |---|---|
@@ -48,7 +48,7 @@ policy-ს, და არ წერთ CEL-ს Kyverno-ს შიგნით. �
 Control-plane ჩვეულებრივ Pod-ებს უშვებს, ამიტომ ცალკე Kubernetes worker არ იქმნება.
 Kyverno საწყის მდგომარეობაში განზრახ **არ არის დაყენებული**: ეს დავალება 1-ის ნაწილია.
 სამუშაო მანქანაზე მომზადებულია დაფიქსირებული installer, რომელიც chart-ის ხელით შერჩევას არ მოითხოვს.
-ლაბი ამაგრებს Kyverno `1.19`-ს (Helm chart `3.9.0`) და იყენებს სტაბილურ CEL-based API-ს
+ლაბი აფიქსირებს Kyverno `1.19`-ს (Helm chart `3.9.0`) და იყენებს სტაბილურ CEL-based API-ს
 `policies.kyverno.io/v1`. Legacy `Policy`/`ClusterPolicy` `kyverno.io/v1`-ში ამ ვერსიიდან
 deprecated-ია და განიხილება მხოლოდ როგორც migration material.
 
@@ -58,7 +58,7 @@ bootstrap-ით, საწყისი (განზრახ არასრ�
 არსებულ `ConstraintTemplate`-ში, და არა admission engine-ის ნულიდან დაყენებას - ამ ნაწილს
 უკვე დავალება 1 ავარჯიშებს Kyverno-სთვის. დავალება 7 მუშაობს ცალკე namespace-ში
 `gatekeeper-108`, Kyverno-ს დავალებებისგან 1-5 (`policy-108`) იზოლირებულში, რათა Pod ერთდროულად ორი განსხვავებული admission engine-ის მიერ
-არ უარყოფილიყო.
+ვერ იქნეს უარყოფილი.
 
 ## განთავსება
 
@@ -123,7 +123,7 @@ CEL-ლოგიკისთვის: დაშალეთ image-ის სტ
 <details>
 <summary>🔍 შეამოწმეთ თავი `check_result`-მდე</summary>
 
-policy-ის გამოყენებამდე დარწმუნდით, რომ დამრღვევი Pod admission-ს საერთოდ გადის
+Policy-ის გამოყენებამდე დარწმუნდით, რომ დამრღვევი Pod admission-ს საერთოდ გადის
 (baseline) - წინააღმდეგ შემთხვევაში გაუგებარია, denial თქვენმა policy-მ გამოიწვია თუ სხვა რამემ:
 
 ```bash
@@ -230,7 +230,7 @@ EOF
 <details>
 <summary>💡 მინიშნება დავალება 4-ისთვის</summary>
 
-`startsWith('registry.k8s.io/')` - პრეფიქსის ყველაზე საიმედო შემოწმებაა, მაგრამ დარწმუნდით, რომ ორივე დაშვებული registry მოწმდება OR-ით (ორიდან ნებისმიერი გამოდგება), და არა AND-ით (ორივე ერთდროულად, რაც ერთი image-ისთვის შეუძლებელია). შეამოწმეთ სწორედ ALLOWLIST (image დაიშვება მხოლოდ იმ შემთხვევაში, თუ ორიდან ერთ-ერთ პრეფიქსს დაემთხვა), და არა კონკრეტულად `docker.io`-ს denylist - policy, დაწერილი როგორც "თუ `docker.io` - deny, სხვა შემთხვევაში allow", გაატარებს `quay.io`-ს, unqualified images-სა და ნებისმიერ სხვა მესამე მხარის registry-ს. დარწმუნდით ასევე, რომ პრეფიქსი შედარებულია დამასრულებელ `/`-თან ერთად (`registry.k8s.io/`, და არა უბრალოდ `registry.k8s.io`), წინააღმდეგ შემთხვევაში მსგავსი დაწერილობის host (`registry.k8s.io.evil.example`) შეიძლება case-insensitive ან არასრულ დამთხვევას გაჰყვეს. როგორც დავალება 2-ში, არ დაგავიწყდეთ `ephemeralContainers` - ეს კონტეინერების სამი სიის შემოწმების იგივე პატერნია.
+`startsWith('registry.k8s.io/')` - პრეფიქსის ყველაზე საიმედო შემოწმებაა, მაგრამ დარწმუნდით, რომ ორივე დაშვებული registry მოწმდება OR-ით (ორიდან ნებისმიერი გამოდგება), და არა AND-ით (ორივე ერთდროულად, რაც ერთი image-ისთვის შეუძლებელია). შეამოწმეთ სწორედ ALLOWLIST (image დაიშვება მხოლოდ იმ შემთხვევაში, თუ ორიდან ერთ-ერთ პრეფიქსს დაემთხვა), და არა კონკრეტულად `docker.io`-ს denylist - policy, დაწერილი როგორც "თუ `docker.io` - deny, სხვა შემთხვევაში allow", გაატარებს `quay.io`-ს, unqualified images-სა და ნებისმიერ სხვა მესამე მხარის registry-ს. დარწმუნდით ასევე, რომ პრეფიქსი შედარებულია დამასრულებელ `/`-თან ერთად (`registry.k8s.io/`, და არა უბრალოდ `registry.k8s.io`), წინააღმდეგ შემთხვევაში მსგავსი დაწერილობის host (`registry.k8s.io.evil.example`) შეიძლება case-insensitive ან არასრული დამთხვევით გაიაროს. როგორც დავალება 2-ში, არ დაგავიწყდეთ `ephemeralContainers` - ეს კონტეინერების სამი სიის შემოწმების იგივე პატერნია.
 </details>
 
 <details>
@@ -271,24 +271,24 @@ init- და ephemeral-კონტეინერებში, და არა
 | **5** | **არასავალდებულო: label-ის mutate Kyverno-ით** |
 | :---: | :--- |
 | რას ვაკეთებთ | • შექმენით CEL-based `MutatingPolicy` `add-kyverno-managed-label` (`policies.kyverno.io/v1`), რომელიც namespace `policy-108`-ის Pod-ებს უმატებს label-ს `security.cks.io/managed-by: kyverno`, თუ ის არ არის.<br/>• გამოიყენეთ mutation, და არა validation.<br/>• სხვა namespace-ების Pod-ებს ნუ მუტირებთ. |
-| მიღების კრიტერიუმები | • Server-side dry-run Pod-ისა დაშვებული registry-თი და `runAsNonRoot: true`-ით, რომელსაც ამ label-ის ჯერ არ აქვს, mutation-ის შემდეგ მას იღებს მნიშვნელობით `kyverno`<br/>• Pod, რომელსაც label უკვე სხვა მნიშვნელობით აქვს მითითებული, საწყის მნიშვნელობას ინარჩუნებს<br/>• Pod `default`-ში ამ label-ის გარეშე რჩება<br/>• ეს ეტაპი `check_result`-ში ჩანს, მაგრამ მისი გამოტოვება დასაშვებია |
+| მიღების კრიტერიუმები | • Server-side dry-run-ისას Pod, დაშვებული registry-თი და `runAsNonRoot: true`-ით, რომელსაც ეს label ჯერ არ აქვს, mutation-ის შემდეგ იღებს მას მნიშვნელობით `kyverno`<br/>• Pod, რომელსაც label უკვე სხვა მნიშვნელობით აქვს მითითებული, საწყის მნიშვნელობას ინარჩუნებს<br/>• Pod `default`-ში ამ label-ის გარეშე რჩება<br/>• ეს ეტაპი `check_result`-ში ჩანს, მაგრამ მისი გამოტოვება დასაშვებია |
 
 <details>
 <summary>💡 მინიშნება დავალება 5-ისთვის</summary>
 
-ეს ეტაპი არასავალდებულოა - თუ დრო გაგიტარდათ, შეგიძლიათ გამოტოვოთ ლაბის დანარჩენი ნაწილისთვის რისკის გარეშე. mutation-ის შესამოწმებელი სატესტო Pod უკვე უნდა გადიოდეს დავალებების 2-4 policies-ს (trusted registry, non-root) - თუ ის თავად წინა policy-ებიდან ერთ-ერთით უარყოფილი იქნება, mutation-ის შედეგს საერთოდ ვერ დაინახავთ. «თუ ის არ არის» დავალებაში - უბრალოდ სურვილი არ არის: mutation-მა აშკარად უნდა შეამოწმოს label-ის არსებობა და ობიექტს არ შეეხოს, თუ ის უკვე არსებობს, წინააღმდეგ შემთხვევაში დავალება შესრულებული არ არის, თუნდაც label-ის გარეშე Pod სწორ მნიშვნელობას იღებდეს.
+ეს ეტაპი არასავალდებულოა - თუ დრო ამოგეწურათ, შეგიძლიათ ის გამოტოვოთ ლაბის დანარჩენი ნაწილისთვის რისკის გარეშე. Mutation-ის შესამოწმებელი სატესტო Pod უკვე უნდა გადიოდეს დავალებების 2-4 policies-ს (trusted registry, non-root) - თუ ის თავად წინა policy-ებიდან ერთ-ერთით უარყოფილი იქნება, mutation-ის შედეგს საერთოდ ვერ დაინახავთ. «თუ ის არ არის» დავალებაში - უბრალოდ სურვილი არ არის: mutation-მა აშკარად უნდა შეამოწმოს label-ის არსებობა და ობიექტს არ შეეხოს, თუ ის უკვე არსებობს, წინააღმდეგ შემთხვევაში დავალება შესრულებული არ არის, თუნდაც label-ის გარეშე Pod სწორ მნიშვნელობას იღებდეს.
 </details>
 
 ---
 | **6** | **ImagePolicyWebhook: გარე backend CEL policy-ის ნაცვლად** |
 | :---: | :--- |
-| რას ვაკეთებთ | • სამუშაო მანქანაზე უკვე მომზადებულია `/opt/image-policy-backend/server.py` - მინიმალური HTTPS-სერვერი, რომელიც `ImageReview` API-ს ახორციელებს (უარყოფს image-ს ტეგით `:latest` ან ტეგის გარეშე საერთოდ).<br/>• განათავსეთ ის როგორც Deployment namespace `image-policy`-ში, Service `image-policy-backend`-ის უკან პორტზე `8443`. Backend-მა უნდა მიიღოს კავშირები TLS-ით (upstream `ImagePolicyWebhook` კონტრაქტი HTTPS-ს მოითხოვს, plain HTTP არ არის მხარდაჭერილი).<br/>• `control-plane`-ზე (`ssh`, შემდეგ `sudo -i`) გამართეთ `AdmissionConfiguration` plugin `ImagePolicyWebhook`-ისთვის (`defaultAllow: false`) და kubeconfig, რომელიც თქვენს backend-ზე მიუთითებს.<br/>• static manifest `kube-apiserver.yaml`-ში **დაამატეთ** `ImagePolicyWebhook` უკვე არსებულ სიაზე `--enable-admission-plugins` (სიას მთლიანად ნუ ჩაანაცვლებთ - წინააღმდეგ შემთხვევაში რისკავთ, გამორთოთ უკვე ჩართული plugins) და ჩართეთ `--runtime-config=imagepolicy.k8s.io/v1alpha1=true`.<br/>• API-ს აღდგენის შემდეგ შექმენით Pod `:latest`-ით - უნდა უარყოფილიყოს; შემდეგ Pod დაფიქსირებული ტეგით - უნდა შეიქმნას. |
-| მიღების კრიტერიუმები | • `image-policy-backend` Available-ა<br/>• Kube-apiserver healthy-ა დამატებული (და არა ჩანაცვლებული) plugin-ით და `--runtime-config`-ით<br/>• Backend-ის kubeconfig იყენებს HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy`<br/>• Pod `:latest`-ით და implicit latest-ით (მათ შორის registry-port ტეგის გარეშე) უარყოფილია სწორედ ImagePolicyWebhook-ით namespace `default`-ში — როგორც ჩვეულებრივ Pod-ში, ისე init/ephemeral container-ში<br/>• მომხმარებლის annotation `alpha.image-policy.k8s.io/break-glass: "true"` გამონაკლისს არ იძლევა<br/>• Namespace `policy-108` გამოყოფილია Kyverno-სთვის Tasks 2–4-დან, რათა ორმა დამოუკიდებელმა admission-მექანიზმა ერთმანეთის უარყოფა არ დაფაროს<br/>• ამ backend-ისთვის `ImageReview.spec.namespace == policy-108`-ის მიხედვით გადაწყვეტილებას Kyverno-ს გადასცემს, ხოლო ყველა დანარჩენ namespace-ში ImagePolicyWebhook აგრძელებს მუშაობას<br/>• Pod დაფიქსირებული ტეგით შექმნილია და Running-ია<br/>• Service backend outage-ის დროს მართლაც კარგავს Endpoints-ს, API უარს ამბობს ამ endpoint-ის მიუწვდომლობის გამო (`defaultAllow: false`), შემდეგ Service selector და admission ზუსტად საწყის მდგომარეობაში აღდგება |
+| რას ვაკეთებთ | • სამუშაო მანქანაზე უკვე მომზადებულია `/opt/image-policy-backend/server.py` - მინიმალური HTTPS-სერვერი, რომელიც `ImageReview` API-ს ახორციელებს (უარყოფს image-ს ტეგით `:latest` ან ტეგის გარეშე საერთოდ).<br/>• განათავსეთ ის როგორც Deployment namespace `image-policy`-ში, Service `image-policy-backend`-ის უკან პორტზე `8443`. Backend-მა უნდა მიიღოს კავშირები TLS-ით (upstream `ImagePolicyWebhook` კონტრაქტი HTTPS-ს მოითხოვს, plain HTTP არ არის მხარდაჭერილი).<br/>• `control-plane`-ზე (`ssh`, შემდეგ `sudo -i`) გამართეთ `AdmissionConfiguration` plugin `ImagePolicyWebhook`-ისთვის (`defaultAllow: false`) და kubeconfig, რომელიც თქვენს backend-ზე მიუთითებს.<br/>• static manifest `kube-apiserver.yaml`-ში **დაამატეთ** `ImagePolicyWebhook` უკვე არსებულ სიაზე `--enable-admission-plugins` (სიას მთლიანად ნუ ჩაანაცვლებთ - წინააღმდეგ შემთხვევაში რისკავთ, გამორთოთ უკვე ჩართული plugins) და ჩართეთ `--runtime-config=imagepolicy.k8s.io/v1alpha1=true`.<br/>• API-ს აღდგენის შემდეგ შექმენით Pod `:latest`-ით - უნდა იყოს უარყოფილი; შემდეგ Pod დაფიქსირებული ტეგით - უნდა შეიქმნას. |
+| მიღების კრიტერიუმები | • `image-policy-backend` Available-ა<br/>• Kube-apiserver healthy-ა დამატებული (და არა ჩანაცვლებული) plugin-ით და `--runtime-config`-ით<br/>• Backend-ის kubeconfig იყენებს HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy`<br/>• Pod `:latest`-ით და implicit latest-ით (მათ შორის registry-port ტეგის გარეშე) უარყოფილია სწორედ ImagePolicyWebhook-ით namespace `default`-ში - როგორც ჩვეულებრივ Pod-ში, ისე init/ephemeral container-ში<br/>• მომხმარებლის annotation `alpha.image-policy.k8s.io/break-glass: "true"` გამონაკლისს არ იძლევა<br/>• Namespace `policy-108` გამოყოფილია დავალებების 2–4 Kyverno-სთვის, რათა ორმა დამოუკიდებელმა admission-მექანიზმმა ერთმანეთის უარყოფა არ დაფაროს<br/>• ამისთვის backend `ImageReview.spec.namespace == policy-108`-ის მიხედვით გადაწყვეტილებას Kyverno-ს გადასცემს, ხოლო ყველა დანარჩენ namespace-ში ImagePolicyWebhook აგრძელებს მუშაობას<br/>• Pod დაფიქსირებული ტეგით შექმნილია და Running-ია<br/>• Service backend outage-ის დროს მართლაც კარგავს Endpoints-ს, API უარს ამბობს ამ endpoint-ის მიუწვდომლობის გამო (`defaultAllow: false`), შემდეგ Service selector და admission ზუსტად საწყის მდგომარეობაში აღდგება |
 
 <details>
 <summary>💡 მინიშნება დავალება 6-ისთვის</summary>
 
-`ImagePolicyWebhook` - პრინციპულად სხვა მექანიზმია, ვიდრე Kyverno დავალებებიდან 1-5: გადაწყვეტილებას გარე HTTPS-backend იღებს API `ImageReview`-ის გავლით, და არა CEL-გამოსახულება კლასტერის შიგნით. დააკოპირეთ მზა `/opt/image-policy-backend/server.py` `control-plane`-ზე (მაგალითად `scp`/`cat` SSH-ით) - დავალება ამოწმებს admission plugin-ის wiring-ის, TLS-კონტრაქტისა და ImageReview API-ის გაგებას, და არა HTTP-სერვერის ნულიდან წერის უნარს. TLS-ისთვის: ჯერ შექმენით Service (რომ გაიგოთ `ClusterIP`), შემდეგ თვითხელმოწერილი სერტიფიკატი ამ IP-ით SAN-ში (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`), შემდეგ Deployment, რომელიც ამაგრებს როგორც კოდს, ისე სერტიფიკატს. არსებულ `--enable-admission-plugins`-ს ახალი მნიშვნელობით მთლიანად ნუ ჩაანაცვლებთ - მიუწერეთ `ImagePolicyWebhook` მძიმით უკვე ჩართულ plugins-ს (ჩვეულებრივ იქ უკვე არის `NodeRestriction`). ასევე არ დაგავიწყდეთ `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` - ამ API-ს აშკარა ჩართვის გარეშე backend საერთოდ არ გამოიძახება. Namespace `image-policy` წინასწარ შექმნილი არ არის - შექმენით ის თავად Deployment/Service-მდე. თუ რესურსების/გზების/ფლაგების დეტალურ თანმიმდევრობაში გაიჭედეთ - ეტალონური მოქმედებების თანმიმდევრობა ამოხსნაშია მოცემული.
+`ImagePolicyWebhook` - პრინციპულად სხვა მექანიზმია, ვიდრე Kyverno დავალებებიდან 1-5: გადაწყვეტილებას გარე HTTPS-backend იღებს API `ImageReview`-ის გავლით, და არა CEL-გამოსახულება კლასტერის შიგნით. გამოიყენეთ მზა `/opt/image-policy-backend/server.py` სამუშაო მანქანიდან (მაგალითად, ჩაწყვეთ ის ConfigMap-ში backend-ის Deployment-ისთვის; `control-plane`-ზე მხოლოდ CA-სერტიფიკატის დაკოპირებაა საჭირო webhook-ის kubeconfig-ისთვის) - დავალება ამოწმებს admission plugin-ის wiring-ის, TLS-კონტრაქტისა და ImageReview API-ის გაგებას, და არა HTTP-სერვერის ნულიდან წერის უნარს. TLS-ისთვის: ჯერ შექმენით Service (რომ გაიგოთ `ClusterIP`), შემდეგ თვითხელმოწერილი სერტიფიკატი ამ IP-ით SAN-ში (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`), შემდეგ Deployment, რომელიც ამაგრებს როგორც კოდს, ისე სერტიფიკატს. არსებულ `--enable-admission-plugins`-ს ახალი მნიშვნელობით მთლიანად ნუ ჩაანაცვლებთ - მიუწერეთ `ImagePolicyWebhook` მძიმით უკვე ჩართულ plugins-ს (ჩვეულებრივ იქ უკვე არის `NodeRestriction`). ასევე არ დაგავიწყდეთ `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` - ამ API-ს აშკარა ჩართვის გარეშე backend საერთოდ არ გამოიძახება. Namespace `image-policy` წინასწარ შექმნილი არ არის - შექმენით ის თავად Deployment/Service-მდე. თუ რესურსების/გზების/ფლაგების დეტალურ თანმიმდევრობაში გაიჭედეთ - ეტალონური მოქმედებების თანმიმდევრობა ამოხსნაშია მოცემული.
 </details>
 
 ---
@@ -300,7 +300,7 @@ init- და ephemeral-კონტეინერებში, და არა
 <details>
 <summary>💡 მინიშნება დავალება 7-ისთვის</summary>
 
-იპოვეთ ConstraintTemplate `kubectl get constrainttemplate k8sblockedregistries -o yaml`-ით. Rego დევს `spec.targets[].rego`-ში როგორც მრავალსტრიქონიანი სტრიქონი - სწორედ ის უნდა დაარედაქტირეთ (`kubectl edit constrainttemplate k8sblockedregistries`, ან `get -o yaml` → შესწორება → `apply`). არსებული Rego დაბლოკილ registry-ს აცხადებს ცალკე ფაქტებით ფორმით `blocked_registry("untrusted-registry.example")` - დაამატეთ კიდევ ერთი ასეთი სტრიქონი `very-bad-registry.test`-ისთვის, უკვე არსებულის წაშლისა და ჩანაცვლების გარეშე. ამას ნუ აგრევთ `Constraint.spec.parameters`-თან - policy-ის ამ ვერსიაში Constraint parameters-ს საერთოდ არ იყენებს, იქ დასარედაქტირებელი არაფერია.
+იპოვეთ ConstraintTemplate `kubectl get constrainttemplate k8sblockedregistries -o yaml`-ით. Rego დევს `spec.targets[].rego`-ში როგორც მრავალსტრიქონიანი სტრიქონი - სწორედ ის უნდა დაარედაქტიროთ (`kubectl edit constrainttemplate k8sblockedregistries`, ან `get -o yaml` → შესწორება → `apply`). არსებული Rego დაბლოკილ registry-ს აცხადებს ცალკე ფაქტებით ფორმით `blocked_registry("untrusted-registry.example")` - დაამატეთ კიდევ ერთი ასეთი სტრიქონი `very-bad-registry.test`-ისთვის, უკვე არსებულის წაშლისა და ჩანაცვლების გარეშე. ამას ნუ აგრევთ `Constraint.spec.parameters`-თან - policy-ის ამ ვერსიაში Constraint parameters-ს საერთოდ არ იყენებს, იქ დასარედაქტირებელი არაფერია.
 </details>
 
 <details>
@@ -339,7 +339,7 @@ echo "old-bad baseline exit: $?"
 
 დაამატეთ Rego, გაიმეორეთ იგივე manifest (ახალი სახელით, ძველი Pod უკვე
 "შექმნილია" dry-run-ით და არ ინახება) - ახლა მოსალოდნელია admission-ის შეცდომა
-Gatekeeper-გან, სწორედ `k8sblockedregistries`-ზე მითითებით, ორივე registry-სთვის:
+Gatekeeper-ისგან, სწორედ `k8sblockedregistries`-ზე მითითებით, ორივე registry-სთვის:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -414,8 +414,8 @@ TASK=108 make delete_cks_task
 
 ## თავსებადობა და image-ების აკრძალვის ზუსტი სემანტიკა
 
-ლაბი ამაგრებს Kubernetes 1.36.0-სა და Kyverno 1.19-ს ახალ
-`policies.kyverno.io/v1` API-სთან გასაცნობად. ეს **forward-looking / unsupported combination**: Kyverno
+ლაბი აფიქსირებს Kubernetes 1.36.0-სა და Kyverno 1.19-ს ახალ
+`policies.kyverno.io/v1` API-სთან გასაცნობად. ეს არის **forward-looking / unsupported combination**: Kyverno
 1.19 ოფიციალურად ტესტირდება Kubernetes 1.33–1.35-თან, და არა 1.36-თან. ლაბორატორიის გარეთ გამოყენებამდე
 აირჩიეთ მხარდაჭერილი ვერსიების მატრიცა და შეადარეთ release notes.
 

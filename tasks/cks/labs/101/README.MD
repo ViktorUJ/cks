@@ -6,9 +6,9 @@
 
 `NetworkPolicy` works as an allow-list: after default-deny, the required flows are brought back only by explicit rules. Enforcement is provided by Calico. The worker of this lab is a Terraform-managed EC2 instance; its Instance Metadata Service (IMDS) is reachable at `http://169.254.169.254/`. Terraform explicitly enables the HTTP endpoint, leaves IMDSv1 GET allowed for a safe probe, and sets the response hop limit to `2`, so that before default-deny a regular Pod can confirm network reachability of IMDS.
 
-The lab checks only the network reachability of the IMDS endpoint, without reading metadata or credentials. Any actually received HTTP status `1xx–5xx` means that a TCP/HTTP path to IMDS exists. `HTTPCODE:000` together with a transport error/timeout means there is no HTTP response. The specific HTTP status depends on the EC2 metadata options: if token usage is `required`, a GET without a valid IMDSv2 token receives `401`; if IMDSv1 is allowed, a tokenless GET is treated as an IMDSv1 request and may receive a regular HTTP response.
+The lab checks only the network reachability of the IMDS endpoint, without reading metadata or credentials. Any actually received HTTP status `1xx–5xx` means that a TCP/HTTP path to IMDS exists. The code `000` (`HTTP:000` in the solution commands, `HTTPCODE:000` in the checker output) together with a transport error/timeout means there is no HTTP response. The specific HTTP status depends on the EC2 metadata options: if token usage is `required`, a GET without a valid IMDSv2 token receives `401`; if IMDSv1 is allowed, a tokenless GET is treated as an IMDSv1 request and may receive a regular HTTP response.
 
-**Residual risk.** The worker EC2 instance has an IAM instance profile attached, and a tokenless IMDSv1 GET to `latest/meta-data/iam/security-credentials/<role>` actually returns temporary AWS credentials (AccessKeyId/SecretAccessKey/SessionToken) - this is not a hypothetical risk but the actual behavior of the current environment. The role itself is restricted to near-zero permissions (least privilege: it cannot even read its own IAM role via `iam:GetRole`), so the practical value of a leak to an attacker is minimal, but the student must clearly understand that in production with the same configuration (`HttpTokens=optional`, IMDSv1 allowed) the same command would return the real credentials of a working role with real permissions. The lab deliberately reproduces this anti-pattern from chapter 02.1 (IMDSv1 allowed, response hop limit `2`) for the purposes of probing and learning to find this vulnerability through NetworkPolicy; in production use `HttpTokens=required` (IMDSv2 only) and `HttpPutResponseHopLimit=1`.
+**Residual risk.** The worker EC2 instance has an IAM instance profile attached, and a tokenless IMDSv1 GET to `latest/meta-data/iam/security-credentials/<role>` actually returns temporary AWS credentials (AccessKeyId/SecretAccessKey/SessionToken) - this is not a hypothetical risk but the actual behavior of the current environment. The role itself is restricted to near-zero permissions (least privilege: it cannot even read its own IAM role via `iam:GetRole`), so the practical value of a leak to an attacker is minimal, but the student must clearly understand that in production with the same configuration (`HttpTokens=optional`, IMDSv1 allowed) the same command would return the real credentials of a production role with real permissions. The lab deliberately reproduces this anti-pattern from chapter 02.1 (IMDSv1 allowed, response hop limit `2`) for the purposes of probing and learning to find this vulnerability through NetworkPolicy; in production use `HttpTokens=required` (IMDSv2 only) and `HttpPutResponseHopLimit=1`.
 
 ## Deployment
 
@@ -30,7 +30,7 @@ For example:
 18:53:06.019 STDOUT [worker] terraform: worker_pc_ssh = "ssh ubuntu@18.193.110.150 password= fq0J9RuZWN"
 ```
 
-For the connection use only the address from the command:
+To connect, use only the address from the command:
 
 ```bash
 ssh ubuntu@<IP>
@@ -38,7 +38,7 @@ ssh ubuntu@<IP>
 
 When SSH asks for a password, enter the value Terraform showed after `password=`.
 
-**For runtime checks** use a temporary diagnostic Pod with the same labels as the identity being checked. HTTP checks need an image with curl (`curlimages/curl:8.11.1`); DNS checks need an image with nslookup (`busybox`). After the check, delete the temporary Pods and temporary policies.
+**For runtime checks** use a temporary diagnostic Pod with the same labels as the identity being checked. HTTP checks need an image with curl (`curlimages/curl:8.11.1`); DNS checks need an image with nslookup (`busybox:1.36.1`). After the check, delete the temporary Pods and temporary policies.
 
 Work on the worker. Before you start, make sure the namespaces are clean (just in case):
 
@@ -70,7 +70,7 @@ Configure a minimal ingress/egress allow-list, pin an image digest, prove the AN
 
 |           **1**           | **The application** |
 | :-----: | :----- |
-|       What to do       | Namespace `cks-101`; Deployments `frontend` and `backend` with `replicas: 1`, without `hostNetwork`, with the same `viktoruj/ping_pong@sha256:<64hex>`; Service `backend` TCP/8080.<br/><br/>**How to get the current digest:**<br/>1. Temporarily run a Pod from the image `viktoruj/ping_pong:latest`.<br/>2. Wait for the pull and Ready.<br/>3. Run `digest=$(kubectl get pod <pod_name> -o yaml \| grep imageID \| cut -d'@' -f2)` and obtain `sha256:<64hex>`.<br/>4. Delete the temporary Pod.<br/>5. Use the obtained digest for both Deployments: `viktoruj/ping_pong@sha256:<64hex>`. |
+|       What to do       | Namespace `cks-101`; Deployments `frontend` and `backend` with `replicas: 1`, without `hostNetwork`, with the same `viktoruj/ping_pong@sha256:<64hex>`; Service `backend` TCP/8080.<br/><br/>**How to get the current digest:**<br/>1. Temporarily run a Pod from the image `viktoruj/ping_pong:latest`.<br/>2. Wait for the image to be pulled and the Pod to become Ready.<br/>3. Run `digest=$(kubectl get pod <pod_name> -o yaml \| grep imageID \| cut -d'@' -f2)` and obtain `sha256:<64hex>`.<br/>4. Delete the temporary Pod.<br/>5. Use the obtained digest for both Deployments: `viktoruj/ping_pong@sha256:<64hex>`. |
 | Acceptance criteria | Both replicas are Ready, the image references are identical, the Service has an endpoint. |
 |        Verification        | Run `kubectl -n cks-101 get deploy,svc,endpoints` and make sure that:<br/>1. Both Deployments are `1/1 Ready`.<br/>2. Service `backend` has an endpoint.<br/><br/>To verify the pinned image run:<br/>`kubectl -n cks-101 get deploy frontend backend -o yaml \| grep 'image:'`<br/>Both Deployments must use the same image of the form `viktoruj/ping_pong@sha256:<64hex>`. |
 
@@ -111,8 +111,8 @@ Configure a minimal ingress/egress allow-list, pin an image digest, prove the AN
 |           **6**           | **Legacy AND and IMDS except** |
 | :-----: | :----- |
 |       What to do       | Create the namespace `cks-101-legacy` with the Deployment `legacy-client`: replicas=1, no hostNetwork, image `curlimages/curl:8.11.1`, command `sleep 3600`. Create the NetworkPolicy `allow-backend-ingress-from-legacy` in the namespace `cks-101`: it selects backend, contains one ingress peer with an AND selector (namespaceSelector and podSelector in a single `from` element), TCP/8080. Create the NetworkPolicy `allow-legacy-egress` in the namespace `cks-101-legacy`: it selects app=legacy-client, contains ipBlock cidr=0.0.0.0/0 with the single except 169.254.169.254/32, and no additional allow-rules. Check: 1) IMDS from legacy-client is blocked; 2) legacy-client can reach backend; 3) a Pod with a different label in the same namespace cannot pass the ingress; 4) a Pod with label=legacy-client in the namespace cks-101 cannot pass the ingress. After the checks, delete the temporary Pods and temporary policies. |
-| Acceptance criteria | IMDS is blocked, the actual legacy backend flow is allowed, a wrong label/namespace is blocked. |
-|        Verification        | 1. Run `kubectl -n cks-101-legacy get networkpolicy allow-legacy-egress -o yaml` - make sure that `ipBlock.cidr=0.0.0.0/0` and the only `except` is `169.254.169.254/32`.<br/>2. Run `kubectl -n cks-101 get networkpolicy allow-backend-ingress-from-legacy -o yaml` - make sure that `namespaceSelector` and `podSelector` are in the same `from` element, and the port is TCP/8080.<br/>3. Curl from `legacy-client` to IMDS must return `HTTP 000` and exit `7` or `28`.<br/>4. Curl from `legacy-client` to the backend must get a real HTTP response.<br/>5. A Pod with a different label in `cks-101-legacy` with a temporary egress to the backend must not pass the backend ingress.<br/>6. A Pod with `app=legacy-client` in the namespace `cks-101` with a temporary egress to the backend must also not pass the backend ingress. |
+| Acceptance criteria | IMDS is blocked, the actual legacy-client → backend flow is allowed, a Pod with a wrong label or from a wrong namespace is blocked. |
+|        Verification        | 1. Run `kubectl -n cks-101-legacy get networkpolicy allow-legacy-egress -o yaml` - make sure that `ipBlock.cidr=0.0.0.0/0` and the only `except` is `169.254.169.254/32`.<br/>2. Run `kubectl -n cks-101 get networkpolicy allow-backend-ingress-from-legacy -o yaml` - make sure that `namespaceSelector` and `podSelector` are in the same `from` element, and the port is TCP/8080.<br/>3. Curl from `legacy-client` to IMDS must return `HTTP 000` and exit `7` or `28`.<br/>4. Curl from `legacy-client` to the backend must get a real HTTP response.<br/>5. A Pod with a different label in `cks-101-legacy` with a temporary egress to the backend must not pass the backend ingress.<br/>6. A Pod with `app=legacy-client` in the namespace `cks-101` with a temporary egress to the backend must not pass the backend ingress either. |
 
 ---
 

@@ -16,7 +16,7 @@
 > exit   # node-იდან უკან worker-ზე
 > ```
 >
-> Artifacts შემოწმება კითხულობს **სამუშაო მანქანიდან** (`/var/work/tests/artifacts/<ნომერი>/`), ისინი
+> Artifact-ებს შემოწმება კითხულობს **სამუშაო მანქანიდან** (`/var/work/tests/artifacts/<ნომერი>/`), ისინი
 > მხოლოდ ლაბისთვის არის საჭირო - გამოცდაზე მათ არ აქვთ ადგილი. ვინახავთ მათ მოკლე ბრძანებით `worker`-დან
 > (`> ფაილი`), შიგთავსს ცალკე ვუყურებთ `cat <ფაილი>`-ით.
 
@@ -52,16 +52,16 @@ apparmor_parser -r /etc/apparmor.d/k8s-106-deny-write
 aa-status --pretty-json | grep k8s-106-deny-write
 # მოსალოდნელია: "k8s-106-deny-write":	"enforce",
 # ჩვეულებრივი 'aa-status | grep ...' პროფილის რეჟიმს არ აჩვენებს: ტექსტურ გამოტანაში პროფილები
-# დაჯგუფებულია სათაურებქვეშ ('N profiles are in enforce mode.'), სახელები სუფიქსის გარეშეა.
+# დაჯგუფებულია სათაურების ქვეშ ('N profiles are in enforce mode.'), სახელები სუფიქსის გარეშეა.
 # კონკრეტული პროფილის შესამოწმებლად გამოიყენეთ 'aa-status --pretty-json' (ან '--json').
 exit
 exit
 ```
 
 ამ პროფილისთვის `aa-enforce`/`aa-complain` და `apparmor-utils` პაკეტის პროფილების შეცვლის სხვა,
-Python-ზე დაწერილი ინსტრუმენტები ნუ გამოიყენებთ, სანამ დავალება 9 არ შესრულებულა:
+Python-ზე დაწერილ ინსტრუმენტებს ნუ გამოიყენებთ, სანამ დავალება 9 არ შესრულებულა:
 ისინი შიგნით იძახებენ `apparmor.read_profiles()`-ს, რომელიც გაშვებისას პარსავს
-**ყველა** ფაილს `/etc/apparmor.d/`-ში, ჯერ ჩაუტვირთავი და ცნობილად
+**ყველა** ფაილს `/etc/apparmor.d/`-ში, ჯერ ჩაუტვირთავი და განზრახ
 გატეხილი `/etc/apparmor.d/k8s-106-broken-profile`-ის ჩათვლით დავალება 9-იდან - და ვარდებიან
 parser-ის შეცდომით სხვის ფაილზე, თქვენს პროფილამდე მისვლის ცდის გარეშეც. `apparmor_parser`
 (binary, და არა Python-wrapper), პირდაპირ ერთი კონკრეტული ფაილით გამოძახებული, პარსავს
@@ -69,7 +69,7 @@ parser-ის შეცდომით სხვის ფაილზე, თ�
 (ვშლით `complain`-ს `flags=(...)`-დან) ხელით `sed`-ით, შემდეგ კი სწორედ
 ამ ფაილს ვტვირთავთ თავიდან `apparmor_parser -r`-ით.
 
-`aa-status` - მდგომარეობის ნახვის ცალკე ინსტრუმენტია, და არა პროფილების შეცვლისა, და აქ ის
+`aa-status` - მდგომარეობის ნახვის ცალკე ინსტრუმენტია, და არა პროფილების შეცვლისა, და ეს შეზღუდვა მას
 არ ეხება. კონკრეტული პროფილის რეჟიმს აჩვენებს `aa-status --pretty-json` (შემოწმებულია
 ლაბის node-ზე, apparmor 3.0.4; `--json` იგივეს იძლევა ერთ სტრიქონში, მაგალითად
 `aa-status --json | jq -r '.profiles["k8s-106-deny-write"]'`). ალტერნატივა - ბირთვის ფაილი
@@ -138,7 +138,7 @@ kubectl exec -n security-106 apparmor-writer -- \
 არანულოვანი exit code და ტექსტი 'permission denied' თავისთავად **არ** ამტკიცებს, რომ სწორედ
 AppArmor-ის ამ წესმა იმუშავა - ჩვეულებრივი DAC/filesystem შეცდომა shell-ის
 თვალსაზრისით იდენტურად გამოიყურებოდა. უარყოფა სწორედ ამ profile-თან დააკავშირეთ kernel audit log-ის გავლით; მას
-ვუყურებთ node-ზე ზემოთ ცდისთანავე:
+ვუყურებთ node-ზე ზემოთ აღწერილი მცდელობის შემდეგ დაუყოვნებლივ:
 
 ```bash
 # node-ზე
@@ -152,13 +152,13 @@ exit
 
 თუ `/proc/1/attr/current` კონკრეტულ runtime-ში მიუწვდომელია, დააფიქსირეთ ეს და დაეყრდენით
 Localhost profile-ის მინიჭებას kernel `apparmor="DENIED"`-თან ერთად ამ profile-ისთვის;
-ერთი არანულოვანი კოდი ამ evidence-ის გარეშე არასაკმარისია, რადგან მას mount-მაც შეუძლია მისცეს ან ჩვეულებრივმა
+ერთი არანულოვანი კოდი ამ evidence-ის გარეშე არასაკმარისია, რადგან ის შეიძლება გამოიწვიოს mount-მაც ან ჩვეულებრივმა
 Unix permission-მა.
 
 ## 4. RuntimeDefault ჩვეულებრივი Pod-ისთვის
 
-`RuntimeDefault` - გადატანადი baseline-ია, რომელსაც containerd/runtime-ის სტანდარტული
-პროფილი ირჩევს. ველი აშკარად არის მითითებული Pod-ის დონეზე.
+`RuntimeDefault` - გადატანადი baseline-ია, რომელიც containerd/runtime-ის სტანდარტულ
+პროფილს ირჩევს. ველი აშკარად არის მითითებული Pod-ის დონეზე.
 
 ```yaml
 # runtime-default.yaml
@@ -223,7 +223,7 @@ forced private propagation-ისთვის - ხოლო containerd default 
 რომელსაც ეს Pod იღებს, რადგან აშკარა `appArmorProfile` აქ მითითებული არ არის) შეიცავს
 `deny mount,`-ს ფლაგებზე რაიმე პირობის გარეშე, capabilities/seccomp-ისგან დამოუკიდებლად. ამიტომ
 `unshare -m true` შეიძლება `EPERM`-ით ჩავარდეს AppArmor-ის გამო, თუნდაც seccomp საერთოდ არ
-ზღუდავდეს `unshare`-ს - ასეთი probe ორ განსხვავებულ security control-ს აერთიანებდა. `unshare -n`
+ზღუდავდეს `unshare`-ს - ასეთი probe ორ განსხვავებულ security control-ს ერთმანეთში აურევდა. `unshare -n`
 იძახებს მხოლოდ თავად syscall-ს `unshare(2)`, გვერდითი `mount()`-ის გარეშე.
 
 ```yaml
@@ -351,7 +351,7 @@ ssh control-plane "sudo cat /proc/<host PID>/uid_map" >> /var/work/tests/artifac
 `hostUsers: false`-ის გარეშე ფაილი `/proc/<host-PID>/uid_map` ასევე აქვს, მაგრამ პროცესი რჩება
 host (initial) user namespace-ში. ამიტომ mapping იწყება UID 0 -> host UID 0-ით (ჩვეულებრივ
 სტრიქონი ასეთი სახით `0 0 4294967295`, მაგალითად `cat /proc/1/uid_map` node-ზე), და არა
-არაპრივილეგირებული per-Pod host UID-ით. `userns-probe`-ს `hostUsers: false`-ით ველით
+არაპრივილეგირებული per-Pod host UID-ით. `userns-probe`-ისგან `hostUsers: false`-ით ველით
 საპირისპიროს: `0 <არანულოვანი-host-uid> <დიაპაზონი-per-pod>`.
 
 ## 8. `seccompDefault: true` kubelet-ზე
@@ -404,7 +404,7 @@ kubectl exec -n security-106 no-seccomp-field -- grep '^Seccomp:' /proc/1/status
 # Seccomp: 2  -- kubelet-მა RuntimeDefault თავად გამოიყენა, manifest-ში ველის გარეშე
 
 # შეამოწმეთ თავი kubelet-ის რეალურად გამოყენებული კონფიგურაციით, და არა დისკზე ფაილის ტექსტით -
-# drop-in-მა ან ბრძანების ხაზის ფლაგმა შეიძლებოდა მნიშვნელობა გადაეფარათ
+# drop-in-ს ან ბრძანების ხაზის ფლაგს შეეძლო მნიშვნელობის გადაფარვა
 # თავად config.yaml-ის შეცვლის გარეშე:
 NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
 kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" | jq '.kubeletconfig.seccompDefault'
@@ -434,15 +434,15 @@ cat /var/work/tests/artifacts/8/apparmor-debug.txt
 # ... syntax error, unexpected TOK_CLOSE, expecting TOK_END_OF_RULE
 ```
 
-ვიყენებთ `sudo`-ს compile-only შემოწმებისთვისაც `-Q`: ლაბის node-ზე (apparmor 3.0.4, Ubuntu)
+ვიყენებთ `sudo`-ს compile-only შემოწმებისთვისაც (`-Q`): ლაბის node-ზე (apparmor 3.0.4, Ubuntu)
 პრივილეგიების გარეშე parser ყოველი გაშვებისას ცდილობს policy cache-ის გამართვას
 `/var/cache/apparmor`-ში და ვარდება "Failed setting up policy cache (/var/cache/apparmor):
 Permission denied"-ით სინტაქსის შემოწმებამდე - რეალური სინტაქსური შეცდომის ნაცვლად
-მიიღებთ მატყუარა შეცდომას უფლებების შესახებ, ხოლო `apparmor-debug.txt` არ შეიცავს საჭირო ტექსტს
-"syntax error". შემოწმებულია თავად node-ზე, ცნობილად გატეხილ პროფილზეც.
+მიიღებთ შეცდომაში შემყვან შეტყობინებას უფლებების შესახებ, ხოლო `apparmor-debug.txt` არ შეიცავს საჭირო ტექსტს
+"syntax error". შემოწმებულია თავად node-ზე, განზრახ გატეხილ პროფილზეც.
 ალტერნატივა `sudo`-ს გარეშე - დაამატეთ `-K`/`--skip-cache` (`apparmor_parser -Q -K ...`): ქეშირების გარეშე
 parser პროფილის გარჩევამდე აღწევს. `sudo` ამ ლაბში არჩეულია შემდგომ `-r`-თან ერთიანი
-workflow-სთვის, რომელიც ნებისმიერ შემთხვევაში პრივილეგიებს მოითხოვს.
+workflow-სთვის: `-r` ნებისმიერ შემთხვევაში პრივილეგიებს მოითხოვს.
 
 ვასწორებთ node-ზე: AppArmor-წესი აუცილებლად მძიმით უნდა მთავრდებოდეს. შემდეგ ვტვირთავთ
 გასწორებულ პროფილს ბირთვში - სწორედ `-r -v` (reload + verbose), და არა `-Q`/`-p`, რომლებიც

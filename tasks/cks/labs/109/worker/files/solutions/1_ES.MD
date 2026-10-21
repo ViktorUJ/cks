@@ -37,8 +37,8 @@ kubectl config use-context "$CTX"
 
 `Secret.data` en la API está codificado en base64, y no cifrado. El bootstrap creó un
 canary seguro antes de que apareciera la EncryptionConfiguration. Primero miramos el registro raw de etcd con el comando de la
-documentación y luego guardamos la prueba en forma de cadena en el archivo `/var/work/109/plaintext-proof.txt`
-en el control-plane (`/tmp/plaintext-proof.txt`) y después la copiamos a la máquina de trabajo en
+documentación y luego guardamos la prueba en forma de cadena en el archivo `/tmp/plaintext-proof.txt`
+en el control-plane y después la copiamos a la máquina de trabajo en
 `/var/work/109/plaintext-proof.txt` (el directorio lo creó el bootstrap): la comprobación lee el archivo en la máquina de trabajo.
 
 Entra en el control-plane y ejecuta en él (en este comando todo es de la documentación, salvo la clave en
@@ -246,13 +246,13 @@ until kubectl get --raw=/readyz 2>/dev/null | grep -qx ok; do sleep 2; done
 kubectl -n "$NS" get secret legacy-secret encrypted-secret
 ```
 
-Estado final de este laboratorio: el encrypted provider es el primero y el único, `identity`
+Estado final de este laboratorio: el provider de cifrado (`aescbc`) es el primero y el único, `identity`
 está eliminado. El fallback temporal no se debe dejar como un «seguro» permanente.
 
 ## 5. Restringir el acceso a la API y desactivar el token automount
 
 Encryption at rest no sustituye a RBAC: un sujeto con `get` de Secret verá el plaintext mediante la API.
-Crearemos un ServiceAccount al que esté disponible exactamente un Secret, y un Pod de diagnóstico sin
+Crearemos un ServiceAccount que tenga acceso a exactamente un Secret y un Pod de diagnóstico sin
 service-account token montado.
 
 ```yaml
@@ -334,10 +334,10 @@ contrasta el formato de KMS v2 y los requisitos de health/ACL con la documentaci
 
 ### Lifecycle completo de la rotación de la clave aescbc
 
-La transición `identity -> aescbc` de la tarea 4 es una migration, y no una rotación de una clave ya
-cifrada. Antes de la rotación haz un snapshot cifrado de etcd y guarda la
-clave antigua para el rollback. Añade la clave nueva **la primera**, y deja temporalmente la antigua
-la segunda: los providers se leen en orden, y los registros nuevos se escriben con la primera clave.
+La transición `identity -> aescbc` de la tarea 4 es una migration, y no una rotación de la clave para datos ya
+cifrados. Antes de la rotación haz un snapshot cifrado de etcd y guarda la
+clave antigua para el rollback. Añade la clave nueva **como primera** y deja temporalmente la antigua
+como segunda: los providers se leen en orden, y los registros nuevos se escriben con la primera clave.
 
 ```yaml
 - aescbc:
@@ -374,4 +374,4 @@ Cuando la migration de todos los Secret esté confirmada, el backup hecho, la AP
 devuelva `ok`, elimina la key antigua de la lista, reinicia el API server y repite las
 comprobaciones. No elimines la key antigua antes: los registros no reescritos con el nuevo provider quedarán
 ilegibles. Para KMS v2 el orden es el mismo: primero el nuevo KEK/plugin primary, luego el
-re-encryption, la comprobación y solo después de la migración, la retirada del KEK antiguo de explotación.
+re-encryption, la comprobación y solo después de la migración, la retirada de servicio del KEK antiguo.

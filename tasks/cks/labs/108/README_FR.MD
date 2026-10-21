@@ -58,7 +58,7 @@ C'est fait exprès : la tâche 7 vérifie la capacité à trouver et compléter 
 `ConstraintTemplate` déjà existant, et non à installer un admission engine de zéro - cette partie
 est déjà exercée par la tâche 1 pour Kyverno. La tâche 7 fonctionne dans un namespace distinct
 `gatekeeper-108`, isolé des tâches 1-5 de Kyverno (`policy-108`), afin qu'un Pod ne puisse pas
-être rejeté simultanément par deux admission engine différents.
+être rejeté simultanément par deux admission engines différents.
 
 ## Déploiement
 
@@ -105,7 +105,7 @@ contenir `v1.19.` ; au moins un Deployment doit avoir `AVAILABLE` supérieur à 
 ---
 | **2** | **Interdire les images avec le tag `latest`** |
 | :---: | :--- |
-| Ce qu'on fait | • Créez une `ValidatingPolicy` basée sur CEL `deny-latest-tag` (`policies.kyverno.io/v1`) avec `validationActions: [Deny]`.<br/>• Elle doit s'appliquer aux Pod et au subresource `pods/ephemeralcontainers` du namespace `policy-108`.<br/>• Elle doit rejeter toute image dans `containers`, `initContainers` ou `ephemeralContainers` qui est un `:latest` explicite OU un latest implicite (une image sans tag et sans digest du tout). |
+| Ce qu'on fait | • Créez une `ValidatingPolicy` basée sur CEL `deny-latest-tag` (`policies.kyverno.io/v1`) avec `validationActions: [Deny]`.<br/>• Elle doit s'appliquer aux Pods et au subresource `pods/ephemeralcontainers` du namespace `policy-108`.<br/>• Elle doit rejeter toute image dans `containers`, `initContainers` ou `ephemeralContainers` qui est un `:latest` explicite OU un latest implicite (une image sans tag et sans digest du tout). |
 | Critères d'acceptation | • La policy existe et fonctionne en mode Deny<br/>• L'admission rejette à la fois le `:latest` explicite et le latest implicite (untagged) dans chacune des trois listes de conteneurs, y compris une image avec un port de registry sans tag (`registry.example:5000/app`), et accepte les versioned trusted images et les images épinglées par digest dans chaque liste<br/>• Lors d'un UPDATE d'un Pod existant, le changement de `spec.containers[*].image` ou `spec.initContainers[*].image` vers `:latest` est aussi rejeté par cette policy (les champs image ordinaires d'un Pod admettent l'UPDATE in-place) |
 
 <details>
@@ -175,8 +175,8 @@ après l'application de la policy, et pas seulement avant.
 ---
 | **3** | **Exiger une exécution sans root** |
 | :---: | :--- |
-| Ce qu'on fait | • Créez une `ValidatingPolicy` basée sur CEL `require-run-as-non-root` en mode Deny.<br/>• Pour chaque Pod dans `policy-108`, le champ `spec.securityContext.runAsNonRoot` doit être explicitement égal à `true`.<br/>• Au niveau du Pod et de tous les conteneurs sont interdits `runAsUser: 0` et `runAsNonRoot: false` au niveau du container : les réglages du conteneur peuvent redéfinir le securityContext au niveau du Pod. |
-| Critères d'acceptation | • La policy existe et est Deny<br/>• Un Pod avec `runAsNonRoot: false` ou sans ce champ, `runAsUser: 0` au niveau du Pod, ainsi qu'un conteneur avec `runAsNonRoot: false` / `runAsUser: 0` dans `containers`, `initContainers`, `ephemeralContainers` sont rejetés précisément par cette policy<br/>• Un `runAsNonRoot: true`, `runAsUser: 1000` explicite et sûr au niveau du container est accepté |
+| Ce qu'on fait | • Créez une `ValidatingPolicy` basée sur CEL `require-run-as-non-root` en mode Deny.<br/>• Pour chaque Pod dans `policy-108`, le champ `spec.securityContext.runAsNonRoot` doit être explicitement égal à `true`.<br/>• Au niveau du Pod et de tous les conteneurs sont interdits `runAsUser: 0` et `runAsNonRoot: false` au niveau du conteneur : les réglages du conteneur peuvent redéfinir le securityContext au niveau du Pod. |
+| Critères d'acceptation | • La policy existe et est Deny<br/>• Un Pod avec `runAsNonRoot: false` ou sans ce champ, `runAsUser: 0` au niveau du Pod, ainsi qu'un conteneur avec `runAsNonRoot: false` / `runAsUser: 0` dans `containers`, `initContainers`, `ephemeralContainers` sont rejetés précisément par cette policy<br/>• Un `runAsNonRoot: true`, `runAsUser: 1000` explicite et sûr au niveau du conteneur est accepté |
 
 <details>
 <summary>💡 Indice pour la tâche 3</summary>
@@ -216,7 +216,7 @@ spec:
 EOF
 ```
 
-Appliquez la policy et répétez les deux manifest - LES DEUX doivent maintenant se terminer par une erreur
+Appliquez la policy et répétez les deux manifests - LES DEUX doivent maintenant se terminer par une erreur
 d'admission. Vérifiez ensuite le positive control : le même Pod, mais avec
 `runAsNonRoot: true` explicite, doit passer aussi après l'application de la policy.
 </details>
@@ -230,7 +230,7 @@ d'admission. Vérifiez ensuite le positive control : le même Pod, mais avec
 <details>
 <summary>💡 Indice pour la tâche 4</summary>
 
-`startsWith('registry.k8s.io/')` est la vérification de préfixe la plus fiable, mais assurez-vous que les deux registry autorisés sont vérifiés via OR (l'un ou l'autre convient), et non AND (les deux à la fois, ce qui est impossible pour une seule image). Vérifiez précisément un ALLOWLIST (l'image n'est admise QUE si elle correspond à l'un des deux préfixes), et non une denylist concrètement de `docker.io` - une policy écrite comme « si c'est `docker.io` - deny, sinon allow » laissera passer `quay.io`, les images unqualified et tout autre registry tiers. Assurez-vous aussi que le préfixe est comparé avec la `/` FINALE (`registry.k8s.io/`, et pas simplement `registry.k8s.io`), sinon un host d'orthographe proche (`registry.k8s.io.evil.example`) peut passer par une correspondance case-insensitive ou incomplète. Comme dans la tâche 2, n'oubliez pas `ephemeralContainers` - c'est le même schéma de vérification des trois listes de conteneurs.
+`startsWith('registry.k8s.io/')` est la vérification de préfixe la plus fiable, mais assurez-vous que les deux registry autorisés sont vérifiés via OR (l'un ou l'autre convient), et non AND (les deux à la fois, ce qui est impossible pour une seule image). Vérifiez précisément une ALLOWLIST (l'image n'est admise QUE si elle correspond à l'un des deux préfixes), et non une denylist concrètement de `docker.io` - une policy écrite comme « si c'est `docker.io` - deny, sinon allow » laissera passer `quay.io`, les images unqualified et tout autre registry tiers. Assurez-vous aussi que le préfixe est comparé avec la `/` FINALE (`registry.k8s.io/`, et pas simplement `registry.k8s.io`), sinon un host d'orthographe proche (`registry.k8s.io.evil.example`) peut passer par une correspondance case-insensitive ou incomplète. Comme dans la tâche 2, n'oubliez pas `ephemeralContainers` - c'est le même schéma de vérification des trois listes de conteneurs.
 </details>
 
 <details>
@@ -254,7 +254,7 @@ EOF
 ```
 
 Appliquez la policy, répétez le même manifest - il doit maintenant être denied. C'est UNE seule
-valeur untrusted concrète (`docker.io`), et non la preuve d'un allowlist complet -
+valeur untrusted concrète (`docker.io`), et non la preuve d'une allowlist complète -
 une policy qui interdit simplement littéralement `docker.io`, mais laisse passer,
 par exemple, une image unqualified (implicit Docker Hub sans host explicite), `quay.io` ou
 un host d'orthographe proche (`registry.k8s.io.evil.example`), passera aussi cette UNE
@@ -268,31 +268,31 @@ dans les conteneurs init et ephemeral, et pas seulement dans `containers`.
 </details>
 
 ---
-| **5** | **Optionnel : mutate d'un label via Kyverno** |
+| **5** | **Optionnel : mutation d'un label via Kyverno** |
 | :---: | :--- |
-| Ce qu'on fait | • Créez une `MutatingPolicy` basée sur CEL `add-kyverno-managed-label` (`policies.kyverno.io/v1`), qui ajoute aux Pod du namespace `policy-108` le label `security.cks.io/managed-by: kyverno`, s'il est absent.<br/>• Utilisez la mutation, et non la validation.<br/>• Ne mutez pas les Pod d'autres namespace. |
+| Ce qu'on fait | • Créez une `MutatingPolicy` basée sur CEL `add-kyverno-managed-label` (`policies.kyverno.io/v1`), qui ajoute aux Pods du namespace `policy-108` le label `security.cks.io/managed-by: kyverno`, s'il est absent.<br/>• Utilisez la mutation, et non la validation.<br/>• Ne mutez pas les Pods d'autres namespaces. |
 | Critères d'acceptation | • Un server-side dry-run d'un Pod avec un registry autorisé et `runAsNonRoot: true`, qui n'a pas encore ce label, le reçoit après la mutation avec la valeur `kyverno`<br/>• Un Pod qui a DÉJÀ le label avec une autre valeur conserve la valeur d'origine<br/>• Un Pod dans `default` reste sans ce label<br/>• Cette étape est affichée dans `check_result`, mais il est admis de l'omettre |
 
 <details>
 <summary>💡 Indice pour la tâche 5</summary>
 
-Cette étape est optionnelle - si vous n'avez plus de temps, vous pouvez l'omettre sans risque pour le reste du lab. Le Pod de test pour vérifier la mutation doit déjà passer les policies des tâches 2-4 (trusted registry, non-root) - s'il est lui-même rejeté par l'une des policy précédentes, vous ne verrez pas du tout le résultat de la mutation. « S'il est absent » dans la tâche n'est pas seulement un souhait : la mutation doit vérifier explicitement la présence du label et ne pas toucher à l'objet s'il est déjà là, sinon la tâche n'est pas accomplie, même si un Pod sans label reçoit la bonne valeur.
+Cette étape est optionnelle - si vous n'avez plus de temps, vous pouvez l'omettre sans risque pour le reste du lab. Le Pod de test pour vérifier la mutation doit déjà passer les policies des tâches 2-4 (trusted registry, non-root) - s'il est lui-même rejeté par l'une des policies précédentes, vous ne verrez pas du tout le résultat de la mutation. « S'il est absent » dans la tâche n'est pas seulement un souhait : la mutation doit vérifier explicitement la présence du label et ne pas toucher à l'objet s'il est déjà là, sinon la tâche n'est pas accomplie, même si un Pod sans label reçoit la bonne valeur.
 </details>
 
 ---
 | **6** | **ImagePolicyWebhook : backend externe au lieu d'une CEL policy** |
 | :---: | :--- |
 | Ce qu'on fait | • Sur la machine de travail est déjà préparé `/opt/image-policy-backend/server.py` - un serveur HTTPS minimal qui implémente l'API `ImageReview` (rejette les images avec le tag `:latest` ou sans tag du tout).<br/>• Déployez-le comme Deployment dans le namespace `image-policy`, derrière un Service `image-policy-backend` sur le port `8443`. Le backend doit accepter les connexions en TLS (le contrat upstream de `ImagePolicyWebhook` exige HTTPS, le HTTP simple n'est pas pris en charge).<br/>• Sur `control-plane` (`ssh`, puis `sudo -i`), configurez un `AdmissionConfiguration` pour le plugin `ImagePolicyWebhook` (`defaultAllow: false`) et un kubeconfig pointant vers votre backend.<br/>• Dans le static manifest `kube-apiserver.yaml`, **ajoutez** `ImagePolicyWebhook` à la liste déjà existante de `--enable-admission-plugins` (ne remplacez pas toute la liste - sinon vous risquez de désactiver des plugins déjà activés) et activez `--runtime-config=imagepolicy.k8s.io/v1alpha1=true`.<br/>• Après le rétablissement de l'API, créez un Pod avec `:latest` - il doit être rejeté ; puis un Pod avec un tag figé - il doit être créé. |
-| Critères d'acceptation | • `image-policy-backend` Available<br/>• Kube-apiserver healthy avec le plugin ajouté (et non remplacé) et `--runtime-config`<br/>• Le kubeconfig du backend utilise HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy`<br/>• Un Pod avec `:latest` et latest implicite (y compris un registry-port sans tag) est rejeté précisément par ImagePolicyWebhook dans le namespace `default` — aussi bien dans un Pod ordinaire que dans un init/ephemeral container<br/>• L'annotation utilisateur `alpha.image-policy.k8s.io/break-glass: "true"` ne donne aucune exception<br/>• Le namespace `policy-108` est réservé à Kyverno des Tasks 2–4, afin que deux mécanismes d'admission indépendants ne masquent pas le refus l'un de l'autre<br/>• Pour cela, le backend, d'après `ImageReview.spec.namespace == policy-108`, délègue la décision à Kyverno, et dans tous les autres namespace ImagePolicyWebhook continue de fonctionner<br/>• Le Pod avec un tag figé est créé et Running<br/>• Le Service perd réellement ses Endpoints pendant le backend outage, l'API refuse à cause de l'indisponibilité de cet endpoint (`defaultAllow: false`), puis le Service selector et l'admission se rétablissent exactement à l'état d'origine |
+| Critères d'acceptation | • `image-policy-backend` Available<br/>• Kube-apiserver healthy avec le plugin ajouté (et non remplacé) et `--runtime-config`<br/>• Le kubeconfig du backend utilise HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy`<br/>• Un Pod avec `:latest` et latest implicite (y compris un registry-port sans tag) est rejeté précisément par ImagePolicyWebhook dans le namespace `default` - aussi bien dans un Pod ordinaire que dans un init/ephemeral container<br/>• L'annotation utilisateur `alpha.image-policy.k8s.io/break-glass: "true"` ne donne aucune exception<br/>• Le namespace `policy-108` est réservé à Kyverno des tâches 2–4, afin que deux mécanismes d'admission indépendants ne masquent pas le refus l'un de l'autre<br/>• Pour cela, lorsque `ImageReview.spec.namespace == policy-108`, le backend délègue la décision à Kyverno, et dans tous les autres namespace ImagePolicyWebhook continue de fonctionner<br/>• Le Pod avec un tag figé est créé et Running<br/>• Le Service perd réellement ses Endpoints pendant le backend outage, l'API refuse à cause de l'indisponibilité de cet endpoint (`defaultAllow: false`), puis le Service selector et l'admission se rétablissent exactement à l'état d'origine |
 
 <details>
 <summary>💡 Indice pour la tâche 6</summary>
 
-`ImagePolicyWebhook` est un mécanisme fondamentalement différent de Kyverno des tâches 1-5 : la décision est prise par un backend HTTPS externe via l'API `ImageReview`, et non par une expression CEL à l'intérieur du cluster. Copiez le `/opt/image-policy-backend/server.py` prêt sur le `control-plane` (par exemple `scp`/`cat` via SSH) - la tâche vérifie la compréhension du wiring de l'admission plugin, du contrat TLS et de l'API ImageReview, et non la capacité à écrire un serveur HTTP de zéro. Pour TLS : créez d'abord le Service (pour connaître le `ClusterIP`), puis un certificat auto-signé avec cette IP dans le SAN (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`), puis le Deployment, qui monte à la fois le code et le certificat. Ne remplacez pas le `--enable-admission-plugins` existant par une nouvelle valeur entière - ajoutez `ImagePolicyWebhook` séparé par une virgule aux plugins déjà activés (en général, `NodeRestriction` y est déjà). N'oubliez pas non plus `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` - sans l'activation explicite de cette API, le backend ne sera pas du tout appelé. Le namespace `image-policy` n'est pas créé à l'avance - créez-le vous-même avant le Deployment/Service. Si vous êtes bloqué sur la séquence détaillée de ressources/chemins/flags, l'ordre d'actions de référence est donné dans la solution.
+`ImagePolicyWebhook` est un mécanisme fondamentalement différent de Kyverno des tâches 1-5 : la décision est prise par un backend HTTPS externe via l'API `ImageReview`, et non par une expression CEL à l'intérieur du cluster. Utilisez le `/opt/image-policy-backend/server.py` prêt depuis la machine de travail (par exemple, empaquetez-le dans un ConfigMap pour le Deployment du backend ; sur le `control-plane`, il faut copier uniquement le certificat CA pour le kubeconfig du webhook) - la tâche vérifie la compréhension du wiring de l'admission plugin, du contrat TLS et de l'API ImageReview, et non la capacité à écrire un serveur HTTP de zéro. Pour TLS : créez d'abord le Service (pour connaître le `ClusterIP`), puis un certificat auto-signé avec cette IP dans le SAN (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`), puis le Deployment, qui monte à la fois le code et le certificat. Ne remplacez pas entièrement la valeur existante de `--enable-admission-plugins` par une nouvelle - ajoutez `ImagePolicyWebhook` séparé par une virgule aux plugins déjà activés (en général, `NodeRestriction` y est déjà). N'oubliez pas non plus `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` - sans l'activation explicite de cette API, le backend ne sera pas du tout appelé. Le namespace `image-policy` n'est pas créé à l'avance - créez-le vous-même avant le Deployment/Service. Si vous êtes bloqué sur la séquence détaillée de ressources/chemins/flags, l'ordre d'actions de référence est donné dans la solution.
 </details>
 
 ---
-| **7** | **Gatekeeper ConstraintTemplate : compléter le blocklist de Rego** |
+| **7** | **Gatekeeper ConstraintTemplate : compléter la blocklist Rego** |
 | :---: | :--- |
 | Ce qu'on fait | • Dans le cluster est déjà installé **Gatekeeper** (OPA), ainsi que le `ConstraintTemplate` `k8sblockedregistries` et le `Constraint` `K8sBlockedRegistries/deny-bad-registries`, limité à un namespace distinct `gatekeeper-108` (et non `policy-108` - c'est un terrain d'essai séparé des tâches 1-5 de Kyverno, afin que Kyverno et Gatekeeper ne rejettent pas le même Pod simultanément).<br/>• Le Rego à l'intérieur du `ConstraintTemplate` contient déjà plusieurs registry bloqués (`untrusted-registry.example`, `docker-fake.test`), mais **ne contient volontairement pas** `very-bad-registry.test`.<br/>• Trouvez `ConstraintTemplate.spec.targets[].rego` et ajoutez-y une règle pour `very-bad-registry.test` - précisément dans le Rego, et non dans les paramètres du `Constraint`.<br/>• `deny-bad-registries` est déjà tout à fait correct et n'utilise pas du tout `spec.parameters` - il n'est pas nécessaire d'y toucher. |
 | Critères d'acceptation | • Le `ConstraintTemplate k8sblockedregistries` et le Constraint d'origine `K8sBlockedRegistries/deny-bad-registries` existent<br/>• Le Rego conserve les deux règles actives d'origine (`untrusted-registry.example`, `docker-fake.test`) et contient la nouvelle règle active pour `very-bad-registry.test`<br/>• Un Pod avec chacun de ces trois registry dans `gatekeeper-108` est rejeté précisément par le Constraint `deny-bad-registries`<br/>• Un Pod avec une image du `registry.k8s.io` de confiance passe<br/>• Le Constraint reste Pod-only, limité à `gatekeeper-108`, sans parameters/selectors/exclusions<br/>• Aucun Constraint supplémentaire de ce type n'est créé |
@@ -398,7 +398,7 @@ check_result
 La vérification contient Init et sept tests. Les quatre premiers, le sixième et le septième sont obligatoires. Le cinquième
 test exécute la vérification de la mutation, mais ne fait pas échouer le lab si la policy
 optionnelle n'est pas créée. Les tâches 2-4 et 7 utilisent `--dry-run=server`, de sorte que les images ne sont pas
-téléchargées et que les Pod ne restent pas dans le namespace ; la tâche 6 vérifie l'admission réelle (non dry-run)
+téléchargées et que les Pods ne restent pas dans le namespace ; la tâche 6 vérifie l'admission réelle (non dry-run)
 via ImagePolicyWebhook, c'est pourquoi le Pod `webhook-pinned-ok` est réellement
 créé.
 

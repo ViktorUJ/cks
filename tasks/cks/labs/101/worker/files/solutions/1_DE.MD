@@ -2,7 +2,7 @@
 
 # Lab 101 - Kurzlösung
 
-Wir verwenden `k` statt `kubectl` (der Alias ist in der Prüfung bereits verfügbar).
+Wir verwenden `k` statt `kubectl` (der Alias ist in der CKS-Prüfung bereits verfügbar).
 
 Vor dem Start (falls nötig) löschen wir alte Namespaces:
 ```bash
@@ -41,7 +41,7 @@ k -n cks-101 run probe --image=curlimages/curl:8.11.1 -l app=frontend --command 
 k -n cks-101 wait --for=condition=Ready pod/probe --timeout=60s
 ```
 
-Wir erstellen den unabhängigen Namespace für den Control:
+Wir erstellen den unabhängigen Namespace für den Control-Probe:
 ```bash
 k create ns imds-control
 k -n imds-control run imds-control --image=curlimages/curl:8.11.1 --command -- sleep 3600
@@ -196,7 +196,7 @@ k -n cks-101 exec probe -- \
 echo $?
 ```
 
-## 5. IMDS final verification
+## 5. Abschließende IMDS-Prüfung
 
 ```bash
 # control: IMDS ist erreichbar
@@ -271,7 +271,7 @@ echo $?
 k -n cks-101-legacy exec deploy/legacy-client -- curl -sS -m 5 http://backend.cks-101:8080/
 ```
 
-## 7. hostNetwork observation
+## 7. Beobachtung von hostNetwork
 
 ```bash
 k -n cks-101 run hostnetwork-probe --image=curlimages/curl:8.11.1 -l app=frontend \

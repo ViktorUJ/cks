@@ -3,9 +3,9 @@
 # Lab 115 - Cilium bootstrap, kube-proxy replacement y Mutual Authentication
 
 > **Advanced / production track. No forma parte del requisito formal del CKS Core exam.**
-> Este laboratorio sale del marco del examen CKS y es útil como habilidad de producción: la instalación de
-> Cilium desde cero como reemplazo completo de kube-proxy, y Cilium Mutual Authentication sobre
-> la base de SPIRE. Si te preparas solo para el examen, la prioridad son los laboratorios 101-114.
+> Este laboratorio va más allá del examen CKS y es útil como habilidad de producción: la instalación de
+> Cilium desde cero como reemplazo completo de kube-proxy, y Cilium Mutual Authentication basada
+> en SPIRE. Si te preparas solo para el examen, la prioridad son los laboratorios 101-114.
 
 ## Descripción
 
@@ -13,7 +13,7 @@ El control-plane de este laboratorio se ha levantado mediante `kubeadm init --sk
 el DaemonSet de `kube-proxy` y **sin un CNI instalado**. El Node permanece `NotReady` hasta que tú
 instales Cilium. Esto es deliberado: el laboratorio trata por completo de la instalación manual de Cilium como
 reemplazo completo de kube-proxy (`kubeProxyReplacement`), de la habilitación incremental de WireGuard
-transparent encryption y de Cilium Mutual Authentication sobre la base de SPIRE: cada paso
+transparent encryption y de Cilium Mutual Authentication basada en SPIRE: cada paso
 se instala y se comprueba por separado, y no se entrega ya hecho.
 
 Los CLI `cilium`/`hubble` ya están instalados en el worker y apuntan al clúster real
@@ -33,7 +33,7 @@ El Node estará `NotReady` justo después del login: es el baseline esperado, y 
 Instalar Cilium como reemplazo completo de kube-proxy en un clúster kubeadm kube-proxy-free ya levantado,
 habilitar el cifrado WireGuard, habilitar Cilium Mutual Authentication
 (SPIRE) y escribir una `CiliumNetworkPolicy` que exija una mutual authentication exitosa entre
-dos namespace.
+dos namespaces.
 
 ## Infraestructura
 
@@ -41,7 +41,7 @@ dos namespace.
 | --- | --- |
 | control-plane EC2 | clúster kubeadm sin kube-proxy y sin CNI en el momento de entregar el laboratorio |
 | `ingress-115` | namespace del cliente, que debe pasar la mutual authentication |
-| `app-115` | namespace del backend, protegido por una CiliumNetworkPolicy con `authentication.mode: required` |
+| `app-115` | namespace del backend protegido por una CiliumNetworkPolicy con `authentication.mode: required` |
 | worker EC2 | los CLI `cilium`/`hubble`, el kubeconfig configurado |
 
 ## Tareas
@@ -58,7 +58,7 @@ dos namespace.
 
 |           **2**           | **Instalación de Cilium como reemplazo de kube-proxy** |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|       Qué hacemos       | • Instala el Cilium agent/chart versión `1.20.1` mediante el CLI `cilium` versión `v0.19.7` instalado en el worker, con `kubeProxyReplacement=true` y `k8sServiceHost`/`k8sServicePort` indicados explícitamente, que apunten al API server real (no al Service ClusterIP: sin kube-proxy el clúster no puede resolver `kubernetes.default` antes de que el propio Cilium arranque) |
+|       Qué hacemos       | • Instala el Cilium agent/chart versión `1.20.1` mediante el CLI `cilium` versión `v0.19.7` instalado en el worker, con `kubeProxyReplacement=true` y `k8sServiceHost`/`k8sServicePort` indicados explícitamente, que apunten al API server real (no al Service ClusterIP: sin kube-proxy el tráfico al ClusterIP `kubernetes.default` no llega al API server hasta que el propio Cilium arranque) |
 | Criterios de aceptación | • `KubeProxyReplacement: True/Strict` (en `cilium-dbg status` del agente)<br/>• El Node pasa a `Ready`<br/>• El Service ClusterIP es alcanzable sin kube-proxy |
 |        Comprobación        | `cilium status --wait`, `kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status \| grep KubeProxyReplacement`, luego `kubectl get nodes` -> `Ready`. Desde un Pod de prueba: `curl https://kubernetes.default.svc.cluster.local/` debe recibir una HTTP response (no un connection error). |
 
@@ -96,8 +96,8 @@ dos namespace.
 
 |           **6**           | **Positive/negative control: la authenticated identity está permitida, la ajena no** |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|       Qué hacemos       | • Comprueba el efecto de la policy con tráfico en vivo: el cliente de `ingress-115` debe alcanzar `backend` (tras un handshake de mutual auth basado en SPIRE exitoso)<br/>• Un Pod aparte de un namespace "incorrecto" (`app-115`, no `ingress-115`; el tráfico del backend a sí mismo Cilium siempre lo deja pasar) debe ser bloqueado |
-| Criterios de aceptación | • En el backend espejo aislado, el baseline permite a ambos clientes; tras aplicar una copia de la policy solo se permite `ingress-115`<br/>• El backend en funcionamiento responde al cliente permitido, rechaza a los clientes de `app-115` y de un nuevo namespace independiente<br/>• El Cilium BPF auth map contiene `spire` para la pareja exacta de identity del cliente/backend |
+|       Qué hacemos       | • Comprueba el efecto de la policy con tráfico en vivo: el cliente de `ingress-115` debe alcanzar `backend` (tras un handshake exitoso de mutual auth basado en SPIRE)<br/>• Un Pod aparte de un namespace "incorrecto" (`app-115`, no `ingress-115`; el tráfico del backend a sí mismo Cilium siempre lo deja pasar) debe ser bloqueado |
+| Criterios de aceptación | • En el backend espejo aislado, el baseline permite a ambos clientes; tras aplicar una copia de la policy solo se permite `ingress-115`<br/>• El backend en funcionamiento responde al cliente permitido, rechaza a los clientes de `app-115` y de un nuevo namespace independiente<br/>• El Cilium BPF auth map contiene `spire` para el par exacto de identities cliente/backend |
 |        Comprobación        | `curl` desde el pod cliente en `ingress-115` a `http://backend.app-115.svc.cluster.local/` -> HTTP response. El mismo curl desde un Pod en `app-115` sin el label del cliente -> connection error. |
 
 ## Comprobación
@@ -106,7 +106,7 @@ dos namespace.
 check_result
 ```
 
-El Checker **nunca retira la** `app-115/backend-auth-required` **en funcionamiento**. Para comprobar el baseline crea un backend espejo temporal y un Service en un namespace desechable `cks-115-*`, primero comprueba el tráfico permitido sin policy, luego aplica una copia de la CiliumNetworkPolicy comprobada solo al backend espejo. Por separado se comprueban el backend real, el EndpointSlice, las parejas exactas de SPIRE identities en el BPF auth map y la prohibición de clientes de namespace ajenos. Todos los Pod, Service, policy y el namespace temporal creados se eliminan con una comprobación de cleanup.
+El Checker **nunca retira la** `app-115/backend-auth-required` **en funcionamiento**. Para comprobar el baseline crea un backend espejo temporal y un Service en un namespace desechable `cks-115-*`, primero comprueba el tráfico permitido sin policy, luego aplica una copia de la CiliumNetworkPolicy comprobada solo al backend espejo. Por separado se comprueban el backend real, el EndpointSlice, los pares exactos de SPIRE identities en el BPF auth map y la prohibición de clientes de namespaces ajenos. Todos los Pods, Services, policies y el namespace temporal creados se eliminan con una comprobación de cleanup.
 
 Solución de referencia: [worker/files/solutions/1_ES.MD](worker/files/solutions/1_ES.MD).
 

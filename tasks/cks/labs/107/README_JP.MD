@@ -12,24 +12,24 @@ production の namespace では、`restricted` を `enforce` モードで有効�
 `emptyDir` に許可します。
 
 課題にあるオブジェクトだけを扱ってください。クラスターには、空の namespace
-`psa-restricted-107` と `psa-observe-107` があらかじめ作成されています；PSA-labels と workload はそこにはありません。
+`psa-restricted-107`、`psa-observe-107`、`psa-controller-107` があらかじめ作成されています；PSA-labels と workload はそこにはありません。
 
 ## 開始前のセルフチェック
 
 <details>
-<summary>1. Pod Security Admission の `enforce` は `audit`/`warn` と何が違うか?</summary>
+<summary>1. Pod Security Admission の `enforce` は `audit`/`warn` と何が違うか？</summary>
 
 `enforce` は、選択された PSS レベルに違反する Pod の作成を実際にブロックします - admission request はエラーで終了します。`audit`/`warn` はリクエストをブロック「しません」：Pod はそれでも作成されますが、`audit` は kube-apiserver の audit log に annotation を追加し、`warn` は `kubectl apply` のときにユーザーにテキストの警告を表示します。これらは責任のレベルが異なります：`audit`/`warn` は実際のブロックを有効にする前の観察用で、`enforce` が本来の防御です。
 </details>
 
 <details>
-<summary>2. namespace に、PSS レベルとともに `*-version` label を固定する必要があるのはなぜか?</summary>
+<summary>2. namespace に、PSS レベルとともに `*-version` label を固定する必要があるのはなぜか？</summary>
 
 固定されたバージョン (`enforce-version`) がないと、PSA は確認のたびに Kubernetes の現在のバージョンを使用します - クラスターがアップデートされると、`restricted`/`baseline` のルールセットは気づかないうちに変わる可能性があり、昨日通った Pod が、あなたが何もしないまま今日拒否され始めることがあります。バージョンを固定すると、将来のクラスターのアップデートに関係なく、挙動が予測可能で再現可能になります。
 </details>
 
 <details>
-<summary>3. 課題 6 の `ValidatingAdmissionPolicy` が PSA を重複させるのではなく補完するのはなぜか?</summary>
+<summary>3. 課題 6 の `ValidatingAdmissionPolicy` が PSA を重複させるのではなく補完するのはなぜか？</summary>
 
 PSS の `restricted` は、security フィールド (non-root、capabilities、seccomp、escalation) の固定された標準化された集合を定義します。`automountServiceAccountToken` はこの集合に含まれず - PSA はこれをまったく確認しません。つまり、Pod は `restricted` に完全に適合していながら、不要なマウントされた API-token を黙って受け取る可能性があります。Custom の `ValidatingAdmissionPolicy` は、PSA がすでに行っていることを置き換えたり重複させたりすることなく、まさにこの隙間を埋めます。
 </details>
@@ -133,7 +133,7 @@ echo "after-label exit: $?"
 <details>
 <summary>💡 課題 2 のヒント</summary>
 
-Pod が admission rejection を受けた場合は、エラーメッセージを注意深く読んでください。通常、不足している正確なフィールド (たとえば "container has no capabilities.drop") が名指しされています。Kubernetes 1.36 の PSS `restricted` のセマンティクスについての重要な詳細：それが要求するのは、effective な (文字どおり重複している必要はない) 有効な `seccompProfile` です - pod-level のプロファイル (`spec.securityContext.seccompProfile.type`) は、自分のフィールドが設定されていないコンテナに継承されることがあり、逆に、container-level のフィールドは、pod-level のプロファイルがなくても、すべてのコンテナで明示されていれば十分です。つまり、PSS 自体は文字どおり両方のレベルを同時に要求しません。**この実習では、意図的に Pod とコンテナの両方で `RuntimeDefault` を明示的に設定するよう求めています** - PSS がそれを要求するからではなく、両方のレベルの設定を練習するためです。同様に、`runAsUser: 1000` は、まさにこの実習の explicit な hardening の決定です：PSS `restricted` は UID `0` を禁止しますが、具体的に `1000` を要求しません (ゼロ以外の任意の値、またはフィールドの完全な不在は、PSS 自体にとっては許容されます)。
+Pod が admission rejection を受けた場合は、エラーメッセージを注意深く読んでください。通常、不足している正確なフィールド (たとえば "container has no capabilities.drop") が名指しされています。Kubernetes 1.36 の PSS `restricted` のセマンティクスについての重要な詳細：それが要求するのは、実効的な (文字どおり重複している必要はない) 許容される `seccompProfile` です - pod-level のプロファイル (`spec.securityContext.seccompProfile.type`) は、自分のフィールドが設定されていないコンテナに継承されることがあり、逆に、container-level のフィールドは、pod-level のプロファイルがなくても、すべてのコンテナで明示されていれば十分です。つまり、PSS 自体は文字どおり両方のレベルを同時に要求しません。**この実習では、意図的に Pod とコンテナの両方で `RuntimeDefault` を明示的に設定するよう求めています** - PSS がそれを要求するからではなく、両方のレベルの設定を練習するためです。同様に、`runAsUser: 1000` は、まさにこの実習の explicit な hardening の決定です：PSS `restricted` は UID `0` を禁止しますが、具体的に `1000` を要求しません (ゼロ以外の任意の値、またはフィールドの完全な不在は、PSS 自体にとっては許容されます)。
 </details>
 
 ---
@@ -245,7 +245,7 @@ kubectl get namespace psa-restricted-107 psa-observe-107 --show-labels
 | **6** | **Native ValidatingAdmissionPolicy: `automountServiceAccountToken: false` を要求する** |
 | :---: | :--- |
 | やること | • PSA `restricted` は、すでに `allowPrivilegeEscalation: false`、`ALL` を含む `capabilities.drop`、non-root、seccomp を要求しています - 課題 2 がまさにそれを示しています。<br/>• しかし PSS `restricted` は `automountServiceAccountToken` を**確認しません**：Kubernetes API を必要としない Pod が、マウントされた ServiceAccount token を黙って受け取り、PSA を完全に通過する可能性があります。これは PSS がカバーしない独立した control であり、そのため、組み込みの PSA を重複させるのではなく、まさに custom の `ValidatingAdmissionPolicy` がここでは適切です。<br/>• Pod レベルで `automountServiceAccountToken == false` を要求する CEL 式を持つ `ValidatingAdmissionPolicy` `require-no-automount-token` を作成します。<br/>• `ValidatingAdmissionPolicyBinding` `require-no-automount-token-binding` を、`psa-restricted-107` に対する `matchResources.namespaceSelector` で限定し、`validationActions: [Deny]` で適用します。<br/>• 3 つの状態すべてを server-side dry-run で実証します：PSA に完全に適合した Pod (課題 2 のすべてのフィールド - non-root、seccomp、drop ALL、escalation false を持つ) でフィールドがないものは、policy+binding の正確なペアから DENY を受け取る必要があります；`automountServiceAccountToken: false` は ALLOW を受け取る必要があります；`automountServiceAccountToken: true` は同じペアから再び DENY を受け取る必要があります。<br/>• policy の作成後、`psa-restricted-107` の新しい Pod (再作成する `restricted-app` を含む) は、自分自身に `automountServiceAccountToken: false` を含む必要があります。そうでなければ policy がそれらを拒否します。 |
-| 受け入れ基準 | • **オブジェクト:** `ValidatingAdmissionPolicy require-no-automount-token` とその `ValidatingAdmissionPolicyBinding` が存在し、`validationActions` に `Deny` が含まれ、Binding が `psa-restricted-107` のみにマッチする。実習には、この policy に対する Binding がちょうど 1 つ - `require-no-automount-token-binding` - 存在する；この policy の他の namespace 用の追加の Binding は作成されない。<br/>• **3 つの状態:** `automountServiceAccountToken: false` のない PSA 適合 Pod の server-side dry-run が、まさに `ValidatingAdmissionPolicy 'require-no-automount-token'` と `ValidatingAdmissionPolicyBinding 'require-no-automount-token-binding'` のペアによって拒否される (PSA のメッセージ `violates PodSecurity` でも、他の policy でもない)；`automountServiceAccountToken: false` の Pod は受け入れられ、`automountServiceAccountToken: true` の Pod は同じ正確なペアによって拒否される。<br/>• **すべての Pod のカバー:** policy が、`psa-restricted-107` 内で、その `resourceRules` で選択されるすべての Pod をカバーする。`ValidatingAdmissionPolicy` に `spec.matchConditions`、`matchConstraints.objectSelector`、`matchConstraints.namespaceSelector` を追加しないでください。また Binding の `matchResources` に `objectSelector` も追加しないでください - これらはカバレッジを一部の Pod に狭め、workload が label やリクエストの条件によって確認から漏れる可能性があります。<br/>• **Namespace の scope:** Binding の `matchResources.namespaceSelector` のみで設定され、これは `psa-restricted-107` に正確に結びつけられている；selector には他の namespace-label のキーに関する条件が含まれず、それ自体でスコープをこの namespace に一意に限定する。<br/>• **CEL:** validation には、Pod の名前/labels/annotations、user/request、`namespaceObject`、`params`、`variables`、その他のフィールドによる例外が含まれない：判断は `object.spec.automountServiceAccountToken` のみに依存する (正しい CEL の形式なら何でも許容され、optional 構文 `object.spec.?automountServiceAccountToken.orValue(true) == false` も含まれる)。`spec.auditAnnotations` が存在しないか空である：その個別の CEL expressions が `failurePolicy` を通じて admission に影響しうるため、admission control は `spec.validations` のみで設定される。`variables` と `paramKind` は使用されない。<br/>• **Resource の scope:** `matchConstraints.resourceRules` が、policy をちょうど `core/v1 pods` の操作 `CREATE` と `UPDATE` に限定し、`resourceNames` はない；`scope` が存在しないか、`*` か `Namespaced` であり、`Cluster` ではない；`excludeResourceRules` は使用されない。Binding は、自身の `resourceRules`/`excludeResourceRules` で resource/operation の scope を狭めない。<br/>• これにより、いくつかの選ばれた workload の例ではなく、`missing / false / true` の 3 つの状態で完全な boolean contract を実証できる。 |
+| 受け入れ基準 | • **オブジェクト：** `ValidatingAdmissionPolicy require-no-automount-token` とその `ValidatingAdmissionPolicyBinding` が存在し、`validationActions` に `Deny` が含まれ、Binding が `psa-restricted-107` のみにマッチする。実習には、この policy に対する Binding がちょうど 1 つ - `require-no-automount-token-binding` - 存在する；この policy の他の namespace 用の追加の Binding は作成されない。<br/>• **3 つの状態：** `automountServiceAccountToken: false` のない PSA 適合 Pod の server-side dry-run が、まさに `ValidatingAdmissionPolicy 'require-no-automount-token'` と `ValidatingAdmissionPolicyBinding 'require-no-automount-token-binding'` のペアによって拒否される (PSA のメッセージ `violates PodSecurity` でも、他の policy でもない)；`automountServiceAccountToken: false` の Pod は受け入れられ、`automountServiceAccountToken: true` の Pod は同じ正確なペアによって拒否される。<br/>• **すべての Pod のカバー：** policy が、`psa-restricted-107` 内で、その `resourceRules` で選択されるすべての Pod をカバーする。`ValidatingAdmissionPolicy` に `spec.matchConditions`、`matchConstraints.objectSelector`、`matchConstraints.namespaceSelector` を追加しないでください。また Binding の `matchResources` に `objectSelector` も追加しないでください - これらはカバレッジを一部の Pod に狭め、workload が label やリクエストの条件によって確認から漏れる可能性があります。<br/>• **Namespace の scope:** Binding の `matchResources.namespaceSelector` のみで設定され、これは `psa-restricted-107` に正確に結びつけられている；selector には他の namespace-label のキーに関する条件が含まれず、それ自体でスコープをこの namespace に一意に限定する。<br/>• **CEL:** validation には、Pod の名前/labels/annotations、user/request、`namespaceObject`、`params`、`variables`、その他のフィールドによる例外が含まれない：判断は `object.spec.automountServiceAccountToken` のみに依存する (正しい CEL の形式なら何でも許容され、optional 構文 `object.spec.?automountServiceAccountToken.orValue(true) == false` も含まれる)。`spec.auditAnnotations` が存在しないか空である：その個別の CEL expressions が `failurePolicy` を通じて admission に影響しうるため、admission control は `spec.validations` のみで設定される。`variables` と `paramKind` は使用されない。<br/>• **Resource の scope:** `matchConstraints.resourceRules` が、policy をちょうど `core/v1 pods` の操作 `CREATE` と `UPDATE` に限定し、`resourceNames` はない；`scope` が存在しないか、`*` か `Namespaced` であり、`Cluster` ではない；`excludeResourceRules` は使用されない。Binding は、自身の `resourceRules`/`excludeResourceRules` で resource/operation の scope を狭めない。<br/>• これにより、いくつかの選ばれた workload の例ではなく、`missing / false / true` の 3 つの状態で完全な boolean contract を実証できる。 |
 
 <details>
 <summary>💡 課題 6 のヒント</summary>
@@ -390,7 +390,7 @@ EOF
 ```
 
 最後に、最も重要なこと - denial の事実だけでなく、scope の境界を確認してください：同じ
-manifest (automount の opt-out なし) を namespace `psa-observe-107` で実行すると、PASS するはずです -
+manifest (automount の opt-out なし) を namespace `psa-observe-107` で実行すると、「通る」はずです -
 そこでも拒否される場合、`namespaceSelector` が 1 つの namespace より多くにマッチしているということです：
 
 ```bash
@@ -423,10 +423,12 @@ echo "exit code in psa-observe-107: $?"
 ```
 </details>
 
+---
+
 | **7** | **Controller-driven な admission denial: ReplicaSet events による診断** |
 | :---: | :--- |
 | やること | 空の namespace `psa-controller-107` に、hardening のない単純な Pod template (たとえば `busybox:1.36`、`sleep 3600`、`securityContext` なし) を持つ Deployment `controller-app` (label `app=controller-app`、replicas=1) を作成します - 正常に起動するはずで、PSA はまだ邪魔をしません。次に、この namespace で `pod-security.kubernetes.io/enforce=restricted` と `enforce-version=v1.36` を有効にします (すでに存在する Pod は動作し続けます - PSA はすでに作成されたオブジェクトには触れません)。現在の Pod を削除します：ReplicaSet が代わりの Pod を作成しようとし、今度は admission がそれを拒否します。原因を `kubectl -n psa-controller-107 describe rs` と `kubectl -n psa-controller-107 get events` で確認します - そこには、テキスト `violates PodSecurity "restricted:v1.36"` を伴う `FailedCreate` があります。Deployment の Pod template を修正し (課題 2 と同じ hardening フィールドを追加します：non-root、`seccompProfile: RuntimeDefault`、`capabilities.drop: [ALL]`、`allowPrivilegeEscalation: false`)、ReplicaSet が、通過する新しい Pod を正常に作成するまで待ちます。 |
-| 受け入れ基準 | Namespace が `restricted:v1.36` を enforce している；Deployment の template が PSS-restricted に完全に適合している；現在の Pod を削除した後、ReplicaSet が現在の enforce モードの下で新しい Ready な Pod を実際に作成する (単に「オブジェクトが存在する」だけではない - 実際の削除と再作成で確認される)。 |
+| 受け入れ基準 | namespace で `restricted:v1.36` が enforce されている；Deployment の Pod template が PSS `restricted` に完全に適合している；現在の Pod を削除した後、ReplicaSet が現在の enforce モードの下で新しい Ready な Pod を実際に作成する (単に「オブジェクトが存在する」だけではない - 実際の削除と再作成で確認される)。 |
 
 <details>
 <summary>💡 課題 7 のヒント</summary>

@@ -3,7 +3,7 @@
 # Lab 115 - 簡要解答
 
 > Advanced/production track。確切的版本/CLI 旗標在不同的 Cilium
-> 版本之間可能不同 - 如果下面的內容無法逐字運作,請檢查 `cilium install --help`/`cilium upgrade --help`。
+> 版本之間可能不同 - 如果下面的內容無法逐字運作，請檢查 `cilium install --help`/`cilium upgrade --help`。
 
 ## 1. Baseline
 
@@ -31,7 +31,7 @@ kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status | gre
 kubectl get nodes
 ```
 
-> cilium-cli 0.19 的 `cilium status` 不會印出 `KubeProxyReplacement`/`Encryption` 這幾行;
+> cilium-cli 0.19 的 `cilium status` 不會印出 `KubeProxyReplacement`/`Encryption` 這幾行；
 > 它們由 agent Pod 內的 `cilium-dbg status` 顯示(checker 也是這樣檢查的)。
 
 ```
@@ -51,7 +51,7 @@ api HTTP:403
 ```
 
 `403`(不是 `000`)- 表示透過 Service ClusterIP 到 API 的 TCP/TLS 在沒有
-kube-proxy 的情況下確實可以運作;這裡 `403` 是預期的,因為請求沒有 token,有回應這個事實本身就足夠了。
+kube-proxy 的情況下確實可以運作；這裡 `403` 是預期的，因為請求沒有 token，有回應這個事實本身就足夠了。
 
 ## 3. WireGuard encryption
 
@@ -87,16 +87,16 @@ api HTTP:403
 
 ## 4. Cilium Mutual Authentication(SPIRE)
 
-相對於任務中最小的設定,這個實驗台需要多三個參數:
+相對於任務中最小的設定，這個實驗台需要多三個參數：
 
-- `authentication.enabled=true` - 沒有它,chart 會拒絕 `spire.enabled=true`
+- `authentication.enabled=true` - 沒有它，chart 會拒絕 `spire.enabled=true`
   (`SPIRE integration requires .Values.authentication.enabled=true ...`)。
-- `install.server.dataStorage.enabled=false` - 叢集中沒有 StorageClass,因此 PVC
-  `spire-data-spire-server-0` 永遠是 `Pending`,而 `spire-server-0` 也是 `Pending`
+- `install.server.dataStorage.enabled=false` - 叢集中沒有 StorageClass，因此 PVC
+  `spire-data-spire-server-0` 永遠是 `Pending`，而 `spire-server-0` 也是 `Pending`
   (對實驗來說暫時性的儲存就足夠了)。
-- `install.server.securityContext.runAsUser=0` - 映像 `spire-server` 以 uid 1000 啟動,
-  無法在 `root:755` 的 hostPath 目錄中建立 `api.sock`;伺服器會悄悄地結束
-  endpoint,並被 liveness-probe 殺掉(`cilium-init` 中的 `Waiting for spire-server to start...`)。
+- `install.server.securityContext.runAsUser=0` - 映像 `spire-server` 以 uid 1000 啟動，
+  無法在 `root:755` 的 hostPath 目錄中建立 `api.sock`；伺服器會悄悄地結束
+  endpoint，並被 liveness-probe 殺掉(`cilium-init` 中的 `Waiting for spire-server to start...`)。
 
 ```bash
 cilium upgrade --version 1.20.1 \
@@ -176,8 +176,8 @@ ciliumnetworkpolicy.cilium.io/backend-auth-required created
 
 ## 6. Positive/negative control
 
-Negative control - 是 `app-115` 中的**單獨 Pod**:Pod 對它自己的流量(包括
-透過 Service)Cilium 永遠放行,因此在 `backend` 內做 `exec` 什麼也證明不了。
+負向對照(negative control)是 `app-115` 中的**單獨 Pod**:Pod 對它自己的流量(包括
+透過 Service)Cilium 永遠放行，因此在 `backend` 內做 `exec` 什麼也證明不了。
 
 ```bash
 kubectl -n app-115 run intruder --image=curlimages/curl:8.11.1 --command -- sleep 3600
@@ -196,9 +196,9 @@ SRC IDENTITY   DST IDENTITY   REMOTE NODE ID   AUTH TYPE   EXPIRATION
 11376          33174          0                spire       ...
 ```
 
-來自 `ingress-115` 的 `client` 通過 mutual authentication(`auth list` 中有 `spire` 記錄),並
-得到 `200`;來自 `app-115` 的 `intruder` - transport deny(沒有針對它的 identity 的 allow)。
-新 client 的第一個請求可能需要幾秒鐘:在 SPIFFE-handshake 進行期間 SYN 會被丟棄,
+來自 `ingress-115` 的 `client` 通過 mutual authentication(`auth list` 中有 `spire` 記錄)，並
+得到 `200`；來自 `app-115` 的 `intruder` - transport deny(沒有針對它的 identity 的 allow)。
+新用戶端的第一個請求可能需要幾秒鐘：在 SPIFFE-handshake 進行期間 SYN 會被丟棄，
 然後重傳才通過。
 
 ---

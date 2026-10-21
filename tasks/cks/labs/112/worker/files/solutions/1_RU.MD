@@ -439,7 +439,7 @@ cat "$DIR/containment.txt"
 # exec_exit=1 (не 0)
 ```
 
-## Задание 7. Override upstream-макроса и вывод в JSON/файл
+## 7. Override upstream-макроса и вывод в JSON/файл
 
 Стандартное правило **Terminal shell in container** сработает и на легитимный
 инструмент. Правильное место для environment-specific исключения - не редактирование
@@ -554,7 +554,7 @@ tail -n 20 /var/log/falco/events.log \
 # {"pod": "immutable-app", "ns": "runtime-112"}
 ```
 
-## Задание 8. Audit webhook backend
+## 8. Audit webhook backend
 
 `audit-receiver` уже развёрнут стартовым скриптом. Создайте webhook kubeconfig, указывающий
 на его Service; для лабы допустим HTTP, в production webhook требует HTTPS и client
@@ -623,7 +623,7 @@ kubectl logs -n runtime-112 "$RECEIVER_POD" --tail=50 | grep -A5 objectRef
 check_result
 ```
 
-## Задание 9. Интеграционное задание: обход admission через containerd и обнаружение через Falco
+## 9. Интеграционное задание: обход admission через containerd и обнаружение через Falco
 
 Это задание связывает Supply Chain Security (лаба 111, глава 26) с Runtime Security этой
 лабы: admission-проверка (Kyverno) не видит контейнер, если он создан прямо через
@@ -803,7 +803,7 @@ property одинаковым (exact) способом и с одним и те�
 cat >> /etc/falco/falco_rules.local.yaml <<EOF
 
 - rule: CKS112 Runtime Bypass of Admission
-  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via ctr/crictl directly)
+  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via crictl/CRI directly)
   condition: >
     spawned_process and
     container.id != host and
@@ -843,13 +843,13 @@ cks112-rm $BYPASS_1
 cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_2 'echo CKS112_CTR_BYPASS; sleep 5'
 sleep 3
 journalctl -u falco-modern-bpf --since "$START_TS" --no-pager | grep 'CKS112 runtime bypass of admission' > /tmp/art/9/falco-bypass-attempt.log
-cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-alpine.log
+cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-untrusted.log
 cks112-rm $BYPASS_2
 ```
 
 Наконец, доказываем сам prefix-trap: репозиторий, построенный как `${TRUSTED_REPO}-evil`,
 НАЧИНАЕТСЯ с той же подстроки, что и разрешённый `$TRUSTED_REPO`, но не равен ему точно.
-Если бы Falco condition использовал `startswith` (как в более ранней, неправильной версии
+Если бы Falco condition использовал `startswith` (как в наивном варианте
 этого правила), этот образ прошёл бы НЕЗАМЕЧЕННЫМ - именно поэтому исправленное условие
 `!=` обязано поймать его. Образ prefix-trap подготовлен bootstrap-ом (`$CKS112_PREFIX_IMAGE`,
 отдельный digest):
@@ -872,7 +872,7 @@ scp 'control-plane:/tmp/art/9/*' /var/work/tests/artifacts/9/
 > объединённый artifact, который проверяет автоматическая приёмка (содержит оба алерта:
 > untrusted и prefix-trap, но не должен содержать алерт для trusted repo). Дополнительно
 > каждый probe пишет собственный файл для ручной диагностики: `probe-trusted.log` (должен быть
-> пустым - это и есть negative control), `probe-alpine.log` и `probe-prefix.log`.
+> пустым - это и есть negative control), `probe-untrusted.log` и `probe-prefix.log`.
 
 Ключевой вывод этого задания: registry allowlist на admission и Falco на runtime - не
 взаимозаменяемые слои, а взаимодополняющие. Admission останавливает путь через Kubernetes

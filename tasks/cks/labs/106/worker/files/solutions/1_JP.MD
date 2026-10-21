@@ -1,10 +1,10 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD)
 
-# Lab 106 - 参考解答: AppArmor と seccomp
+# Lab 106 - 参考解答：AppArmor と seccomp
 
 > Kubernetes のコマンド (`kubectl`) は作業マシン (`worker`) で実行してください。ノード自体に関すること
 > (AppArmor、kubelet、`crictl`) は、**ノード上で直接**行ってください：`ssh` で一度入って
-> root になり (`sudo -i`) ます - 各コマンドを個別の
+> root になります (`sudo -i`) - そのほうが、各コマンドを個別の
 > `ssh control-plane '...'` で送るより速く、試験でもまさにこの進め方をするべきです。Namespace
 > `security-106` は課題 3 で作成します。
 >
@@ -63,7 +63,7 @@ exit
 それらは内部で `apparmor.read_profiles()` を呼び出し、起動時に `/etc/apparmor.d/` の**すべての**
 ファイルを解析 (パース) します。課題 9 のまだロードされていない、明らかに
 壊れている `/etc/apparmor.d/k8s-106-broken-profile` も含まれ - あなたのプロファイルに到達する前に、
-他人のファイルでパーサーエラーを起こして失敗します。`apparmor_parser`
+無関係なファイルでパーサーエラーを起こして失敗します。`apparmor_parser`
 (Python のラッパーではなくバイナリ) は、特定の 1 つのファイルを直接指定して呼び出せば、
 そのファイルだけを解析し、この問題の影響を受けません - まさにこのため、プロファイルのフラグを
 (`flags=(...)` から `complain` を削除して) `sed` で手動で修正し、そのうえでまさに
@@ -150,8 +150,8 @@ exit
 exit
 ```
 
-特定の runtime で `/proc/1/attr/current` が利用できない場合は、それを記録し、この profile についての
-Localhost profile の割り当てと、カーネルの `apparmor="DENIED"` を根拠にしてください；
+特定の runtime で `/proc/1/attr/current` が利用できない場合は、それを記録し、
+Localhost profile の割り当てと、この profile に対するカーネルの `apparmor="DENIED"` を根拠にしてください；
 これらの evidence がなく、ゼロ以外のコードだけでは不十分です。それは mount や通常の
 Unix のパーミッションでも発生しうるためです。
 
@@ -210,7 +210,7 @@ exit
 API では seccomp root からの相対パスを指定します：`profiles/cks-106-deny-unshare.json`。
 
 `SYS_ADMIN` はここでは、実習のためだけの意図的な危険な例外です (seccomp なしの control の確認は checker が行います)。custom
-filter がなければ、この capability を持つ `unshare -n` は成功する可能性があり；seccomp は `EPERM` を返す必要があります。
+filter がなければ、この capability を持つ `unshare -n` は成功する可能性があります。seccomp は `EPERM` を返す必要があります。
 これは hardened combination ではありません。`allowPrivilegeEscalation: false` は `no_new_privs` を有効にしますが、
 プロセスにすでに付与された capabilities は取り上げないため、このフィールドを `SYS_ADMIN` の
 「補償」としては使いません。production では、必要性が証明されない限り、そのような capability は削除されます。
@@ -327,7 +327,7 @@ crictl inspect <ID> | jq -r '.info.pid'
 
 ノード上の `/proc/<host PID>/uid_map` は変換を表します：3 つの数 - `<container-uid-start>
 <host-uid-start> <length>`。`hostUsers: false` の場合、最初の行は `0` (container UID 0) で始まる必要がありますが、
-host-uid-start は **ゼロではない**必要があります - それがホストの非特権の範囲であり、`length` は
+host-uid-start は **0 以外**である必要があります - それがホストの非特権の範囲であり、`length` は
 標準の per-Pod ブロック `65536` UID です。
 
 ```bash
@@ -348,9 +348,9 @@ ssh control-plane "sudo cat /proc/<host PID>/uid_map" >> /var/work/tests/artifac
 containerd/runc の非互換性や、実際に適用された Pod に `hostUsers: false` がないことが原因です) -
 これは hardening ではなく、ホスト上の通常の root です。比較のために：`hostUsers: false` のない
 通常の Pod でも、ファイル `/proc/<host-PID>/uid_map` は存在しますが、プロセスは
-host (initial) user namespace に留まります。そのため、マッピングは UID 0 -> host UID 0 で始まります (通常は
-`0 0 4294967295` のような行で、たとえばノード上の `cat /proc/1/uid_map`)、非特権の
-per-Pod host UID からではありません。`hostUsers: false` を持つ `userns-probe` では、その逆が期待されます：
+host (initial) user namespace に留まります。そのため、マッピングは非特権の per-Pod host UID からではなく、
+UID 0 -> host UID 0 で始まります (通常は `0 0 4294967295` のような行で、たとえばノード上の
+`cat /proc/1/uid_map` で確認できます)。`hostUsers: false` を持つ `userns-probe` では、その逆が期待されます：
 `0 <ゼロでない-host-uid> <per-pod の範囲>`。
 
 ## 8. kubelet の `seccompDefault: true`
@@ -417,7 +417,7 @@ kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" | jq '.kubeletconfig.sec
 
 `/etc/apparmor.d/k8s-106-broken-profile` はすでにディスク上にありますが、一度もロードされていません：
 ルール `deny /work/** w` の後のカンマが欠けています。まず、カーネルにロードせずにエラーを見つけます。
-`-p`/`--preprocess` はここでは適して「いません」 - これは preprocessing (`#include` を
+`-p`/`--preprocess` はここでは**適しません** - これは preprocessing (`#include` を
 stdout に展開する) であり、safe dry-run/syntax-check ではありません。`-Q`/`--skip-kernel-load`
 (カーネルにロードしない完全なコンパイル/検証) または `-d`/`--debug`
 (1 回のみ - syntax check だけ) を使用します。
@@ -438,7 +438,7 @@ compile-only の確認 `-Q` でも `sudo` を使います：実習のノード (
 構文の確認の前に "Failed setting up policy cache (/var/cache/apparmor):
 Permission denied" で失敗します - 実際の構文エラーの代わりに権限についての紛らわしいエラーが出て、
 `apparmor-debug.txt` に必要なテキスト "syntax error" が含まれなくなります。ノード自体で
-(明らかに壊れたプロファイルでも) 確認済みです。
+(壊れていることが分かっているプロファイルでも) 確認済みです。
 `sudo` なしの代替手段は、`-K`/`--skip-cache` を追加すること (`apparmor_parser -Q -K ...`) です：
 キャッシュなしでは、パーサーはプロファイルの解析まで進みます。この実習で `sudo` を選んだのは、その後の
 `-r` と同じワークフローにするためで、`-r` はいずれにせよ権限を必要とします。
