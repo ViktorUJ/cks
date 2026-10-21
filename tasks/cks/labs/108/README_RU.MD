@@ -77,7 +77,7 @@ check_result
 | **1** | **Установить Kyverno** |
 | :---: | :--- |
 | Что делаем | • Установите Kyverno в namespace `kyverno`.<br/>• Используйте подготовленную на worker команду `/usr/local/bin/install-kyverno`; она применяет закреплённый Helm chart.<br/>• Дождитесь доступности admission controller. |
-| Критерии приёмки | В кластере есть CRD `validatingpolicies.policies.kyverno.io`; версия Kyverno - `1.19.x`; минимум один Deployment namespace `kyverno` имеет доступную реплику. |
+| Критерии приёмки | • В кластере есть CRD `validatingpolicies.policies.kyverno.io`<br/>• Версия Kyverno - `1.19.x`<br/>• Минимум один Deployment namespace `kyverno` имеет доступную реплику |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
@@ -104,7 +104,7 @@ kubectl get deployment -n kyverno -o json | \
 | **2** | **Запретить image с тегом `latest`** |
 | :---: | :--- |
 | Что делаем | • Создайте CEL-based `ValidatingPolicy` `deny-latest-tag` (`policies.kyverno.io/v1`) с `validationActions: [Deny]`.<br/>• Она должна применяться к Pod и subresource `pods/ephemeralcontainers` namespace `policy-108`.<br/>• Она должна отклонять любой image в `containers`, `initContainers` или `ephemeralContainers`, который является явным `:latest` ИЛИ implicit latest (образ без тега и без digest вообще). |
-| Критерии приёмки | Policy существует и работает в режиме Deny; admission отклоняет и явный `:latest`, и implicit latest (untagged) в каждом из трёх списков контейнеров, включая image с registry-портом без тега (`registry.example:5000/app`), а versioned trusted images и digest-pinned images в каждом списке принимает. При UPDATE существующего Pod изменение `spec.containers[*].image` или `spec.initContainers[*].image` на `:latest` также отклоняется этой policy (обычные Pod image-поля допускают in-place UPDATE). |
+| Критерии приёмки | • Policy существует и работает в режиме Deny<br/>• Admission отклоняет и явный `:latest`, и implicit latest (untagged) в каждом из трёх списков контейнеров, включая image с registry-портом без тега (`registry.example:5000/app`), а versioned trusted images и digest-pinned images в каждом списке принимает<br/>• При UPDATE существующего Pod изменение `spec.containers[*].image` или `spec.initContainers[*].image` на `:latest` также отклоняется этой policy (обычные Pod image-поля допускают in-place UPDATE) |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -174,7 +174,7 @@ subresource). Наконец, проверьте positive control - versioned ta
 | **3** | **Требовать запуск не от root** |
 | :---: | :--- |
 | Что делаем | • Создайте CEL-based `ValidatingPolicy` `require-run-as-non-root` в режиме Deny.<br/>• Для каждого Pod в `policy-108` поле `spec.securityContext.runAsNonRoot` должно быть явно равно `true`.<br/>• На уровне Pod и всех контейнеров запрещены `runAsUser: 0` и container-level `runAsNonRoot: false`: настройки контейнера могут переопределить Pod-level securityContext. |
-| Критерии приёмки | Policy существует и Deny; Pod с `runAsNonRoot: false` или без этого поля, Pod-level `runAsUser: 0`, а также контейнер с `runAsNonRoot: false` / `runAsUser: 0` в `containers`, `initContainers`, `ephemeralContainers` отклоняются именно этой policy. Безопасное explicit container-level `runAsNonRoot: true`, `runAsUser: 1000` принимается. |
+| Критерии приёмки | • Policy существует и Deny<br/>• Pod с `runAsNonRoot: false` или без этого поля, Pod-level `runAsUser: 0`, а также контейнер с `runAsNonRoot: false` / `runAsUser: 0` в `containers`, `initContainers`, `ephemeralContainers` отклоняются именно этой policy<br/>• Безопасное explicit container-level `runAsNonRoot: true`, `runAsUser: 1000` принимается |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
@@ -223,7 +223,7 @@ admission. Затем проверьте positive control: тот же Pod, но
 | **4** | **Allowlist container registry** |
 | :---: | :--- |
 | Что делаем | • Создайте CEL-based `ValidatingPolicy` `allow-approved-registries` в режиме Deny.<br/>• Для каждого контейнера (`containers`, `initContainers`, `ephemeralContainers`) разрешайте только `registry.k8s.io/*` или `ghcr.io/cks-lab/*`.<br/>• Остальные image registry запретите. |
-| Критерии приёмки | Policy существует и Deny; untrusted image отклоняется во всех трёх списках; оба approved prefixes (`registry.k8s.io/` и `ghcr.io/cks-lab/`) допускаются в каждом из трёх списков. Обычный Pod UPDATE, меняющий image на unapproved registry, отклоняется самой policy; проверяются также другие unapproved registry и host/path-lookalikes в init/ephemeral списках. |
+| Критерии приёмки | • Policy существует и Deny<br/>• Untrusted image отклоняется во всех трёх списках<br/>• Оба approved prefixes (`registry.k8s.io/` и `ghcr.io/cks-lab/`) допускаются в каждом из трёх списков<br/>• Обычный Pod UPDATE, меняющий image на unapproved registry, отклоняется самой policy<br/>• Проверяются также другие unapproved registry и host/path-lookalikes в init/ephemeral списках |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
@@ -269,7 +269,7 @@ image через `kubectl debug` на уже запущенном разрешё
 | **5** | **Опционально: mutate label через Kyverno** |
 | :---: | :--- |
 | Что делаем | • Создайте CEL-based `MutatingPolicy` `add-kyverno-managed-label` (`policies.kyverno.io/v1`), которая добавляет к Pod namespace `policy-108` label `security.cks.io/managed-by: kyverno`, если он отсутствует.<br/>• Используйте mutation, а не validation.<br/>• Не мутируйте Pod в других namespace. |
-| Критерии приёмки | Server-side dry-run Pod с разрешённым registry и `runAsNonRoot: true`, у которого ещё НЕТ этого label, получает его после mutation со значением `kyverno`. Pod, у которого label УЖЕ задан с другим значением, сохраняет исходное значение; Pod в `default` остаётся без этого label. Этот этап отображается в `check_result`, но его пропуск допустим. |
+| Критерии приёмки | • Server-side dry-run Pod с разрешённым registry и `runAsNonRoot: true`, у которого ещё НЕТ этого label, получает его после mutation со значением `kyverno`<br/>• Pod, у которого label УЖЕ задан с другим значением, сохраняет исходное значение<br/>• Pod в `default` остаётся без этого label<br/>• Этот этап отображается в `check_result`, но его пропуск допустим |
 
 <details>
 <summary>💡 Подсказка к заданию 5</summary>
@@ -281,7 +281,7 @@ image через `kubectl debug` на уже запущенном разрешё
 | **6** | **ImagePolicyWebhook: внешний backend вместо CEL policy** |
 | :---: | :--- |
 | Что делаем | • На рабочей машине уже подготовлен `/opt/image-policy-backend/server.py` - минимальный HTTPS-сервер, реализующий `ImageReview` API (отклоняет image с тегом `:latest` или без тега вовсе).<br/>• Разверните его как Deployment в namespace `image-policy`, за Service `image-policy-backend` на порту `8443`. Backend должен принимать соединения по TLS (upstream `ImagePolicyWebhook` контракт требует HTTPS, plain HTTP не поддерживается).<br/>• На `control-plane` (`ssh`, затем `sudo -i`) настройте `AdmissionConfiguration` для plugin `ImagePolicyWebhook` (`defaultAllow: false`) и kubeconfig, указывающий на ваш backend.<br/>• В static manifest `kube-apiserver.yaml` **добавьте** `ImagePolicyWebhook` к уже существующему списку `--enable-admission-plugins` (не заменяйте список целиком - иначе рискуете выключить уже включённые plugins) и включите `--runtime-config=imagepolicy.k8s.io/v1alpha1=true`.<br/>• После восстановления API создайте Pod с `:latest` - должен быть отклонён; затем Pod с закреплённым тегом - должен быть создан. |
-| Критерии приёмки | `image-policy-backend` Available; kube-apiserver healthy с добавленным (не заменённым) plugin и `--runtime-config`; kubeconfig backend'а использует HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy`; Pod с `:latest` и implicit latest (в том числе registry-port без тега) отклоняется именно ImagePolicyWebhook в namespace `default` — как в обычном Pod, так и в init/ephemeral container; пользовательская аннотация `alpha.image-policy.k8s.io/break-glass: "true"` не даёт исключения. Namespace `policy-108` выделен под Kyverno из Tasks 2–4, чтобы два независимых механизма admission не маскировали отказ друг друга; для этого backend по `ImageReview.spec.namespace == policy-108` делегирует решение Kyverno, а во всех остальных namespace продолжает работать ImagePolicyWebhook. Pod с закреплённым тегом создан и Running; Service действительно теряет Endpoints во время backend outage, API отказывает из-за недоступности этого endpoint (`defaultAllow: false`), затем Service selector и admission восстанавливаются точно к исходному состоянию. |
+| Критерии приёмки | • `image-policy-backend` Available<br/>• Kube-apiserver healthy с добавленным (не заменённым) plugin и `--runtime-config`<br/>• Kubeconfig backend'а использует HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy`<br/>• Pod с `:latest` и implicit latest (в том числе registry-port без тега) отклоняется именно ImagePolicyWebhook в namespace `default` — как в обычном Pod, так и в init/ephemeral container<br/>• Пользовательская аннотация `alpha.image-policy.k8s.io/break-glass: "true"` не даёт исключения<br/>• Namespace `policy-108` выделен под Kyverno из Tasks 2–4, чтобы два независимых механизма admission не маскировали отказ друг друга<br/>• Для этого backend по `ImageReview.spec.namespace == policy-108` делегирует решение Kyverno, а во всех остальных namespace продолжает работать ImagePolicyWebhook<br/>• Pod с закреплённым тегом создан и Running<br/>• Service действительно теряет Endpoints во время backend outage, API отказывает из-за недоступности этого endpoint (`defaultAllow: false`), затем Service selector и admission восстанавливаются точно к исходному состоянию |
 
 <details>
 <summary>💡 Подсказка к заданию 6</summary>
@@ -293,7 +293,7 @@ image через `kubectl debug` на уже запущенном разрешё
 | **7** | **Gatekeeper ConstraintTemplate: дописать Rego blocklist** |
 | :---: | :--- |
 | Что делаем | • В кластере уже установлен **Gatekeeper** (OPA), а также `ConstraintTemplate` `k8sblockedregistries` и `Constraint` `K8sBlockedRegistries/deny-bad-registries`, ограниченный отдельным namespace `gatekeeper-108` (не `policy-108` - это отдельный от Kyverno-заданий 1-5 полигон, чтобы Kyverno и Gatekeeper не отклоняли один и тот же Pod одновременно).<br/>• Rego внутри `ConstraintTemplate` уже содержит несколько заблокированных registry (`untrusted-registry.example`, `docker-fake.test`), но **намеренно не содержит** `very-bad-registry.test`.<br/>• Найдите `ConstraintTemplate.spec.targets[].rego` и допишите в него правило для `very-bad-registry.test` - именно в Rego, а не в параметрах `Constraint`.<br/>• `deny-bad-registries` уже полностью корректен и не использует `spec.parameters` вообще - трогать его не нужно. |
-| Критерии приёмки | `ConstraintTemplate k8sblockedregistries` и исходный Constraint `K8sBlockedRegistries/deny-bad-registries` существуют; Rego сохраняет оба исходных активных правила (`untrusted-registry.example`, `docker-fake.test`) и содержит новое активное правило для `very-bad-registry.test`; Pod с каждым из этих трёх registry в `gatekeeper-108` отклоняется именно Constraint `deny-bad-registries`; Pod с образом из доверенного `registry.k8s.io` проходит. Constraint остаётся Pod-only, ограничен `gatekeeper-108`, без parameters/selectors/exclusions; дополнительный Constraint этого типа не создаётся. |
+| Критерии приёмки | • `ConstraintTemplate k8sblockedregistries` и исходный Constraint `K8sBlockedRegistries/deny-bad-registries` существуют<br/>• Rego сохраняет оба исходных активных правила (`untrusted-registry.example`, `docker-fake.test`) и содержит новое активное правило для `very-bad-registry.test`<br/>• Pod с каждым из этих трёх registry в `gatekeeper-108` отклоняется именно Constraint `deny-bad-registries`<br/>• Pod с образом из доверенного `registry.k8s.io` проходит<br/>• Constraint остаётся Pod-only, ограничен `gatekeeper-108`, без parameters/selectors/exclusions<br/>• Дополнительный Constraint этого типа не создаётся |
 
 <details>
 <summary>💡 Подсказка к заданию 7</summary>

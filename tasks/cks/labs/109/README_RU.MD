@@ -82,8 +82,8 @@ check_result
 ---
 | **1** | **Доказать исходный plaintext Secret** |
 | :---: | :--- |
-| Что делаем | До включения шифрования запросите raw запись `/registry/secrets/encryption-109/legacy-secret` стандартным `etcdctl get ... --print-value-only`. Зайдите на control-plane (`ssh control-plane`) и работайте на нём, как на экзамене: пропустите вывод через `strings` и сохраните результат в файл на control-plane (`/tmp/plaintext-proof.txt`), затем скопируйте его на рабочую машину командой `scp` в `/var/work/109/plaintext-proof.txt`. |
-| Критерии приёмки | Файл содержит полный вывод `strings` исходной raw-записи (совпадает со снимком bootstrap, включая marker `cks-109-legacy-plaintext`) и не содержит `k8s:enc:`; вручную набранная строка не принимается. Это доказательство исходного состояния: `Secret.data` - base64, не encryption at rest. |
+| Что делаем | • До включения шифрования запросите raw запись `/registry/secrets/encryption-109/legacy-secret` стандартным `etcdctl get ... --print-value-only`<br/>• Зайдите на control-plane (`ssh control-plane`) и работайте на нём, как на экзамене: пропустите вывод через `strings` и сохраните результат в файл на control-plane (`/tmp/plaintext-proof.txt`), затем скопируйте его на рабочую машину командой `scp` в `/var/work/109/plaintext-proof.txt` |
+| Критерии приёмки | • Файл содержит полный вывод `strings` исходной raw-записи (совпадает со снимком bootstrap, включая marker `cks-109-legacy-plaintext`) и не содержит `k8s:enc:`<br/>• Вручную набранная строка не принимается<br/>• Это доказательство исходного состояния: `Secret.data` - base64, не encryption at rest |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
@@ -94,8 +94,8 @@ check_result
 ---
 | **2** | **Создать EncryptionConfiguration для Secret** |
 | :---: | :--- |
-| Что делаем | На control-plane создайте `/etc/kubernetes/enc/encryption-config.yaml`, owner `root:root`, mode `0600`. Формат: `apiserver.config.k8s.io/v1`, `EncryptionConfiguration`; для `secrets` первым provider задайте `aescbc` с именованным base64-ключом из **32 случайных bytes**, затем `identity: {}`. |
-| Критерии приёмки | Файл `root:root` mode `0600` в каталоге `root:root` mode `0700`; основной действующий provider для `secrets` — **первый** `aescbc` с корректным named base64 key из 32 bytes. `identity` допустим только последним временным fallback для legacy plaintext. Symlink на файл/каталог запрещён. |
+| Что делаем | • На control-plane создайте `/etc/kubernetes/enc/encryption-config.yaml`, owner `root:root`, mode `0600`<br/>• Формат: `apiserver.config.k8s.io/v1`, `EncryptionConfiguration`<br/>• Для `secrets` первым provider задайте `aescbc` с именованным base64-ключом из **32 случайных bytes**, затем `identity: {}` |
+| Критерии приёмки | • Файл `root:root` mode `0600` в каталоге `root:root` mode `0700`<br/>• Основной действующий provider для `secrets` — **первый** `aescbc` с корректным named base64 key из 32 bytes<br/>• `identity` допустим только последним временным fallback для legacy plaintext<br/>• Symlink на файл/каталог запрещён |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -106,8 +106,8 @@ check_result
 ---
 | **3** | **Подключить config к static kube-apiserver** |
 | :---: | :--- |
-| Что делаем | Аккуратно измените `/etc/kubernetes/manifests/kube-apiserver.yaml`: добавьте flag `--encryption-provider-config=/etc/kubernetes/enc/encryption-config.yaml`, read-only `volumeMount` `/etc/kubernetes/enc` и соответствующий `hostPath` volume `/etc/kubernetes/enc`. Сохраните backup manifest до правки. |
-| Критерии приёмки | Работающий manifest содержит flag, mount и hostPath; после restart static Pod `kubectl get --raw='/readyz'` возвращает `ok`. |
+| Что делаем | • Аккуратно измените `/etc/kubernetes/manifests/kube-apiserver.yaml`: добавьте flag `--encryption-provider-config=/etc/kubernetes/enc/encryption-config.yaml`, read-only `volumeMount` `/etc/kubernetes/enc` и соответствующий `hostPath` volume `/etc/kubernetes/enc`<br/>• Сохраните backup manifest до правки |
+| Критерии приёмки | • Работающий manifest содержит flag, mount и hostPath<br/>• После restart static Pod `kubectl get --raw='/readyz'` возвращает `ok` |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
@@ -118,8 +118,8 @@ check_result
 ---
 | **4** | **Re-encrypt и доказать ciphertext** |
 | :---: | :--- |
-| Что делаем | После готовности API server создайте в `encryption-109` Secret `encrypted-secret` с literal `token=cks-109-fresh-ciphertext`. Перепишите все ранее существующие Secret через API (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`). Проверьте оба Secret через API и raw etcd. Только после этой проверки удалите временный `identity` fallback, перезапустите static kube-apiserver и снова проверьте `/readyz` и чтение обоих Secret. |
-| Критерии приёмки | `legacy-secret` и `encrypted-secret` читаются через API с исходными значениями; raw value каждого начинается с `k8s:enc:aescbc:v1:`; legacy marker больше не виден в raw etcd; исходные payload/UID всего bootstrap Secret corpus сохранены, все записи зашифрованы первым действующим ключом; ключ из финального файла способен расшифровать ciphertext обоих canary Secret; в финальной конфигурации отсутствует `identity`, API healthy. |
+| Что делаем | • После готовности API server создайте в `encryption-109` Secret `encrypted-secret` с literal `token=cks-109-fresh-ciphertext`<br/>• Перепишите все ранее существующие Secret через API (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`)<br/>• Проверьте оба Secret через API и raw etcd<br/>• Только после этой проверки удалите временный `identity` fallback, перезапустите static kube-apiserver и снова проверьте `/readyz` и чтение обоих Secret |
+| Критерии приёмки | • `legacy-secret` и `encrypted-secret` читаются через API с исходными значениями<br/>• Raw value каждого начинается с `k8s:enc:aescbc:v1:`<br/>• Legacy marker больше не виден в raw etcd<br/>• Исходные payload/UID всего bootstrap Secret corpus сохранены, все записи зашифрованы первым действующим ключом<br/>• Ключ из финального файла способен расшифровать ciphertext обоих canary Secret<br/>• В финальной конфигурации отсутствует `identity`, API healthy |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
@@ -130,8 +130,8 @@ check_result
 ---
 | **5** | **Минимизировать RBAC и отключить automount** |
 | :---: | :--- |
-| Что делаем | Создайте ServiceAccount `secret-reader` в `encryption-109` с `automountServiceAccountToken: false`. Role `secret-reader-109` должна давать только `get` только Secret `encrypted-secret`; привяжите её одноимённым RoleBinding. Создайте Pod `secret-reader-109` c этим ServiceAccount, `automountServiceAccountToken: false`, образом `registry.k8s.io/pause:3.10`. |
-| Критерии приёмки | Effective RBAC для ServiceAccount с его штатными группами позволяет `get encrypted-secret` в `encryption-109` и запрещает другие Secret-операции, в том числе доступ к Secret других namespace; Role/RoleBinding точные. Pod Running с одним `pause:3.10`, без автоматически либо вручную смонтированных ServiceAccount token и других credential-bearing sources (Secret/hostPath/CSI/PVC volumes, Secret env/envFrom); безобидные emptyDir/ConfigMap volumes допустимы; `automountServiceAccountToken: false` в Pod и ServiceAccount. |
+| Что делаем | • Создайте ServiceAccount `secret-reader` в `encryption-109` с `automountServiceAccountToken: false`<br/>• Role `secret-reader-109` должна давать только `get` только Secret `encrypted-secret`<br/>• Привяжите её одноимённым RoleBinding<br/>• Создайте Pod `secret-reader-109` c этим ServiceAccount, `automountServiceAccountToken: false`, образом `registry.k8s.io/pause:3.10` |
+| Критерии приёмки | • Effective RBAC для ServiceAccount с его штатными группами позволяет `get encrypted-secret` в `encryption-109` и запрещает другие Secret-операции, в том числе доступ к Secret других namespace<br/>• Role/RoleBinding точные<br/>• Pod Running с одним `pause:3.10`, без автоматически либо вручную смонтированных ServiceAccount token и других credential-bearing sources (Secret/hostPath/CSI/PVC volumes, Secret env/envFrom)<br/>• Безобидные emptyDir/ConfigMap volumes допустимы<br/>• `automountServiceAccountToken: false` в Pod и ServiceAccount |
 
 <details>
 <summary>💡 Подсказка к заданию 5</summary>

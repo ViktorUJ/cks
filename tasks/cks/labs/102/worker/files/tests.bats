@@ -120,47 +120,28 @@ no_unexpected_policies() {
   policies_ok=false
   no_unexpected_policies "$NS" backend-policy frontend-fqdn && policies_ok=true
 
-  # Чекер сам доказывает причинность (before/after), без student-artifact: временно
-  # снимает уже применённый backend-policy, убеждается, что backend реально достижим
-  # для ОБОИХ identity (иначе deny ничего не доказывает - сеть могла быть сломана и без
-  # policy), затем накатывает policy обратно и проверяет итоговое поведение.
-  printf '%s' "$policy" | jq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)' \
-    > "$CHECKER_DIR/2/backend-policy.json"
-  kubectl --context "$CTX" delete ciliumnetworkpolicy backend-policy -n "$NS" --wait=true >/dev/null 2>&1
-  sleep 3
-
-  read -r base_f_rc base_f_code <<<"$(live_probe frontend http://backend/)"
-  read -r base_c_rc base_c_code <<<"$(live_probe client http://backend/)"
-
-  kubectl --context "$CTX" apply -f "$CHECKER_DIR/2/backend-policy.json" >/dev/null 2>&1
-  sleep 3
-
+  # Read-only proof: never remove a live security policy. A successful frontend
+  # request proves that the backend Service/path actually works; the untrusted
+  # client is an independent negative control. Exact policy shape is checked above.
   read -r after_f_rc after_f_code <<<"$(live_probe frontend http://backend/)"
   read -r after_c_rc after_c_code <<<"$(live_probe client http://backend/)"
-
-  printf 'baseline frontend: rc=%s code=%s\nbaseline client: rc=%s code=%s\nafter frontend: rc=%s code=%s\nafter client: rc=%s code=%s\n' \
-    "$base_f_rc" "$base_f_code" "$base_c_rc" "$base_c_code" "$after_f_rc" "$after_f_code" "$after_c_rc" "$after_c_code" \
+  printf 'effective frontend: rc=%s code=%s\neffective client: rc=%s code=%s\n' \
+    "$after_f_rc" "$after_f_code" "$after_c_rc" "$after_c_code" \
     > "$CHECKER_DIR/2/l3-l4-runtime.txt"
-
-  baseline_ok=true
-  reachable "$base_f_rc" "$base_f_code" || baseline_ok=false
-  reachable "$base_c_rc" "$base_c_code" || baseline_ok=false
 
   after_ok=true
   exact_code "$after_f_rc" "$after_f_code" "200" || after_ok=false
   transport_denied "$after_c_rc" "$after_c_code" || after_ok=false
 
-  if [[ "$policy_ok" == "true" && "$policies_ok" == "true" && "$baseline_ok" == "true" && "$after_ok" == "true" ]]; then
+  if [[ "$policy_ok" == "true" && "$policies_ok" == "true" && "$after_ok" == "true" ]]; then
     record_result 0
   else
     if [[ "$policy_ok" != "true" ]]; then
       echo "HINT: CiliumNetworkPolicy 'backend-policy' must select exactly endpointSelector {app: backend}, exactly one ingress rule with fromEndpoints {role: frontend}, and exactly one toPorts entry for TCP/80 with no endPort - no extra ports, no extra peers."
     elif [[ "$policies_ok" != "true" ]]; then
       echo "HINT: only 'backend-policy' and 'frontend-fqdn' are expected to exist as policy resources in $NS - no other CiliumNetworkPolicy, standard NetworkPolicy, or cluster-wide CiliumClusterwideNetworkPolicy. Cilium policies are additive, so an extra policy may widen the effective allow-set."
-    elif [[ "$baseline_ok" != "true" ]]; then
-      echo "HINT: with backend-policy temporarily removed, both 'frontend' and 'client' must reach backend with a real HTTP status - if they can't, that's a connectivity problem unrelated to your policy, and the deny in task 2 doesn't prove anything (rc=$base_f_rc/$base_f_code frontend, rc=$base_c_rc/$base_c_code client)."
     else
-      echo "HINT: after re-applying backend-policy, 'frontend' must get exactly HTTP 200 (got rc=$after_f_rc code=$after_f_code) and 'client' must get a transport-level deny, HTTPCODE=000 with exit 7/28 (got rc=$after_c_rc code=$after_c_code) - a real HTTP response (403/404/...) means the network path still exists and L3/L4 deny is not proven."
+      echo "HINT: with the live backend-policy, 'frontend' must get exactly HTTP 200 (got rc=$after_f_rc code=$after_f_code) and 'client' must get a transport-level deny, HTTPCODE=000 with exit 7/28 (got rc=$after_c_rc code=$after_c_code) - a real HTTP response (403/404/...) means the network path still exists and L3/L4 deny is not proven."
     fi
     cat "$CHECKER_DIR/2/l3-l4-runtime.txt"
     record_result 1
@@ -198,55 +179,30 @@ no_unexpected_policies() {
   policies_ok=false
   no_unexpected_policies "$NS" backend-policy frontend-fqdn && policies_ok=true
 
-  # Чекер сам доказывает переход L4->L7 (before/after), без student-artifact: строит
-  # L4-only вариант ИЗ уже применённого объекта (просто снимает rules.http), временно
-  # накатывает его и убеждается, что L4-only policy не смотрит внутрь HTTP - GET и POST
-  # оба реально доходят до backend. Затем возвращает финальный L7-вариант и проверяет
-  # итоговое поведение.
-  printf '%s' "$policy" | jq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)' \
-    > "$CHECKER_DIR/3/backend-policy-l7.json"
-  jq 'del(.spec.ingress[0].toPorts[0].rules)' "$CHECKER_DIR/3/backend-policy-l7.json" \
-    > "$CHECKER_DIR/3/backend-policy-l4-only.json"
-
-  kubectl --context "$CTX" apply -f "$CHECKER_DIR/3/backend-policy-l4-only.json" >/dev/null 2>&1
-  sleep 3
-
-  read -r base_get_rc base_get_code <<<"$(live_probe frontend http://backend/)"
-  read -r base_post_rc base_post_code <<<"$(live_probe frontend -X POST http://backend/)"
-
-  kubectl --context "$CTX" apply -f "$CHECKER_DIR/3/backend-policy-l7.json" >/dev/null 2>&1
-  sleep 3
-
+  # Non-disruptive L7 proof. Running workload remains protected throughout.
   read -r get_rc get_code <<<"$(live_probe frontend http://backend/)"
   read -r post_rc post_code <<<"$(live_probe frontend -X POST http://backend/)"
   read -r client_rc client_code <<<"$(live_probe client http://backend/)"
-
-  printf 'baseline(L4-only) GET: rc=%s code=%s\nbaseline(L4-only) POST: rc=%s code=%s\nafter(L7) GET: rc=%s code=%s\nafter(L7) POST: rc=%s code=%s\nafter(L7) client: rc=%s code=%s\n' \
-    "$base_get_rc" "$base_get_code" "$base_post_rc" "$base_post_code" "$get_rc" "$get_code" "$post_rc" "$post_code" "$client_rc" "$client_code" \
+  printf 'effective GET: rc=%s code=%s\neffective POST: rc=%s code=%s\neffective client: rc=%s code=%s\n' \
+    "$get_rc" "$get_code" "$post_rc" "$post_code" "$client_rc" "$client_code" \
     > "$CHECKER_DIR/3/l7-http-runtime.txt"
-
-  baseline_ok=true
-  reachable "$base_get_rc" "$base_get_code" || baseline_ok=false
-  reachable "$base_post_rc" "$base_post_code" || baseline_ok=false
 
   after_ok=true
   exact_code "$get_rc" "$get_code" "200" || after_ok=false
   exact_code "$post_rc" "$post_code" "403" || after_ok=false
   transport_denied "$client_rc" "$client_code" || after_ok=false
 
-  if [[ "$policy_ok" == "true" && "$policies_ok" == "true" && "$baseline_ok" == "true" && "$after_ok" == "true" ]]; then
+  if [[ "$policy_ok" == "true" && "$policies_ok" == "true" && "$after_ok" == "true" ]]; then
     record_result 0
   else
     if [[ "$policy_ok" != "true" ]]; then
       echo "HINT: the final backend-policy for TCP/80 must contain exactly one toPorts entry with exactly one rules.http entry (method GET, path /) - no separate L4-only rule left next to it, no extra methods/paths, no extra ports/peers."
     elif [[ "$policies_ok" != "true" ]]; then
       echo "HINT: only 'backend-policy' and 'frontend-fqdn' are expected to exist as policy resources in $NS - no other CiliumNetworkPolicy, standard NetworkPolicy, or cluster-wide CiliumClusterwideNetworkPolicy."
-    elif [[ "$baseline_ok" != "true" ]]; then
-      echo "HINT: with only the L4-only variant of your policy applied (same selector/port, no rules.http), both GET and POST must reach backend with a real HTTP status - L4-only policy does not inspect HTTP (rc=$base_get_rc/$base_get_code GET, rc=$base_post_rc/$base_post_code POST)."
     elif ! exact_code "$get_rc" "$get_code" "200"; then
-      echo "HINT: after re-applying the L7 policy, GET / must return exactly 200 (got rc=$get_rc code=$get_code) - check the L7 rule's method/path match the actual request exactly."
+      echo "HINT: with the live L7 policy, GET / must return exactly 200 (got rc=$get_rc code=$get_code) - check the L7 rule's method/path match the actual request exactly."
     elif ! exact_code "$post_rc" "$post_code" "403"; then
-      echo "HINT: after re-applying the L7 policy, POST / must return exactly 403 (got rc=$post_rc code=$post_code) - it should be denied by the L7 policy since only GET was allowed."
+      echo "HINT: with the live L7 policy, POST / must return exactly 403 (got rc=$post_rc code=$post_code) - it should be denied by the L7 policy since only GET was allowed."
     else
       echo "HINT: 'client' must still receive a transport-level deny (HTTPCODE:000, exit 7/28) on this task too - the L3/L4 restriction from task 2 must remain in effect while you add the L7 rule (got rc=$client_rc code=$client_code)."
     fi
@@ -350,36 +306,21 @@ no_unexpected_policies() {
   policies_ok=false
   no_unexpected_policies "$NS" backend-policy frontend-fqdn && policies_ok=true
 
-  # Чекер сам доказывает before/after для DNS-aware egress, без student-artifact: временно
-  # снимает уже применённый frontend-fqdn (egress откатывается к default-allow), проверяет
-  # baseline на lab-owned fixture (allowed.cks102.test/blocked.cks102.test резолвятся в
-  # 198.18.0.10/198.18.0.20 - синтетические IP вне Kubernetes address space, а не
-  # ClusterIP: Cilium toFQDNs не применяет allow-правило к IP внутри кластера, поэтому
-  # фикстура полностью под контролем этой лабы, но живёт в отдельном network namespace на
-  # control-plane узле - в отличие от example.com/www.google.com здесь нет и не может быть
-  # "inconclusive" ветки, фикстура обязана быть доступна всегда), затем накатывает policy
-  # обратно и проверяет итоговое поведение + regression для backend из заданий 2-3.
-  printf '%s' "$policy" | jq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)' \
-    > "$CHECKER_DIR/4/frontend-fqdn.json"
-  kubectl --context "$CTX" delete ciliumnetworkpolicy frontend-fqdn -n "$NS" --wait=true >/dev/null 2>&1
-  sleep 3
-
+  # Independent fixture control from unselected 'client' (role=untrusted).
+  # Never delete the live frontend CNP; independent client verifies that the
+  # host-side fixture stays reachable without altering the student's controls.
   base_dns_ok=false
-  kubectl --context "$CTX" exec -n "$NS" frontend -- getent hosts allowed.cks102.test >/dev/null 2>&1 && base_dns_ok=true
-  read -r base_https_rc base_https_code <<<"$(live_probe frontend --max-time 10 -k https://allowed.cks102.test/)"
-  read -r base_http_rc base_http_code <<<"$(live_probe frontend http://allowed.cks102.test:80/)"
-  read -r base_blocked_rc base_blocked_code <<<"$(live_probe frontend --max-time 10 -k https://blocked.cks102.test/)"
+  kubectl --context "$CTX" exec -n "$NS" client -- getent hosts allowed.cks102.test >/dev/null 2>&1 && base_dns_ok=true
+  read -r base_https_rc base_https_code <<<"$(live_probe client --max-time 10 -k https://allowed.cks102.test/)"
+  read -r base_http_rc base_http_code <<<"$(live_probe client http://allowed.cks102.test:80/)"
+  read -r base_blocked_rc base_blocked_code <<<"$(live_probe client --max-time 10 -k https://blocked.cks102.test/)"
 
   if [[ "$base_dns_ok" != "true" ]] || ! reachable "$base_https_rc" "$base_https_code" \
       || ! reachable "$base_http_rc" "$base_http_code" || ! reachable "$base_blocked_rc" "$base_blocked_code"; then
-    echo "HINT: lab-owned FQDN fixture (allowed.cks102.test/blocked.cks102.test) is not reachable even WITHOUT frontend-fqdn applied - this is an infrastructure problem (fixture network namespace/CoreDNS hosts entries from k8s-1/scripts/master.sh), not a policy problem. Baseline: dns_ok=$base_dns_ok https: rc=$base_https_rc code=$base_https_code http: rc=$base_http_rc code=$base_http_code blocked: rc=$base_blocked_rc code=$base_blocked_code" >&2
-    kubectl --context "$CTX" apply -f "$CHECKER_DIR/4/frontend-fqdn.json" >/dev/null 2>&1
+    echo "HINT: Lab FQDN fixtures are unavailable to independent unselected client; repair fixture network/CoreDNS first." >&2
     record_result 1
     return
   fi
-
-  kubectl --context "$CTX" apply -f "$CHECKER_DIR/4/frontend-fqdn.json" >/dev/null 2>&1
-  sleep 5
 
   dns_after_ok=false
   kubectl --context "$CTX" exec -n "$NS" frontend -- getent hosts allowed.cks102.test >/dev/null 2>&1 && dns_after_ok=true
@@ -423,15 +364,15 @@ no_unexpected_policies() {
     elif [[ "$policies_ok" != "true" ]]; then
       echo "HINT: only 'backend-policy' and 'frontend-fqdn' are expected to exist as policy resources in $NS."
     elif [[ "$dns_after_ok" != "true" ]]; then
-      echo "HINT: DNS resolution for allowed.cks102.test from frontend does not work after frontend-fqdn was re-applied. The DNS egress rule (toEndpoints kube-dns, rules.dns) must actually let DNS queries through."
+      echo "HINT: DNS resolution for allowed.cks102.test from frontend does not work with frontend-fqdn active. The DNS egress rule (toEndpoints kube-dns, rules.dns) must actually let DNS queries through."
     elif [[ "$https_result_ok" != "true" ]]; then
-      echo "HINT: allowed.cks102.test:443 was reachable without any frontend-fqdn policy (rc=$base_https_rc code=$base_https_code) but is not reachable after re-applying it (rc=$https_rc code=$https_code) - it must remain allowed by toFQDNs matchName allowed.cks102.test on TCP/443."
+      echo "HINT: allowed.cks102.test:443 was reachable from the independent, policy-unselected client (rc=$base_https_rc code=$base_https_code) but is not reachable after re-applying it (rc=$https_rc code=$https_code) - it must remain allowed by toFQDNs matchName allowed.cks102.test on TCP/443."
     elif [[ "$http_result_ok" != "true" ]]; then
-      echo "HINT: allowed.cks102.test:80 was reachable without policy (rc=$base_http_rc code=$base_http_code) but did not get a transport-level deny after re-applying frontend-fqdn (rc=$http_rc code=$http_code) - only TCP/443 should be allowed for allowed.cks102.test."
+      echo "HINT: allowed.cks102.test:80 was reachable from the independent, policy-unselected client (rc=$base_http_rc code=$base_http_code) but did not get a transport-level deny with the policy active (rc=$http_rc code=$http_code) - only TCP/443 should be allowed for allowed.cks102.test."
     elif [[ "$google_result_ok" != "true" ]]; then
-      echo "HINT: blocked.cks102.test:443 was reachable without policy (rc=$base_blocked_rc code=$base_blocked_code) but did not get a transport-level deny after re-applying frontend-fqdn (rc=$blocked_rc code=$blocked_code) - toFQDNs must match only allowed.cks102.test, not blocked.cks102.test."
+      echo "HINT: blocked.cks102.test:443 was reachable from the independent, policy-unselected client (rc=$base_blocked_rc code=$base_blocked_code) but did not get a transport-level deny with the policy active (rc=$blocked_rc code=$blocked_code) - toFQDNs must match only allowed.cks102.test, not blocked.cks102.test."
     else
-      echo "HINT: frontend -> backend regressed after re-applying frontend-fqdn (GET: rc=$backend_get_rc code=$backend_get_code, expected 200; POST: rc=$backend_post_rc code=$backend_post_code, expected 403). frontend-fqdn adds egress default-deny for frontend - it must also contain an explicit internal rule allowing toEndpoints {app: backend} on TCP/80."
+      echo "HINT: frontend -> backend regressed with the policy active (GET: rc=$backend_get_rc code=$backend_get_code, expected 200; POST: rc=$backend_post_rc code=$backend_post_code, expected 403). frontend-fqdn adds egress default-deny for frontend - it must also contain an explicit internal rule allowing toEndpoints {app: backend} on TCP/80."
     fi
     cat "$CHECKER_DIR/4/fqdn-runtime.txt"
     record_result 1
@@ -525,7 +466,7 @@ no_unexpected_policies() {
       and ((.toPorts[0].ports[0].endPort // null) == null)
       and ((.toPorts[0].rules.http // []) | length) == 1
       and (.toPorts[0].rules.http[0].method == "GET")
-      and (.toPorts[0].rules.http[0].path | test($pathfrag));
+      and (.toPorts[0].rules.http[0].path | test("^" + $pathfrag + "(\\.\\*|\\.\\+)?$"));
     # NOTE: fromEndpoints containing a bare empty selector looks like "match any
     # identity" but is NOT: Cilium implicitly scopes a fromEndpoints selector with no
     # explicit namespace label to the policy own namespace, even for an empty selector -
@@ -547,36 +488,23 @@ no_unexpected_policies() {
       and ((.fromEndpoints[0].matchExpressions // []) | length == 0);
     (.spec.endpointSelector.matchLabels == {"app":"portal"})
     and ((.spec.ingress // []) | length == 2)
-    and (any(.spec.ingress[]; any_rule and http_rule_ok("public")))
-    and (any(.spec.ingress[]; finance_rule and http_rule_ok("private")))
+    and (any(.spec.ingress[]; any_rule and http_rule_ok("/public/")))
+    and (any(.spec.ingress[]; finance_rule and http_rule_ok("/private/")))
   ' 2>/dev/null)
 
   policies_ok=false
   no_unexpected_policies "production" portal-policy && policies_ok=true
 
-  # Чекер сам доказывает before/after: снимает portal-policy, проверяет baseline (оба
-  # path со ОБОИХ namespace реально отдают 200 без policy - иначе deny в task 6 ничего
-  # не доказывает), затем накатывает policy обратно.
-  printf '%s' "$policy" | jq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)' \
-    > "$CHECKER_DIR/6/portal-policy.json"
-  kubectl --context "$CTX" delete ciliumnetworkpolicy portal-policy -n production --wait=true >/dev/null 2>&1
-  sleep 3
-
-  # live_probe assumes pods live in $NS; portal/finance-client live in other namespaces,
-  # so call kubectl directly here instead.
-  base_fin_pub_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/public/ 2>/dev/null)
-  base_fin_priv_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/private/ 2>/dev/null)
-  base_ext_pub_code=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/public/ 2>/dev/null)
-  base_ext_priv_code=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/private/ 2>/dev/null)
-
-  baseline_ok=true
-  [[ "$base_fin_pub_code" =~ ^2 ]] || baseline_ok=false
-  [[ "$base_fin_priv_code" =~ ^2 ]] || baseline_ok=false
-  [[ "$base_ext_pub_code" =~ ^2 ]] || baseline_ok=false
-  [[ "$base_ext_priv_code" =~ ^2 ]] || baseline_ok=false
-
-  kubectl --context "$CTX" apply -f "$CHECKER_DIR/6/portal-policy.json" >/dev/null 2>&1
-  sleep 3
+  # Read-only baseline: validate both endpoint routes on the real portal Pod
+  # over loopback. Since this traffic does not enter ingress CNP, a malicious
+  # application returning 403 is not mistaken for policy enforcement.
+  baseline_ok=false
+  kubectl --context "$CTX" exec -n production portal -- wget -q -T 5 -O /dev/null http://127.0.0.1/public/ >/dev/null 2>&1 && \
+  kubectl --context "$CTX" exec -n production portal -- wget -q -T 5 -O /dev/null http://127.0.0.1/private/ >/dev/null 2>&1 && baseline_ok=true
+  base_fin_pub_code=$([[ "$baseline_ok" == true ]] && echo 200 || echo 000)
+  base_fin_priv_code="$base_fin_pub_code"
+  base_ext_pub_code="$base_fin_pub_code"
+  base_ext_priv_code="$base_fin_pub_code"
 
   fin_pub_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/public/ 2>/dev/null)
   fin_priv_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/private/ 2>/dev/null)
@@ -600,11 +528,11 @@ no_unexpected_policies() {
     record_result 0
   else
     if [[ "$policy_ok" != "true" ]]; then
-      echo "HINT: 'portal-policy' must select {app: portal} and contain exactly two ingress rules on TCP/80: one with fromEndpoints:[{}] (matches any identity) allowing GET on a path matching /public/, and one with fromEndpoints matching namespace 'finance' allowing GET on a path matching /private/."
+      echo "HINT: portal-policy must select exactly {app:portal}, with a single cross-namespace public rule permitting GET /public/.* and a separate finance-only rule permitting GET /private/.*. No broader alternation/regex, extra ingress or L4-only bypass is allowed."
     elif [[ "$policies_ok" != "true" ]]; then
       echo "HINT: only 'portal-policy' is expected to exist as a policy resource in namespace 'production'."
     elif [[ "$baseline_ok" != "true" ]]; then
-      echo "HINT: with portal-policy temporarily removed, BOTH /public/ and /private/ must return a 2xx status from BOTH finance-client and the external client - if not, this is a connectivity/fixture problem unrelated to your policy, and task 6's deny proves nothing."
+      echo "HINT: portal must serve both /public/ and /private/ over loopback (returning the canonical public/private bodies). This control never changes the live policy."
     elif [[ "$fin_pub_code" != "200" || "$fin_priv_code" != "200" ]]; then
       echo "HINT: finance-client must get 200 on BOTH /public/* and /private/* after the policy is applied - the fromEndpoints:[{}] rule already matches the finance identity too, so finance should also get /public/*."
     elif [[ "$ext_pub_code" != "200" ]]; then

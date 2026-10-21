@@ -3,7 +3,7 @@
 > Работаем как на экзамене: `kubectl` - на рабочей машине, а операции над узлом (apt, kubeadm,
 > kubelet) - на самом узле: зайдите на него `ssh <узел>`, перейдите в root (`sudo -i`),
 > выполните команды и выйдите (`exit`, `exit`). Стартовая версия кластера `1.35.x`, целевая -
-> `1.36.x`. Узлы: `k8s113_controlPlane_1` (control-plane) и `k8s113_node_worker1` (worker).
+> `1.36.x`. Имена узлов (`<cp-имя>`, `<worker-имя>`) берём из `kubectl get no`; на экзамене они другие, в этой лабе ssh-алиасы: `k8s113_controlPlane_1` и `k8s113_node_worker1`.
 
 ## Где взять команды в документации
 
@@ -25,14 +25,13 @@
 
 ```bash
 export KUBECONFIG=/home/ubuntu/.kube/config
-export CTX=cluster1-admin@cluster1
-kubectl config use-context "$CTX"
+kubectl config use-context cluster1-admin@cluster1
 mkdir -p /var/work/tests/artifacts/{1,2,4}
-# Имена узлов в Kubernetes - hostname инстансов (ip-10-...), а не ssh-алиасы; определяем их по роли.
-export CP_NODE=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
-export WORKER_NODE=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}')
-echo "control-plane=$CP_NODE worker=$WORKER_NODE"
+kubectl get no
 ```
+
+В `kubectl get no` запомните имена узлов (`ip-10-...`): они понадобятся для `drain` и `uncordon`. Ниже
+`<cp-имя>` - имя control-plane, `<worker-имя>` - имя worker-узла.
 
 ## Шаг 0. Параллельно запустите availability-полинг (задание 4)
 
@@ -42,9 +41,9 @@ Deployment `canary` работать на всё время следующих �
 ```bash
 while true; do
   if available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then
-    echo "$(date +%s) available=${available:-0}"                     # API ответил: пустое поле = 0 доступных реплик
+    echo "$(date +%s) available=${available:-0}"
   else
-    echo "$(date +%s) available=api-unreachable"                     # API недоступен - это не простой нагрузки
+    echo "$(date +%s) available=api-unreachable"
   fi >> /var/work/tests/artifacts/4/canary-availability.log
   sleep 5
 done
@@ -53,7 +52,7 @@ done
 ## 1. Upgrade control-plane
 
 ```bash
-ssh k8s113_controlPlane_1
+ssh <cp-имя>
 sudo -i
 ```
 
@@ -88,7 +87,7 @@ kubeadm upgrade plan
 ```bash
 # на control-plane (root)
 kubeadm upgrade apply v1.36.x -y > /tmp/kubeadm-upgrade-apply.txt 2>&1
-cat /tmp/kubeadm-upgrade-apply.txt | tail -3
+tail -3 /tmp/kubeadm-upgrade-apply.txt
 # [upgrade] SUCCESS! A control plane node of your cluster was upgraded to "v1.36.x".
 exit   # из root
 exit   # с control-plane
@@ -96,18 +95,18 @@ exit   # с control-plane
 
 ```bash
 # на рабочей машине: забрать вывод для проверки
-scp k8s113_controlPlane_1:/tmp/kubeadm-upgrade-apply.txt /var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt
+scp <cp-имя>:/tmp/kubeadm-upgrade-apply.txt /var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt
 ```
 
 Только теперь, ПОСЛЕ успешного `kubeadm upgrade apply`, drain узла и обновление kubelet/kubectl:
 
 ```bash
 # на рабочей машине
-kubectl drain "$CP_NODE" --ignore-daemonsets --delete-emptydir-data
+kubectl drain <cp-имя> --ignore-daemonsets --delete-emptydir-data
 ```
 
 ```bash
-ssh k8s113_controlPlane_1
+ssh <cp-имя>
 sudo -i
 ```
 
@@ -127,7 +126,7 @@ exit   # с control-plane
 
 ```bash
 # на рабочей машине
-kubectl uncordon "$CP_NODE"
+kubectl uncordon <cp-имя>
 kubectl get nodes
 ```
 
@@ -142,7 +141,7 @@ kubectl get deployment canary -n upgrade-113
 ```
 
 ```bash
-ssh k8s113_node_worker1
+ssh <worker-имя>
 sudo -i
 ```
 
@@ -161,19 +160,19 @@ apt-mark unhold kubeadm && apt-get update && apt-get install -y kubeadm='1.36.x-
 # на worker (root)
 # на worker-узле (и дополнительных control-plane) вместо apply выполняется upgrade node
 kubeadm upgrade node > /tmp/kubeadm-upgrade-node.txt 2>&1
-cat /tmp/kubeadm-upgrade-node.txt | tail -3
+tail -3 /tmp/kubeadm-upgrade-node.txt
 exit   # из root
 exit   # с worker
 ```
 
 ```bash
 # на рабочей машине
-scp k8s113_node_worker1:/tmp/kubeadm-upgrade-node.txt /var/work/tests/artifacts/2/kubeadm-upgrade-node.txt
-kubectl drain "$WORKER_NODE" --ignore-daemonsets --delete-emptydir-data
+scp <worker-имя>:/tmp/kubeadm-upgrade-node.txt /var/work/tests/artifacts/2/kubeadm-upgrade-node.txt
+kubectl drain <worker-имя> --ignore-daemonsets --delete-emptydir-data
 ```
 
 ```bash
-ssh k8s113_node_worker1
+ssh <worker-имя>
 sudo -i
 ```
 
@@ -193,7 +192,7 @@ exit   # с worker
 
 ```bash
 # на рабочей машине
-kubectl uncordon "$WORKER_NODE"
+kubectl uncordon <worker-имя>
 kubectl get nodes
 ```
 

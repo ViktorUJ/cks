@@ -136,6 +136,23 @@ read_node_aa_profile() {
   profile=$(jq -r '.spec.securityContext.appArmorProfile.type + ":" + (.spec.securityContext.appArmorProfile.localhostProfile // "")' <<<"$pod" 2>/dev/null) || true
   node_selector=$(jq -r ".spec.nodeSelector[\"${NODE_LABEL}\"] // \"\"" <<<"$pod" 2>/dev/null) || true
   automount=$(jq -r '.spec.automountServiceAccountToken' <<<"$pod" 2>/dev/null) || true
+  # The task requires an emptyDir mounted writable at /work. An AppArmor denial alone does
+  # not prove the volume provenance: hostPath, a PVC or a bare image path can be readable
+  # and denied by the same profile. Volume/mount names are free, the shape is not.
+  volume_shape=$(jq -r '
+    ((.spec.containers // []) | length == 1) and
+    .spec.containers[0].name == "app" and
+    .spec.containers[0].image == "busybox:1.36" and
+    ((.spec.initContainers // []) | length == 0) and
+    ((.spec.ephemeralContainers // []) | length == 0) and
+    ((.spec.volumes // []) | length == 1) and
+    (.spec.volumes[0].emptyDir | type == "object") and
+    ((.spec.containers[0].volumeMounts // []) | length == 1) and
+    (.spec.containers[0].volumeMounts[0].name == .spec.volumes[0].name) and
+    (.spec.containers[0].volumeMounts[0].mountPath == "/work") and
+    ((.spec.containers[0].volumeMounts[0].readOnly // false) == false) and
+    ((.spec.containers[0].volumeMounts[0].subPath // null) == null)
+  ' <<<"$pod" 2>/dev/null) || true
   phase=$(jq -r '.status.phase' <<<"$pod" 2>/dev/null) || true
   effective_profile=$(kubectl exec -n "$NS" apparmor-writer --context "$CTX" -- cat /proc/1/attr/current 2>/dev/null || true)
   # Checker-run positive control BEFORE the write probe: the profile grants '/** rix' -
@@ -166,7 +183,7 @@ read_node_aa_profile() {
   kernel_denial=$(ssh -o BatchMode=yes control-plane "sudo journalctl -k --no-pager -n 500 2>/dev/null | grep -F 'apparmor=\"DENIED\"' | grep -F 'profile=\"${AA_PROFILE}\"' | grep -F '${denied_file}' | tail -1" 2>/dev/null || true)
   if [[ "$profile" == "Localhost:${AA_PROFILE}" && "$node_selector" == "true" && "$automount" == "false" && "$phase" == "Running" \
         && "$effective_profile" == "${AA_PROFILE}"* && "$effective_profile" == *"(enforce)"* \
-        && "$read_status" -eq 0 && "$write_status" -ne 0 && -n "$kernel_denial" ]] \
+        && "$volume_shape" == "true" && "$read_status" -eq 0 && "$write_status" -ne 0 && -n "$kernel_denial" ]] \
         && grep -Eqi 'permission denied|operation not permitted' <<<"$output"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
@@ -179,6 +196,8 @@ read_node_aa_profile() {
       echo "HINT: Pod is not Running (phase=$phase). If the profile name in the Pod spec does not match a profile actually loaded on the node, kubelet will report CreateContainerError."
     elif [[ "$effective_profile" != "${AA_PROFILE}"* || "$effective_profile" != *"(enforce)"* ]]; then
       echo "HINT: /proc/1/attr/current inside the container does not show '${AA_PROFILE} (enforce)' applied - check the profile name matches exactly (case-sensitive) between the Pod spec and /etc/apparmor.d/, and that the profile is actually in enforce mode on the node."
+    elif [[ "$volume_shape" != "true" ]]; then
+      echo "HINT: apparmor-writer must have exactly one container app (busybox:1.36) and exactly one volume of type emptyDir mounted at /work as writable, without subPath; hostPath/PVC/Secret volumes and extra containers are not allowed."
     elif [[ "$read_status" -ne 0 ]]; then
       echo "HINT: A plain read ('ls /work') failed inside the container. The profile's '/** rix' rule should allow this - if even reads are blocked, something else (wrong mountPath, missing emptyDir volume, a stricter profile than intended) is broken, and a write failure alone would not prove AppArmor is doing what this task expects."
     elif [[ "$write_status" -eq 0 ]]; then
@@ -186,7 +205,7 @@ read_node_aa_profile() {
     elif [[ -z "$kernel_denial" ]]; then
       echo "HINT: The write failed, but no matching 'apparmor=\"DENIED\" ... profile=\"${AA_PROFILE}\" ... name=\".../${denied_file}\"' kernel audit event was found via 'journalctl -k' on control-plane. A non-zero exit code and a 'permission denied' string alone can come from an unrelated DAC/filesystem error, not necessarily from THIS AppArmor profile - the kernel log is the only evidence that AppArmor itself produced this specific denial."
     fi
-    echo "profile=$profile node_selector=$node_selector automount=$automount phase=$phase effective_profile=${effective_profile:-missing} read_status=$read_status write_status=$write_status output=$output kernel_denial=${kernel_denial:-missing}"
+    echo "profile=$profile node_selector=$node_selector automount=$automount volume_shape=${volume_shape:-missing} phase=$phase effective_profile=${effective_profile:-missing} read_status=$read_status write_status=$write_status output=$output kernel_denial=${kernel_denial:-missing}"
     result=1
   fi
   [ "$result" -eq 0 ]
