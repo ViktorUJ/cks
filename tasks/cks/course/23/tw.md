@@ -1047,7 +1047,7 @@ Lab 前可先複習 CKA foundations：[CKA 第 30 章 — CNI 與 Pod network](.
 
 若專注於 native Cilium mTLS(不使用 Istio sidecar),可延伸練習 **Lab 115:基於 SPIRE 的
 Cilium Mutual Authentication**(advanced/production 進階實務內容,不屬於 CKS Core 考試正式
-範圍):[tasks/cks/labs/115](../../labs/115/README_RU.MD)。
+範圍):[tasks/cks/labs/115](../../labs/115/README_TW.MD)。
 
 自行測試時，使用 disposable cluster 與 dedicated namespaces。不要以關閉 production sidecar 或在 shared node 上對
 sensitive payload 執行 packet capture 來檢查 `STRICT`。

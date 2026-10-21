@@ -798,7 +798,7 @@ binding，並在 `kube-apiserver` 設定 `--anonymous-auth=false`。之後 `chec
 🧪 Lab 104（RBAC 最小化、ServiceAccount tokens 與 API 限制）：
 [tasks/cks/labs/104](../../labs/104/README_TW.MD)
 
-🧪 Lab 114(kubeconfig contexts、client certificate 提取,以及將 Service exposure 從 NodePort 縮減為 ClusterIP):[tasks/cks/labs/114](../../labs/114/README_RU.MD)
+🧪 Lab 114(kubeconfig contexts、client certificate 提取,以及將 Service exposure 從 NodePort 縮減為 ClusterIP):[tasks/cks/labs/114](../../labs/114/README_TW.MD)
 
 🌐 額外互動式練習（killer.sh/killercoda，外部資源）：[apiserver-crash](https://killercoda.com/killer-shell-cks/scenario/apiserver-crash) · [apiserver-misconfigured](https://killercoda.com/killer-shell-cks/scenario/apiserver-misconfigured) · [apiserver-node-restriction](https://killercoda.com/killer-shell-cks/scenario/apiserver-node-restriction)
 

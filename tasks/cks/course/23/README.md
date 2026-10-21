@@ -1190,7 +1190,7 @@ Before the lab, it is useful to refresh CKA fundamentals: [CKA chapter 30 - CNI 
 
 For native Cilium mTLS specifically (no Istio sidecar) - **lab 115: Cilium Mutual
 Authentication with SPIRE** (advanced/production track, not part of the formal CKS Core
-exam requirement): [tasks/cks/labs/115](../../labs/115/README_RU.MD).
+exam requirement): [tasks/cks/labs/115](../../labs/115/README.MD).
 
 For an independent test, use a disposable cluster and dedicated namespaces. Do not test `STRICT`
 by disabling a production sidecar or use packet capture with sensitive payload on a shared node.

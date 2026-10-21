@@ -925,7 +925,7 @@ CCNP მოქმედებს მთელ კლასტერზე, ხ�
 
 🧪 ლაბი 102 (Cilium NetworkPolicy L3/L4/L7): [tasks/cks/labs/102](../../labs/102/README_GE.MD)
 
-🧪 ლაბი 115 (Cilium-ის დაყენება ნულიდან: kube-proxy replacement, WireGuard და SPIRE-ზე დაფუძნებული Mutual Authentication - advanced/production ტრეკი, არ შედის CKS Core exam-ის ფორმალურ მოცულობაში): [tasks/cks/labs/115](../../labs/115/README_RU.MD)
+🧪 ლაბი 115 (Cilium-ის დაყენება ნულიდან: kube-proxy replacement, WireGuard და SPIRE-ზე დაფუძნებული Mutual Authentication - advanced/production ტრეკი, არ შედის CKS Core exam-ის ფორმალურ მოცულობაში): [tasks/cks/labs/115](../../labs/115/README_GE.MD)
 
 🎮 Cilium Hubble (დოკუმენტაცია და ინტერაქტიული მაგალითები):
 [Hubble observability](https://docs.cilium.io/en/stable/observability/hubble/) ·

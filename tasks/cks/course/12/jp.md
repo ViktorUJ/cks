@@ -566,7 +566,7 @@ Lab 104ではminimal Roleを持つServiceAccountを作成し、tokenのautomatic
 🧪 Lab 104（RBAC minimization、ServiceAccount tokens、API restriction）：
 [tasks/cks/labs/104](../../labs/104/README_JP.MD)
 
-🧪 Lab 114（kubeconfig contexts、client certificate の抽出、Service exposure の NodePort -> ClusterIP への縮小）：[tasks/cks/labs/114](../../labs/114/README_RU.MD)
+🧪 Lab 114（kubeconfig contexts、client certificate の抽出、Service exposure の NodePort -> ClusterIP への縮小）：[tasks/cks/labs/114](../../labs/114/README_JP.MD)
 
 🌐 追加のinteractive practice（killer.sh/killercoda、external resource）：[apiserver-crash](https://killercoda.com/killer-shell-cks/scenario/apiserver-crash) · [apiserver-misconfigured](https://killercoda.com/killer-shell-cks/scenario/apiserver-misconfigured) · [apiserver-node-restriction](https://killercoda.com/killer-shell-cks/scenario/apiserver-node-restriction)
 

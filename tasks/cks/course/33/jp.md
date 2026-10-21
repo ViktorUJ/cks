@@ -701,8 +701,8 @@ terminal では `Ctrl+Shift+C` と `Ctrl+Shift+V` を使い、他の Remote Desk
 | [Lab 111](../../labs/111/README_JP.MD) | minimal image、静的解析、Trivy、SBOM、署名、ImagePolicyWebhook |
 | [Lab 112](../../labs/112/README_JP.MD) | Falco、audit ログ、container の immutability |
 | [Lab 113](../../labs/113/README_JP.MD) | kubeadm の minor upgrade: control-plane → worker、version skew、drain/uncordon、downtime がないことの evidence |
-| [Lab 114](../../labs/114/README_RU.MD) | kubeconfig contexts、client certificate の抽出、Service exposure の NodePort → ClusterIP への縮小 |
-| [Lab 115](../../labs/115/README_RU.MD) | Cilium をゼロから構築: kube-proxy replacement、WireGuard、SPIRE による Mutual Authentication（advanced/production、CKS Core 外） |
+| [Lab 114](../../labs/114/README_JP.MD) | kubeconfig contexts、client certificate の抽出、Service exposure の NodePort → ClusterIP への縮小 |
+| [Lab 115](../../labs/115/README_JP.MD) | Cilium をゼロから構築: kube-proxy replacement、WireGuard、SPIRE による Mutual Authentication（advanced/production、CKS Core 外） |
 
 ---
 [目次](../README_JP.md) · [第32章](../32/jp.md)

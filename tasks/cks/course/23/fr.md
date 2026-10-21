@@ -1182,7 +1182,7 @@ Avant le lab, il peut être utile de revoir les bases CKA : [chapitre 30 de CKA 
 
 En complément spécifique pour le mTLS natif de Cilium (sans sidecar Istio) - **lab 115 :
 Cilium Mutual Authentication avec SPIRE** (niveau avancé/production, hors périmètre
-formel de l'examen CKS Core) : [tasks/cks/labs/115](../../labs/115/README_RU.MD).
+formel de l'examen CKS Core) : [tasks/cks/labs/115](../../labs/115/README_FR.MD).
 
 Pour votre propre test, utilisez un cluster disposable et des namespaces séparés. Ne testez pas `STRICT` en
 désactivant un sidecar de production ou en capturant les paquets avec payload sensible sur un nœud partagé.

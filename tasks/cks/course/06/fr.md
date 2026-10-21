@@ -848,7 +848,7 @@ l'ordre des politiques au lieu d'essayer de déboguer tous les niveaux simultan�
 
 🧪 Lab 102 (Cilium NetworkPolicy L3/L4/L7) : [tasks/cks/labs/102](../../labs/102/README_FR.MD)
 
-🧪 Lab 115 (installer Cilium depuis zéro : remplacement de kube-proxy, WireGuard et Mutual Authentication basée sur SPIRE - niveau avancé/production, hors du périmètre formel de l'examen CKS Core) : [tasks/cks/labs/115](../../labs/115/README_RU.MD)
+🧪 Lab 115 (installer Cilium depuis zéro : remplacement de kube-proxy, WireGuard et Mutual Authentication basée sur SPIRE - niveau avancé/production, hors du périmètre formel de l'examen CKS Core) : [tasks/cks/labs/115](../../labs/115/README_FR.MD)
 
 🎮 Cilium Hubble (documentation et exemples interactifs) :
 [Hubble observability](https://docs.cilium.io/en/stable/observability/hubble/) ·

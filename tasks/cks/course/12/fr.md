@@ -713,7 +713,7 @@ et un `curl` anonymous.
 🧪 Lab 104 (minimisation RBAC, ServiceAccount tokens et restriction de l'API) :
 [tasks/cks/labs/104](../../labs/104/README_FR.MD)
 
-🧪 Lab 114 (contextes kubeconfig, extraction de client certificate et réduction de l'exposition du Service NodePort -> ClusterIP) : [tasks/cks/labs/114](../../labs/114/README_RU.MD)
+🧪 Lab 114 (contextes kubeconfig, extraction de client certificate et réduction de l'exposition du Service NodePort -> ClusterIP) : [tasks/cks/labs/114](../../labs/114/README_FR.MD)
 
 🌐 Pratique interactive supplémentaire (killer.sh/killercoda, ressource externe) : [apiserver-crash](https://killercoda.com/killer-shell-cks/scenario/apiserver-crash) · [apiserver-misconfigured](https://killercoda.com/killer-shell-cks/scenario/apiserver-misconfigured) · [apiserver-node-restriction](https://killercoda.com/killer-shell-cks/scenario/apiserver-node-restriction)
 

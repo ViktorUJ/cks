@@ -934,7 +934,7 @@ anonymous `curl`-ს.
 🧪 ლაბა 104 (RBAC-მინიმიზაცია, ServiceAccount-ტოკენები და API-ის შეზღუდვა):
 [tasks/cks/labs/104](../../labs/104/README_GE.MD)
 
-🧪 ლაბა 114 (kubeconfig context-ები, client certificate-ის ამოღება და Service-ის exposure-ის შემცირება NodePort -> ClusterIP): [tasks/cks/labs/114](../../labs/114/README_RU.MD)
+🧪 ლაბა 114 (kubeconfig context-ები, client certificate-ის ამოღება და Service-ის exposure-ის შემცირება NodePort -> ClusterIP): [tasks/cks/labs/114](../../labs/114/README_GE.MD)
 
 🌐 დამატებითი ინტერაქტიული პრაქტიკა (killer.sh/killercoda, გარე რესურსი): [apiserver-crash](https://killercoda.com/killer-shell-cks/scenario/apiserver-crash) · [apiserver-misconfigured](https://killercoda.com/killer-shell-cks/scenario/apiserver-misconfigured) · [apiserver-node-restriction](https://killercoda.com/killer-shell-cks/scenario/apiserver-node-restriction)
 

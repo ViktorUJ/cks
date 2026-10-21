@@ -767,8 +767,8 @@ context. ყოველი lab-ისთვის ჩაწერეთ დრ�
 | [ლაბა 111](../../labs/111/README_GE.MD) | minimal image, სტატიკური ანალიზი, Trivy, SBOM, ხელმოწერა და ImagePolicyWebhook |
 | [ლაბა 112](../../labs/112/README_GE.MD) | Falco, audit-ლოგები და container-ის უცვლელობა |
 | [ლაბა 113](../../labs/113/README_GE.MD) | kubeadm minor upgrade: control-plane → worker, version skew, drain/uncordon და evidence downtime-ის არარსებობისთვის |
-| [ლაბა 114](../../labs/114/README_RU.MD) | kubeconfig context-ები, client certificate-ის ამოღება, Service exposure-ის შემცირება NodePort → ClusterIP |
-| [ლაბა 115](../../labs/115/README_RU.MD) | Cilium ნულიდან: kube-proxy replacement, WireGuard, Mutual Authentication SPIRE-ით (advanced/production, არ არის CKS Core) |
+| [ლაბა 114](../../labs/114/README_GE.MD) | kubeconfig context-ები, client certificate-ის ამოღება, Service exposure-ის შემცირება NodePort → ClusterIP |
+| [ლაბა 115](../../labs/115/README_GE.MD) | Cilium ნულიდან: kube-proxy replacement, WireGuard, Mutual Authentication SPIRE-ით (advanced/production, არ არის CKS Core) |
 
 ---
 [სარჩევი](../README_GE.md) · [თავი 32](../32/ge.md)

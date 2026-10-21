@@ -1316,7 +1316,7 @@ workload-იდან mesh-ში და დაფიქსირეთ შე�
 
 გაგრძელება კონკრეტულად native Cilium mTLS-სთვის (Istio sidecar-ის გარეშე) - **ლაბა 115:
 Cilium Mutual Authentication SPIRE-ით** (advanced/production ტრეკი, არ შედის CKS Core
-exam-ის ფორმალურ მოცულობაში): [tasks/cks/labs/115](../../labs/115/README_RU.MD).
+exam-ის ფორმალურ მოცულობაში): [tasks/cks/labs/115](../../labs/115/README_GE.MD).
 
 დამოუკიდებელი ტესტისთვის გამოიყენეთ disposable cluster და ცალკეული
 namespace-ები. არ შემოწმოთ `STRICT` production-sidecar-ის გამორთვით ან

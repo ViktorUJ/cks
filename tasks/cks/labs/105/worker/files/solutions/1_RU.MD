@@ -1,3 +1,5 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
 # Лаба 105 - эталонное решение: System Hardening ОС и Docker
 
 > Как работать: один раз заходим на ноду по `ssh` и выполняем команды прямо на ней (под

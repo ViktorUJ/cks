@@ -510,8 +510,8 @@ Terminal 使用 `Ctrl+Shift+C`、`Ctrl+Shift+V`；其他 Remote Desktop applicat
 | [Lab 111](../../labs/111/README_TW.MD) | minimal image、static analysis、Trivy、SBOM、signature 與 ImagePolicyWebhook |
 | [Lab 112](../../labs/112/README_TW.MD) | Falco、audit logs 與 container immutability |
 | [Lab 113](../../labs/113/README_TW.MD) | kubeadm minor upgrade：control-plane → worker、version skew、drain/uncordon 與 evidence of no downtime |
-| [Lab 114](../../labs/114/README_RU.MD) | kubeconfig contexts、client certificate 提取、將 Service exposure 從 NodePort 縮減為 ClusterIP |
-| [Lab 115](../../labs/115/README_RU.MD) | 從零安裝 Cilium：取代 kube-proxy、WireGuard、基於 SPIRE 的 Mutual Authentication(advanced/production,非 CKS Core) |
+| [Lab 114](../../labs/114/README_TW.MD) | kubeconfig contexts、client certificate 提取、將 Service exposure 從 NodePort 縮減為 ClusterIP |
+| [Lab 115](../../labs/115/README_TW.MD) | 從零安裝 Cilium：取代 kube-proxy、WireGuard、基於 SPIRE 的 Mutual Authentication(advanced/production,非 CKS Core) |
 
 ---
 [目錄](../README_TW.md) · [第 32 章](../32/tw.md)

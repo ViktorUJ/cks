@@ -582,7 +582,7 @@ CCNP はクラスター全体に作用し、空の selector は全 endpoint を�
 
 🧪 ラボ 102（Cilium NetworkPolicy L3/L4/L7）: [tasks/cks/labs/102](../../labs/102/README_JP.MD)
 
-🧪 ラボ 115（Cilium をゼロから構築: kube-proxy replacement、WireGuard、SPIRE ベースの Mutual Authentication - advanced/production トラック、CKS Core exam の正式スコープ外）: [tasks/cks/labs/115](../../labs/115/README_RU.MD)
+🧪 ラボ 115（Cilium をゼロから構築: kube-proxy replacement、WireGuard、SPIRE ベースの Mutual Authentication - advanced/production トラック、CKS Core exam の正式スコープ外）: [tasks/cks/labs/115](../../labs/115/README_JP.MD)
 
 🎮 Cilium Hubble（documentation と interactive examples）:
 [Hubble observability](https://docs.cilium.io/en/stable/observability/hubble/) ·

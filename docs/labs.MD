@@ -11,21 +11,21 @@ table) and [`tasks/cks/metadata/curriculum-map.yaml`](../tasks/cks/metadata/curr
 
 | Task | Description | Solution |
 |---|---|---|
-| **101** | [NetworkPolicy: default-deny, isolation, and metadata protection](../tasks/cks/labs/101/README_RU.MD) | [SOLUTION](../tasks/cks/labs/101/worker/files/solutions/1_RU.MD) |
-| **102** | [CiliumNetworkPolicy: L3/L4/L7, DNS-aware egress, and Hubble](../tasks/cks/labs/102/README_RU.MD) | [SOLUTION](../tasks/cks/labs/102/worker/files/solutions/1_RU.MD) |
-| **103** | [CIS/kube-bench, secure Ingress TLS, and binary verification](../tasks/cks/labs/103/README_RU.MD) | [SOLUTION](../tasks/cks/labs/103/worker/files/solutions/1_RU.MD) |
-| **104** | [Hardening Kubernetes API access: RBAC, ServiceAccount, and anonymous-auth](../tasks/cks/labs/104/README_RU.MD) | [SOLUTION](../tasks/cks/labs/104/worker/files/solutions/1_RU.MD) |
-| **105** | [OS system hardening and Docker daemon security](../tasks/cks/labs/105/README_RU.MD) | [SOLUTION](../tasks/cks/labs/105/worker/files/solutions/1_RU.MD) |
-| **106** | [AppArmor and seccomp: node-local policy and verifiable denials](../tasks/cks/labs/106/README_RU.MD) | [SOLUTION](../tasks/cks/labs/106/worker/files/solutions/1_RU.MD) |
-| **107** | [Pod Security Admission: restricted, audit/warn, and read-only root filesystem](../tasks/cks/labs/107/README_RU.MD) | [SOLUTION](../tasks/cks/labs/107/worker/files/solutions/1_RU.MD) |
-| **108** | [Admission policies with Kyverno and ImagePolicyWebhook](../tasks/cks/labs/108/README_RU.MD) | [SOLUTION](../tasks/cks/labs/108/worker/files/solutions/1_RU.MD) |
-| **109** | [Encrypting Secrets in etcd and least-privilege access](../tasks/cks/labs/109/README_RU.MD) | [SOLUTION](../tasks/cks/labs/109/worker/files/solutions/1_RU.MD) |
-| **110** | [gVisor RuntimeClass, Cilium WireGuard, and Istio mTLS](../tasks/cks/labs/110/README_RU.MD) | [SOLUTION](../tasks/cks/labs/110/worker/files/solutions/1_RU.MD) |
-| **111** | [Image analysis, static fixes, and supply-chain evidence](../tasks/cks/labs/111/README_RU.MD) | [SOLUTION](../tasks/cks/labs/111/worker/files/solutions/1_RU.MD) |
-| **112** | [Runtime: Falco, audit logs, and an immutable root filesystem](../tasks/cks/labs/112/README_RU.MD) | [SOLUTION](../tasks/cks/labs/112/worker/files/solutions/1_RU.MD) |
-| **113** | [Kubernetes cluster upgrade with kubeadm (minor upgrade)](../tasks/cks/labs/113/README_RU.MD) | [SOLUTION](../tasks/cks/labs/113/worker/files/solutions/1_RU.MD) |
-| **114** | [Kubeconfig contexts, client certificates and API exposure](../tasks/cks/labs/114/README_RU.MD) | [SOLUTION](../tasks/cks/labs/114/worker/files/solutions/1_RU.MD) |
-| **115** | [Cilium bootstrap, kube-proxy replacement and Mutual Authentication (advanced/production track)](../tasks/cks/labs/115/README_RU.MD) | [SOLUTION](../tasks/cks/labs/115/worker/files/solutions/1_RU.MD) |
+| **101** | [NetworkPolicy: default-deny, isolation, and metadata protection](../tasks/cks/labs/101/README.MD) | [SOLUTION](../tasks/cks/labs/101/worker/files/solutions/1.MD) |
+| **102** | [CiliumNetworkPolicy: L3/L4/L7, DNS-aware egress, and Hubble](../tasks/cks/labs/102/README.MD) | [SOLUTION](../tasks/cks/labs/102/worker/files/solutions/1.MD) |
+| **103** | [CIS/kube-bench, secure Ingress TLS, and binary verification](../tasks/cks/labs/103/README.MD) | [SOLUTION](../tasks/cks/labs/103/worker/files/solutions/1.MD) |
+| **104** | [Hardening Kubernetes API access: RBAC, ServiceAccount, and anonymous-auth](../tasks/cks/labs/104/README.MD) | [SOLUTION](../tasks/cks/labs/104/worker/files/solutions/1.MD) |
+| **105** | [OS system hardening and Docker daemon security](../tasks/cks/labs/105/README.MD) | [SOLUTION](../tasks/cks/labs/105/worker/files/solutions/1.MD) |
+| **106** | [AppArmor and seccomp: node-local policy and verifiable denials](../tasks/cks/labs/106/README.MD) | [SOLUTION](../tasks/cks/labs/106/worker/files/solutions/1.MD) |
+| **107** | [Pod Security Admission: restricted, audit/warn, and read-only root filesystem](../tasks/cks/labs/107/README.MD) | [SOLUTION](../tasks/cks/labs/107/worker/files/solutions/1.MD) |
+| **108** | [Admission policies with Kyverno and ImagePolicyWebhook](../tasks/cks/labs/108/README.MD) | [SOLUTION](../tasks/cks/labs/108/worker/files/solutions/1.MD) |
+| **109** | [Encrypting Secrets in etcd and least-privilege access](../tasks/cks/labs/109/README.MD) | [SOLUTION](../tasks/cks/labs/109/worker/files/solutions/1.MD) |
+| **110** | [gVisor RuntimeClass, Cilium WireGuard, and Istio mTLS](../tasks/cks/labs/110/README.MD) | [SOLUTION](../tasks/cks/labs/110/worker/files/solutions/1.MD) |
+| **111** | [Image analysis, static fixes, and supply-chain evidence](../tasks/cks/labs/111/README.MD) | [SOLUTION](../tasks/cks/labs/111/worker/files/solutions/1.MD) |
+| **112** | [Runtime: Falco, audit logs, and an immutable root filesystem](../tasks/cks/labs/112/README.MD) | [SOLUTION](../tasks/cks/labs/112/worker/files/solutions/1.MD) |
+| **113** | [Kubernetes cluster upgrade with kubeadm (minor upgrade)](../tasks/cks/labs/113/README.MD) | [SOLUTION](../tasks/cks/labs/113/worker/files/solutions/1.MD) |
+| **114** | [Kubeconfig contexts, client certificates and API exposure](../tasks/cks/labs/114/README.MD) | [SOLUTION](../tasks/cks/labs/114/worker/files/solutions/1.MD) |
+| **115** | [Cilium bootstrap, kube-proxy replacement and Mutual Authentication (advanced/production track)](../tasks/cks/labs/115/README.MD) | [SOLUTION](../tasks/cks/labs/115/worker/files/solutions/1.MD) |
 
 ### Legacy lab mapping
 

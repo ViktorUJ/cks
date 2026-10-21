@@ -831,7 +831,7 @@ CCNP 作用於整個叢集,空的 selector 會選中所有 endpoints,因此 allo
 
 🧪 Lab 102(Cilium NetworkPolicy L3/L4/L7):[tasks/cks/labs/102](../../labs/102/README_TW.MD)
 
-🧪 Lab 115(從零安裝 Cilium:取代 kube-proxy、WireGuard 與基於 SPIRE 的 Mutual Authentication - advanced/production 進階實務內容,不屬於 CKS Core 考試正式範圍):[tasks/cks/labs/115](../../labs/115/README_RU.MD)
+🧪 Lab 115(從零安裝 Cilium:取代 kube-proxy、WireGuard 與基於 SPIRE 的 Mutual Authentication - advanced/production 進階實務內容,不屬於 CKS Core 考試正式範圍):[tasks/cks/labs/115](../../labs/115/README_TW.MD)
 
 🎮 Cilium Hubble(文件與互動範例):
 [Hubble observability](https://docs.cilium.io/en/stable/observability/hubble/) ·

@@ -849,7 +849,7 @@ policy order rather than trying to debug all layers at once.
 
 🧪 Lab 102 (Cilium NetworkPolicy L3/L4/L7): [tasks/cks/labs/102](../../labs/102/README.MD)
 
-🧪 Lab 115 (bootstrapping Cilium from scratch: kube-proxy replacement, WireGuard and SPIRE-based Mutual Authentication - advanced/production track, not part of the formal CKS Core exam requirement): [tasks/cks/labs/115](../../labs/115/README_RU.MD)
+🧪 Lab 115 (bootstrapping Cilium from scratch: kube-proxy replacement, WireGuard and SPIRE-based Mutual Authentication - advanced/production track, not part of the formal CKS Core exam requirement): [tasks/cks/labs/115](../../labs/115/README.MD)
 
 🎮 Cilium Hubble (documentation and interactive examples):
 [Hubble observability](https://docs.cilium.io/en/stable/observability/hubble/) ·

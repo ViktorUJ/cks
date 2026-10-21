@@ -1020,7 +1020,7 @@ Vor dem Lab ist es hilfreich, die CKA-Grundlagen aufzufrischen: [Kapitel 30 CKA 
 
 Als Fortsetzung speziell für natives Cilium mTLS (ohne Istio-sidecar) - **Lab 115: Cilium
 Mutual Authentication mit SPIRE** (Advanced-/Production-Track, nicht Teil der formalen
-CKS-Core-Prüfungsanforderung): [tasks/cks/labs/115](../../labs/115/README_RU.MD).
+CKS-Core-Prüfungsanforderung): [tasks/cks/labs/115](../../labs/115/README_DE.MD).
 
 Verwenden Sie für den eigenständigen Test einen disposable cluster und separate namespaces. Prüfen Sie
 `STRICT` nicht durch Abschalten eines Production-sidecar oder ein packet capture mit sensitivem payload

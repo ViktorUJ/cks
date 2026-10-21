@@ -567,7 +567,7 @@ En la lab 104 creará un ServiceAccount con Role mínima, deshabilitará el auto
 🧪 Lab 104 (minimización RBAC, tokens de ServiceAccount y restricción de API):
 [tasks/cks/labs/104](../../labs/104/README_ES.MD)
 
-🧪 Lab 114 (contextos de kubeconfig, extracción de client certificate y reducción de la exposición del Service NodePort -> ClusterIP): [tasks/cks/labs/114](../../labs/114/README_RU.MD)
+🧪 Lab 114 (contextos de kubeconfig, extracción de client certificate y reducción de la exposición del Service NodePort -> ClusterIP): [tasks/cks/labs/114](../../labs/114/README_ES.MD)
 
 🌐 Práctica interactiva adicional (killer.sh/killercoda, recurso externo): [apiserver-crash](https://killercoda.com/killer-shell-cks/scenario/apiserver-crash) · [apiserver-misconfigured](https://killercoda.com/killer-shell-cks/scenario/apiserver-misconfigured) · [apiserver-node-restriction](https://killercoda.com/killer-shell-cks/scenario/apiserver-node-restriction)
 

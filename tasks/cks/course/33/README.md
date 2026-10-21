@@ -514,8 +514,8 @@ Complete all labs again without solutions, then mix tasks from different domains
 | [Lab 111](../../labs/111/README.MD) | minimal image, static analysis, Trivy, SBOM, signing, and ImagePolicyWebhook |
 | [Lab 112](../../labs/112/README.MD) | Falco, audit logs, and container immutability |
 | [Lab 113](../../labs/113/README.MD) | kubeadm minor upgrade: control-plane → worker, version skew, drain/uncordon, and evidence of no downtime |
-| [Lab 114](../../labs/114/README_RU.MD) | kubeconfig contexts, client certificate extraction, reducing Service exposure NodePort → ClusterIP |
-| [Lab 115](../../labs/115/README_RU.MD) | Cilium from scratch: kube-proxy replacement, WireGuard, SPIRE Mutual Authentication (advanced/production, not CKS Core) |
+| [Lab 114](../../labs/114/README.MD) | kubeconfig contexts, client certificate extraction, reducing Service exposure NodePort → ClusterIP |
+| [Lab 115](../../labs/115/README.MD) | Cilium from scratch: kube-proxy replacement, WireGuard, SPIRE Mutual Authentication (advanced/production, not CKS Core) |
 
 ---
 [Table of contents](../README.md) · [Chapter 32](../32/README.md)

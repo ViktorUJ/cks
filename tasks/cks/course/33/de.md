@@ -724,8 +724,8 @@ Ihre persönliche Flag-Liste für die Mock-Prüfung.
 | [Lab 111](../../labs/111/README_DE.MD) | minimal image, statische Analyse, Trivy, SBOM, Signatur und ImagePolicyWebhook |
 | [Lab 112](../../labs/112/README_DE.MD) | Falco, audit-logs und Unveränderlichkeit des Containers |
 | [Lab 113](../../labs/113/README_DE.MD) | kubeadm minor upgrade: control-plane → worker, version skew, drain/uncordon und evidence für Downtime-Freiheit |
-| [Lab 114](../../labs/114/README_RU.MD) | kubeconfig-Kontexte, Client-Certificate-Extraktion, Reduzierung der Service-Exposition NodePort → ClusterIP |
-| [Lab 115](../../labs/115/README_RU.MD) | Cilium von Grund auf: kube-proxy-Ersatz, WireGuard, SPIRE Mutual Authentication (advanced/production, nicht CKS Core) |
+| [Lab 114](../../labs/114/README_DE.MD) | kubeconfig-Kontexte, Client-Certificate-Extraktion, Reduzierung der Service-Exposition NodePort → ClusterIP |
+| [Lab 115](../../labs/115/README_DE.MD) | Cilium von Grund auf: kube-proxy-Ersatz, WireGuard, SPIRE Mutual Authentication (advanced/production, nicht CKS Core) |
 
 ---
 [Inhaltsverzeichnis](../README_DE.md) · [Kapitel 32](../32/de.md)

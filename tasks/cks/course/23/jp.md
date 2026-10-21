@@ -850,7 +850,7 @@ lab の前に、CKA の基礎を復習すると有用です。[CKA 第30章 - CN
 
 Istio sidecar なしの native Cilium mTLS に特化した続き課題として、**ラボ 115: SPIRE による
 Cilium Mutual Authentication**（advanced/production トラック、CKS Core exam の正式スコープ外）
-があります: [tasks/cks/labs/115](../../labs/115/README_RU.MD)。
+があります: [tasks/cks/labs/115](../../labs/115/README_JP.MD)。
 
 自主的なテストには disposable cluster と専用の namespace を使用してください。production の sidecar を無効化したり、共有 node で敏感な payload の packet capture を行うことで `STRICT` を確認しないでください。
 

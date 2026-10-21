@@ -699,7 +699,7 @@ debuggen.
 
 🧪 Lab 102 (Cilium NetworkPolicy L3/L4/L7): [tasks/cks/labs/102](../../labs/102/README_DE.MD)
 
-🧪 Lab 115 (Cilium von Grund auf installieren: kube-proxy-Ersatz, WireGuard und SPIRE-basierte Mutual Authentication - Advanced-/Production-Track, nicht Teil der formalen CKS-Core-Prüfungsanforderung): [tasks/cks/labs/115](../../labs/115/README_RU.MD)
+🧪 Lab 115 (Cilium von Grund auf installieren: kube-proxy-Ersatz, WireGuard und SPIRE-basierte Mutual Authentication - Advanced-/Production-Track, nicht Teil der formalen CKS-Core-Prüfungsanforderung): [tasks/cks/labs/115](../../labs/115/README_DE.MD)
 
 🎮 Cilium Hubble (Dokumentation und interaktive Beispiele):
 [Hubble-Beobachtbarkeit](https://docs.cilium.io/en/stable/observability/hubble/) ·

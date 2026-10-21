@@ -566,7 +566,7 @@ In Lab 104, you create a ServiceAccount with minimal Role, disable automatic tok
 🧪 Lab 104 (RBAC minimization, ServiceAccount tokens, and API restriction):
 [tasks/cks/labs/104](../../labs/104/README.MD)
 
-🧪 Lab 114 (kubeconfig contexts, client certificate extraction, and reducing Service exposure NodePort -> ClusterIP): [tasks/cks/labs/114](../../labs/114/README_RU.MD)
+🧪 Lab 114 (kubeconfig contexts, client certificate extraction, and reducing Service exposure NodePort -> ClusterIP): [tasks/cks/labs/114](../../labs/114/README.MD)
 
 🌐 Additional interactive practice (killer.sh/killercoda, external resource): [apiserver-crash](https://killercoda.com/killer-shell-cks/scenario/apiserver-crash) · [apiserver-misconfigured](https://killercoda.com/killer-shell-cks/scenario/apiserver-misconfigured) · [apiserver-node-restriction](https://killercoda.com/killer-shell-cks/scenario/apiserver-node-restriction)
 
