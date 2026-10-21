@@ -69,11 +69,11 @@ no_unexpected_policies() {
 }
 
 @test "1. Namespace cks-102, frontend/backend/client Pods and backend Service exist" {
-  ns=$(kubectl --context "$CTX" get ns "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null)
-  frontend=$(kubectl --context "$CTX" get pod frontend -n "$NS" -o jsonpath='{.metadata.labels.role}' 2>/dev/null)
-  backend=$(kubectl --context "$CTX" get pod backend -n "$NS" -o jsonpath='{.metadata.labels.app}' 2>/dev/null)
-  client=$(kubectl --context "$CTX" get pod client -n "$NS" -o jsonpath='{.metadata.labels.role}' 2>/dev/null)
-  service_port=$(kubectl --context "$CTX" get svc backend -n "$NS" -o jsonpath='{.spec.ports[0].port}' 2>/dev/null)
+  ns=$(kubectl --context "$CTX" get ns "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null) || true
+  frontend=$(kubectl --context "$CTX" get pod frontend -n "$NS" -o jsonpath='{.metadata.labels.role}' 2>/dev/null) || true
+  backend=$(kubectl --context "$CTX" get pod backend -n "$NS" -o jsonpath='{.metadata.labels.app}' 2>/dev/null) || true
+  client=$(kubectl --context "$CTX" get pod client -n "$NS" -o jsonpath='{.metadata.labels.role}' 2>/dev/null) || true
+  service_port=$(kubectl --context "$CTX" get svc backend -n "$NS" -o jsonpath='{.spec.ports[0].port}' 2>/dev/null) || true
   if [[ "$ns" == "$NS" && "$frontend" == "frontend" && "$backend" == "backend" && "$client" == "untrusted" && "$service_port" == "80" ]]; then
     record_result 0
   else
@@ -94,7 +94,7 @@ no_unexpected_policies() {
 @test "2. Cilium L3/L4 policy permits frontend to backend:80 and blocks client" {
   mkdir -p "$CHECKER_DIR/2"
 
-  policy=$(kubectl --context "$CTX" get ciliumnetworkpolicy backend-policy -n "$NS" -o json 2>/dev/null)
+  policy=$(kubectl --context "$CTX" get ciliumnetworkpolicy backend-policy -n "$NS" -o json 2>/dev/null) || true
   if [[ -z "$policy" || "$policy" == "null" ]]; then
     echo "HINT: CiliumNetworkPolicy 'backend-policy' not found in $NS."
     record_result 1
@@ -115,7 +115,7 @@ no_unexpected_policies() {
     and (.spec.ingress[0].toPorts[0].ports[0].port == "80")
     and (.spec.ingress[0].toPorts[0].ports[0].protocol == "TCP")
     and ((.spec.ingress[0].toPorts[0].ports[0].endPort // null) == null)
-  ' 2>/dev/null)
+  ' 2>/dev/null) || true
 
   policies_ok=false
   no_unexpected_policies "$NS" backend-policy frontend-fqdn && policies_ok=true
@@ -151,7 +151,7 @@ no_unexpected_policies() {
 @test "3. Cilium L7 policy permits GET / and denies POST / with 403" {
   mkdir -p "$CHECKER_DIR/3"
 
-  policy=$(kubectl --context "$CTX" get ciliumnetworkpolicy backend-policy -n "$NS" -o json 2>/dev/null)
+  policy=$(kubectl --context "$CTX" get ciliumnetworkpolicy backend-policy -n "$NS" -o json 2>/dev/null) || true
   if [[ -z "$policy" || "$policy" == "null" ]]; then
     echo "HINT: CiliumNetworkPolicy 'backend-policy' not found in $NS."
     record_result 1
@@ -174,7 +174,7 @@ no_unexpected_policies() {
     and ((.spec.ingress[0].toPorts[0].rules.http // []) | length == 1)
     and (.spec.ingress[0].toPorts[0].rules.http[0].method == "GET")
     and (.spec.ingress[0].toPorts[0].rules.http[0].path == "/")
-  ' 2>/dev/null)
+  ' 2>/dev/null) || true
 
   policies_ok=false
   no_unexpected_policies "$NS" backend-policy frontend-fqdn && policies_ok=true
@@ -214,7 +214,7 @@ no_unexpected_policies() {
 @test "4. DNS-aware Cilium policy resolves allowed.cks102.test and permits only HTTPS" {
   mkdir -p "$CHECKER_DIR/4"
 
-  policy=$(kubectl --context "$CTX" get ciliumnetworkpolicy frontend-fqdn -n "$NS" -o json 2>/dev/null)
+  policy=$(kubectl --context "$CTX" get ciliumnetworkpolicy frontend-fqdn -n "$NS" -o json 2>/dev/null) || true
   if [[ -z "$policy" || "$policy" == "null" ]]; then
     echo "HINT: CiliumNetworkPolicy 'frontend-fqdn' not found in $NS."
     record_result 1
@@ -297,9 +297,9 @@ no_unexpected_policies() {
            and (any($e[]?; backend_rule))
            and (any($e[]?; fqdn_rule))
            and (all($e[]?; dns_rule or backend_rule or fqdn_rule)))
-  ' 2>/dev/null)
+  ' 2>/dev/null) || true
 
-  frontend_labels=$(kubectl --context "$CTX" get pod frontend -n "$NS" -o json 2>/dev/null | jq -r '.metadata.labels.role')
+  frontend_labels=$(kubectl --context "$CTX" get pod frontend -n "$NS" -o json 2>/dev/null | jq -r '.metadata.labels.role') || true
   selector_matches_real_frontend=false
   [[ "$frontend_labels" == "frontend" ]] && selector_matches_real_frontend=true
 
@@ -408,14 +408,14 @@ no_unexpected_policies() {
     $f.destination.namespace == $ns and $f.destination.pod_name == "backend" and
     $f.l7.http.method == "GET" and ($f.l7.http.url | endswith("/")) and
     $f.verdict == "FORWARDED"
-  )] | length' "$CHECKER_DIR/5/hubble-observe.json" 2>/dev/null)
+  )] | length' "$CHECKER_DIR/5/hubble-observe.json" 2>/dev/null) || true
   [[ -z "$allowed" ]] && allowed=0
   denied=$(jq -s --arg ns "$NS" '[.[] | (.flow // .) as $f | select(
     $f.source.namespace == $ns and $f.source.pod_name == "frontend" and
     $f.destination.namespace == $ns and $f.destination.pod_name == "backend" and
     $f.l7.http.method == "POST" and ($f.l7.http.url | endswith("/")) and
     $f.verdict == "DROPPED"
-  )] | length' "$CHECKER_DIR/5/hubble-observe.json" 2>/dev/null)
+  )] | length' "$CHECKER_DIR/5/hubble-observe.json" 2>/dev/null) || true
   [[ -z "$denied" ]] && denied=0
 
   if [[ "$allowed" -ge 1 && "$denied" -ge 1 ]]; then
@@ -434,10 +434,10 @@ no_unexpected_policies() {
 @test "6. Composite portal-policy: /public/* open to any endpoint, /private/* restricted to finance" {
   mkdir -p "$CHECKER_DIR/6"
 
-  portal_pod=$(kubectl --context "$CTX" get pod portal -n production -o jsonpath='{.metadata.labels.app}' 2>/dev/null)
-  finance_pod=$(kubectl --context "$CTX" get pod finance-client -n finance -o jsonpath='{.metadata.name}' 2>/dev/null)
-  external_pod=$(kubectl --context "$CTX" get pod client -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null)
-  svc_port=$(kubectl --context "$CTX" get svc portal -n production -o jsonpath='{.spec.ports[0].port}' 2>/dev/null)
+  portal_pod=$(kubectl --context "$CTX" get pod portal -n production -o jsonpath='{.metadata.labels.app}' 2>/dev/null) || true
+  finance_pod=$(kubectl --context "$CTX" get pod finance-client -n finance -o jsonpath='{.metadata.name}' 2>/dev/null) || true
+  external_pod=$(kubectl --context "$CTX" get pod client -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null) || true
+  svc_port=$(kubectl --context "$CTX" get svc portal -n production -o jsonpath='{.spec.ports[0].port}' 2>/dev/null) || true
 
   if [[ "$portal_pod" != "portal" || -z "$finance_pod" || -z "$external_pod" || "$svc_port" != "80" ]]; then
     echo "HINT: task 6 fixtures are missing - need Pod 'portal' (label app=portal) + Service 'portal' port 80 in namespace 'production', Pod 'finance-client' in namespace 'finance', and the existing Pod 'client' in namespace '$NS' from task 1."
@@ -446,7 +446,7 @@ no_unexpected_policies() {
     return
   fi
 
-  policy=$(kubectl --context "$CTX" get ciliumnetworkpolicy portal-policy -n production -o json 2>/dev/null)
+  policy=$(kubectl --context "$CTX" get ciliumnetworkpolicy portal-policy -n production -o json 2>/dev/null) || true
   if [[ -z "$policy" || "$policy" == "null" ]]; then
     echo "HINT: CiliumNetworkPolicy 'portal-policy' not found in namespace 'production'."
     record_result 1
@@ -490,7 +490,7 @@ no_unexpected_policies() {
     and ((.spec.ingress // []) | length == 2)
     and (any(.spec.ingress[]; any_rule and http_rule_ok("/public/")))
     and (any(.spec.ingress[]; finance_rule and http_rule_ok("/private/")))
-  ' 2>/dev/null)
+  ' 2>/dev/null) || true
 
   policies_ok=false
   no_unexpected_policies "production" portal-policy && policies_ok=true
@@ -506,10 +506,10 @@ no_unexpected_policies() {
   base_ext_pub_code="$base_fin_pub_code"
   base_ext_priv_code="$base_fin_pub_code"
 
-  fin_pub_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/public/ 2>/dev/null)
-  fin_priv_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/private/ 2>/dev/null)
-  ext_pub_code=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/public/ 2>/dev/null)
-  ext_priv_code=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/private/ 2>/dev/null)
+  fin_pub_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/public/ 2>/dev/null) || true
+  fin_priv_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/private/ 2>/dev/null) || true
+  ext_pub_code=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/public/ 2>/dev/null) || true
+  ext_priv_code=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/private/ 2>/dev/null) || true
 
   {
     printf 'baseline finance public=%s private=%s\nbaseline external public=%s private=%s\n' \
@@ -532,7 +532,7 @@ no_unexpected_policies() {
     elif [[ "$policies_ok" != "true" ]]; then
       echo "HINT: only 'portal-policy' is expected to exist as a policy resource in namespace 'production'."
     elif [[ "$baseline_ok" != "true" ]]; then
-      echo "HINT: portal must serve both /public/ and /private/ over loopback (returning the canonical public/private bodies). This control never changes the live policy."
+      echo "HINT: portal must serve both /public/ and /private/ over loopback with HTTP 200 (location /public/ and location /private/ in the nginx config). This control never changes the live policy."
     elif [[ "$fin_pub_code" != "200" || "$fin_priv_code" != "200" ]]; then
       echo "HINT: finance-client must get 200 on BOTH /public/* and /private/* after the policy is applied - the fromEndpoints:[{}] rule already matches the finance identity too, so finance should also get /public/*."
     elif [[ "$ext_pub_code" != "200" ]]; then
