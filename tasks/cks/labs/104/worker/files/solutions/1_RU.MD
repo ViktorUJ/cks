@@ -343,7 +343,7 @@ k exec -n security-104 app-vulnerable -- cat /proc/1/environ \
 внутри контейнера; сам процесс приложения всё равно должен запускаться под этим UID, иначе
 он не сможет прочитать файл.
 
-Поле - неизменяемое; Pod нужно удалить и создать заново с тем же именем. Снова дешевле
+Большинство полей Pod (в том числе `volumes`) неизменяемы, поэтому Pod нужно удалить и создать заново с тем же именем. Снова дешевле
 сгенерировать скелет через `--dry-run` и дописать volume в `vim`, чем писать весь YAML:
 
 ```bash
@@ -563,7 +563,7 @@ EOF
 Правило RBAC стоит первым - более специфичное правило должно предшествовать общему
 catch-all, иначе `Metadata` перехватит событие раньше. `omitStages: [RequestReceived]`
 на уровне всей policy убирает лишнюю запись до обработки запроса - у неё нет
-`requestObject`/`responseStatus`, а checker такие записи всё равно отбрасывает (`stage ==
+`requestObject`/`responseStatus`, и checker такие записи всё равно отбрасывает (`stage ==
 "ResponseComplete"`), а с catch-all `Metadata`-правилом на ВСЕ остальные запросы кластера
 эта стадия удваивала бы объём audit.log без пользы.
 
@@ -844,7 +844,7 @@ curl -s -o /dev/null -w '%{http_code}\n' --cacert /tmp/cluster-ca.crt \
   "$SERVER/api/v1/namespaces/security-104/pods"     # 403
 ```
 
-То же самое доказательство, но через привычный `kubectl`, а не `curl` - собираем John отдельный
+То же самое доказательство, но через привычный `kubectl`, а не `curl` - собираем для John отдельный
 kubeconfig из уже выпущенного сертификата (`set-credentials` с `--client-certificate`/
 `--client-key`, а не `--token`, потому что identity здесь именно client-cert, а не
 ServiceAccount token):

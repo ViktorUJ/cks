@@ -157,7 +157,7 @@ ls -la /opt/lab106-fixtures/
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
 
-`Seccomp: 2` в `/proc/1/status` означает "filter mode активен" (SECCOMP_MODE_FILTER) - это то, что вы должны увидеть. `Seccomp: 0` означало бы отсутствие seccomp filter вообще (`Unconfined`). Это самое простое задание из пяти в этой группе - если оно не проходит, скорее всего проблема в nodeSelector, а не в самом seccompProfile.
+`Seccomp: 2` в `/proc/1/status` означает "filter mode активен" (SECCOMP_MODE_FILTER) - это то, что вы должны увидеть. `Seccomp: 0` означало бы отсутствие seccomp filter вообще (`Unconfined`). Это самое простое из трёх seccomp-заданий (4-6) - если оно не проходит, скорее всего проблема в nodeSelector, а не в самом seccompProfile.
 </details>
 
 ---
@@ -187,7 +187,7 @@ BusyBox `unshare -m` после успешного `unshare(2)` дополнит
 самостоятельный `mount(2)` syscall (`mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL)`
 для принудительной private propagation - это поведение unshare, активное по умолчанию,
 если явно не передан `--propagation unchanged`, и даже тогда `mount()` всё равно
-вызывается, просто с нулевыми флагами). стандартный AppArmor-профиль containerd (`RuntimeDefault`,
+вызывается, просто с нулевыми флагами). Стандартный AppArmor-профиль containerd (`RuntimeDefault`,
 который получает Pod без явного `securityContext.appArmorProfile`) содержит `deny mount,`
 БЕЗ каких-либо условий на флаги - этот запрет действует независимо от capabilities и от
 seccomp. Поэтому `unshare -m true` может провалиться с `EPERM` из-за AppArmor ДАЖЕ когда

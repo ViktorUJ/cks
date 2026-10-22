@@ -13,7 +13,7 @@ mTLS。最後，你不只會看到這些設定，還要用可觀察的
 ## 開始前先自我檢查
 
 <details>
-<summary>1. gVisor 的 userspace kernel 與虛擬機的 guest kernel 有什麼本質上的差異？</summary>
+<summary>1. gVisor 的 userspace kernel 與虛擬機器的 guest kernel 有什麼本質上的差異？</summary>
 
 gVisor(`runsc`)在 USERSPACE 中實作它自己的 Linux syscalls 子集，攔截容器的系統呼叫並自己處理，而不直接把它們傳遞給主機的核心 - 容器行程看到的是另一個「核心」(不同的 `uname -r`，某些 syscalls 的行為也不同)。Guest kernel(例如 Kata Containers)則是在輕量級 VM 內執行「完整的」Linux 核心 - 隔離更強，但帶有完整虛擬化的開銷，而 gVisor 沒有這種開銷。
 </details>
@@ -46,7 +46,7 @@ Terragrunt 在 `eu-central-1` 建立 Kubernetes `1.36.0`:
 | CNI | **Cilium**(透過 Cilium CLI 安裝，Helm release 為 `cilium`);WireGuard 在任務 4 之前刻意關閉 |
 | `worker` | 具備 `kubectl`、`cilium`、`istioctl`、`check_result` 以及通往各節點的 SSH aliases 的工作機 |
 
-2026-08-31 驗證過的矩陣(每次建置之前請再核對)：學習用的 Kubernetes
+2026-08-31 驗證過的矩陣(每次建置之前請再核對)：lab 中的 Kubernetes
 `1.36.0`;Cilium data plane - 受支援的 lab 版本，它與
 Kubernetes `1.36` 的相容性需要依據最新的 requirements matrix 確認；Cilium CLI `0.19.7`
 (與 Cilium `1.17+` 相容);Istio `1.30.4`(分支 `1.30` 官方支援 Kubernetes
@@ -149,7 +149,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6}
 <details>
 <summary>💡 任務 5 的提示</summary>
 
-請在節點「真正的」實體網路介面(例如 `eth0`)上擷取流量，而不是在 Pod 的虛擬介面/veth 或 Cilium 內部介面 `cilium_wg0` 上 - 依 WireGuard 隧道的設計，`cilium_wg0` 承載的是「已經解密的」流量(這正是它的用途)，因此即使實體 NIC 上的加密運作正常，在 `any` 上擷取也會在那裡看到 marker。請透過 `ip route get <remote-node-ip>` 找出具體的實體介面，並就使用這個介面。如果 capture 發生在 WireGuard 加密之前的 Pod 路徑「內部」，無論 node-to-node 加密是否啟用，你都會看到 plaintext HTTP。請在執行 HTTP 請求「之前」於背景啟動 `tcpdump`，而不是之後。「只」依 `udp port 51871` 的擷取過濾，會事先把 plaintext TCP 從結果中排除，因此「無法」證明它不存在 - 請使用不帶埠過濾的 `host <remote-node-ip>`，讓同一個範圍能夠真正顯示啟用 WireGuard 之前/之後的差異。Checker 會在發出自己請求的同時，執行它自己的 `tcpdump`(包括暫時停用 WireGuard、之後經過驗證地恢復的 baseline 探測) - 你的 artifact 在學習上有用，但不是唯一的證明：如果在檢查時加密確實沒有運作，checker 的即時 capture 會獨立於你的檔案內容而發現這一點。
+請在節點「真正的」實體網路介面(例如 `eth0`)上擷取流量，而不是在 Pod 的虛擬介面/veth 或 Cilium 內部介面 `cilium_wg0` 上 - 依 WireGuard 隧道的設計，`cilium_wg0` 承載的是「已經解密的」流量(這正是它的用途)，因此即使實體 NIC 上的加密運作正常，在 `any` 上擷取也會在那裡看到 marker。請透過 `ip route get <remote-node-ip>` 找出具體的實體介面，並務必使用這個介面。如果 capture 發生在 WireGuard 加密之前的 Pod 路徑「內部」，無論 node-to-node 加密是否啟用，你都會看到 plaintext HTTP。請在執行 HTTP 請求「之前」於背景啟動 `tcpdump`，而不是之後。「只」依 `udp port 51871` 的擷取過濾，會事先把 plaintext TCP 從結果中排除，因此「無法」證明它不存在 - 請使用不帶埠過濾的 `host <remote-node-ip>`，讓同一個範圍能夠真正顯示啟用 WireGuard 之前/之後的差異。Checker 會在發出自己請求的同時，執行它自己的 `tcpdump`(包括暫時停用 WireGuard、之後經過驗證地恢復的 baseline 探測) - 你的 artifact 在學習上有用，但不是唯一的證明：如果在檢查時加密確實沒有運作，checker 的即時 capture 會獨立於你的檔案內容而發現這一點。
 </details>
 
 ---

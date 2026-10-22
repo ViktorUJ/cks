@@ -16,7 +16,7 @@ offizielle Prozedur `kubeadm upgrade` und das Umschalten des Paket-Repositorys
 <details>
 <summary>1. Warum verlangt `kubeadm upgrade` ein upgrade der control-plane STRIKT vor den worker-Nodes und nicht in beliebiger Reihenfolge?</summary>
 
-`kubeadm upgrade apply` auf der control-plane aktualisiert die Version des API servers und der übrigen control-plane-Komponenten; von dieser Version aus wird die version skew policy des Clusters bemessen. Ein worker-Node mit einem zu neuen kubelet relativ zum API server kann den unterstützten skew verletzen (das kubelet darf nicht neuer sein als kube-apiserver). Das Aktualisieren der control-plane zuerst garantiert, dass der API server bereits auf der Zielversion ist, wenn der worker auf dieselbe wechselt - das ist keine willkürliche Empfehlung, sondern eine Anforderung der version skew policy von Kubernetes.
+`kubeadm upgrade apply` auf der control-plane aktualisiert die Version des API servers und der übrigen control-plane-Komponenten; von dieser Version aus wird die version skew policy des Clusters bemessen. Ein worker-Node mit einem zu neuen kubelet relativ zum API server kann den unterstützten skew verletzen (das kubelet darf nicht neuer sein als kube-apiserver). Das vorherige Aktualisieren der control-plane garantiert, dass der API server bereits auf der Zielversion ist, wenn der worker auf dieselbe wechselt - das ist keine willkürliche Empfehlung, sondern eine Anforderung der version skew policy von Kubernetes.
 </details>
 
 <details>
@@ -97,7 +97,7 @@ Die Reihenfolge ist entscheidend: zuerst `apt-mark unhold kubeadm` → Paket akt
 ---
 | **2** | **Upgrade des worker-Nodes auf das Ziel-minor** |
 | :---: | :--- |
-| Was wir tun | • Schalte auf `k8s113_node_worker1` (`ssh`, `sudo -i`) analog `pkgs.k8s.io` auf `core:/stable:/v1.36` um und aktualisiere `kubeadm`.<br/>• Führe `kubeadm upgrade node` aus (nicht `apply` - das ist ein Befehl nur für die control-plane).<br/>• Führe `kubectl drain` für diesen Node aus (von der Arbeitsmaschine aus, nicht vom Node selbst).<br/>• Aktualisiere `kubelet`/`kubectl`, starte das `kubelet` neu, führe `kubectl uncordon` aus. |
+| Was wir tun | • Schalte auf dem Node `k8s113_node_worker1` (`ssh`, `sudo -i`) analog das Repository `pkgs.k8s.io` auf `core:/stable:/v1.36` um und aktualisiere `kubeadm`.<br/>• Führe `kubeadm upgrade node` aus (nicht `apply` - das ist ein Befehl nur für die control-plane).<br/>• Führe `kubectl drain` für diesen Node aus (von der Arbeitsmaschine aus, nicht vom Node selbst).<br/>• Aktualisiere `kubelet`/`kubectl`, starte das `kubelet` neu, führe `kubectl uncordon` aus. |
 | Abnahmekriterien | • `kubeadm version`, `kubelet --version` und das lokale `kubectl version --client` melden auf dem worker-Node `v1.36.x`.<br/>• `kubectl get nodes` zeigt für den worker-Node `v1.36.x` in `kubeletVersion` und den Status `Ready`.<br/>• Die Ausgabe von `kubeadm upgrade node` ist in einer Datei auf dem Node gespeichert und per `scp` nach `/var/work/tests/artifacts/2/kubeadm-upgrade-node.txt` auf die Arbeitsmaschine kopiert. |
 
 <details>
@@ -110,24 +110,24 @@ Die Reihenfolge ist entscheidend: zuerst `apt-mark unhold kubeadm` → Paket akt
 | **3** | **Die richtige Reihenfolge des upgrades einhalten** |
 | :---: | :--- |
 | Was wir tun | • Führe das upgrade der control-plane (Aufgabe 1) vollständig durch, einschließlich uncordon, BEVOR du das upgrade des worker-Nodes (Aufgabe 2) beginnst.<br/>• Diese Aufgabe erfordert keine gesonderte Aktion im Cluster: Die Reihenfolge wird automatisch von einem checker-owned Monitor des Zustands von Cluster und Versionen geprüft. |
-| Abnahmekriterien | • Der checker-owned monitor hält die ursprüngliche `1.35.x` baseline fest.<br/>• Danach wird der vollständige Übergang der control-plane auf `1.36.x` festgehalten (einschließlich `Ready` und schedulable), während der worker auf `1.35.x` ist, und erst danach der Beginn des upgrades des worker-Nodes.<br/>• Der Zustand übersteht einen Neustart des Monitors; bei einer fehlenden baseline oder einer Beobachtungslücke von mehr als 60 Sekunden wird die Aufgabe nicht als bestanden gewertet. |
+| Abnahmekriterien | • Der checker-owned Monitor hält die ursprüngliche `1.35.x` baseline fest.<br/>• Danach wird der vollständige Übergang der control-plane auf `1.36.x` festgehalten (einschließlich `Ready` und schedulable), während der worker auf `1.35.x` ist, und erst danach der Beginn des upgrades des worker-Nodes.<br/>• Der Zustand übersteht einen Neustart des Monitors; bei einer fehlenden baseline oder einer Beobachtungslücke von mehr als 60 Sekunden wird die Aufgabe nicht als bestanden gewertet. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 3</summary>
 
-Wenn du das upgrade des worker-Nodes bereits vor der control-plane begonnen (oder gar abgeschlossen) hast - halte an; den worker auf einfache Weise wieder auf das Herunterladen der Pakete `1.35.x` zurückzusetzen ist nicht möglich, aber der richtige Weg ist, das upgrade der control-plane abzuschließen und dann das upgrade des worker-Nodes fortzusetzen/zu wiederholen. Entscheidend ist: Das nächste upgrade des worker-Nodes (wann auch immer es begonnen wird) muss nach dem vollständig abgeschlossenen upgrade der control-plane stattfinden. Beginne Aufgabe 2 nicht, bevor `kubectl get node <cp-name>` `v1.36.x` und `Ready` zeigt.
+Wenn du das upgrade des worker-Nodes bereits vor der control-plane begonnen (oder gar abgeschlossen) hast - halte an: Den worker auf einfache Weise wieder auf die Pakete `1.35.x` zurückzusetzen ist nicht möglich; der richtige Weg ist, das upgrade der control-plane abzuschließen und dann das upgrade des worker-Nodes fortzusetzen/zu wiederholen. Entscheidend ist: Das nächste upgrade des worker-Nodes (wann auch immer es begonnen wird) muss nach dem vollständig abgeschlossenen upgrade der control-plane stattfinden. Beginne Aufgabe 2 nicht, bevor `kubectl get node <cp-name>` (der control-plane-Name aus `kubectl get no`) `v1.36.x` und `Ready` zeigt.
 </details>
 
 ---
 | **4** | **Das Fehlen von downtime beim bestehenden workload belegen** |
 | :---: | :--- |
 | Was wir tun | • Starte, während du die Aufgaben 1-2 ausführst, in einer separaten Sitzung auf der Arbeitsmaschine eine Schleife, die die Verfügbarkeit des Deployments `canary` im Namespace `upgrade-113` alle paar Sekunden abfragt.<br/>• Hänge jede Abfragezeile an `/var/work/tests/artifacts/4/canary-availability.log` an, im Format mit `available=N` (zum Beispiel `available=2`).<br/>• Setze die Abfrage während des gesamten upgrades beider Nodes fort. |
-| Abnahmekriterien | • Das Deployment `canary` hat am Ende `2/2` verfügbare Replicas, das ursprüngliche Deployment/PDB und die required Pod anti-affinity sind erhalten.<br/>• Das Fehlen von downtime prüft der checker-owned monitor anhand von Pod Ready und CRI-Containern genau aus `upgrade-113`; Fehler von API/SSH/CRI werden als UNKNOWN gezählt und nicht als null.<br/>• Die Student-Datei `/var/work/tests/artifacts/4/canary-availability.log` enthält mindestens zwei Zeilen im Format `<unix_timestamp> available=N` oder `<unix_timestamp> available=api-unreachable`, mit Beobachtungen vor dem upgrade der control-plane und nach dem Beginn des upgrades des workers. |
+| Abnahmekriterien | • Das Deployment `canary` hat am Ende `2/2` verfügbare Replicas, das ursprüngliche Deployment/PDB und die required Pod anti-affinity sind erhalten.<br/>• Das Fehlen von downtime prüft der checker-owned Monitor anhand von Pod Ready und CRI-Containern genau aus `upgrade-113`; Fehler von API/SSH/CRI werden als UNKNOWN gezählt und nicht als null.<br/>• Die Student-Datei `/var/work/tests/artifacts/4/canary-availability.log` enthält mindestens zwei Zeilen im Format `<unix_timestamp> available=N` oder `<unix_timestamp> available=api-unreachable`, mit Beobachtungen vor dem upgrade der control-plane und nach dem Beginn des upgrades des workers. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 4</summary>
 
-Beispiel einer Abfrageschleife, die du in einem separaten Terminal/`screen`/`tmux` für die gesamte Dauer der Aufgaben 1-2 laufen lassen kannst: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. Wenn das Deployment kurzzeitig alle Replicas verloren hat - prüfe `kubectl get pods -n upgrade-113 -o wide` und ob die aufeinanderfolgenden drains das PDB und die required anti-affinity einhalten.
+Beispiel einer Abfrageschleife, die du in einem separaten Terminal/`screen`/`tmux` für die gesamte Dauer der Aufgaben 1-2 laufen lassen kannst: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. Wenn das Deployment kurzzeitig alle Replicas verloren hat - prüfe `kubectl get pods -n upgrade-113 -o wide` und ob die aufeinanderfolgenden drains das PDB und die required anti-affinity einhalten.
 </details>
 
 ## Prüfung
@@ -141,7 +141,7 @@ Die Prüfung enthält `0 Init` und fünf obligatorische Tests. Die Tests 1-2 pr�
 sowie die wortwörtliche evidence-Datei mit der Ausgabe von `kubeadm upgrade`. Test 3
 prüft die Reihenfolge des upgrades anhand des checker-owned Monitors des Cluster-Zustands und nicht anhand der
 Änderungszeit der Dateien. Test 4 prüft, dass der workload `canary` keinen Ausfall hatte,
-und verwendet denselben checker-owned monitor als maßgebliche Quelle. Test 5 ist die abschließende
+und verwendet denselben checker-owned Monitor als maßgebliche Quelle. Test 5 ist die abschließende
 Prüfung, dass beide Nodes tatsächlich auf der Zielversion sind und nicht im Zustand
 `cordon` zurückgelassen wurden.
 

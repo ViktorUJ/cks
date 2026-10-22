@@ -4,7 +4,7 @@
 
 > Todos los comandos se ejecutan en la máquina de trabajo. El contexto ya está configurado; el namespace
 > `policy-108` lo creó el script de arranque. Primero instala Kyverno y espera al
-> webhook: de lo contrario, las siguientes policies basadas en CEL no comprobarán las peticiones de admission.
+> webhook: de lo contrario, las siguientes policy basadas en CEL no comprobarán las peticiones de admission.
 
 ```bash
 export KUBECONFIG=/home/ubuntu/.kube/config
@@ -74,7 +74,7 @@ kubectl apply -f deny-latest-tag.yaml
 ```
 
 La tarea permite DOS formas de image reference: non-latest tag O digest. Comprueba
-explícitamente que la forma con digest pasa (y no solo que pasa una versioned tag); de lo contrario es fácil
+explícitamente que la forma con digest pasa (y no solo que pasa un versioned tag); de lo contrario, es fácil
 escribir una policy que rechace por accidente TODAS las digest references:
 
 ```bash
@@ -101,7 +101,7 @@ aceptarse también en las demás listas de contenedores, por ejemplo, en `initCo
 
 ## 3. Exigir `runAsNonRoot`
 
-La política exige precisamente el valor `true` en el `securityContext` a nivel de Pod; el valor
+La policy exige precisamente el valor `true` en el `securityContext` a nivel de Pod; el valor
 implícito y `false` no pasan. Además están prohibidos `runAsUser: 0` a nivel de
 Pod y los container-level overrides `runAsNonRoot: false` / `runAsUser: 0` en las
 tres container lists; de lo contrario, el securityContext a nivel de container podrá sobrescribir el
@@ -191,12 +191,14 @@ kubectl apply -f allow-approved-registries.yaml
 Comprobación sin crear un Pod y sin image pull. `docker.io` es solo UN valor
 untrusted concreto; comprueba que la policy realmente es un ALLOWLIST (prohíbe CUALQUIER
 registry salvo los dos permitidos), y no simplemente un denylist de `docker.io` con la cadena literal;
-de lo contrario una imagen unqualified, otro registry de terceros o un host de escritura parecida pasarán
+de lo contrario, una imagen unqualified, otro registry de terceros o un host de escritura parecida pasarán
 de largo con facilidad.
 
 Los positive controls deben cubrir ambos prefix permitidos (`registry.k8s.io/` y
 `ghcr.io/cks-lab/`) en `containers`, `initContainers` y `ephemeralContainers`; no
-limites uno de los registry solo a los contenedores normales:
+limites uno de los registry solo a los contenedores normales.
+
+Los negative controls (cada uno de estos manifests debe ser rechazado):
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -591,10 +593,10 @@ kubectl get pod webhook-pinned-ok
 
 `ImagePolicyWebhook` usa el backend de `/opt/image-policy-backend/server.py`:
 en `default` y en los demás namespace (salvo `policy-108`) prohíbe el latest
-explícito/implícito; `policy-108` lo controlan por completo las tres políticas de Kyverno de las tareas 2–4.
+explícito/implícito; `policy-108` lo controlan por completo las tres policy de Kyverno de las tareas 2–4.
 Es un aislamiento de mecanismos de laboratorio, y no un patrón universal de producción.
 La annotation de usuario `alpha.image-policy.k8s.io/break-glass` NO concede el permiso:
-las annotations de ImageReview forwarding no son una verificación de autenticidad.
+el reenvío de annotations en ImageReview no es una verificación de autenticidad.
 
 `defaultAllow: false` significa fail-closed: si el backend no está disponible, los nuevos Pod/image
 se prohíben, y no se permiten. Compruébalo explícitamente, pero NO escales
@@ -603,7 +605,7 @@ plugin cluster-wide sin excepción por namespace en nuestra configuración, por 
 del propio backend. Si quitas temporalmente todas las réplicas y luego intentas devolverlas,
 la creación de un Pod backend NUEVO pasará ELLA MISMA por el mismo ImagePolicyWebhook (en ese momento
 no disponible) y será rechazada con un `defaultAllow: false` correcto:
-resulta un deadlock del que `kubectl rollout status` no saldrá. En su lugar,
+se produce un deadlock del que `kubectl rollout status` no saldrá. En su lugar,
 desconecta el Service del backend cambiando el `selector` por un valor inexistente: esto no
 crea ni elimina ningún Pod, solo quita temporalmente los `Endpoints`:
 

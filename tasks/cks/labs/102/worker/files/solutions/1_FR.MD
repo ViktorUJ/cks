@@ -132,7 +132,7 @@ POST est rejeté par l'Envoy proxy de Cilium en L7 (`403`), et non par un transp
 network namespace distinct sur le nœud control-plane, et PAS un ClusterIP : `toFQDNs` dans Cilium n'applique pas
 la règle allow à une IP à l'intérieur du cluster), déployé et inscrit dans CoreDNS dès le bootstrap :
 contrairement à `example.com`, ces noms sont toujours disponibles et ne dépendent pas d'Internet. On vérifie AVANT
-la policy - le DNS et les trois endpoint de contrôle (`allowed:443`, `allowed:80`, `blocked:443`) doivent être réellement accessibles (`-k` - certificat
+la policy - le DNS et les trois endpoints de contrôle (`allowed:443`, `allowed:80`, `blocked:443`) doivent être réellement accessibles (`-k` - certificat
 auto-signé du fixture) :
 
 ```bash
@@ -230,12 +230,12 @@ cks-102/frontend:xxxxx -> cks-102/backend:80 http-request FORWARDED (HTTP/1.1 GE
 cks-102/frontend:xxxxx -> cks-102/backend:80 http-request DROPPED (HTTP/1.1 POST http://backend/)
 ```
 
-On doit voir exactement deux flow : `GET /` avec le verdict `FORWARDED` et `POST /` avec le verdict `DROPPED`. S'ils sont absents, `hubble observe` n'a pas été lancé pendant les requêtes ; recommencez.
+On doit voir exactement deux flows : `GET /` avec le verdict `FORWARDED` et `POST /` avec le verdict `DROPPED`. S'ils sont absents, `hubble observe` n'a pas été lancé pendant les requêtes ; recommencez.
 
 ## 6. L7 policy composite : public/private path scopes
 
 Un second backend indépendant avec deux path-scope. On remplace entièrement la configuration nginx
-(`default.conf`), afin que `location` renvoie `200` sur un prefix précis et `404` sur tout le
+(`default.conf`), afin que `location` renvoie `200` sur un préfixe précis et `404` sur tout le
 reste - sans cela, il n'y a aucun moyen de distinguer « autorisé » de « refusé » par le code HTTP.
 
 ```bash
@@ -280,7 +280,7 @@ k -n production wait --for=condition=Ready pod/portal --timeout=60s
 k -n finance wait --for=condition=Ready pod/finance-client --timeout=60s
 ```
 
-Baseline AVANT la policy - les deux path depuis les deux namespace doivent réellement renvoyer `200` :
+Baseline AVANT la policy - les deux paths depuis les deux namespaces doivent réellement renvoyer `200` :
 
 ```bash
 k -n finance exec finance-client -- curl -sS -o /dev/null -w 'public:%{http_code}\n' -m5 http://portal.production/public/
@@ -306,7 +306,7 @@ timeout sur LES DEUX path (la règle ne s'applique pas du tout à son namespace)
 `403` sur `/public/*` (ne correspond qu'à la règle 2, qui n'autorise que `/private/*`).
 Pour faire réellement correspondre n'importe quelle identity indépendamment du namespace, il faut `matchExpressions` avec
 `operator: Exists` sur le reserved-label `k8s:io.kubernetes.pod.namespace` (la simple présence de
-ce label est vraie pour absolument n'importe quel Pod, indépendamment de la valeur) - c'est cela, et non un
+ce label est avérée pour absolument n'importe quel Pod, indépendamment de la valeur) - c'est cela, et non un
 `{}` vide, qui donne l'acceptation cross-namespace pour la règle 1 :
 
 ```bash
@@ -369,7 +369,7 @@ public:200
 private:403
 ```
 
-`finance-client` -> les deux path `200`. `cks-102/client` (n'importe quel autre namespace) -> `/public/*`
+`finance-client` -> les deux paths `200`. `cks-102/client` (n'importe quel autre namespace) -> `/public/*`
 reste `200`, et `/private/*` - `403` (Envoy L7 deny, et non un transport-level `000` : la règle 1
 a déjà autorisé la connexion TCP elle-même pour toutes les identity).
 

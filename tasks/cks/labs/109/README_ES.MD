@@ -35,7 +35,7 @@ base64 es solo una codificación, reversible sin clave: cualquiera que tenga acc
 <details>
 <summary>2. ¿Por qué el provider `identity` debe ir el ÚLTIMO en la lista de providers y no el primero?</summary>
 
-Los providers en `EncryptionConfiguration` se prueban en orden para LEER los registros existentes, y el primer provider se usa para ESCRIBIR datos nuevos. Si `identity` (es decir, "sin cifrado") va el primero, todos los nuevos registros se escribirán SIN cifrar, a pesar de la presencia de `aescbc` en la lista. Con `identity` el último se pueden leer los registros plaintext antiguos (aún no migrados), pero se garantiza que todos los registros nuevos los cifre el primer provider.
+Los providers en `EncryptionConfiguration` se prueban en orden para LEER los registros existentes, y el primer provider se usa para ESCRIBIR datos nuevos. Si `identity` (es decir, "sin cifrado") va el primero, todos los nuevos registros se escribirán SIN cifrar, a pesar de la presencia de `aescbc` en la lista. Con `identity` en último lugar se pueden leer los registros plaintext antiguos (aún no migrados), pero se garantiza que todos los registros nuevos los cifre el primer provider.
 </details>
 
 <details>
@@ -96,7 +96,7 @@ Esta tarea hay que hacerla PRIMERO, antes de la tarea 2: en cuanto habilites Enc
 ---
 | **2** | **Crear la EncryptionConfiguration para Secret** |
 | :---: | :--- |
-| Qué hacemos | • En el control-plane crea `/etc/kubernetes/enc/encryption-config.yaml`, owner `root:root`, mode `0600`<br/>• Formato: `apiserver.config.k8s.io/v1`, `EncryptionConfiguration`<br/>• Para `secrets` establece como primer provider `aescbc` con una clave base64 con nombre de **32 bytes aleatorios**, y después `identity: {}` |
+| Qué hacemos | • En el control-plane crea `/etc/kubernetes/enc/encryption-config.yaml`, owner `root:root`, mode `0600`<br/>• Formato: `apiserver.config.k8s.io/v1`, `EncryptionConfiguration`<br/>• Para `secrets` establece como primer provider `aescbc` con una clave base64 con nombre, de **32 bytes aleatorios**, y después `identity: {}` |
 | Criterios de aceptación | • Archivo `root:root` mode `0600` en un directorio `root:root` mode `0700`<br/>• El provider activo principal para `secrets` es el **primer** `aescbc`, con una named base64 key correcta de 32 bytes<br/>• `identity` es admisible solo como último fallback temporal para el plaintext legacy<br/>• Un symlink al archivo/directorio está prohibido |
 
 <details>

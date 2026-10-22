@@ -120,7 +120,7 @@ step the file on disk gives no protection at all and will not appear in
 ---
 | **2** | **Switch the AppArmor profile to enforce** |
 | :---: | :--- |
-| What to do | On the node `control-plane` switch the profile `k8s-106-deny-write` loaded in task 1 to `enforce` mode. The original `complain` mode records violations, but is not a protection. Do not delete the profile and do not change its name. |
+| What to do | On the node `control-plane` switch the profile `k8s-106-deny-write` loaded in task 1 to `enforce` mode. The original `complain` mode records violations, but does not constitute protection. Do not delete the profile and do not change its name. |
 | Acceptance criteria | A node with the label `security.cks.io/localhost-profiles-106=true` exists; `/etc/apparmor.d/k8s-106-deny-write` is available; `/sys/kernel/security/apparmor/profiles` contains the line `k8s-106-deny-write (enforce)`. The checker-owned bootstrap baseline (recorded BEFORE the lab was handed out, on a transient copy of this same profile while it was still in `complain`) confirms that a write matching the `/work/**` pattern of this profile really did pass back then - without this it cannot be proven that it was the switch to `enforce` that caused the later denial. |
 
 <details>
@@ -157,7 +157,7 @@ this binary, unlike `aa-enforce`, parses only the file passed to it.
 <details>
 <summary>💡 Hint for task 4</summary>
 
-`Seccomp: 2` in `/proc/1/status` means "filter mode is active" (SECCOMP_MODE_FILTER) - this is what you should see. `Seccomp: 0` would mean no seccomp filter at all (`Unconfined`). This is the simplest of the five tasks in this group - if it does not pass, the problem is most likely in the nodeSelector and not in the seccompProfile itself.
+`Seccomp: 2` in `/proc/1/status` means "filter mode is active" (SECCOMP_MODE_FILTER) - this is what you should see. `Seccomp: 0` would mean no seccomp filter at all (`Unconfined`). This is the simplest of the three seccomp tasks (4-6) - if it does not pass, the problem is most likely in the nodeSelector and not in the seccompProfile itself.
 </details>
 
 ---
@@ -187,7 +187,7 @@ BusyBox `unshare -m` after a successful `unshare(2)` additionally performs a SEC
 independent `mount(2)` syscall (`mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL)`
 to force private propagation - this is the behavior of unshare, active by default
 unless `--propagation unchanged` is passed explicitly, and even then `mount()` is
-still called, just with zero flags). containerd's default AppArmor profile (`RuntimeDefault`,
+still called, just with zero flags). The default AppArmor profile of containerd (`RuntimeDefault`,
 which a Pod without an explicit `securityContext.appArmorProfile` gets) contains `deny mount,`
 WITHOUT any conditions on flags - this prohibition acts independently of capabilities and of
 seccomp. Therefore `unshare -m true` can fail with `EPERM` because of AppArmor EVEN when
@@ -197,7 +197,7 @@ syscall itself without any subsequent `mount()` - both `localhost-seccomp` and
 `sysadmin-control` use the same `SYS_ADMIN`, so the difference in the result is
 unambiguously explained by exactly the seccomp filter, and not by a side effect of AppArmor.
 
-The order of commands matters for the evidentiary value: first run `unshare -n true` and make sure it fails with an error (non-zero exit code), ONLY THEN write the line `unshare denied by seccomp` to `/tmp/unshare-result` - do not write the line in advance, "assuming" the result. The negative control (`sysadmin-control`) must use THE SAME capability `SYS_ADMIN`, but `seccompProfile.type: Unconfined` - if you forget to specify `Unconfined` explicitly, the Pod may get `RuntimeDefault` by default (if the `seccompDefault` from task 8 is enabled) and the test will not show the difference.
+The order of commands matters for the proof to be convincing: first run `unshare -n true` and make sure it fails with an error (non-zero exit code), ONLY THEN write the line `unshare denied by seccomp` to `/tmp/unshare-result` - do not write the line in advance, "assuming" the result. The negative control (`sysadmin-control`) must use THE SAME capability `SYS_ADMIN`, but `seccompProfile.type: Unconfined` - if you forget to specify `Unconfined` explicitly, the Pod may get `RuntimeDefault` by default (if the `seccompDefault` from task 8 is enabled) and the test will not show the difference.
 </details>
 
 Linux capabilities and privilege escalation are different axes. `allowPrivilegeEscalation: false`

@@ -87,7 +87,7 @@ manager externo usa KMS v2; elige un provider local solo con un threat model vig
 y un procedimiento de rotación.
 
 Generamos una clave AES-256 de 32 bytes, la codificamos en base64 y creamos la configuración en el control-plane.
-`aescbc` va el primero: con él se escribirán los nuevos Secret. Con `identity` el último, el API
+`aescbc` va el primero: con él se escribirán los nuevos Secret. Con `identity` en último lugar, el API
 server puede leer el registro plaintext antiguo solo hasta la migración. Un ejemplo del archivo está en la página de la
 documentación (enlace al principio de la solución).
 
@@ -252,7 +252,7 @@ está eliminado. El fallback temporal no se debe dejar como un «seguro» perman
 ## 5. Restringir el acceso a la API y desactivar el token automount
 
 Encryption at rest no sustituye a RBAC: un sujeto con `get` de Secret verá el plaintext mediante la API.
-Crearemos un ServiceAccount que tenga acceso a exactamente un Secret y un Pod de diagnóstico sin
+Crearemos un ServiceAccount con acceso a exactamente un Secret, así como un Pod de diagnóstico sin
 service-account token montado.
 
 ```yaml

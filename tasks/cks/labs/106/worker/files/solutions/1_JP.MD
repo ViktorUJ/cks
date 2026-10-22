@@ -16,7 +16,7 @@
 > exit   # ノードから worker に戻る
 > ```
 >
-> 確認は成果物を**作業マシン** (`/var/work/tests/artifacts/<番号>/`) から読み取ります。これらは
+> チェック (`check_result`) は成果物を**作業マシン** (`/var/work/tests/artifacts/<番号>/`) から読み取ります。これらは
 > 実習のためだけに必要で、試験にはありません。`worker` から短いコマンド
 > (`> ファイル`) で保存し、内容は別途 `cat <ファイル>` で確認します。
 
@@ -61,8 +61,8 @@ exit
 課題 9 を終えるまでは、このプロファイルに対して、Python で書かれた `apparmor-utils` パッケージの
 `aa-enforce`/`aa-complain` やその他のプロファイル変更ツールを使わないでください：
 それらは内部で `apparmor.read_profiles()` を呼び出し、起動時に `/etc/apparmor.d/` の**すべての**
-ファイルを解析 (パース) します。課題 9 のまだロードされていない、明らかに
-壊れている `/etc/apparmor.d/k8s-106-broken-profile` も含まれ - あなたのプロファイルに到達する前に、
+ファイルを解析 (パース) します。これには、課題 9 のまだロードされていない、壊れていることが分かっている
+`/etc/apparmor.d/k8s-106-broken-profile` も含まれるため、ツールはあなたのプロファイルに到達しようとすらせず、
 無関係なファイルでパーサーエラーを起こして失敗します。`apparmor_parser`
 (Python のラッパーではなくバイナリ) は、特定の 1 つのファイルを直接指定して呼び出せば、
 そのファイルだけを解析し、この問題の影響を受けません - まさにこのため、プロファイルのフラグを
@@ -136,7 +136,7 @@ kubectl exec -n security-106 apparmor-writer -- \
 ```
 
 ゼロ以外の exit code と 'permission denied' というテキストだけでは、まさに AppArmor のこのルールが
-作動したことの証明には「なりません」 - 通常の DAC/ファイルシステムのエラーも、shell から見れば
+作動したことの証明には**なりません** - 通常の DAC/ファイルシステムのエラーも、shell から見れば
 同じに見えます。拒否をまさにこの profile に結びつけるには、kernel audit log を使います；
 上の試行の直後に、ノード上でそれを確認します：
 
@@ -152,7 +152,7 @@ exit
 
 特定の runtime で `/proc/1/attr/current` が利用できない場合は、それを記録し、
 Localhost profile の割り当てと、この profile に対するカーネルの `apparmor="DENIED"` を根拠にしてください；
-これらの evidence がなく、ゼロ以外のコードだけでは不十分です。それは mount や通常の
+これらの evidence を伴わない、ゼロ以外のコードだけでは不十分です。それは mount や通常の
 Unix のパーミッションでも発生しうるためです。
 
 ## 4. 通常の Pod の RuntimeDefault
@@ -219,7 +219,7 @@ Kubernetes では、capability は接頭辞 `CAP_` なしで `SYS_ADMIN` と書�
 `unshare -n` (network namespace、`CLONE_NEWNET`) を使い、`unshare -m` (mount
 namespace) は使いません。どちらの操作も同じ `CAP_SYS_ADMIN` を必要としますが、BusyBox の `unshare -m` は、
 `unshare(2)` が成功した後に、強制的な private propagation のために独立した `mount(2)` syscall を追加で実行します -
-そして containerd の default AppArmor-プロファイル (この Pod が受け取る `RuntimeDefault`。
+そして containerd の標準の AppArmor プロファイル (この Pod が受け取る `RuntimeDefault`。
 ここでは明示的な `appArmorProfile` が指定されていないため) には、フラグに関する条件のない
 `deny mount,` が含まれており、capabilities/seccomp とは無関係に作用します。そのため、
 `unshare -m true` は、seccomp が `unshare` をまったく制限していない場合でも AppArmor が原因で `EPERM` で失敗する可能性があり -
@@ -355,7 +355,7 @@ UID 0 -> host UID 0 で始まります (通常は `0 0 4294967295` のような�
 
 ## 8. kubelet の `seccompDefault: true`
 
-これまでのすべての Pod は `seccompProfile` を明示的に指定していました。ここでは node-level の baseline を確認します：
+seccomp プロファイルを持つこれまでの Pod (課題 4-6) は `seccompProfile` を明示的に指定していました。ここでは node-level の baseline を確認します：
 開発者がこのフィールドを忘れた場合、kubelet が自分で `RuntimeDefault` を適用し、
 プロセスを `Unconfined` のままにしないようにします。ノード上で kubelet の設定を修正します：
 

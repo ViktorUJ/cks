@@ -414,7 +414,7 @@ cat "$DIR/evidence-summary.txt"
 compromise された Pod を削除します。これは最小限の containment の連鎖であり、完全な調査ではありません：
 credential の revocation/rotation、他の workload の探索、owner/controller の復旧は、
 別の IR の手順で行います。最後のコマンドは、特定のエラーのテキストを探すのではなく、
-否定的な結果を実証します。
+失敗という結果 (ネガティブな結果) を実証します。
 
 ```bash
 # ターミナル 2
@@ -449,7 +449,7 @@ cat "$DIR/containment.txt"
 それは別のルール **Run shell untrusted** ("Shell spawned by untrusted
 binary") に関するもので、**Terminal shell in container** には影響しません。`container.name` ではなく `k8s.pod.name` と
 `k8s.ns.name` を使用してください：`container.name` は**コンテナ**の名前 (ここでは
-`app`) であり、Pod ではなく、コンテナ名による一致は、ほぼ確実に誤った、あるいは広すぎる
+`app`) であり、Pod ではありません。コンテナ名による一致は、ほぼ確実に誤った、あるいは広すぎる
 allowlist になります。
 
 ```bash
@@ -464,7 +464,7 @@ EOF
 systemctl restart falco && sleep 10
 ```
 
-今や除外されている名前で、インタラクティブな shell を持つ Pod を作成します：
+現在除外されている名前で、インタラクティブな shell を持つ Pod を作成します：
 
 ```bash
 # ターミナル 2
@@ -487,7 +487,7 @@ kubectl wait -n runtime-112 --for=condition=Ready pod/ci-runner --timeout=60s
 kubectl exec -n runtime-112 -it ci-runner -- sh -c 'echo shell-open; sleep 2'
 ```
 
-別に、課題 5 の `immutable-app` (除外なし) が引き続き alert を出すことを確認してください - override が
+別途、課題 5 の `immutable-app` (除外なし) が引き続き alert を出すことを確認してください - override が
 ルール全体を黙って無効にしてはなりません：
 
 ```bash
@@ -829,7 +829,7 @@ wc -l < /tmp/art/9/probe-trusted.log        # 0: 許可された repository に�
 cks112-rm $PROBE_ALLOWED
 ```
 
-「ぶら下がった」プロセスを残さないよう、繰り返す前に最初の container/task を取り除き、
+「ハングした」プロセスが残らないよう、繰り返す前に最初の container/task を取り除き、
 新しい一意の ID で 2 つ目を起動します - これに対してはアラートが必ずあるはずです：
 
 ```bash
@@ -885,7 +885,7 @@ Kyverno の CEL policy は、同じ比較のセマンティクス (`==`/`!=`、`
 起動とその引数による検出です。ここでは、原理的に別のクラスの Falco の
 条件を使用します：どのプロセスが、どのコマンドライン引数でそれを行うかに関係なく、特定のファイル/デバイスのオープンによる検出です。
 
-Deployment `mem-scanner` (2 replicas) は bootstrap によってすでにデプロイされています；両方の replica が定期的に
+Deployment `mem-scanner` (2 つの replica) は bootstrap によってすでにデプロイされています；両方の replica が定期的に
 コンテナ内から `/dev/mem` を開きます。コンテナ内の `/dev/mem` のパスは synthetic で
 安全な fixture です (backing device は実際にはホストの `/dev/null` であり、ホストの実際の物理
 メモリではありません)；ファイル名による Falco の条件 (`fd.name = /dev/mem`) にとっては、それは区別できません -
@@ -928,8 +928,8 @@ scp control-plane:/tmp/art/10/falco-devmem.log /var/work/tests/artifacts/10/
 ```
 
 検出が (Pod manifest ではなく) Falco 自体によって確認されたら、alert に
-名指しされた Pod を保存し、スケールの前に、それが実際に Deployment `mem-scanner` の
-ReplicaSet に属していることを確認します：
+名指しされた Pod を、スケールの前に保存します (保存された JSON には owner の連鎖が表示されます：Deployment `mem-scanner` の
+ReplicaSet)：
 
 ```bash
 # ターミナル 2

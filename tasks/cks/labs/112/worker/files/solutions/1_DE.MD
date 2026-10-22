@@ -2,7 +2,7 @@
 
 # Lab 112 - Referenzlösung: Falco, audit-Logs und Unveränderlichkeit
 
-Wir arbeiten wie in der Prüfung. Öffne **zwei Terminals** und lass beide bis zum Ende der Lab offen:
+Wir arbeiten wie in der Prüfung. Öffne **zwei Terminals** und lass beide bis zum Ende des Labs offen:
 
 - **Terminal 1 - control-plane:** `ssh control-plane`, dann `sudo -i` (danach werden alle Befehle auf dem Node
   als root ausgeführt, ohne `sudo`). Der einzige Node der control plane führt auch die workloads aus.
@@ -78,7 +78,7 @@ geöffnet ist, erfasst Falco keine Ereignisse, und die shell aus Aufgabe 2 kann 
 kein alert erscheint, wiederhole das `exec` nach einigen Sekunden.
 
 Wenn der Dienst nicht startet, sieh dir zuerst `journalctl -u falco-modern-bpf -b --no-pager` an.
-Ersetze die engine nicht durch ein kernel module: In dieser Lab wird genau `modern_ebpf` verlangt.
+Ersetze die engine nicht durch ein kernel module: In diesem Lab wird genau `modern_ebpf` verlangt.
 
 ## 2. Standardregel für eine shell im Container
 
@@ -161,7 +161,7 @@ Container etwa 5 Sekunden lang, und Ereignisse, die früher stattgefunden haben,
 
 Wir erstellen die policy nach der Regel aus Kapitel 32: Vollständiges request/response schreiben wir nur für die
 nicht sensiblen `configmaps` in `runtime-112`; für `secrets` nehmen wir `Metadata`, damit der Body des Secrets
-(Tokens, Passwörter) nicht ins Log gelangt. `None` und `omitStages` reduzieren tatsächlich das high-volume
+(Tokens, Passwörter) nicht in den Log gelangt. `None` und `omitStages` reduzieren tatsächlich das high-volume
 noise; das abschließende catch-all `Metadata` ist fallback logging und keine Rauschunterdrückung. Die Reihenfolge der Regeln ist wichtig:
 spezifische Regeln stehen vor dem catch-all. Die Struktur der Datei stammt aus dem Beispiel in der Dokumentation (Abschnitt Audit
 policy).
@@ -239,7 +239,7 @@ Das ist ein static Pod: Das kubelet erstellt den API server automatisch neu (etw
 antwortet `kubectl` mit `connection refused`). Warte, bis er bereit ist:
 
 ```bash
-# Terminal 2: wiederhole, bis der Befehl "ok" zurückgibt
+# Terminal 2: wiederhole, bis der Befehl „ok“ zurückgibt
 kubectl get --raw=/readyz
 ```
 
@@ -324,12 +324,12 @@ cat /var/work/tests/artifacts/5/rootfs-write-denied.log
 kubectl exec -n "$NS" immutable-app -- sh -c 'touch /tmp/allowed && test -f /tmp/allowed'
 ```
 
-## 6. Minimale containment-Kette vom Alert bis zur Isolation
+## 6. Minimale containment-Kette vom alert bis zur Isolation
 
 Das audit backend läuft bereits, daher hinterlässt ein neues `kubectl exec` API evidence. Wir starten
 einen kontrollierten langlebigen Prozess: Der marker bleibt in der command line lange genug für
 die Prüfung von `/proc`. In production startet man einen verdächtigen Prozess nicht erneut; hier ist das
-safe planted evidence einer einmaligen Lab.
+sichere planted evidence eines einmaligen Labs.
 
 ```bash
 # Terminal 1 (control-plane, root): Startzeitpunkt des Durchlaufs (die Zeit nehmen wir von der control-plane,
@@ -446,8 +446,8 @@ Werkzeug aus. Der richtige Ort für eine environment-specific Ausnahme ist nicht
 der Regel selbst, sondern das override des reservierten upstream-Macros gerade dieser Regel:
 `user_expected_terminal_shell_in_container_conditions` (standardmäßig `(never_true)`, das
 heißt, es gibt keine Ausnahmen). Verwechsle es nicht mit dem im Namen ähnlichen `user_shell_container_exclusions` -
-dieses gehört zu einer separaten Regel **Run shell untrusted** ("Shell spawned by untrusted
-binary") und beeinflusst **Terminal shell in container** nicht. Verwende `k8s.pod.name` und
+dieses gehört zu einer separaten Regel **Run shell untrusted** („Shell spawned by untrusted
+binary“) und beeinflusst **Terminal shell in container** nicht. Verwende `k8s.pod.name` und
 `k8s.ns.name` und nicht `container.name`: `container.name` ist der Name des **Containers** (hier
 `app`) und nicht des Pods, und eine Übereinstimmung nach dem Namen des Containers ergibt fast immer eine falsche oder zu
 breite allowlist.
@@ -557,7 +557,7 @@ tail -n 20 /var/log/falco/events.log \
 ## 8. Audit webhook backend
 
 `audit-receiver` ist vom Startskript bereits bereitgestellt. Erstelle eine webhook kubeconfig, die auf
-seinen Service zeigt; für die Lab ist HTTP zulässig, in production erfordert der webhook HTTPS und ein client
+seinen Service zeigt; für das Lab ist HTTP zulässig, in production erfordert der webhook HTTPS und ein client
 certificate (Kapitel 32).
 
 ```bash
@@ -658,7 +658,7 @@ echo "CKS112_REGISTRY=$CKS112_REGISTRY CKS112_TRUSTED_REPO=$CKS112_TRUSTED_REPO"
 
 (`install-kyverno` - dieselbe Kyverno-Version wie in Lab 111.)
 
-Wir erstellen eine native `ValidatingPolicy` mit allowlist auf die trusted registry. Wir verwenden die Kyverno CEL
+Wir erstellen eine native `ValidatingPolicy` mit einer allowlist für die trusted registry. Wir verwenden die Kyverno CEL
 Image library (`image(...).registry()`/`.repository()`) für einen exakten Vergleich und nicht
 `startsWith` - sonst würde auch `${CKS112_TRUSTED_REPO}-evil` die policy passieren, weil sein
 image string einfach mit dem erlaubten Teilstring beginnt. Die denial-Meldung enthält
@@ -722,7 +722,7 @@ Jetzt modellieren wir den Pfad, den der admission controller nicht sieht: Der Co
 in der container runtime über CRI erstellt und umgeht kube-apiserver vollständig. Dafür gibt es auf der control-plane
 den Helper `cks112-run <Image> <id> '<Befehl>'` (ein Wrapper um `crictl runp/create/start`) und
 `cks112-rm <id>` zum Aufräumen. Warum nicht `ctr run`: Container, die über `ctr` erstellt wurden, sind
-CRI nicht bekannt, und Falco schreibt für sie immer `container.image.repository = <NA>` - trusted und
+der CRI nicht bekannt, und Falco schreibt für sie immer `container.image.repository = <NA>` - trusted und
 untrusted Images wären nicht unterscheidbar. Einen Container, der über CRI erstellt wurde, sieht Falco mit dem Image.
 Jeder Start erhält ein eindeutiges Suffix `$RUN_ID`, und alle dabei erstellten IDs verwenden
 dieses Suffix, daher stößt ein erneuter Durchlauf nicht auf Reste des vorherigen Versuchs:
@@ -833,7 +833,7 @@ wc -l < /tmp/art/9/probe-trusted.log        # 0: kein alert für das erlaubte re
 cks112-rm $PROBE_ALLOWED
 ```
 
-Wir entfernen den ersten container/task vor der Wiederholung, um keinen "hängenden" Prozess zu hinterlassen, und
+Wir entfernen den ersten container/task vor der Wiederholung, um keinen „hängenden“ Prozess zu hinterlassen, und
 starten den zweiten mit einer neuen eindeutigen ID - für ihn muss es einen alert geben:
 
 ```bash
@@ -883,18 +883,18 @@ gilt für die signature verification in Lab 111 - der Unterschied ist nur, dass 
 die Signatur prüft und hier einfach registry/repository. Eine zusätzliche Erkenntnis aus der
 prefix-trap-Prüfung oben: Falco condition und Kyverno CEL policy müssen DIESELBE
 Vergleichssemantik verwenden (`==`/`!=` und nicht `startsWith`/prefix), sonst sind sie nicht mehr
-äquivalente security controls, selbst wenn beide formal "dasselbe" repository prüfen.
+äquivalente security controls, selbst wenn beide formal „dasselbe“ repository prüfen.
 
 ## 10. Zugriff auf `/dev/mem` über eine file/device-open condition erkennen
 
 Die Aufgaben 3, 7 und 9 bauten die condition um `spawned_process`/`proc.cmdline` auf - Erkennung
 anhand des STARTS eines Prozesses und seiner Argumente. Hier wird eine grundsätzlich andere Klasse
-von Falco-Bedingung verwendet: Erkennung anhand des ÖFFNENS einer konkreten Datei/eines Geräts, unabhängig davon,
+von Falco-Bedingungen verwendet: Erkennung anhand des ÖFFNENS einer konkreten Datei/eines Geräts, unabhängig davon,
 welcher Prozess das tut und mit welchen Argumenten der Kommandozeile.
 
 Das Deployment `mem-scanner` (2 Replicas) ist vom bootstrap bereits bereitgestellt; beide Replicas öffnen periodisch
 `/dev/mem` innerhalb des Containers. Der Pfad `/dev/mem` innerhalb des Containers ist eine synthetic
-safe fixture (das backing device ist tatsächlich das host `/dev/null` und nicht der reale physische
+safe fixture (das backing device ist tatsächlich das `/dev/null` des Hosts und nicht der reale physische
 Speicher des Hosts); für die Falco-Bedingung nach dem Dateinamen (`fd.name = /dev/mem`) ist das nicht unterscheidbar -
 erkannt wird der Systemaufruf `open`/`openat`/`openat2` selbst. Füge die Regel auf der
 `control-plane` hinzu:
@@ -920,8 +920,8 @@ systemctl restart falco && sleep 10
 
 Warte auf den nächsten periodischen Zyklus von `mem-scanner` (alle ~15 Sekunden) und finde die
 Auslösung. Nimm den Identifikator des Pods AUS dem alert selbst (`k8s_pod=`) und rate nicht
-vorab, welche der beiden Replicas schuldig ist - das ist dieselbe Grundregel "beginne mit dem
-alert" wie in Aufgabe 6:
+vorab, welche der beiden Replicas schuldig ist - das ist dieselbe Grundregel „beginne mit dem
+alert“ wie in Aufgabe 6:
 
 ```bash
 # Terminal 1 (control-plane, root)
@@ -937,8 +937,8 @@ scp control-plane:/tmp/art/10/falco-devmem.log /var/work/tests/artifacts/10/
 ```
 
 Nachdem die Erkennung von Falco selbst bestätigt wurde (und nicht durch das Pod manifest), speichere den im alert
-genannten Pod und überzeuge dich, dass er vor dem Skalieren tatsächlich zum ReplicaSet des Deployment
-`mem-scanner` gehört:
+genannten Pod vor dem Skalieren (im gespeicherten JSON ist die owner-Kette sichtbar: ReplicaSet des Deployment
+`mem-scanner`):
 
 ```bash
 # Terminal 2
@@ -959,6 +959,6 @@ jq '.spec.replicas' /var/work/tests/artifacts/10/scaled-down.json
 
 `container.id != host` in der Bedingung ist kein dekoratives Detail: Ohne sie würde die Regel
 auch bei legitimen Systemprozessen des Nodes (zum Beispiel Werkzeugen zur Speicherdiagnose) auslösen,
-die außerhalb von Containern laufen, und auf jedem Node des Clusters laute false positives erzeugen.
+die außerhalb von Containern laufen, und auf jedem Node des Clusters störendes Rauschen durch false positives erzeugen.
 
 Führe am Ende `check_result` aus.

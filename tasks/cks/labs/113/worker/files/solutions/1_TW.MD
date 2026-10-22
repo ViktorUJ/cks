@@ -3,7 +3,7 @@
 # Lab 113 - 參考解答：kubeadm minor upgrade
 
 > 像考試中一樣工作：`kubectl` 在工作機上執行，而對節點的操作(apt、kubeadm、
-> kubelet)- 在節點本身上執行：用 `ssh <節點>` 登入，切換到 root(`sudo -i`),
+> kubelet)- 在節點本身上執行：用 `ssh <node>` 登入，切換到 root(`sudo -i`),
 > 執行指令，然後離開(`exit`、`exit`)。叢集的起始版本為 `1.35.x`，目標版本為
 > `1.36.x`。節點名稱(`<cp-name>`、`<worker-name>`)取自 `kubectl get no`；在考試中它們是不同的，在本實驗中 ssh 別名是：`k8s113_controlPlane_1` 與 `k8s113_node_worker1`。
 

@@ -9,8 +9,8 @@
 儲存在指定的位置，並適合稽核。
 
 這是關於 security tooling 與 supply chain 的 CKS 任務，而不是 CKA 的練習。大多數
-artifacts 都在 worker 上於本機分析；唯一的例外是任務 4，其中
-需要套用 hardened Deployment，以檢查 Ready/Available 與 HTTP smoke test。
+artifacts 都在 worker 上於本機分析；叢集另外還會用於任務 1c、4、5b 與 9a-9c
+(live Deployments、帶有 Ready/Available 檢查與 HTTP smoke test 的 hardened Deployment、Kyverno policy 與 Pod)。
 
 ## Threat model
 
@@ -26,12 +26,12 @@ scanning(例如 Trivy secret scanning)以及映像 history 的檢視(`docker his
 scanning。即使目前的設定已經不包含 secret，它仍然可能
 留在 layer 歷史中而可被存取。
 
-mutable-tag tampering 的威脅在於，部署之後，在沒有改變的、帶有
-標籤的引用下，可以替換成另一個惡意的 image。這正是為什麼 digest pinning 在
+mutable-tag tampering 的威脅在於，部署之後，同一個沒有改變的、帶有
+標籤的引用所指向的映像，可能被替換成另一個惡意的 image。這正是為什麼 digest pinning 在
 任務 3–5 中很重要：它固定的是映像的具體內容，而不只是它的名稱與標籤。
 
 任務 7 中的簽章驗證證明，具體的 digest 是由受信任的
-key/identity 簽署的(signature integrity)，而任務 1 中的 Trivy scan 則是在目前的 vulnerability DB 下，沒有偵測到
+key/identity 簽署的(signature integrity)，而任務 1 中的 Trivy scan 僅表示，在目前的 vulnerability DB 下，沒有發現
 落在其 detection coverage 內的已知弱點
 (Trivy 自己的文件記載了偏向 precision 的 trade-off，在這種情況下可能出現 false
 negatives - "0 findings" 不等於沒有弱點的 formal proof)。這是不同的
@@ -43,7 +43,7 @@ Sigstore 提供單獨的指令 `cosign attest`/`cosign verify-attestation`，本
 沒有使用。
 
 本機的 `cosign verify`(任務 7)本身並不是 enforcement：它證明的是具體 image reference 在檢查當下的
-簽章，但不妨礙任何人透過直接的 `kubectl apply`，繞過 CI 去執行
+簽章，但無法阻止任何人透過直接的 `kubectl apply`，繞過 CI 去執行
 未簽署或以其他方式簽署的映像。只有
 admission-time 的檢查(任務 9a-9c)才讓簽章成為 Pod 被允許進入叢集的必要條件 -
 這就是「我們檢查了簽章」與「叢集不會執行
@@ -73,7 +73,7 @@ SBOM 解決的是盤點「元件」與套件版本的問題(安裝了什麼，�
 <details>
 <summary>3. 為什麼在 CI 中本機執行的 `cosign verify` 無法阻止有人透過 `kubectl apply` 部署未簽署的映像？</summary>
 
-在本機(例如在 CI pipeline 中)執行的 `cosign verify`，只是檢查簽章並把結果回傳給呼叫者的一個指令。它並沒有內建在 Kubernetes API 的 admission 路徑中 - 沒有任何東西能阻止有叢集存取權的人，直接以「任何」映像執行 `kubectl apply`，完全繞過 CI。只有內建在叢集本身、作為 policy 的 admission-time 檢查(任務 9a-9c)，才讓簽章成為允許的「必要」條件 - 這就是「我們檢查過了」與「叢集在物理上不會放行」之間的差別。
+在本機(例如在 CI pipeline 中)執行的 `cosign verify`，只是檢查簽章並把結果回傳給呼叫者的一個指令。它並沒有內建在 Kubernetes API 的 admission 路徑中 - 沒有任何東西能阻止有叢集存取權的人，直接以「任何」映像執行 `kubectl apply`，完全繞過 CI。只有內建在叢集本身、作為 policy 的 admission-time 檢查(任務 9a-9c)，才讓簽章成為允許的「必要」條件 - 這就是「我們檢查過了」與「叢集根本不會放行」之間的差別。
 </details>
 
 ## 基礎架構
@@ -127,7 +127,7 @@ control-plane 上的 `registry:2` - 由 bootstrap 啟動：
 - 資料儲存在節點本機的 PV(`/var/lib/cks111-registry`)上，因此能撐過
   registry Pod 的重新啟動；
 - 已發布映像的 digest 請從 `podman push --digestfile` 取得，而 manifest 是否存在
-  請用對 `/v2/` 的請求檢查(registry 中沒有像 `docker buildx imagetools` 這類僅限 HTTPS 的工具);
+  請用對 `/v2/` 的請求檢查(這個 registry 不適用像 `docker buildx imagetools` 這類僅限 HTTPS 的工具);
 - 詳細的指令順序 - 在[參考解答](worker/files/solutions/1_TW.MD)的「0. 準備」步驟中。
 
 **Docker Hub 的限制**。同一個 IP 的匿名 pull 有限制(約每 6 小時 100 個請求)。
@@ -195,8 +195,8 @@ check_result
 ---
 | **1c** | **依 CRITICAL severity 做 workload image triage** |
 | :---: | :--- |
-| 要做什麼 | • namespace `cks-111` 中已經部署了 4 個 Deployment(label `cks.io/task=1c`)，每個都只有一個 immutable、以 digest 固定的 image。<br/>• 從這些 LIVE Deployments 取得 image references(不要依標籤名稱猜測)，用 Trivy 以 `--severity CRITICAL` 掃描**全部 4 個**映像，並計算每個映像中不重複的 CRITICAL `VulnerabilityID` 數量。<br/>• 找出 CRITICAL 數量最多的 Deployment(「最脆弱的」)以及數量最少的兩個 Deployment(「兩個最不脆弱的」)。把它們的名稱寫入 `/var/work/tests/artifacts/1c/ranking.txt`，格式為 `MOST_VULNERABLE=<deployment-name>`、`LEAST_VULNERABLE_1=<deployment-name>`、`LEAST_VULNERABLE_2=<deployment-name>`。<br/>• 對最有弱點的 Deployment 的映像，**以 Trivy**(`trivy image --format cyclonedx`)產生 CycloneDX SBOM 到 `1c/cyclonedx.json`。<br/>• 然後進行 remediate：只在兩個最不脆弱的 Deployment 上保留 `replicas > 0`，其餘兩個(包括最有弱點的)縮減到 `replicas: 0`。 |
-| 驗收標準 | • **Ranking**:checker 會自己重複對全部 4 個 live images 的 Trivy CRITICAL 掃描，並重新計算 ranking - `ranking.txt` 必須與這次新的掃描相符，而不是與過時的/猜測的結果相符。<br/>• **SBOM:**`cyclonedx.json` 是有效的 CycloneDX 文件，正是來自 Trivy，並且屬於真正最有弱點的 Deployment 的映像。<br/>• **Remediation**：恰好 2 個 Deployment(依新掃描最不脆弱的)具有 `replicas > 0`，其餘 2 個 - `replicas: 0`。 |
+| 要做什麼 | • namespace `cks-111` 中已經部署了 4 個 Deployment(label `cks.io/task=1c`)，每個都只有一個 immutable、以 digest 固定的 image。<br/>• 從這些 LIVE Deployments 取得 image references(不要依標籤名稱猜測)，用 Trivy 以 `--severity CRITICAL` 掃描**全部 4 個**映像，並計算每個映像中不重複的 CRITICAL `VulnerabilityID` 數量。<br/>• 找出 CRITICAL 數量最多的 Deployment(「最脆弱的」)以及數量最少的兩個 Deployment(「兩個最不脆弱的」)。把它們的名稱寫入 `/var/work/tests/artifacts/1c/ranking.txt`，格式為 `MOST_VULNERABLE=<deployment-name>`、`LEAST_VULNERABLE_1=<deployment-name>`、`LEAST_VULNERABLE_2=<deployment-name>`。<br/>• 對最脆弱的 Deployment 的映像，**以 Trivy**(`trivy image --format cyclonedx`)產生 CycloneDX SBOM 到 `1c/cyclonedx.json`。<br/>• 然後進行 remediate：只在兩個最不脆弱的 Deployment 上保留 `replicas > 0`，其餘兩個(包括最脆弱的)縮減到 `replicas: 0`。 |
+| 驗收標準 | • **Ranking**:checker 會自己重複對全部 4 個 live images 的 Trivy CRITICAL 掃描，並重新計算 ranking - `ranking.txt` 必須與這次新的掃描相符，而不是與過時的/猜測的結果相符。<br/>• **SBOM:**`cyclonedx.json` 是有效的 CycloneDX 文件，正是來自 Trivy，並且屬於真正最脆弱的 Deployment 的映像。<br/>• **Remediation**：恰好 2 個 Deployment(依新掃描最不脆弱的)具有 `replicas > 0`，其餘 2 個 - `replicas: 0`。 |
 
 <details>
 <summary>💡 任務 1c 的提示</summary>
@@ -225,7 +225,7 @@ linter 在發現問題時回傳非零 exit code 是「預期的」行為，而�
 <details>
 <summary>💡 任務 3 的提示</summary>
 
-`CKS_SIGNATURE_TEST` 的 `ARG`/`LABEL` 看起來可能與目前 Hadolint 的 findings 無關 - 它是特意在這裡事先加入的，讓任務 9c(要晚得多)能夠透過 `--build-arg` 建置物理上不同的映像，而不必再次改寫 Dockerfile。請現在就加入這兩行，即使它們的用處要到 9c 才會明白。
+`CKS_SIGNATURE_TEST` 的 `ARG`/`LABEL` 看起來可能與目前 Hadolint 的 findings 無關 - 它是特意在這裡事先加入的，讓任務 9c(要晚得多)能夠透過 `--build-arg` 建置實際上不同的映像，而不必再次改寫 Dockerfile。請現在就加入這兩行，即使它們的用處要到 9c 才會明白。
 </details>
 
 ---
@@ -316,24 +316,24 @@ Syft 透過旗標 `-o cyclonedx-json` 產生 CycloneDX(不要與同一個工具�
 | **9b** | **Fresh signed ALLOW:policy 建立之後的新 Pod** |
 | :---: | :--- |
 | 要做什麼 | • 任務 9a 的 policy 必須允許已簽署的 `$HARDENED_IMAGE` - 但對已經存在的 Deployment 再次 `kubectl apply` **並不能證明**這一點：如果 template 沒有改變，新的 ReplicaSet/Pod 可能不會被建立，而 `Running` 只是在 policy 之前建立的舊 Pod。<br/>• 建立一個**新的**、先前不存在的物件：`kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`。<br/>• 把這個 Pod 的 `creationTimestamp`、9a 中 policy 的 `creationTimestamp`，以及最終的 `status.phase`/`Ready` condition 儲存到 `9b/signed-admission-check.json`。 |
-| 驗收標準 | • **Pod:**`signed-admission-check` 存在，使用的正是 `$HARDENED_IMAGE`；對它成功執行 `cosign verify --key cosign.pub "$HARDENED_IMAGE"`,`status.phase` 不是 `Failed`，而 `Ready` 條件達到 `True`。<br/>• **Artifact:**`9b/signed-admission-check.json` 包含這個 image，並且 Pod 的 `creationTimestamp` **晚於** `ImageValidatingPolicy require-signed-catalog-images` 的 `creationTimestamp`。<br/>• 這證明了 policy 之後對可驗證簽署的 image 的 fresh admission，而不是撐過 policy 的舊 Pod。 |
+| 驗收標準 | • **Pod:**`signed-admission-check` 存在，使用的正是 `$HARDENED_IMAGE`；對它成功執行 `cosign verify --key cosign.pub "$HARDENED_IMAGE"`,`status.phase` 不是 `Failed`，而 `Ready` condition 達到 `True`。<br/>• **Artifact:**`9b/signed-admission-check.json` 包含這個 image，並且 Pod 的 `creationTimestamp` **不早於** `ImageValidatingPolicy require-signed-catalog-images` 的 `creationTimestamp`。<br/>• 這證明了 policy 之後對可驗證簽署的 image 的 fresh admission，而不是撐過 policy 的舊 Pod。 |
 
 <details>
 <summary>💡 任務 9b 的提示</summary>
 
-不要為這項檢查重複使用任務 4 中的 Deployment `catalog` - 請使用字面上全新的 `kubectl run`，搭配新的 Pod 名稱，如任務所指定的。兩個 timestamp(Pod 與 policy)都是 UTC 的 ISO8601 字串，可以像一般字串一樣以字典序比較(`"2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z"` 在 bash 中，對這種格式能正確運作)。
+不要為這項檢查重複使用任務 4 中的 Deployment `catalog` - 請使用字面上全新的 `kubectl run`，搭配新的 Pod 名稱，如任務所指定的。兩個 timestamp(Pod 與 policy)都是 UTC 的 ISO8601 字串，可以像一般字串一樣以字典序比較(`[[ "2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z" ]]` 在 bash 中，對這種格式能正確運作)。
 </details>
 
 ---
 | **9c** | **Signature-specific DENY：同一個 repository 中確實存在的 unsigned digest** |
 | :---: | :--- |
-| 要做什麼 | • 在與 `$HARDENED_IMAGE` 相同的 repository 中，建置並發布**第二個** tag(例如 `${HARDENED_TAG%:*}:unsigned-1.0`)，不要簽署它。<br/>• 這個映像必須是**物理上不同的 artifact**，而不是與已簽署的 `$HARDENED_IMAGE` 相同的 digest：如果不加更改地建置同一個 `Dockerfile`/context,reproducible/cached build 可能產生相同的 digest，那麼「unsigned」標籤實際上會指向已經簽署的 artifact，而 `cosign verify` 會出乎意料地通過。<br/>• 透過 build-arg 引入受控的差異(例如 `--build-arg CKS_SIGNATURE_TEST=unsigned-1`，並在 Dockerfile 中有對應的 `ARG`/`LABEL`)，並明確把 `$UNSIGNED_DIGEST != $HARDENED_DIGEST` 的證明儲存到 `9c/digest-comparison.txt`。<br/>• 以與任務 3 相同的方式(`podman push --digestfile`)取得 registry manifest digest，在同一個 repository 中組成 `$UNSIGNED_IMAGE`。<br/>• 明確證明這個 digest **存在且 pullable**(對 registry 的請求 `GET /v2/catalog/manifests/<digest>` 成功)，並且**沒有**以你的金鑰簽出的有效簽章(`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` 以錯誤結束)- 把兩個輸出分別儲存到 `9c/unsigned-exists.txt` 與 `9c/unsigned-not-signed.txt`。<br/>• 然後以這個 `$UNSIGNED_IMAGE` 建立 Pod `catalog-unsigned-probe`，並把 admission denial 儲存到 `9c/admission-deny.txt`。 |
+| 要做什麼 | • 在與 `$HARDENED_IMAGE` 相同的 repository 中，建置並發布**第二個** tag(例如 `${HARDENED_TAG%:*}:unsigned-1.0`)，不要簽署它。<br/>• 這個映像必須是**實際上不同的 artifact**，而不是與已簽署的 `$HARDENED_IMAGE` 相同的 digest：如果不加更改地建置同一個 `Dockerfile`/context,reproducible/cached build 可能產生相同的 digest，那麼「unsigned」標籤實際上會指向已經簽署的 artifact，而 `cosign verify` 會出乎意料地通過。<br/>• 透過 build-arg 引入受控的差異(例如 `--build-arg CKS_SIGNATURE_TEST=unsigned-1`，並在 Dockerfile 中有對應的 `ARG`/`LABEL`)，並明確把 `$UNSIGNED_DIGEST != $HARDENED_DIGEST` 的證明儲存到 `9c/digest-comparison.txt`。<br/>• 以與任務 3 相同的方式(`podman push --digestfile`)取得 registry manifest digest，在同一個 repository 中組成 `$UNSIGNED_IMAGE`。<br/>• 明確證明這個 digest **存在且 pullable**(對 registry 中 `/v2/catalog/manifests/<digest>` 發出的 `HEAD` 或 `GET` 請求成功)，並且**沒有**以你的金鑰簽出的有效簽章(`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` 以錯誤結束)- 把兩個輸出分別儲存到 `9c/unsigned-exists.txt` 與 `9c/unsigned-not-signed.txt`。<br/>• 然後以這個 `$UNSIGNED_IMAGE` 建立 Pod `catalog-unsigned-probe`，並把 admission denial 儲存到 `9c/admission-deny.txt`。 |
 | 驗收標準 | • **Artifact:**`9c/digest-comparison.txt` 包含 `hardened_digest=`、`unsigned_digest=` 與 `unsigned_image=`(與 `$HARDENED_IMAGE` 在同一個 repository 中的完整 `tag@digest` 引用，帶有 genuinely 不同的 digest)。<br/>• **checker 的檢查**：會自己在 registry 中解析 `unsigned_image`，透過自己的 `cosign verify` 確認沒有有效的簽章，以這個映像建立它「自己的」新 Pod，並要求它自己的 policy 的唯一 validation message:`catalog image must have a valid release signature`。<br/>• 只有這則訊息才算數，而不是任何 admission 錯誤：來自另一個 policy 的一般 admission/signature 錯誤不會得到 PASS，`manifest unknown`/registry 查詢錯誤也不夠。<br/>• 沒有真實 admission control 的手動撰寫 evidence 檔案不會得到 PASS - checker 不信任任何文字檔，除了作為指向真實待檢查映像的指標 `unsigned_image=`。 |
 
 <details>
 <summary>💡 任務 9c 的提示</summary>
 
-證明的順序對於它們的可信度很重要：先證明 `$UNSIGNED_IMAGE` 「存在」且 PULLABLE(否則之後的 denial 可能只是 "manifest unknown",而不是關於簽章)，然後證明「沒有」簽章，而「之後」才嘗試建立 Pod。如果 `digest-comparison.txt` 中的 digest 比較顯示相符 - 請設法讓 content 真正不同(例如把 `CKS_SIGNATURE_TEST` build-arg 改成另一個值並重新建置)。
+證明的順序對於它們的可信度很重要：先證明 `$UNSIGNED_IMAGE` 「存在」且 PULLABLE(否則之後的 denial 可能只是 "manifest unknown"，而不是關於簽章)，然後證明「沒有」簽章，而「之後」才嘗試建立 Pod。如果 `digest-comparison.txt` 中的 digest 比較顯示相符 - 請設法讓 content 真正不同(例如把 `CKS_SIGNATURE_TEST` build-arg 改成另一個值並重新建置)。
 </details>
 
 ## 檢查

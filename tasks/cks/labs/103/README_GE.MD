@@ -5,7 +5,7 @@
 ## აღწერა
 
 ამ ლაბორატორიულ სამუშაოში თქვენ აკონფიგურირებთ ორკვანძიან Kubernetes-კლასტერს (control-plane +
-worker) როგორც უსაფრთხოების ინჟინერი: უშვებთ `kube-bench`-ს (worker node-ზე მას თავად აყენებთ) და მისი აღმოჩენების მიხედვით
+worker) როგორც უსაფრთხოების ინჟინერი: უშვებთ `kube-bench`-ს (worker-node-ზე მას თავად აყენებთ) და მისი აღმოჩენების მიხედვით
 (და არა მეხსიერებით) ასწორებთ control-plane კომპონენტებისა და ორივე node-ის kubelet-ის
 სახიფათო პარამეტრებს, აქვეყნებთ Ingress-ს მხოლოდ TLS-ით, ზღუდავთ control plane-ის TLS-ს და
 ადასტურებთ დაყენებული Kubernetes-binary-ების მთლიანობას.
@@ -21,7 +21,7 @@ worker) როგორც უსაფრთხოების ინჟინ�
 
 - [თავი 07. CIS Benchmark და kube-bench](../../course/07/ge.md)
 - [თავი 08. Secure Ingress TLS-ით](../../course/08/ge.md)
-- [თავი 09. კომპონენტების არასაიმედო არგუმენტები და binary-ების შემოწმება](../../course/09/ge.md)
+- [თავი 09. კომპონენტების სახიფათო არგუმენტები და binary-ების შემოწმება](../../course/09/ge.md)
 
 ## შეამოწმეთ თავი სტარტამდე
 
@@ -134,7 +134,7 @@ ssh control-plane hostname
 <details>
 <summary>💡 მინიშნება დავალება 2-ისთვის</summary>
 
-ეძებეთ დავალება 1-ის ანგარიშში checks `4.2.1` (`--anonymous-auth`) და `4.2.4` (`--read-only-port`) სექციაში `node`. `KubeletConfiguration`-ში (`/var/lib/kubelet/config.yaml`) მათ შეესაბამება `authentication.anonymous.enabled` და `readOnlyPort` - CIS მოითხოვს `authentication.anonymous.enabled: false` და `readOnlyPort: 0`. `authentication.anonymous.enabled` მდებარეობს ჩადგმულად, key-ის `authentication.anonymous` ქვეშ, და არა როგორც ცალკე top-level ველი `anonymous: false` - YAML-ის ჩაღრმავებები ყურადღებით შეამოწმეთ. config.yaml-ის შესწორების შემდეგ საჭიროა თავად kubelet-სერვისის გადატვირთვა (`systemctl restart kubelet`), ფაილის რედაქტირება თავისთავად არ ამოქმედებს ცვლილებებს გაშვებულ პროცესზე.
+ეძებეთ დავალება 1-ის ანგარიშში check-ები `4.2.1` (`--anonymous-auth`) და `4.2.4` (`--read-only-port`) სექციაში `node`. `KubeletConfiguration`-ში (`/var/lib/kubelet/config.yaml`) მათ შეესაბამება `authentication.anonymous.enabled` და `readOnlyPort` - CIS მოითხოვს `authentication.anonymous.enabled: false` და `readOnlyPort: 0`. `authentication.anonymous.enabled` მდებარეობს ჩადგმულად, key-ის `authentication.anonymous` ქვეშ, და არა როგორც ცალკე top-level ველი `anonymous: false` - YAML-ის ჩაღრმავებები ყურადღებით შეამოწმეთ. config.yaml-ის შესწორების შემდეგ საჭიროა თავად kubelet-სერვისის გადატვირთვა (`systemctl restart kubelet`), ფაილის რედაქტირება თავისთავად არ ამოქმედებს ცვლილებებს გაშვებულ პროცესზე.
 </details>
 
 ---
@@ -220,7 +220,7 @@ HTTP→HTTPS redirect-ის შემოწმება არ არის ა
 
 | **7** | **Remediation cycle: კონკრეტული kube-bench FAIL-იდან PASS-მდე** |
 | :---: | :--- |
-| რას ვაკეთებთ | დავალება 1-ის ანგარიში მიმდინარე მდგომარეობის snapshot-ია; აქ საჭიროა ერთი კონკრეტული ჩავარდნილი ტესტის დაკავშირება მის გასწორებასთან. control-plane-ზე გაუშვით `kube-bench` სწორედ `--check 1.1.1`-ით (kube-apiserver-ის static Pod manifest-ის უფლებები; სალაბორატორიო ინფრასტრუქტურა განზრახ ადგენს mode `0644`-ს, `cis-1.12` მოითხოვს `600`-ს ან უფრო მკაცრს) და შეინახეთ გამოტანა **გასწორებამდე** `/var/work/tests/artifacts/7/before.txt`-ში - ის უნდა შეიცავდეს `[FAIL]`-ს ამ ტესტისთვის. გაასწორეთ ფაილის `/etc/kubernetes/manifests/kube-apiserver.yaml` წვდომის უფლება (`chmod 600`), შემდეგ ხელახლა გაუშვით იგივე `--check 1.1.1` და შეინახეთ გამოტანა `/var/work/tests/artifacts/7/after.txt`-ში - ის უნდა შეიცავდეს `[PASS]`-ს ამ check-ისთვის ერთი `[FAIL]`-ის გარეშე. |
+| რას ვაკეთებთ | დავალება 1-ის ანგარიში მიმდინარე მდგომარეობის snapshot-ია; აქ საჭიროა ერთი კონკრეტული ჩავარდნილი ტესტის დაკავშირება მის გასწორებასთან. control-plane-ზე გაუშვით `kube-bench` სწორედ `--check 1.1.1`-ით (kube-apiserver-ის static Pod manifest-ის უფლებები; სალაბორატორიო ინფრასტრუქტურა განზრახ ადგენს mode `0644`-ს, `cis-1.12` მოითხოვს `600`-ს ან უფრო მკაცრს) და შეინახეთ გამოტანა **გასწორებამდე** `/var/work/tests/artifacts/7/before.txt`-ში - ის უნდა შეიცავდეს `[FAIL]`-ს ამ ტესტისთვის. გაასწორეთ ფაილის `/etc/kubernetes/manifests/kube-apiserver.yaml` წვდომის უფლებები (`chmod 600`), შემდეგ ხელახლა გაუშვით იგივე `--check 1.1.1` და შეინახეთ გამოტანა `/var/work/tests/artifacts/7/after.txt`-ში - ის უნდა შეიცავდეს `[PASS]`-ს ამ check-ისთვის ერთი `[FAIL]`-ის გარეშე. |
 | მიღების კრიტერიუმები | `before.txt` შეიცავს სტრიქონს `[FAIL]` check `1.1.1`-ისთვის; ფაილის ფაქტობრივი უფლებები node-ზე გასწორების შემდეგ - ზუსტად `600`; `after.txt` შეიცავს `[PASS]`-ს check `1.1.1`-ისთვის და მისთვის არ შეიცავს `[FAIL]`-ს; kube-apiserver ჯანსაღი რჩება ცვლილების შემდეგ (fs-only შესწორება, კომპონენტი თავიდან არ იქმნება). |
 
 <details>
@@ -259,13 +259,13 @@ HTTP→HTTPS redirect-ის შემოწმება არ არის ა
 
 | **10** | **Remediation cycle: protect-kernel-defaults worker-node-ზე** |
 | :---: | :--- |
-| რას ვაკეთებთ | იგივე ხერხი, რაც დავალებებში 7-9, ახლა კლასტერის რეალურ worker-node-ზე (და არა control-plane-ზე), მაგრამ სხვა პროფილისთვის: დაფიქსირებული `cis-1.12` (გამოყენებული ამ ლაბში ყველგან) check protect-kernel-defaults-ს საერთოდ არ შეიცავს - CIS-მა ის ამ პროფილის ვერსიაში ამოიღო/გადანომრა, ხოლო `cis-1.12`-ში საკუთარი `4.2.6` სხვა check-ია (`--make-iptables-util-chains`, ნაგულისხმევად PASS). საჭირო check იმავე ID-ით არსებობს იმავე binary-ის უფრო ძველ პროფილში `cis-1.24` - გამოიყენეთ აშკარად `--benchmark cis-1.24 --check 4.2.6` მხოლოდ ამ დავალებისთვის. `control-plane`-ისგან განსხვავებით, `kube-bench` worker-node-ზე წინასწარ დაყენებული **არ არის** - დააყენეთ ის აქ თავად (რეალური install: ჩამოტვირთეთ იგივე დაფიქსირებული release, ამოაარქივეთ `binary` და `cfg`), და ნუ დააკოპირებთ მას სხვა ადგილიდან. შეინახეთ გამოტანა **გასწორებამდე** `/var/work/tests/artifacts/10/before.txt`-ში (უნდა შეიცავდეს `[FAIL]`-ს ტექსტით protect-kernel-defaults-ის შესახებ). kubeadm-ის მიერ დაგენერირებული `KubeletConfiguration` worker-node-ზე ველს `protectKernelDefaults` საერთოდ არ შეიცავს (უსაფრთხოებისთვის სახიფათო default `false`-ის ექვივალენტია) - დაამატეთ `protectKernelDefaults: true` ამ node-ის `/var/lib/kubelet/config.yaml`-ში, გადატვირთეთ kubelet, დაელოდეთ `Ready`-ს, შემდეგ ხელახლა გაუშვით იგივე check (იგივე `cis-1.24`-ით) და შეინახეთ `/var/work/tests/artifacts/10/after.txt` (უნდა შეიცავდეს `[PASS]`-ს). |
+| რას ვაკეთებთ | იგივე ხერხი, რაც დავალებებში 7-9, ახლა კლასტერის რეალურ worker-node-ზე (და არა control-plane-ზე), მაგრამ სხვა პროფილისთვის: დაფიქსირებული `cis-1.12` (გამოყენებული ამ ლაბში ყველგან) check protect-kernel-defaults-ს საერთოდ არ შეიცავს - CIS-მა ის ამ პროფილის ვერსიაში ამოიღო/გადაანომრა, ხოლო `cis-1.12`-ში საკუთარი `4.2.6` სხვა check-ია (`--make-iptables-util-chains`, ნაგულისხმევად PASS). საჭირო check იმავე ID-ით არსებობს იმავე binary-ის უფრო ძველ პროფილში `cis-1.24` - გამოიყენეთ აშკარად `--benchmark cis-1.24 --check 4.2.6` მხოლოდ ამ დავალებისთვის. `control-plane`-ისგან განსხვავებით, `kube-bench` worker-node-ზე წინასწარ დაყენებული **არ არის** - დააყენეთ ის აქ თავად (რეალური install: ჩამოტვირთეთ იგივე დაფიქსირებული release, ამოაარქივეთ `binary` და `cfg`), და ნუ დააკოპირებთ მას სხვა ადგილიდან. შეინახეთ გამოტანა **გასწორებამდე** `/var/work/tests/artifacts/10/before.txt`-ში (უნდა შეიცავდეს `[FAIL]`-ს ტექსტით protect-kernel-defaults-ის შესახებ). kubeadm-ის მიერ დაგენერირებული `KubeletConfiguration` worker-node-ზე ველს `protectKernelDefaults` საერთოდ არ შეიცავს (უსაფრთხოებისთვის სახიფათო default `false`-ის ექვივალენტია) - დაამატეთ `protectKernelDefaults: true` ამ node-ის `/var/lib/kubelet/config.yaml`-ში, გადატვირთეთ kubelet, დაელოდეთ `Ready`-ს, შემდეგ ხელახლა გაუშვით იგივე check (იგივე `cis-1.24`-ით) და შეინახეთ `/var/work/tests/artifacts/10/after.txt` (უნდა შეიცავდეს `[PASS]`-ს). |
 | მიღების კრიტერიუმები | `before.txt` შეიცავს `[FAIL] 4.2.6`-ს ტექსტით protect-kernel-defaults-ის შესახებ (და არა ნებისმიერ `4.2.6`-ს); worker-node-ის მოქმედ kubelet configuration-ში (`/configz`) არის `protectKernelDefaults: true`; `after.txt` შეიცავს `[PASS] 4.2.6`-ს იმავე ტექსტით, `[FAIL]`-ის გარეშე; worker-node `Ready`-ა გადატვირთვის შემდეგ. |
 
 <details>
 <summary>💡 მინიშნება დავალება 10-ისთვის</summary>
 
-იპოვეთ worker-node-ის სახელი `kubectl get nodes -l '!node-role.kubernetes.io/control-plane'`-ით - ეს არ არის control-plane და არც სამუშაო მანქანა (bastion), საიდანაც ბრძანებებს ასრულებთ. დააყენეთ `kube-bench` მასზე რეალური ბრძანებით (`curl` + `tar` + `install`), და არა control-plane-იდან ან worker PC-დან კოპირებით - control-plane-ისგან განსხვავებით, აქ ის განზრახ არ არის, რათა თავად დაყენების პროცესი ერთხელ გაიაროთ. არ დაგავიწყდეთ `--benchmark cis-1.24` (და არა `cis-1.12`, რომელიც დანარჩენ დავალებებში ყველგან გამოიყენება) - წინააღმდეგ შემთხვევაში `--check 4.2.6` იპოვის სხვა, უკვე გამავალ check-ს და დავალება არაფერს დაამტკიცებს. ველი `protectKernelDefaults` kubeadm-ის მიერ დაგენერირებულ `config.yaml`-ში ფიზიკურად არ არის, ამიტომ უბრალოდ ბოლოში მიუწერეთ, ჩასანაცვლებელ არსებულ სტრიქონს ნუ ეძებთ (დავალება 2-ში `readOnlyPort`-ისგან განსხვავებით). worker-node-ზე `systemctl restart kubelet`-ის შემდეგ დაელოდეთ მის `Ready`-ზე დაბრუნებას, სანამ check-ს ხელახლა გაუშვებთ.
+იპოვეთ worker-node-ის სახელი `kubectl get nodes -l '!node-role.kubernetes.io/control-plane'`-ით - ეს არ არის control-plane და არც სამუშაო მანქანა (bastion), საიდანაც ბრძანებებს ასრულებთ. დააყენეთ `kube-bench` მასზე რეალური ბრძანებით (`curl` + `tar` + `install`), და არა control-plane-იდან ან worker PC-დან კოპირებით - control-plane-ისგან განსხვავებით, აქ ის განზრახ არ არის, რათა თავად დაყენების პროცესი ერთხელ გაიაროთ. არ დაგავიწყდეთ `--benchmark cis-1.24` (და არა `cis-1.12`, რომელიც დანარჩენ დავალებებში ყველგან გამოიყენება) - წინააღმდეგ შემთხვევაში `--check 4.2.6` იპოვის სხვა, უკვე წარმატებულ check-ს და დავალება არაფერს დაამტკიცებს. ველი `protectKernelDefaults` kubeadm-ის მიერ დაგენერირებულ `config.yaml`-ში ფიზიკურად არ არის, ამიტომ უბრალოდ ბოლოში მიუწერეთ, ჩასანაცვლებელ არსებულ სტრიქონს ნუ ეძებთ (დავალება 2-ში `readOnlyPort`-ისგან განსხვავებით). worker-node-ზე `systemctl restart kubelet`-ის შემდეგ დაელოდეთ მის `Ready`-ზე დაბრუნებას, სანამ check-ს ხელახლა გაუშვებთ.
 </details>
 
 ---

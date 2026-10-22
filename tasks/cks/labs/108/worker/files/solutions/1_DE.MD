@@ -36,7 +36,7 @@ Warte, bis mindestens ein Deployment in `kyverno` `AVAILABLE > 0` hat.
 
 Erstelle eine `ValidatingPolicy` im Modus `Deny`. Die Regel prüft alle drei Listen von Containern -
 `containers`, `initContainers` und `ephemeralContainers`: Sonst lässt sich ein verbotenes Image leicht
-über einen init- oder ephemeral container einschleusen, während der Pod selbst admission trotzdem besteht.
+über einen init- oder ephemeral container einschleusen, während der Pod selbst die admission trotzdem besteht.
 
 ```yaml
 # deny-latest-tag.yaml
@@ -192,11 +192,13 @@ Prüfung ohne Erstellen eines Pods und ohne image pull. `docker.io` ist nur EIN 
 untrusted-Wert; prüfe, dass die policy tatsächlich eine ALLOWLIST ist (sie verbietet JEDE
 Registry außer den beiden erlaubten) und nicht einfach eine Denylist von `docker.io` mit dem buchstäblichen String -
 sonst gehen ein unqualified image, eine andere Drittanbieter-Registry oder ein ähnlich geschriebener Host leicht
-vorbei.
+an der policy vorbei.
 
 Positive controls müssen beide erlaubten Präfixe (`registry.k8s.io/` und
 `ghcr.io/cks-lab/`) in `containers`, `initContainers` und `ephemeralContainers` abdecken; beschränke
-keine der Registries nur auf gewöhnliche Container:
+keine der Registries nur auf gewöhnliche Container.
+
+Negative controls (jedes dieser Manifeste muss abgelehnt werden):
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -380,8 +382,8 @@ mutation policy beeinflusst die Wertung der Aufgaben 1-4, 6 und 7 nicht.
 
 Anders als in den Aufgaben 1-5 trifft hier die Entscheidung über das Image ein externes HTTPS-Backend über die
 API `ImageReview` und nicht ein CEL-Ausdruck innerhalb von Kyverno. Die Upstream-Dokumentation zu
-ImagePolicyWebhook verlangt ausdrücklich, dass die Backend-Verbindung TLS verwendet ("It is
-required that the backend communicate over TLS"), daher verwenden wir ein selbstsigniertes
+ImagePolicyWebhook verlangt ausdrücklich, dass die Backend-Verbindung TLS verwendet („It is
+required that the backend communicate over TLS“), daher verwenden wir ein selbstsigniertes
 Zertifikat und nicht HTTP.
 
 Das Backend ist auf der Arbeitsmaschine bereits vorbereitet:
@@ -491,7 +493,7 @@ ssh "$CP"
 sudo -i
 ```
 
-Erstelle auf der `control-plane` die admission config und die kubeconfig für das Backend. Die Pfade liegen auf der Platte der **control-plane
+Erstelle auf der `control-plane` die admission config und die kubeconfig für das Backend. Die Pfade liegen im Dateisystem der **control-plane
 selbst**:
 
 ```bash
@@ -591,10 +593,10 @@ kubectl get pod webhook-pinned-ok
 
 `ImagePolicyWebhook` verwendet das Backend aus `/opt/image-policy-backend/server.py`:
 In `default` und den übrigen Namespaces (außer `policy-108`) verbietet er explicit/implicit
-latest; `policy-108` kontrollieren vollständig die drei Kyverno-Policies aus den Aufgaben 2–4.
+latest; `policy-108` wird vollständig von den drei Kyverno-Policies aus den Aufgaben 2–4 kontrolliert.
 Das ist eine Lab-Isolation der Mechanismen und kein universelles production pattern.
 Die Benutzer-Annotation `alpha.image-policy.k8s.io/break-glass` gibt KEINE Erlaubnis:
-Das Weiterleiten von ImageReview-Annotations ist keine Prüfung der Authentizität.
+Das Weiterleiten von Annotationen an ImageReview ist keine Prüfung der Authentizität.
 
 `defaultAllow: false` bedeutet fail-closed: Wenn das Backend nicht verfügbar ist, werden neue Pods/Images
 verboten und nicht erlaubt. Prüfe das explizit - aber skaliere `image-policy-backend` NICHT auf 0 Replicas:

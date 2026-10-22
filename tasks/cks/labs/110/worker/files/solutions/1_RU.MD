@@ -290,8 +290,8 @@ ip route get $remote_ip
 # 10.110.2.172 dev ens5 src 10.110.1.x   <- интерфейс (ens5), не any / cilium_* / lxc* / veth*
 ```
 
-**Baseline: WireGuard выключен.** Временно отключаем WireGuard и повторяем ТОТ ЖЕ запрос с ТЕМ ЖЕ
-capture scope. В конце обязательно вернём `enable-wireguard: "true"`.
+**Baseline: WireGuard выключен.** Временно отключаем WireGuard и выполняем запрос с capture scope
+`host <remote-node-ip>`. В конце обязательно вернём `enable-wireguard: "true"`.
 
 ```bash
 # терминал 2

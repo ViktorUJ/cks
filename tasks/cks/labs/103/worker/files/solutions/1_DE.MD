@@ -3,7 +3,7 @@
 # Lab 103 - Referenzlösung
 
 > Die Befehle werden auf dem worker ausgeführt, sofern nicht ausdrücklich `control-plane` angegeben ist. Speichere vor dem Bearbeiten der
-> static Pod manifests Kopien. Das Kubelet bemerkt die Änderung der Dateien selbst und erstellt die
+> static Pod manifests Kopien. Das kubelet bemerkt die Änderung der Dateien selbst und erstellt die
 > entsprechenden static Pods neu; lösche sie nicht über die Kubernetes API.
 >
 > In der Prüfung sind `k` (`alias k=kubectl`) und die bash-completion dafür auf dem SSH-Host bereits eingerichtet -
@@ -16,7 +16,7 @@ k config use-context "$CTX"
 ssh control-plane hostname
 ```
 
-## Aufgabe 1. kube-bench Bericht
+## Aufgabe 1. kube-bench-Bericht
 
 `kube-bench` `0.16.0` ist auf der `control-plane` bereits installiert (wie in der echten Prüfung, wo
 das CIS-Benchmark-Tooling auf den Nodes schon vorhanden ist) - er muss nicht vom worker dorthin kopiert werden. Kubernetes
@@ -137,7 +137,7 @@ k get po -n kube-system -l component=kube-apiserver
 
 Erstelle eine minimale Anwendung und einen Service, erzeuge ein selbstsigniertes Zertifikat für
 den exakten DNS-Namen, erstelle dann das TLS Secret und den Ingress. Der Controller `ingress-nginx` ist
-in dieser Lab bereits installiert und Ready (lab-owned fixture, die Version ist im bootstrap festgelegt) - davon überzeugen wir uns,
+in diesem Lab bereits installiert und Ready (lab-owned fixture, die Version ist im bootstrap festgelegt) - davon überzeugen wir uns,
 bevor wir den Ingress erstellen.
 
 Kurze Ressourcennamen (`ns` = namespace, `deploy` = deployment, `svc` = service,
@@ -215,7 +215,7 @@ curl -v "http://secure.cks.local:${HTTP_NODEPORT}/"
 ```
 
 Dieser HTTP→HTTPS-Redirect ist eine echte Prüfungsfrage und keine künstliche Anforderung
-der Lab (siehe mock-Prüfung `tasks/cks/mock/04`, Aufgabe 4).
+des Labs (siehe mock-Prüfung `tasks/cks/mock/04`, Aufgabe 4).
 
 ## Aufgabe 5. TLS hardening kube-apiserver und etcd
 
@@ -234,7 +234,7 @@ k exec -n kube-system $(k get po -n kube-system -l component=etcd -o name) -- et
 Füge in beiden static Pod manifests die Parameter in den `command` ein. Beim kube-apiserver verlangt die Aufgabe
 BEIDE Flags, obwohl den tatsächlichen Schutz bei `VersionTLS13` gerade `--tls-min-version` bietet
 (Go wählt die TLS 1.3 cipher suites selbst, `--tls-cipher-suites` hat darauf keinen Einfluss - siehe Frage
-2 im Abschnitt "Prüfe dich vor dem Start"). `--tls-cipher-suites` wird trotzdem explizit benötigt - das ist
+2 im Abschnitt „Prüfe dich vor dem Start“). `--tls-cipher-suites` wird trotzdem explizit benötigt - das ist
 defense-in-depth: Wenn die Mindestversion später auf 1.2 abgeschwächt wird, werden schwache Chiffrensätze
 nicht von selbst aktiviert. Bei etcd (dort ist TLS 1.2 zulässig) schränkt `--cipher-suites` das Set
 bereits jetzt tatsächlich ein und nicht erst für die Zukunft.
@@ -315,7 +315,7 @@ grep -A1 '1.1.1' /var/work/tests/artifacts/7/before.txt
 # [FAIL] 1.1.1 Ensure that the API server pod specification file permissions ...
 ```
 
-Prüfe das tatsächliche Zugriffsrecht auf dem Node und korrigiere es auf `600` - das ist eine file-only
+Prüfe die tatsächlichen Zugriffsrechte auf dem Node und korrigiere sie auf `600` - das ist eine file-only
 Änderung, das kubelet erstellt den static Pod wegen einer Änderung der Rechte nicht neu, nur wegen einer Änderung des
 Inhalts des Manifests:
 
@@ -443,9 +443,9 @@ oben müssen `Running` zeigen.
 
 ## Aufgabe 10. Remediation cycle: protect-kernel-defaults auf dem worker-Node
 
-Derselbe Ansatz wie in den Aufgaben 7-9, jetzt auf dem ECHTEN worker-Node (nicht der control-plane), aber für ein
+Derselbe Ansatz wie in den Aufgaben 7-9, jetzt auf dem ECHTEN worker-Node (nicht auf der control-plane), aber für ein
 ANDERES Profil. Das festgelegte `kube-bench 0.16.0`/`cis-1.12` (in allen übrigen
-Aufgaben dieser Lab verwendet) enthält den check protect-kernel-defaults überhaupt nicht - CIS hat ihn ab dieser Version des Profils entfernt/
+Aufgaben dieses Labs verwendet) enthält den check protect-kernel-defaults überhaupt nicht - CIS hat ihn ab dieser Version des Profils entfernt/
 umnummeriert; das eigene `4.2.6` in `cis-1.12` ist ein
 ANDERER check (`--make-iptables-util-chains`, standardmäßig `PASS`, hat mit protect-kernel-defaults
 nichts zu tun). Der benötigte check mit derselben ID `4.2.6` existiert im älteren Profil
@@ -454,7 +454,7 @@ für diese eine Aufgabe.
 
 Anders als auf der control-plane ist `kube-bench` auf dem worker-Node NICHT vorinstalliert - installiere ihn
 hier selbst (echte Installation, keine Kopie von der control-plane oder dem worker PC): Lade dasselbe
-festgelegte Release von GitHub herunter, entpacke `binary` und `cfg` in das default `--config-dir`
+festgelegte Release von GitHub herunter, entpacke `binary` und `cfg` in das Standardverzeichnis für `--config-dir`
 (`/etc/kube-bench/cfg`), um dieses Flag nicht in jedem Befehl explizit angeben zu müssen:
 
 ```bash

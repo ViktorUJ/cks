@@ -44,7 +44,7 @@ Aufgaben, öffne die Referenzlösung erst nach einem eigenen Versuch oder bei Sc
 
 ## Ziel
 
-Lernen, sicher mit einem kubeconfig zu arbeiten, das mehrere Kontexte enthält, ein
+Lernen, sicher mit einem kubeconfig zu arbeiten, das mehrere contexts enthält, ein
 client certificate zu extrahieren und zu prüfen, ohne es zur Authentifizierung zu verwenden, und die exposure eines Service
 durch das Umschalten `NodePort` -> `ClusterIP` bewusst zu steuern.
 
@@ -52,7 +52,7 @@ durch das Umschalten `NodePort` -> `ClusterIP` bewusst zu steuern.
 
 | Komponente | Zweck |
 | --- | --- |
-| kubeconfig (`~/.kube/config`) | 4 context: 1 funktionierender (`cluster1-admin@cluster1`), 2 decoy (`staging-admin@staging`, `legacy-admin@legacy`), 1 mit echtem client certificate (`cluster9-admin@cluster1`) |
+| kubeconfig (`~/.kube/config`) | 4 contexts: 1 funktionierender (`cluster1-admin@cluster1`), 2 decoy (`staging-admin@staging`, `legacy-admin@legacy`), 1 mit echtem client certificate (`cluster9-admin@cluster1`) |
 | `cks-114` | Namespace deiner backend-Anwendung und des Service |
 | control-plane EC2 | Ein-Node-kubeadm-Cluster, CNI Calico |
 
@@ -79,14 +79,14 @@ durch das Umschalten `NodePort` -> `ClusterIP` bewusst zu steuern.
 | **3** | **Baseline: NodePort exposure** |
 | :---: | :--- |
 | Was wir tun | • Erstelle den Namespace `cks-114`.<br/>• Erstelle das Deployment `backend` (zum Beispiel `viktoruj/ping_pong:alpine` mit `SRV_PORT=80`, label `app=backend`).<br/>• Erstelle den Service `kubernetes-public` vom Typ `NodePort` auf Port 80, mit explizitem `nodePort: 30114`.<br/>• **Fasse** den Service `default/kubernetes` **nicht an**. |
-| Abnahmekriterien | • Das Backend ist tatsächlich erreichbar, sowohl vom worker (außerhalb des Clusters) über `<node-internal-ip>:30114` als auch innerhalb des Clusters über `kubernetes-public.cks-114.svc.cluster.local`.<br/>• `default/kubernetes` bleibt `ClusterIP`.<br/>• Aufgabe 4 macht denselben Service anschließend zu `ClusterIP`, daher ist der NodePort-Zustand zum Ende des Labs nicht mehr zu beobachten: Die historische NodePort-Phase wird durch zwei HTTP-200-Proben (vom worker und per DNS aus einem Pod), die Prüfung von Backend/EndpointSlice und einen Monitor bestätigt, der die UID von Service und Deployment speichert.<br/>• Führe zuerst Aufgabe 3 vollständig aus und warte auf die Datei `/var/lib/cks-lab114-checker/nodeport-phase-seen`, die der Monitor nach beiden erfolgreichen live-Proben erstellt; erst danach führe Aufgabe 4 aus. Die Datei ist die Bestätigung der historischen Phase für denselben Service/dasselbe Deployment. |
+| Abnahmekriterien | • Das Backend ist tatsächlich erreichbar, sowohl vom worker (außerhalb des Clusters) über `<node-internal-ip>:30114` als auch innerhalb des Clusters über `kubernetes-public.cks-114.svc.cluster.local`.<br/>• `default/kubernetes` bleibt `ClusterIP`.<br/>• Aufgabe 4 macht denselben Service anschließend zu `ClusterIP`, daher ist der NodePort-Zustand zum Ende des Labs nicht mehr zu beobachten: Die historische NodePort-Phase wird durch zwei HTTP-200-Proben (vom worker und per DNS aus einem Pod), die Prüfung von Backend/EndpointSlice und einen Monitor bestätigt, der die UID von Service und Deployment speichert.<br/>• Führe zuerst Aufgabe 3 vollständig aus und warte auf die Datei `/var/lib/cks-lab114-checker/nodeport-phase-seen`, die der Monitor nach beiden erfolgreichen Live-Proben erstellt; erst danach führe Aufgabe 4 aus. Die Datei ist die Bestätigung der historischen Phase für denselben Service/dasselbe Deployment. |
 | Prüfung | Vom worker (außerhalb des Clusters): `curl http://<node-internal-ip>:30114/` -> HTTP 200.<br/>Aus dem Cluster (temporärer Pod mit curl): `curl http://kubernetes-public.cks-114.svc.cluster.local/` -> HTTP 200. IP des Nodes: `kubectl get nodes -o wide`. |
 
 ---
 
 | **4** | **Reduce exposure: NodePort -> ClusterIP** |
 | :---: | :--- |
-| Was wir tun | • Ändere `kubernetes-public` auf den Typ `ClusterIP`.<br/>• Denke daran: Der API server lässt einen explizit gesetzten `nodePort` beim Typ `ClusterIP` nicht zu - zuverlässiger ist es, das Feld explizit zu entfernen (`kubectl edit svc kubernetes-public` und lösche die Zeile `nodePort`, oder ein JSON patch mit `op: remove` für `/spec/ports/0/nodePort`). |
+| Was wir tun | • Ändere `kubernetes-public` auf den Typ `ClusterIP`.<br/>• Denke daran: Der API server lässt einen explizit gesetzten `nodePort` beim Typ `ClusterIP` nicht zu - zuverlässiger ist es, das Feld explizit zu entfernen (`kubectl edit svc kubernetes-public` und lösche die Zeile `nodePort`, oder per JSON patch mit `op: remove` für `/spec/ports/0/nodePort`). |
 | Abnahmekriterien | • Der externe Pfad `<node-internal-ip>:30114` ist jetzt auf Transportebene blockiert (connection refused/timeout).<br/>• Der clusterinterne Pfad funktioniert weiterhin.<br/>• Der backend Pod bleibt Ready. |
 | Prüfung | Vom worker: `curl -m5 http://<node-internal-ip>:30114/` -> Verbindungsfehler (kein HTTP-Code).<br/>Aus dem Cluster: `curl http://kubernetes-public.cks-114.svc.cluster.local/` -> HTTP 200 wie zuvor.<br/>`kubectl -n cks-114 get svc kubernetes-public -o yaml` -> `type: ClusterIP`, bei keinem Port gibt es `nodePort`. |
 
@@ -97,7 +97,7 @@ check_result
 ```
 
 Der Checker prüft `current-context` und eine Live-Anfrage an die API darüber, extrahiert und analysiert unabhängig das
-Zertifikat `cluster9-admin`, prüft es gegen den ursprünglichen bootstrap fingerprint und vergleicht es mit deinem Artefakt und führt außerdem eine clusterinterne HTTP 200 probe über Service-DNS aus, prüft Deployment, EndpointSlice und die Unveränderlichkeit von `default/kubernetes`. Die historische NodePort-Phase bestätigt ein root-owned Monitor mit zwei live-Proben vor dem Umschalten des Service; im Zustand ClusterIP prüft der Checker live DNS und die transportseitige Ablehnung von NodePort.
+Zertifikat `cluster9-admin`, prüft es gegen den ursprünglichen bootstrap fingerprint und vergleicht es mit deinem Artefakt und führt außerdem eine clusterinterne HTTP-200-Probe über Service-DNS aus, prüft Deployment, EndpointSlice und die Unveränderlichkeit von `default/kubernetes`. Die historische NodePort-Phase bestätigt ein root-owned Monitor mit zwei Live-Proben vor dem Umschalten des Service; im Zustand ClusterIP prüft der Checker live DNS und die transportseitige Ablehnung von NodePort.
 
 Referenzlösung: [worker/files/solutions/1_DE.MD](worker/files/solutions/1_DE.MD).
 

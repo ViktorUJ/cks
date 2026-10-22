@@ -330,7 +330,7 @@ systemctl cat docker.socket                          # ... SocketGroup=root ... 
 `docker.socket` 不得包含 TCP `ListenStream`:
 
 ```bash
-ss -ltnp | grep dockerd                        # 輸出為空(docker.socket 產生的 systemd TCP socket 由下一行捕捉)
+ss -ltnp | grep dockerd                        # 輸出為空(docker.socket 產生的 systemd TCP socket 由下一行檢查)
 systemctl cat docker.socket | grep ListenStream # 只有 /run/docker.sock(以及空的重設)
 stat -c '%U %G %a' /var/run/docker.sock         # root root 660
 sudo -u developer docker ps                     # permission denied
@@ -361,9 +361,9 @@ ssh docker-host 'if sudo -u developer docker ps >/dev/null 2>&1; then echo "deve
 阻止重新載入。這兩個指令都作用在
 `modprobe` 層級(alias resolution 與明確的 `modprobe sctp`)，消除一般的載入路徑；
 它們不能取代 kernel-level 的強制執行(`insmod` 直接透過 syscall 插入模組，
-不讀取 `modprobe.d`，而 `modprobe --ignore-install` 在同等的
-root 存取權下可以繞過 `install`)- 對這個實驗來說，重要的是消除預期的自動載入路徑，而不是
-模擬防範已經在節點上擁有 root 的使用者。
+不讀取 `modprobe.d`，而 `modprobe --ignore-install` 在主機上具備
+root 存取權時可以繞過 `install`)- 對這個實驗來說，重要的是消除預期的自動載入路徑，而不是
+提供針對已經在節點上擁有 root 的使用者的防護。
 
 **`modprobe -r sctp` 在已經在運作的叢集上可能無法成功** - 這是預期的，
 不是學員的錯誤。協定的核心模組(包括 `sctp`)會對載入模組當時已存在的每個 netns

@@ -60,7 +60,7 @@ kubeadm-კლასტერზე, WireGuard encryption-ის ჩართვ
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |       რას ვაკეთებთ       | • დააყენეთ `1.20.1` ვერსიის Cilium agent/chart worker-ზე დაყენებული `cilium` CLI ვერსიით `v0.19.7`, `kubeProxyReplacement=true`-ით და ცხადად მითითებული `k8sServiceHost`/`k8sServicePort`-ით, რომლებიც ნამდვილ API server-ზე მიუთითებს (არა Service ClusterIP-ზე - kube-proxy-ის გარეშე ტრაფიკი ClusterIP `kubernetes.default`-ზე API server-მდე არ აღწევს, სანამ თავად Cilium არ ამუშავდება) |
 | მიღების კრიტერიუმები | • `KubeProxyReplacement: True/Strict` (აგენტის `cilium-dbg status`-ში)<br/>• Node ხდება `Ready`<br/>• ClusterIP Service მისაწვდომია kube-proxy-ის გარეშე |
-|        შემოწმება        | `cilium status --wait`, `kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status \| grep KubeProxyReplacement`, შემდეგ `kubectl get nodes` -> `Ready`. სატესტო Pod-იდან: `curl https://kubernetes.default.svc.cluster.local/` უნდა მიიღოს HTTP response (და არა connection error). |
+|        შემოწმება        | `cilium status --wait`, `kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status \| grep KubeProxyReplacement`, შემდეგ `kubectl get nodes` -> `Ready`. სატესტო Pod-იდან: `curl https://kubernetes.default.svc.cluster.local/`-მა უნდა მიიღოს HTTP response (და არა connection error). |
 
 ---
 

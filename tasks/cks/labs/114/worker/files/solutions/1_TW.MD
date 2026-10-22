@@ -137,7 +137,7 @@ external HTTP:000
 in-cluster HTTP:200
 ```
 
-`kubernetes-public:30114` 不再被節點上的 kube-proxy 監聽(transport deny)；透過 Service DNS 的
+`kubernetes-public:30114` 不再由節點上的 kube-proxy 提供服務(transport deny)；透過 Service DNS 的
 叢集內部路徑沒有退化。
 
 ```bash

@@ -286,7 +286,7 @@ k delete clusterrole lab104-anonymous-debug-access
 ```
 
 取り消しは、まさに認証されていない identity (`system:anonymous` + グループ `system:unauthenticated`、
-それ以外は何もなし) の名前による negative control で、`SubjectAccessReview` を通じて確認します -
+それ以外は何もなし) として行う negative control で、`SubjectAccessReview` を通じて確認します -
 これは admin コンテキストが作成するため、グループのリストを
 人為的に拡張する必要はありません：
 
@@ -315,7 +315,7 @@ done
 認証されていないリクエストはそのグループに含まれず、チェックは本物の
 anonymous identity を反映しなくなります。namespace ごとに個別に確認するのは、
 RoleBinding はそれ自身の namespace でのみ有効だからです：cluster-wide な紐づけがないことは、
-ローカルな紐づけがないことの証明にはならず、受け入れ基準はどの namespace でもアクセスを禁止しています。
+ローカルな紐づけがないことの証明にはならず、受け入れ基準は、どの namespace でもアクセスがないことを要求しています。
 
 最後に `check_result` を実行します。
 
@@ -341,7 +341,7 @@ k exec -n security-104 app-vulnerable -- cat /proc/1/environ \
 read-only です；アプリケーションのプロセス自体もこの UID で起動する必要があり、そうでなければ
 ファイルを読み取れません。
 
-このフィールドは変更不可です；Pod は削除して、同じ名前で作り直す必要があります。ここでも、
+Pod のほとんどのフィールド (`volumes` を含む) は変更不可であるため、Pod は削除して、同じ名前で作り直す必要があります。ここでも、
 YAML 全体を書くより、`--dry-run` で骨組みを生成して `vim` で volume を追記する方が簡単です：
 
 ```bash
@@ -605,7 +605,7 @@ k get po -n kube-system -l component=kube-apiserver
 
 作業マシンに戻り (管理者 `cluster1-admin` として)、危険な紐づけを作成します -
 これは `build-agent` による escalation の試み**ではなく** (課題 7 の後、
-彼にはそのための実際の経路はもうありません)、管理者の行為をモデル化したもので、
+`build-agent` にはそのための実際の経路はもうありません)、管理者の行為をモデル化したもので、
 audit log は、それを実際に誰が行い、誰に権限が付与されたのかについての
 再現可能な evidence として捕捉する必要があります：
 

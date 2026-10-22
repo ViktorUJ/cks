@@ -35,7 +35,7 @@ Docker daemon 以 root 權限執行，而它的 API 在沒有 TLS client certifi
 </details>
 
 <details>
-<summary>4. 為什麼即使 secret 從未寫入磁碟，行程的 core dump 仍然可能洩漏 secret?</summary>
+<summary>4. 為什麼即使 secret 從未寫入磁碟，行程的 core dump 仍然可能洩漏 secret？</summary>
 
 Core dump 是行程在 crash 當下的記憶體映像，它**可能**包含解密後的變數值、private key 與以明文保存的 token。這不保證是行程的全部記憶體：映射的集合取決於 `/proc/<pid>/coredump_filter`，而個別區域可能被排除，例如透過 `MADV_DONTDUMP`。因此，即使應用程式從不明確地把 secret 寫入檔案，crash dump 也可能把存在於已納入映射中的 secret 儲存到磁碟上可讀取的檔案裡。
 </details>
@@ -173,7 +173,7 @@ Kubernetes manifests。
 ---
 | **6** | **關閉 `docker-host` 上對 Docker daemon 的不安全存取** |
 | :---: | :--- |
-| 要做什麼 | • 在單獨的 `docker-host` 上，停止透過 TCP/2375 發布 Docker API：從學習用的 systemd override 中移除 `-H tcp://...`，但保留僅透過 unix-socket 的存取。<br/>• 把 `/var/run/docker.sock` 設定為 `root:root`,mode 為 `660`；為了在 restart 之後保持，請透過 `docker.socket` override 設定。<br/>• 把 `developer` 從 `docker` 群組中移除。<br/>• 修改之後，務必執行 `sudo systemctl daemon-reload && sudo systemctl restart docker.socket && sudo systemctl restart docker.service` - 這證明設定能撐過 daemon 的重新啟動，而不只是暫時符合預期的狀態。<br/>• restart 之後，確認 Docker 確實在運作(`sudo docker version`)，而不只是被停止了。 |
+| 要做什麼 | • 在單獨的 `docker-host` 上，停止透過 TCP/2375 發布 Docker API：從學習用的 systemd override 中移除 `-H tcp://...`，但保留僅透過 unix-socket 的存取。<br/>• 把 `/var/run/docker.sock` 設定為 `root:root`,mode 為 `660`；為了在 restart 之後仍然有效，請透過 `docker.socket` override 設定。<br/>• 把 `developer` 從 `docker` 群組中移除。<br/>• 修改之後，務必執行 `sudo systemctl daemon-reload && sudo systemctl restart docker.socket && sudo systemctl restart docker.service` - 這證明設定能撐過 daemon 的重新啟動，而不只是暫時符合預期的狀態。<br/>• restart 之後，確認 Docker 確實在運作(`sudo docker version`)，而不只是被停止了。 |
 | 驗收標準 | • **restart 之後 Docker 在運作**：在 `daemon-reload` + restart 之後，`docker.service` 與 `docker.socket` 處於 `active` 狀態，而 `sudo docker version`/`sudo docker info` 成功結束(positive control - Docker 確實在運作，而不只是「被關閉了，所以 2375 是關閉的」)。<br/>• **沒有 TCP API**:TCP/2375 上沒有 listener。restart 之後，Docker API 在任何埠上都沒有任何 TCP listener:effective `docker.service` 不包含 TCP `-H/--host`，而 `docker.socket` 不包含 TCP `ListenStream`；唯一的 API endpoint 是 Unix socket `/var/run/docker.sock`。<br/>• **Socket:**`stat -c '%U %G %a' /var/run/docker.sock` 回傳 `root root 660`；持久的 `docker.service`/`docker.socket` override(透過 `systemctl cat`)不包含 `-H tcp://`，並設定 `SocketGroup=root`/`SocketMode=0660`。<br/>• **使用者 `developer`**：不屬於 `docker` 群組，而 `sudo -u developer docker ps` 以存取錯誤結束。<br/>• **Artifacts**：建立 `/var/work/tests/artifacts/6/docker-tcp.txt`、`/var/work/tests/artifacts/6/docker-socket.txt`、`/var/work/tests/artifacts/6/developer-access.txt`，分別包含 `tcp/2375: closed`、`root root 660`、`developer docker ps: denied` 這幾行。 |
 
 <details>

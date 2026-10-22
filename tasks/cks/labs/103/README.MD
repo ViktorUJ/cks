@@ -7,7 +7,7 @@
 In this lab you configure a two-node Kubernetes cluster (control-plane +
 worker) as a security engineer: you run `kube-bench` (you install it yourself on the worker node) and, based on its findings
 (not from memory), fix insecure parameters of the control-plane components and of the kubelet
-on both nodes, publish an Ingress over TLS only, restrict the control-plane TLS, and
+on both nodes, publish an Ingress over TLS only, restrict TLS on the control plane, and
 confirm the integrity of the installed Kubernetes binaries.
 
 This is not a repetition of the basic Kubernetes setup from CKA. What matters here are the places where
@@ -220,7 +220,7 @@ Download the official file `kubelet.sha256`/`kubectl.sha256` from `https://dl.k8
 
 | **7** | **Remediation cycle: from a specific kube-bench FAIL to PASS** |
 | :---: | :--- |
-| What to do | The task 1 report is a snapshot of the current state; here you need to connect one specific failed test with its fix. On the control-plane run `kube-bench` with exactly `--check 1.1.1` (permissions of the kube-apiserver static Pod manifest; the lab infrastructure deliberately sets mode `0644`, `cis-1.12` requires `600` or stricter) and save the output **before** the fix in `/var/work/tests/artifacts/7/before.txt` - it must contain `[FAIL]` for this test. Fix the access permission of the file `/etc/kubernetes/manifests/kube-apiserver.yaml` (`chmod 600`), then run the same `--check 1.1.1` again and save the output in `/var/work/tests/artifacts/7/after.txt` - it must contain `[PASS]` without a single `[FAIL]` for this check. |
+| What to do | The task 1 report is a snapshot of the current state; here you need to connect one specific failed test with its fix. On the control-plane run `kube-bench` with exactly `--check 1.1.1` (permissions of the kube-apiserver static Pod manifest; the lab infrastructure deliberately sets mode `0644`, `cis-1.12` requires `600` or stricter) and save the output **before** the fix in `/var/work/tests/artifacts/7/before.txt` - it must contain `[FAIL]` for this test. Fix the permissions of the file `/etc/kubernetes/manifests/kube-apiserver.yaml` (`chmod 600`), then run the same `--check 1.1.1` again and save the output in `/var/work/tests/artifacts/7/after.txt` - it must contain `[PASS]` without a single `[FAIL]` for this check. |
 | Acceptance criteria | `before.txt` contains a `[FAIL]` line for the check `1.1.1`; the actual file permissions on the node after the fix are exactly `600`; `after.txt` contains `[PASS]` for the check `1.1.1` and does not contain `[FAIL]` for it; kube-apiserver stays healthy after the change (an fs-only fix, the component is not recreated). |
 
 <details>

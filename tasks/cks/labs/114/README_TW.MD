@@ -4,7 +4,7 @@
 
 ## 說明
 
-發給學員的 kubeconfig 包含多個 contexts：可運作的 `cluster1-admin@cluster1`,
+發給學員的 kubeconfig 包含多個 context：可運作的 `cluster1-admin@cluster1`,
 以及兩個刻意無法運作的(`staging-admin@staging`、`legacy-admin@legacy`)，它們指向不存在的
 API server。登入之後 `current-context` 立刻被設為無法運作的 `staging-admin@staging` - 這是
 刻意重現考試中的真實情況：考生拿到帶有多個

@@ -356,7 +356,7 @@ contrario: `0 <host-uid-distinto-de-cero> <rango-per-pod>`.
 
 ## 8. `seccompDefault: true` en el kubelet
 
-Todos los Pod anteriores indicaban explícitamente `seccompProfile`. Aquí comprobamos el node-level baseline:
+Los Pod anteriores con un perfil seccomp (tareas 4–6) indicaban explícitamente `seccompProfile`. Aquí comprobamos el node-level baseline:
 si el desarrollador olvida este campo, el kubelet debe aplicar `RuntimeDefault` por sí mismo, y no
 dejar el proceso `Unconfined`. Editamos la configuración del kubelet en el nodo:
 

@@ -3,7 +3,7 @@
 # Lab 109 - solution de référence : encryption at rest pour Secret
 
 > Nous travaillons comme à l'examen : les commandes `kubectl` s'exécutent sur la machine de travail, et les opérations sur le
-> nœud (etcd, fichiers et manifest du control-plane) - sur le control-plane lui-même : entrez-y avec
+> nœud (etcd, fichiers et manifest du control-plane) - sur le control-plane lui-même : connectez-vous-y avec
 > `ssh control-plane`, exécutez les commandes et sortez (`exit`). C'est **uniquement un cluster pédagogique
 > mono-nœud** ; en production, on ne donne pas aux utilisateurs d'accès direct à etcd.
 
@@ -328,7 +328,7 @@ Pour KMS v2, l'API server utilise un seed/DEK chiffré au niveau de l'API server
 dérive les clés de chiffrement des enregistrements individuels. Le plugin protège le seed via un KEK externe ;
 c'est en cela que KMS v2 diffère de KMS v1 per-resource. Etcd conserve le ciphertext des ressources et
 les métadonnées nécessaires au déchiffrement. Le KEK reste dans le KMS externe, et non dans etcd ni dans Git. Le schéma de
-configuration dépend de la version de Kubernetes et du plugin, mais en principe il faut le provider `kms`,
+configuration dépend de la version de Kubernetes et du plugin, mais il faut dans tous les cas le provider `kms`,
 un nom stable de key et l'endpoint du socket. Ne copiez pas l'endpoint d'exemple d'un cluster tiers :
 comparez le format de KMS v2 et les exigences de health/ACL avec la documentation de votre version de Kubernetes.
 
@@ -374,4 +374,4 @@ Quand la migration de tous les Secret est confirmée, le backup fait, l'API lit 
 renvoie `ok`, supprimez l'ancienne key de la liste, redémarrez l'API server et répétez les
 vérifications. Ne supprimez pas l'ancienne key plus tôt : les enregistrements non réécrits avec le nouveau provider deviendront
 illisibles. Pour KMS v2, l'ordre est le même : d'abord le nouveau KEK/plugin primary, puis le
-re-encryption, la vérification et ce n'est qu'après la migration qu'on retire l'ancien KEK de l'exploitation.
+re-encryption, la vérification et, seulement après la migration, le retrait de l'ancien KEK de l'exploitation.

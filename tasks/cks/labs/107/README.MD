@@ -79,7 +79,7 @@ check_result
 <details>
 <summary>🔍 Self-check before `check_result`</summary>
 
-First the baseline - BEFORE setting the labels make sure that the same insecure manifest
+First the baseline - BEFORE setting the labels, make sure that the same insecure manifest
 passes (otherwise it is unclear whether the denial is caused by your enforce label or by something else):
 
 ```bash
@@ -151,7 +151,7 @@ There are four separate labels - it is easy to forget one of them (especially th
 <details>
 <summary>🔍 Self-check before `check_result`</summary>
 
-Baseline - BEFORE setting the labels a violating manifest must pass without a PSA warning
+Baseline - BEFORE setting the labels, a violating manifest must pass without a PSA warning
 (the namespace is not yet observed):
 
 ```bash
@@ -214,7 +214,7 @@ If the Pod was NOT created - check whether you accidentally set the `enforce` la
 <summary>🔍 Self-check before `check_result`</summary>
 
 This task effectively repeats the self-check of task 3, but with a persistent Pod. After
-creating `baseline-audit-sample` make sure that it really exists and is
+creating `baseline-audit-sample`, make sure that it really exists and is
 `Running`/`Pending` (was not rejected):
 
 ```bash
@@ -257,7 +257,7 @@ The test Pod for this task must be FULLY PSA-compatible (all the fields from tas
 <details>
 <summary>🔍 Self-check before `check_result`</summary>
 
-Baseline - BEFORE creating the VAP/Binding the same PSA-compatible Pod without the automount opt-out
+Baseline - BEFORE creating the VAP/Binding, the same PSA-compatible Pod without the automount opt-out
 must pass (PSA itself does not reject it, `automountServiceAccountToken` is not part
 of PSS):
 
@@ -325,7 +325,7 @@ EOF
 # 'require-no-automount-token-binding' denied request: ...
 ```
 
-With the same PSA-compatible manifest set `automountServiceAccountToken: false` - the request
+With the same PSA-compatible manifest, set `automountServiceAccountToken: false` - the request
 must pass:
 
 ```bash
@@ -428,13 +428,13 @@ echo "exit code in psa-observe-107: $?"
 
 | **7** | **Controller-driven admission denial: diagnostics via ReplicaSet events** |
 | :---: | :--- |
-| What to do | In the empty namespace `psa-controller-107` create a Deployment `controller-app` (label `app=controller-app`, replicas=1) with a simple Pod template without hardening (for example `busybox:1.36`, `sleep 3600`, without `securityContext`) - it must start successfully, PSA does not interfere yet. Then enable `pod-security.kubernetes.io/enforce=restricted` and `enforce-version=v1.36` on this namespace (the already existing Pod keeps running - PSA does not touch already created objects). Delete the current Pod: the ReplicaSet will try to create a replacement, and now admission will reject it. Check the reason via `kubectl -n psa-controller-107 describe rs` and `kubectl -n psa-controller-107 get events` - there will be a `FailedCreate` with the text `violates PodSecurity "restricted:v1.36"`. Fix the Pod template of the Deployment (add the same hardening fields as in task 2: non-root, `seccompProfile: RuntimeDefault`, `capabilities.drop: [ALL]`, `allowPrivilegeEscalation: false`) and wait until the ReplicaSet successfully creates a new, passing Pod. |
+| What to do | In the empty namespace `psa-controller-107` create a Deployment `controller-app` (label `app=controller-app`, replicas=1) with a simple Pod template without hardening (for example `busybox:1.36`, `sleep 3600`, without `securityContext`) - it must start successfully; PSA does not interfere yet. Then enable `pod-security.kubernetes.io/enforce=restricted` and `enforce-version=v1.36` on this namespace (the already existing Pod keeps running - PSA does not touch already created objects). Delete the current Pod: the ReplicaSet will try to create a replacement, and now admission will reject it. Check the reason via `kubectl -n psa-controller-107 describe rs` and `kubectl -n psa-controller-107 get events` - there will be a `FailedCreate` with the text `violates PodSecurity "restricted:v1.36"`. Fix the Pod template of the Deployment (add the same hardening fields as in task 2: non-root, `seccompProfile: RuntimeDefault`, `capabilities.drop: [ALL]`, `allowPrivilegeEscalation: false`) and wait until the ReplicaSet successfully creates a new, passing Pod. |
 | Acceptance criteria | The namespace has `restricted:v1.36` enforced; the Pod template in the Deployment fully complies with PSS `restricted`; after deleting the current Pod the ReplicaSet really creates a new Ready Pod under the current enforce mode (not just "the object exists" - this is checked by a live deletion and recreation). |
 
 <details>
 <summary>💡 Hint for task 7</summary>
 
-The order matters: first a Deployment without hardening (it passes, PSA is not enforcing yet), then the
+The order matters: first a Deployment without hardening (it passes; PSA is not enforcing yet), then the
 enforce=restricted label on the namespace (the existing Pod is not affected), then `kubectl
 delete pod -l app=controller-app` - this is where the ReplicaSet runs into the admission deny.
 If you do not delete the Pod manually, you will not see the denial at all until some reschedule

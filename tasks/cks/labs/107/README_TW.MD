@@ -251,7 +251,7 @@ kubectl get namespace psa-restricted-107 psa-observe-107 --show-labels
 <details>
 <summary>💡 任務 6 的提示</summary>
 
-這個任務的測試 Pod 必須「完全」相容於 PSA(任務 2 的所有欄位)，只缺少 `automountServiceAccountToken: false` - 如果測試 Pod 同時違反 PSS 與你新的 policy，你就無法證明是「你的」policy 起了作用，而不是內建的 PSA。沒有 `matchResources.namespaceSelector` 的 `ValidatingAdmissionPolicyBinding` 會套用到「整個」叢集 - 務必把 scope 精確地限制在一個 namespace `psa-restricted-107`(例如透過 `matchLabels: {kubernetes.io/metadata.name: psa-restricted-107}`)，而不是透過帶有多個值的 `matchExpressions`，其中 `psa-restricted-107` 只是幾個符合的 namespace 之一：如果你的 selector 不小心也比對到 `psa-observe-107`，同樣的規則就會在那裡意外地生效。
+這個任務的測試 Pod 必須「完全」相容於 PSA(任務 2 的所有欄位)，只缺少 `automountServiceAccountToken: false` - 如果測試 Pod 同時違反 PSS 與你新的 policy，你就無法證明是「你的」policy 起了作用，而不是內建的 PSA。沒有 `matchResources.namespaceSelector` 的 `ValidatingAdmissionPolicyBinding` 會套用到「整個」叢集 - 務必把 scope 精確地限制在一個 namespace `psa-restricted-107`(例如透過 `matchLabels: {kubernetes.io/metadata.name: psa-restricted-107}`)，而不是透過帶有多個值的 `matchExpressions`，其中 `psa-restricted-107` 只是幾個符合的 namespace 之一：如果你的 selector 不小心也比對到 `psa-observe-107`，同一條規則就會在那裡意外地生效。
 </details>
 
 <details>
@@ -390,7 +390,7 @@ EOF
 # 'require-no-automount-token-binding' denied request: ...
 ```
 
-最後，也是最重要的 - 檢查 scope 的「邊界」，而不只是 denial 的事實：同樣的
+最後，也是最重要的 - 檢查 scope 的「邊界」，而不只是 denial 的事實：同一個
 manifest(沒有 automount opt-out)，但在 namespace `psa-observe-107` 中，必須「通過」- 如果
 它也被拒絕，表示你的 `namespaceSelector` 比對到的不只一個 namespace:
 

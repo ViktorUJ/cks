@@ -68,7 +68,7 @@ cilium status --wait
 kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status | grep Encryption
 ```
 
-> `cilium upgrade` 只更改 ConfigMap:agent 在重新啟動之後才會套用 `encryption.*`
+> `cilium upgrade` 只更改 ConfigMap：agent 在重新啟動之後才會套用 `encryption.*`
 > (在那之前是 `Encryption: Disabled`)。
 
 ```
@@ -95,7 +95,7 @@ api HTTP:403
   `spire-data-spire-server-0` 永遠是 `Pending`，而 `spire-server-0` 也是 `Pending`
   (對實驗來說暫時性的儲存就足夠了)。
 - `install.server.securityContext.runAsUser=0` - 映像 `spire-server` 以 uid 1000 啟動，
-  無法在 `root:755` 的 hostPath 目錄中建立 `api.sock`；伺服器會悄悄地結束
+  無法在 `root:755` 的 hostPath 目錄中建立 `api.sock`；伺服器會悄悄地不啟動自己的
   endpoint，並被 liveness-probe 殺掉(`cilium-init` 中的 `Waiting for spire-server to start...`)。
 
 ```bash
@@ -120,8 +120,8 @@ cilium-spire   spire-agent-xxxxx    1/1     Running   0    2m
 cilium-spire   spire-server-0       2/2     Running   0    2m
 ```
 
-SPIRE 的 Pod 位於 namespace `cilium-spire`。安裝之後請立刻重新啟動 Cilium,
-讓 agent 與 operator 在已經運作的 SPIRE 中重新註冊 identities:
+SPIRE 的 Pod 位於 namespace `cilium-spire`。安裝之後請立刻重新啟動 Cilium，
+讓 agent 與 operator 在已經運作的 SPIRE 中重新註冊 identities：
 
 ```bash
 kubectl -n kube-system rollout restart deploy/cilium-operator ds/cilium
@@ -176,7 +176,7 @@ ciliumnetworkpolicy.cilium.io/backend-auth-required created
 
 ## 6. Positive/negative control
 
-負向對照(negative control)是 `app-115` 中的**單獨 Pod**:Pod 對它自己的流量(包括
+負向對照(negative control)是 `app-115` 中的**單獨 Pod**：Pod 對它自己的流量(包括
 透過 Service)Cilium 永遠放行，因此在 `backend` 內做 `exec` 什麼也證明不了。
 
 ```bash

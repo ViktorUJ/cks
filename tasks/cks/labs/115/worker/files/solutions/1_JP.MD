@@ -97,7 +97,7 @@ api HTTP:403
   (実習には一時的なストレージで十分です)。
 - `install.server.securityContext.runAsUser=0` - イメージ `spire-server` は uid 1000 で起動し、
   `root:755` の hostPath ディレクトリに `api.sock` を作成できません；サーバーは黙って
-  endpoint を終了し、liveness プローブによって kill されます (`cilium-init` の `Waiting for spire-server to start...`)。
+  endpoint を起動せず、liveness プローブによって kill されます (`cilium-init` の `Waiting for spire-server to start...`)。
 
 ```bash
 cilium upgrade --version 1.20.1 \

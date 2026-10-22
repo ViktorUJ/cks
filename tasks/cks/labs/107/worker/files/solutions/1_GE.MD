@@ -201,12 +201,12 @@ kubectl apply -f require-no-automount-token.yaml
 kubectl get validatingadmissionpolicy,validatingadmissionpolicybinding
 ```
 
-დაამტკიცეთ სამივე მდგომარეობა server-side dry-run-ით, მუდმივი Pod-ის შენახვის გარეშე. Pod ველის
+დაამტკიცეთ სამივე მდგომარეობა server-side dry-run-ით, მუდმივი Pod-ის შენახვის გარეშე. Pod-მა ველის
 გარეშე უნდა მიიღოს DENY policy + binding-ის ზუსტი წყვილისგან, `false` უნდა გაიაროს, ხოლო
 `true` უნდა მიიღოს DENY იმავე წყვილისგან. პირველი Pod
 სრულად შეესაბამება PSA `restricted`-ს (non-root, seccomp, `allowPrivilegeEscalation:
 false`, `capabilities.drop: ["ALL"]`) - PSA თავად მიიღებდა მას, ამიტომ უარყოფა
-სწორედ ახალი policy-სგან უნდა მოვიდეს, და არა `violates PodSecurity`-ისგან:
+სწორედ ახალი policy-სგან უნდა მოვიდეს, და არა `violates PodSecurity`-სგან:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'YAML'

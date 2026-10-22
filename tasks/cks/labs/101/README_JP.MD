@@ -119,7 +119,7 @@ time_left
 |           **7**           | **hostNetwork の観察** |
 | :-----: | :----- |
 |       やること       | イメージ `curlimages/curl:8.11.1`、label `app=frontend`、`spec.hostNetwork=true` を持つ `hostnetwork-probe` を作成します。通常の frontend Pod で使ったのと同じ IMDS curl を、この Pod から実行します。実際の観察結果を Task 5 と比較します。補助的な artifact ファイルを作成する必要はありません。 |
-| 受け入れ基準 | Pod が Ready、`hostNetwork=true`、実際の IMDS probe が実行されている。hostNetwork について、普遍的な期待結果は想定されない：挙動は CNI とノードの構成に依存します。 |
+| 受け入れ基準 | Pod が Ready、`hostNetwork=true`、実際の IMDS probe が実行されている。hostNetwork について、普遍的な期待結果は想定されない：挙動は CNI とノードの構成に依存する。 |
 |        検証        | `hostNetwork: true` を確認し、続いて bounded IMDS curl (`-m 5`) と `echo $?` を実行します。実際の観察結果を、Task 5 の通常の Pod と比較します。 |
 
 ## 検証

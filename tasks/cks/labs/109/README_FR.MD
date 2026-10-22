@@ -22,7 +22,7 @@ Encryption at rest protège contre un storage compromise : supposons qu'un attaq
 
 Après l'activation de l'encryption at rest, les tâches 2–4 réduisent le blast radius d'un tel accès : les données lues directement ne doivent pas révéler le Secret. Ce n'est pas une protection universelle ni un substitut au contrôle d'accès à l'API.
 
-Si l'attaquant a un accès légitime à l'API avec des droits de lecture des Secret, encryption at rest ne protège pas de cette menace : l'API renverra la valeur après déchiffrement. C'est pourquoi la tâche 5 restreint séparément RBAC et automount, réduisant le blast radius de l'identity d'un workload ayant de tels droits.
+Si l'attaquant a un accès légitime à l'API avec des droits de lecture des Secret, l'encryption at rest ne protège pas contre cette menace : l'API renverra la valeur après déchiffrement. C'est pourquoi la tâche 5 restreint séparément RBAC et automount, réduisant le blast radius de l'identity d'un workload ayant de tels droits.
 
 ## Testez-vous avant de commencer
 
@@ -41,7 +41,7 @@ Les providers dans `EncryptionConfiguration` sont essayés dans l'ordre pour LIR
 <details>
 <summary>3. Pourquoi ne peut-on pas simplement supprimer l'ancienne clé de chiffrement immédiatement après avoir ajouté la nouvelle ?</summary>
 
-Les enregistrements existants dans etcd restent chiffrés avec l'ANCIENNE clé tant qu'ils ne sont pas réécrits explicitement (re-encryption). Si vous retirez l'ancienne clé de l'`EncryptionConfiguration` active avant que tous les enregistrements aient été réécrits avec la nouvelle, l'API server ne pourra pas déchiffrer les anciens enregistrements restants via la provider chain actuelle - ils deviendront illisibles jusqu'à ce que l'ancienne clé soit remise dans la configuration. Retirer la clé de la config ne détruit pas physiquement le key material : si l'ancienne clé conservée est de nouveau ajoutée à la provider chain, l'accès est rétabli. Une perte irréversible de données ne se produit que si le key material lui-même est réellement perdu ou détruit (par exemple, la clé n'a été enregistrée nulle part avant la suppression). L'ordre : ajouter la nouvelle clé en premier → réécrire tous les Secret → confirmer que tous les enregistrements utilisent la nouvelle clé → conserver l'ancienne clé dans un endroit fiable pour le rollback → ce n'est qu'ensuite qu'on la retire de la config.
+Les enregistrements existants dans etcd restent chiffrés avec l'ANCIENNE clé tant qu'ils ne sont pas réécrits explicitement (re-encryption). Si vous retirez l'ancienne clé de l'`EncryptionConfiguration` active avant que tous les enregistrements aient été réécrits avec la nouvelle, l'API server ne pourra pas déchiffrer les anciens enregistrements restants via la provider chain actuelle - ils deviendront illisibles jusqu'à ce que l'ancienne clé soit remise dans la configuration. Retirer la clé de la config ne détruit pas physiquement le key material : si l'ancienne clé conservée est de nouveau ajoutée à la provider chain, l'accès est rétabli. Une perte irréversible de données ne se produit que si le key material lui-même est réellement perdu ou détruit (par exemple, la clé n'a été enregistrée nulle part avant la suppression). L'ordre : ajouter la nouvelle clé en premier → réécrire tous les Secret → confirmer que tous les enregistrements utilisent la nouvelle clé → conserver l'ancienne clé dans un emplacement sûr pour le rollback → ce n'est qu'ensuite qu'on la retire de la config.
 </details>
 
 ## Infrastructure
@@ -60,7 +60,7 @@ Avant les tâches, le bootstrap crée le namespace `encryption-109` et un `legac
 inoffensif. Ce Secret a été créé **avant** l'EncryptionConfiguration, il sert donc
 de preuve contrôlée de l'état plaintext.
 
-Les opérations sur le nœud s'effectuent sur le control-plane lui-même, comme à l'examen : entrez-y
+Les opérations sur le nœud s'effectuent sur le control-plane lui-même, comme à l'examen : connectez-vous-y
 (`ssh control-plane`), travaillez là-bas et sortez (`exit`) ; `kubectl` - depuis la machine de travail. L'enregistrement raw
 d'etcd se lit avec l'`etcdctl` standard de la documentation Kubernetes avec les certificats kubeadm de
 `/etc/kubernetes/pki/etcd/` (`ca.crt`, `server.crt`, `server.key`). Les exemples de commandes tout prêts sont
@@ -133,12 +133,12 @@ L'ordre est critique : créer `encrypted-secret` → réécrire TOUS les Secret 
 | **5** | **Minimiser RBAC et désactiver automount** |
 | :---: | :--- |
 | Ce qu'on fait | • Créez un ServiceAccount `secret-reader` dans `encryption-109` avec `automountServiceAccountToken: false`<br/>• Le Role `secret-reader-109` doit donner uniquement `get` uniquement sur le Secret `encrypted-secret`<br/>• Liez-le par un RoleBinding de même nom<br/>• Créez un Pod `secret-reader-109` avec ce ServiceAccount, `automountServiceAccountToken: false`, avec l'image `registry.k8s.io/pause:3.10` |
-| Critères d'acceptation | • Le RBAC effectif du ServiceAccount avec ses groupes standard autorise `get encrypted-secret` dans `encryption-109` et interdit les autres opérations sur Secret, y compris l'accès aux Secret d'autres namespace<br/>• Role/RoleBinding exacts<br/>• Pod Running avec un seul `pause:3.10`, sans ServiceAccount token monté ni automatiquement ni manuellement et sans autres credential-bearing sources (volumes Secret/hostPath/CSI/PVC, env/envFrom de Secret)<br/>• Les volumes emptyDir/ConfigMap inoffensifs sont admissibles<br/>• `automountServiceAccountToken: false` dans le Pod et le ServiceAccount |
+| Critères d'acceptation | • Le RBAC effectif du ServiceAccount avec ses groupes standard autorise `get encrypted-secret` dans `encryption-109` et interdit les autres opérations sur Secret, y compris l'accès aux Secret d'autres namespaces<br/>• Role/RoleBinding exacts<br/>• Pod Running avec un seul `pause:3.10`, sans ServiceAccount token monté ni automatiquement ni manuellement et sans autres credential-bearing sources (volumes Secret/hostPath/CSI/PVC, env/envFrom de Secret)<br/>• Les volumes emptyDir/ConfigMap inoffensifs sont admissibles<br/>• `automountServiceAccountToken: false` dans le Pod et le ServiceAccount |
 
 <details>
 <summary>💡 Indice pour la tâche 5</summary>
 
-Utilisez `resourceNames: ["encrypted-secret"]` dans le Role - sans ce champ, `get`/`list` sur la ressource `secrets` donnerait accès à TOUS les Secret du namespace, y compris `legacy-secret`, ce qui enfreint l'exigence de least-privilege. `pause:3.10` est une image de substitution, qui n'a pas du tout besoin de la Kubernetes API, c'est pourquoi l'automount est désactivé à deux niveaux (SA et Pod) sans conséquences fonctionnelles.
+Utilisez `resourceNames: ["encrypted-secret"]` dans le Role - sans ce champ, `get`/`list` sur la ressource `secrets` donnerait accès à TOUS les Secret du namespace, y compris `legacy-secret`, ce qui enfreint l'exigence de least-privilege. `pause:3.10` est une image de substitution, qui n'a pas du tout besoin de l'API Kubernetes, c'est pourquoi l'automount est désactivé à deux niveaux (SA et Pod) sans conséquences fonctionnelles.
 </details>
 
 ## Vérification
@@ -148,7 +148,7 @@ check_result
 ```
 
 La vérification contient Init et cinq tests obligatoires. Le test 4 vérifie non seulement la présence du
-fichier de configuration, mais aussi le ciphertext réel `k8s:enc:aescbc:v1:` pour le nouvel et l'ancien enregistrement
+fichier de configuration, mais aussi le ciphertext réel `k8s:enc:aescbc:v1:` pour le nouvel enregistrement et l'ancien enregistrement
 d'etcd, et l'absence de l'`identity` migration-only dans la configuration finale. Avant un re-encryption de masse dans un environnement réel, il faut un snapshot, un plan de
 rotation des clés et une fenêtre contrôlée ; ce lab n'est pas un runbook de production.
 
@@ -184,7 +184,7 @@ resources:
 ```
 
 Ajoutez le provider en premier pour les nouveaux enregistrements, montez le socket dans le `kube-apiserver` static
-et attendez la health du plugin avant le re-encryption. Pour une configuration réelle, utilisez
+et attendez que le plugin soit en bonne santé (health) avant le re-encryption. Pour une configuration réelle, utilisez
 un plugin pris en charge et le format actuel de `kms` v2 de la documentation de la version
 de Kubernetes utilisée ; ce lab ne déploie pas de KMS-plugin et ne fournit pas de socket opérationnel.
 

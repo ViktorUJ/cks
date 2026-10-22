@@ -67,7 +67,7 @@ deux namespaces.
 |           **3**           | **WireGuard transparent encryption**                                                                                                                                                                       |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |       Ce qu'on fait       | • Activez `encryption.enabled=true`, `encryption.type=wireguard` par-dessus le Cilium déjà installé (`cilium upgrade`, et non une réinstallation de zéro) |
-| Critères d'acceptation | • `Encryption: Wireguard` dans `cilium-dbg status` et `enable-wireguard: "true"` dans le ConfigMap de Cilium<br/>• Le chemin de la tâche 2 n'a pas régressé<br/>• Le banc mono-nœud confirme la configuration WireGuard activée, mais ne démontre pas un trafic inter-nœuds chiffré (Peers: 0) |
+| Critères d'acceptation | • `Encryption: Wireguard` dans `cilium-dbg status` et `enable-wireguard: "true"` dans le ConfigMap de Cilium<br/>• Le chemin de la tâche 2 n'a pas régressé<br/>• Le banc à un seul node confirme la configuration WireGuard activée, mais ne démontre pas un trafic chiffré entre nodes (Peers: 0) |
 |        Vérification        | `kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status \| grep Encryption`. Répétez le curl de la tâche 2 - il doit de nouveau recevoir une HTTP response. |
 
 ---

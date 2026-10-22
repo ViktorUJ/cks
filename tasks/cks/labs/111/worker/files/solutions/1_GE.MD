@@ -3,8 +3,8 @@
 # Lab 111 - ეტალონური ამოხსნა
 
 ყველა ბრძანება სრულდება worker-ზე. ეს ინსტრუმენტების ჩვეულებრივი ბრძანებებია (trivy, kubesec,
-kube-linter, hadolint, podman, syft, bom, cosign), რომლებიც გამოცდაზე არის; სკრიპტები არ არის, სადაც
-რამდენიმე შედეგის შედარებაა საჭირო, ეს გამოტანის მიხედვით თვალით კეთდება. ჯერ დააყენეთ საერთო
+kube-linter, hadolint, podman, syft, bom, cosign), რომლებიც გამოცდაზე არის; სკრიპტები არ არის; იქ, სადაც
+რამდენიმე შედეგის შედარებაა საჭირო, ეს გამოტანის მიხედვით თვალით კეთდება. ჯერ განსაზღვრეთ საერთო
 ცვლადები:
 
 ```bash
@@ -356,7 +356,7 @@ jq '{artifact: .ArtifactType, os: .Metadata.OS.Family, results: (.Results | leng
 ```
 
 Trivy განსაზღვრავს OS-ს CycloneDX-ის კომპონენტით `operating-system` (`alpine 3.20.5`) და
-უთანადებს პაკეტებს მოწყვლადობების ბაზას - `Results` არაცარიელია. შედარებისთვის: SPDX დავალება 6-დან
+ადარებს პაკეტებს მოწყვლადობების ბაზასთან - `Results` არაცარიელია. შედარებისთვის: SPDX დავალება 6-დან
 (`bom`) multi-arch image-ისთვის OS-ს არ შეიცავს (`Detected OS family="none"`), და `trivy sbom` მასზე
 არაფერს პოულობს (`Results` ცარიელია) - ამიტომ ამ დავალებისთვის CycloneDX-ს იღებენ.
 
@@ -379,7 +379,7 @@ kubectl -n kyverno wait --for=condition=Available deployment/kyverno-admission-c
 Docker build context დავალება 9c-ში (Dockerfile-ში `COPY . /usr/share/nginx/html` აკოპირებს
 build context-ის მთელ შიგთავსს), ამიტომ `cosign.key`, `$ROOT`-ის შიგნით დარჩენილი, მოხვდება
 გამოქვეყნებული image-ის filesystem-ში private signing key-ის registry-ში გაჟონვის სახით. ხელი მოაწერეთ
-სწორედ `$HARDENED_IMAGE`-ს დავალება 3/4-დან, და არა upstream `nginx`-ს. ეს
+სწორედ `$HARDENED_IMAGE`-ს დავალება 3/4-დან, და არა upstream `nginx`-ს. ამ
 `cosign.key`-ს production CI-ში ნუ გადაიტანთ.
 
 ```bash
@@ -452,7 +452,7 @@ POLICY_CREATED=$(kubectl get imagevalidatingpolicy require-signed-catalog-images
   -o jsonpath='{.metadata.creationTimestamp}')
 
 # policy-ის შექმნისთანავე Kyverno webhook-ის პირველი გამოძახება (ხელმოწერის შემოწმება registry-ში) შეიძლება
-# 10 წმ-იან timeout-ს მიადგეს (`failed calling webhook ... context deadline exceeded`):
+# 10 წმ-იან timeout-ს შეეჯახოს (`failed calling webhook ... context deadline exceeded`):
 # failurePolicy=Fail-ის დროს Pod მაშინ არ იქმნება. უბრალოდ გაიმეორეთ ბრძანება რამდენიმე წამში.
 kubectl run signed-admission-check -n cks-111 --image=$HARDENED_IMAGE --restart=Never --command -- sleep 3600
 kubectl wait --for=condition=Ready pod/signed-admission-check -n cks-111 --timeout=60s
@@ -477,11 +477,11 @@ cat "$ART/9b/signed-admission-check.json"
 
 ## 9c. Signature-specific DENY: unsigned digest იმავე repository-ში
 
-Unsigned candidate უნდა არსებობდეს **იმავე** repository-ში, რაც ხელმოწერილი
+Unsigned candidate უნდა არსებობდეს **იმავე** repository-ში, რომელშიცაა ხელმოწერილი
 `$HARDENED_IMAGE` - წინააღმდეგ შემთხვევაში admission შეიძლება უარს ამბობდეს `manifest unknown`-ის ან
 registry lookup-ის შეცდომის გამო, და არა ხელმოწერის არარსებობის გამო, და denial დეკლარირებულ
 security property-ს ვერ დაამტკიცებს. ვაგებთ და ვაქვეყნებთ მეორე, შეგნებულად ხელმოუწერელ tag-ს იმავე
-repository-ში - და **აუცილებლად** `$HARDENED_IMAGE`-სგან განსხვავებული შიგთავსით: თუ
+repository-ში - და **აუცილებლად** `$HARDENED_IMAGE`-ისგან განსხვავებული შიგთავსით: თუ
 იმავე `Dockerfile`/context-ს ცვლილებების გარეშე ააგებთ, reproducible/cached build-მა შეიძლება **იგივე**
 manifest digest მოგცეთ, რაც უკვე ხელმოწერილ image-ს აქვს, და მაშინ `cosign verify` "unsigned" tag-ზე
 მოულოდნელად გაივლის - რადგან ის ფიზიკურად უკვე ხელმოწერილ artifact-ზე მიუთითებს. ამიტომ
@@ -505,7 +505,7 @@ cat "$ART/9c/digest-comparison.txt"
 
 `$ROOT/Dockerfile` დავალება 3-იდან უნდა იღებდეს ამ build-arg-ს (მაგალითად,
 `ARG CKS_SIGNATURE_TEST=signed` და `LABEL cks.signature-test=$CKS_SIGNATURE_TEST` არსებული
-ინსტრუქციების გვერდით) - მაშინ აწყობილი image `$HARDENED_IMAGE`-სგან ზუსტად
+ინსტრუქციების გვერდით) - მაშინ აწყობილი image `$HARDENED_IMAGE`-ისგან ზუსტად
 ერთი უსაფრთხო label-ით (`LABEL`) განსხვავდება და დავალებებში 3-4 შემოწმებულ security-თვისებებს ხელს არ ახლებს.
 
 აშკარად ვამტკიცებთ, რომ ეს digest არსებობს და pullable-ია, policy-ის შემოწმებამდე -
@@ -521,7 +521,7 @@ curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json, application/v
 cat "$ART/9c/unsigned-exists.txt"        # HTTP/1.1 200 OK და docker-content-digest: $UNSIGNED_DIGEST
 ```
 
-აშკარად ვამტკიცებთ ვალიდური ხელმოწერის არარსებობას ამავე გასაღებით - Pod-ის შექმნის ცდამდე,
+აშკარად ვამტკიცებთ ვალიდური ხელმოწერის არარსებობას ამავე გასაღებით - Pod-ის შექმნის **ცდამდე**,
 რათა denial იყოს პროგნოზირებადად signature-ისთვის სპეციფიკური, და არა სხვა რამისთვის:
 
 ```bash

@@ -28,8 +28,8 @@ k auth can-i delete secrets -n security-104 \
 ## 2. Projected token de ServiceAccount
 
 El TokenRequest volume emite un token de corta duración; el automontaje normal está desactivado.
-No fijamos `audience: kubernetes.default.svc`: para kubeadm no es un valor que el API server acepte con garantía
-aceptado por el API server. Si se omite `audience`, el kubelet usa el identifier del
+No fijamos `audience: kubernetes.default.svc`: para kubeadm no es necesariamente un valor que el API server acepte.
+Si se omite `audience`, el kubelet usa el identifier del
 API server por defecto. Se puede indicar una audience aparte solo después de comprobar
 `--api-audiences` (o el default de `--service-account-issuer`) en el control-plane.
 `expirationSeconds` debe estar en el rango `600`-`3600` inclusive: la Kubernetes API
@@ -151,7 +151,7 @@ echo "exit code: $?"
 No montes tampoco aparte un legacy `Secret` con `type: kubernetes.io/service-account-token`:
 incluso con el automount desactivado, un Secret así se puede montar a mano mediante
 `volumes[].secret`, y entonces el Pod formalmente está "sin token" según el campo de automount, pero de hecho
-sigue teniendo un API-token válido dentro del contenedor.
+sigue teniendo un token de API válido dentro del contenedor.
 
 ## 4. Eliminación de los permisos wildcard
 
@@ -259,7 +259,7 @@ k get po -n kube-system -l component=kube-apiserver \
 ```
 
 Aparte, auditamos los ClusterRoleBinding cuyos subjects apuntan al usuario anónimo
-o al grupo anónimos: en el clúster se ha dejado deliberadamente un binding lab-owned así:
+o al grupo anónimo: en el clúster se ha dejado deliberadamente un binding lab-owned así:
 
 ```bash
 k get clusterrolebinding -o json | jq -r \
@@ -273,7 +273,7 @@ k get clusterrolebinding -o json | jq -r \
 non-resource URL `/livez`, `/readyz`, `/healthz`, `/version`, `/version/`, y no a los
 recursos normales de Kubernetes: es el default Kubernetes RBAC, una parte necesaria del bootstrap, no lo toques.
 Esto no es lo mismo que `anonymous.conditions` de esta misma tarea: esa lista
-limita en qué rutas la petición recibe en absoluto una anonymous identity en la etapa de
+limita en qué rutas la petición llega a recibir una anonymous identity en la etapa de
 authentication (allí solo `/livez`/`/readyz`/`/healthz`): `/version` devuelve `401` a las peticiones anónimas
 precisamente porque allí no se asigna una anonymous identity, y no porque a
 `system:public-info-viewer` le falten permisos allí. `lab104-unintended-anonymous-access` es un
@@ -343,7 +343,7 @@ muestra `kubectl get pod -o json`). `0400` es read-only solo para el propietario
 dentro del contenedor; el propio proceso de la aplicación igualmente debe ejecutarse con ese UID; de lo contrario
 no podrá leer el archivo.
 
-El campo es inmutable; el Pod hay que eliminarlo y crearlo de nuevo con el mismo nombre. De nuevo es más barato
+La mayoría de los campos del Pod (incluido `volumes`) son inmutables, por lo que el Pod hay que eliminarlo y crearlo de nuevo con el mismo nombre. De nuevo es más barato
 generar el esqueleto mediante `--dry-run` y añadir el volume en `vim` que escribir todo el YAML:
 
 ```bash
@@ -530,7 +530,7 @@ hace falta un Pod con acceso a la API, añade `automountServiceAccountToken: tru
 manifest concreto, tras comprobar que el acceso realmente hace falta; no cambies el baseline
 del SA `default` de vuelta a `true` para todo el namespace. Tampoco montes a mano un
 `Secret` antiguo (legacy) con `type: kubernetes.io/service-account-token` mediante `volumes[].secret`:
-eso daría al Pod un API-token válido con independencia de los ajustes de automount.
+eso daría al Pod un token de API válido con independencia de los ajustes de automount.
 
 Al final ejecuta `check_result`.
 
@@ -607,7 +607,7 @@ k get po -n kube-system -l component=kube-apiserver
 
 Volvemos a la máquina de trabajo (en nombre del administrador `cluster1-admin`) y creamos
 el binding peligroso: esto **no** es un intento de escalada por parte de `build-agent` (ya no tiene
-caminos reales hacia ello tras la tarea 7), sino una acción de administrador modelada,
+caminos reales hacia ello tras la tarea 7), sino una acción de administrador simulada,
 que el audit log debe capturar como evidence reproducible de quién exactamente la
 realizó y a quién exactamente se concedieron los permisos:
 
@@ -649,7 +649,7 @@ ssh control-plane "sudo cat /var/log/kubernetes/audit/audit.log" \
 ```
 
 Guardamos el evento **completo**, tal como realmente está en el audit log (incluido el `auditID`): no
-lo reescribimos ni montamos el JSON a mano, de lo contrario el artifact no coincidirá con el registro real
+lo reescribimos ni construimos el JSON a mano, de lo contrario el artifact no coincidirá con el registro real
 en el log durante la verificación.
 
 Containment: eliminamos el binding y confirmamos que el acceso está realmente revocado, y no que simplemente el
@@ -770,7 +770,7 @@ Al final ejecuta `check_result`.
 
 Generamos una private key y un CSR con `CN=john`: el RBAC para un usuario basado en certificado
 se vincula mediante `kind: User`, y no `ServiceAccount`, y `User` no tiene un objeto de API
-propio: su identity se determina por completo por que el CN del certificado de cliente
+propio: su identity depende por completo de que el CN del certificado de cliente
 coincida con el `name` en el binding.
 
 ```bash

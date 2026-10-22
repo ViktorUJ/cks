@@ -6,7 +6,7 @@
 
 ამ CKS-ლაბში თქვენ დააყენებთ Kyverno-ს და დაიცავთ namespace `policy-108`-ს policy-as-code
 წესებით. პრაქტიკა მოიცავს validating admission-ს: ტეგ `latest`-ის აკრძალვა, სავალდებულო
-`runAsNonRoot`, registry allowlist; ბოლო, არასავალდებულო ეტაპზე - Pod-ის mutation
+`runAsNonRoot`, registry allowlist; არასავალდებულო ეტაპზე - Pod-ის mutation
 admission-ისას. დავალება 6 ამ მიდგომას ადარებს სხვა მექანიზმს - ჩაშენებულ
 `ImagePolicyWebhook`-ს, სადაც image-ის შესახებ გადაწყვეტილებას გარე HTTP(S)-backend იღებს API
 `ImageReview`-ის გავლით, და არა CEL-გამოსახულება კლასტერის შიგნით. ფინალური დავალება 7 - მესამე, ცალკე admission
@@ -225,7 +225,7 @@ EOF
 | **4** | **Container registry allowlist** |
 | :---: | :--- |
 | რას ვაკეთებთ | • შექმენით CEL-based `ValidatingPolicy` `allow-approved-registries` Deny-რეჟიმში.<br/>• თითოეული კონტეინერისთვის (`containers`, `initContainers`, `ephemeralContainers`) დაუშვით მხოლოდ `registry.k8s.io/*` ან `ghcr.io/cks-lab/*`.<br/>• დანარჩენი image registry აკრძალეთ. |
-| მიღების კრიტერიუმები | • Policy არსებობს და Deny-ა<br/>• Untrusted image უარყოფილია სამივე სიაში<br/>• ორივე approved prefixes (`registry.k8s.io/` და `ghcr.io/cks-lab/`) დაშვებულია სამივე სიიდან თითოეულში<br/>• ჩვეულებრივი Pod UPDATE, რომელიც image-ს unapproved registry-ზე ცვლის, უარყოფილია თავად policy-ით<br/>• მოწმდება ასევე სხვა unapproved registry და host/path-lookalikes init/ephemeral სიებში |
+| მიღების კრიტერიუმები | • Policy არსებობს და Deny-ა<br/>• Untrusted image უარყოფილია სამივე სიაში<br/>• ორივე approved prefixes (`registry.k8s.io/` და `ghcr.io/cks-lab/`) დაშვებულია სამივე სიის თითოეულში<br/>• ჩვეულებრივი Pod UPDATE, რომელიც image-ს unapproved registry-ზე ცვლის, უარყოფილია თავად policy-ით<br/>• მოწმდება ასევე სხვა unapproved registry და host/path-lookalikes init/ephemeral სიებში |
 
 <details>
 <summary>💡 მინიშნება დავალება 4-ისთვის</summary>
@@ -288,11 +288,11 @@ init- და ephemeral-კონტეინერებში, და არა
 <details>
 <summary>💡 მინიშნება დავალება 6-ისთვის</summary>
 
-`ImagePolicyWebhook` - პრინციპულად სხვა მექანიზმია, ვიდრე Kyverno დავალებებიდან 1-5: გადაწყვეტილებას გარე HTTPS-backend იღებს API `ImageReview`-ის გავლით, და არა CEL-გამოსახულება კლასტერის შიგნით. გამოიყენეთ მზა `/opt/image-policy-backend/server.py` სამუშაო მანქანიდან (მაგალითად, ჩაწყვეთ ის ConfigMap-ში backend-ის Deployment-ისთვის; `control-plane`-ზე მხოლოდ CA-სერტიფიკატის დაკოპირებაა საჭირო webhook-ის kubeconfig-ისთვის) - დავალება ამოწმებს admission plugin-ის wiring-ის, TLS-კონტრაქტისა და ImageReview API-ის გაგებას, და არა HTTP-სერვერის ნულიდან წერის უნარს. TLS-ისთვის: ჯერ შექმენით Service (რომ გაიგოთ `ClusterIP`), შემდეგ თვითხელმოწერილი სერტიფიკატი ამ IP-ით SAN-ში (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`), შემდეგ Deployment, რომელიც ამაგრებს როგორც კოდს, ისე სერტიფიკატს. არსებულ `--enable-admission-plugins`-ს ახალი მნიშვნელობით მთლიანად ნუ ჩაანაცვლებთ - მიუწერეთ `ImagePolicyWebhook` მძიმით უკვე ჩართულ plugins-ს (ჩვეულებრივ იქ უკვე არის `NodeRestriction`). ასევე არ დაგავიწყდეთ `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` - ამ API-ს აშკარა ჩართვის გარეშე backend საერთოდ არ გამოიძახება. Namespace `image-policy` წინასწარ შექმნილი არ არის - შექმენით ის თავად Deployment/Service-მდე. თუ რესურსების/გზების/ფლაგების დეტალურ თანმიმდევრობაში გაიჭედეთ - ეტალონური მოქმედებების თანმიმდევრობა ამოხსნაშია მოცემული.
+`ImagePolicyWebhook` - პრინციპულად სხვა მექანიზმია, ვიდრე Kyverno დავალებებიდან 1-5: გადაწყვეტილებას გარე HTTPS-backend იღებს API `ImageReview`-ის გავლით, და არა CEL-გამოსახულება კლასტერის შიგნით. გამოიყენეთ მზა `/opt/image-policy-backend/server.py` სამუშაო მანქანიდან (მაგალითად, მოათავსეთ ის ConfigMap-ში backend-ის Deployment-ისთვის; `control-plane`-ზე მხოლოდ CA-სერტიფიკატის დაკოპირებაა საჭირო webhook-ის kubeconfig-ისთვის) - დავალება ამოწმებს admission plugin-ის wiring-ის, TLS-კონტრაქტისა და ImageReview API-ის გაგებას, და არა HTTP-სერვერის ნულიდან წერის უნარს. TLS-ისთვის: ჯერ შექმენით Service (რომ გაიგოთ `ClusterIP`), შემდეგ თვითხელმოწერილი სერტიფიკატი ამ IP-ით SAN-ში (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`), შემდეგ Deployment, რომელიც მიამაგრებს როგორც კოდს, ისე სერტიფიკატს. არსებულ `--enable-admission-plugins`-ს ახალი მნიშვნელობით მთლიანად ნუ ჩაანაცვლებთ - მიუწერეთ `ImagePolicyWebhook` მძიმით უკვე ჩართულ plugins-ს (ჩვეულებრივ იქ უკვე არის `NodeRestriction`). ასევე არ დაგავიწყდეთ `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` - ამ API-ს აშკარა ჩართვის გარეშე backend საერთოდ არ გამოიძახება. Namespace `image-policy` წინასწარ შექმნილი არ არის - შექმენით ის თავად Deployment/Service-მდე. თუ რესურსების/გზების/ფლაგების დეტალურ თანმიმდევრობაში გაიჭედეთ - ეტალონური მოქმედებების თანმიმდევრობა ამოხსნაშია მოცემული.
 </details>
 
 ---
-| **7** | **Gatekeeper ConstraintTemplate: Rego blocklist-ის დაწერა** |
+| **7** | **Gatekeeper ConstraintTemplate: Rego blocklist-ის დამატება** |
 | :---: | :--- |
 | რას ვაკეთებთ | • კლასტერში უკვე დაყენებულია **Gatekeeper** (OPA), ასევე `ConstraintTemplate` `k8sblockedregistries` და `Constraint` `K8sBlockedRegistries/deny-bad-registries`, შეზღუდული ცალკე namespace `gatekeeper-108`-ით (და არა `policy-108`-ით - ეს Kyverno-ს დავალებებისგან 1-5 ცალკე პოლიგონია, რათა Kyverno და Gatekeeper ერთსა და იმავე Pod-ს ერთდროულად არ უარყოფდნენ).<br/>• Rego `ConstraintTemplate`-ის შიგნით უკვე შეიცავს რამდენიმე დაბლოკილ registry-ს (`untrusted-registry.example`, `docker-fake.test`), მაგრამ **განზრახ არ შეიცავს** `very-bad-registry.test`-ს.<br/>• იპოვეთ `ConstraintTemplate.spec.targets[].rego` და დაამატეთ მასში წესი `very-bad-registry.test`-ისთვის - სწორედ Rego-ში, და არა `Constraint`-ის პარამეტრებში.<br/>• `deny-bad-registries` უკვე სრულიად სწორია და `spec.parameters`-ს საერთოდ არ იყენებს - მისი შეხება საჭირო არ არის. |
 | მიღების კრიტერიუმები | • `ConstraintTemplate k8sblockedregistries` და საწყისი Constraint `K8sBlockedRegistries/deny-bad-registries` არსებობს<br/>• Rego ინარჩუნებს ორივე საწყის აქტიურ წესს (`untrusted-registry.example`, `docker-fake.test`) და შეიცავს ახალ აქტიურ წესს `very-bad-registry.test`-ისთვის<br/>• Pod ამ სამი registry-დან თითოეულით `gatekeeper-108`-ში უარყოფილია სწორედ Constraint `deny-bad-registries`-ით<br/>• Pod image-ით სანდო `registry.k8s.io`-დან გადის<br/>• Constraint რჩება Pod-only, შეზღუდულია `gatekeeper-108`-ით, parameters/selectors/exclusions-ის გარეშე<br/>• ამ ტიპის დამატებითი Constraint არ იქმნება |
@@ -300,7 +300,7 @@ init- და ephemeral-კონტეინერებში, და არა
 <details>
 <summary>💡 მინიშნება დავალება 7-ისთვის</summary>
 
-იპოვეთ ConstraintTemplate `kubectl get constrainttemplate k8sblockedregistries -o yaml`-ით. Rego დევს `spec.targets[].rego`-ში როგორც მრავალსტრიქონიანი სტრიქონი - სწორედ ის უნდა დაარედაქტიროთ (`kubectl edit constrainttemplate k8sblockedregistries`, ან `get -o yaml` → შესწორება → `apply`). არსებული Rego დაბლოკილ registry-ს აცხადებს ცალკე ფაქტებით ფორმით `blocked_registry("untrusted-registry.example")` - დაამატეთ კიდევ ერთი ასეთი სტრიქონი `very-bad-registry.test`-ისთვის, უკვე არსებულის წაშლისა და ჩანაცვლების გარეშე. ამას ნუ აგრევთ `Constraint.spec.parameters`-თან - policy-ის ამ ვერსიაში Constraint parameters-ს საერთოდ არ იყენებს, იქ დასარედაქტირებელი არაფერია.
+იპოვეთ ConstraintTemplate `kubectl get constrainttemplate k8sblockedregistries -o yaml`-ით. Rego დევს `spec.targets[].rego`-ში როგორც მრავალსტრიქონიანი სტრიქონი - სწორედ ის უნდა დაარედაქტიროთ (`kubectl edit constrainttemplate k8sblockedregistries`, ან `get -o yaml` → შესწორება → `apply`). არსებული Rego დაბლოკილ registry-ს აცხადებს ცალკე ფაქტებით, როგორიცაა `blocked_registry("untrusted-registry.example")` - დაამატეთ კიდევ ერთი ასეთი სტრიქონი `very-bad-registry.test`-ისთვის, უკვე არსებულის წაშლისა და ჩანაცვლების გარეშე. ამას ნუ აგრევთ `Constraint.spec.parameters`-თან - policy-ის ამ ვერსიაში Constraint parameters-ს საერთოდ არ იყენებს, იქ დასარედაქტირებელი არაფერია.
 </details>
 
 <details>
@@ -398,7 +398,7 @@ check_result
 შემოწმება შეიცავს Init-ს და შვიდ ტესტს. პირველი ოთხი, მეექვსე და მეშვიდე სავალდებულოა. მეხუთე
 ტესტი ასრულებს mutation-ის შემოწმებას, მაგრამ ლაბორატორიას წარუმატებლად არ ხდის, თუ optional
 policy არ არის შექმნილი. დავალებები 2-4 და 7 იყენებენ `--dry-run=server`-ს, ამიტომ image-ები
-არ იტვირთება და Pod-ები namespace-ში არ რჩება; დავალება 6 ამოწმებს რეალურ (არა dry-run)
+არ ჩამოიტვირთება და Pod-ები namespace-ში არ რჩება; დავალება 6 ამოწმებს რეალურ (არა dry-run)
 admission-ს ImagePolicyWebhook-ით, ამიტომ Pod `webhook-pinned-ok` მართლაც
 იქმნება.
 

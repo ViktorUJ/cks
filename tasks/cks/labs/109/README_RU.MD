@@ -132,7 +132,7 @@ check_result
 ---
 | **5** | **Минимизировать RBAC и отключить automount** |
 | :---: | :--- |
-| Что делаем | • Создайте ServiceAccount `secret-reader` в `encryption-109` с `automountServiceAccountToken: false`<br/>• Role `secret-reader-109` должна давать только `get` только Secret `encrypted-secret`<br/>• Привяжите её одноимённым RoleBinding<br/>• Создайте Pod `secret-reader-109` c этим ServiceAccount, `automountServiceAccountToken: false`, образом `registry.k8s.io/pause:3.10` |
+| Что делаем | • Создайте ServiceAccount `secret-reader` в `encryption-109` с `automountServiceAccountToken: false`<br/>• Role `secret-reader-109` должна давать только `get` только Secret `encrypted-secret`<br/>• Привяжите её одноимённым RoleBinding<br/>• Создайте Pod `secret-reader-109` с этим ServiceAccount, `automountServiceAccountToken: false`, образом `registry.k8s.io/pause:3.10` |
 | Критерии приёмки | • Effective RBAC для ServiceAccount с его штатными группами позволяет `get encrypted-secret` в `encryption-109` и запрещает другие Secret-операции, в том числе доступ к Secret других namespace<br/>• Role/RoleBinding точные<br/>• Pod Running с одним `pause:3.10`, без автоматически либо вручную смонтированных ServiceAccount token и других credential-bearing sources (Secret/hostPath/CSI/PVC volumes, Secret env/envFrom)<br/>• Безобидные emptyDir/ConfigMap volumes допустимы<br/>• `automountServiceAccountToken: false` в Pod и ServiceAccount |
 
 <details>

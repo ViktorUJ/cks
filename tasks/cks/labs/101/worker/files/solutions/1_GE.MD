@@ -188,7 +188,7 @@ spec:
 EOF
 ```
 
-ვამოწმებთ Service DNS-ის გავლით:
+ვამოწმებთ Service DNS-ით:
 
 ```bash
 k -n cks-101 exec probe -- \

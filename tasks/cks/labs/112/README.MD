@@ -5,7 +5,7 @@
 ## Goal
 
 In this CKS lab you set up runtime event monitoring on a node and audit logging for the control plane
-API, and then make a workload immutable at runtime. The work goes on a single
+API, and then make a workload immutable at runtime. The work is done on a single
 node: the `control-plane` is also the workload node, so Falco sees the events
 from the test Pods, and the kube-apiserver lives in a static Pod manifest.
 
@@ -76,8 +76,8 @@ with `scp` into `/var/work/tests/artifacts/<task number>/`.
 
 Before containment it is useful to mentally estimate the blast radius: can the ServiceAccount
 of the compromised Pod read Secrets, create workloads, or reach other
-namespaces. This can and should be quickly checked with `kubectl auth can-i` as the
-ServiceAccount of the Pod `falco-shell` (`--as=system:serviceaccount:runtime-112:default`) as an additional step; it is not mandatory, does not affect the
+namespaces? This can and should be quickly checked with `kubectl auth can-i` as the
+ServiceAccount of the Pod `falco-shell` (`--as=system:serviceaccount:runtime-112:default`); this is an additional step: it is not mandatory, does not affect the
 acceptance criteria, and is not tested.
 
 ---
@@ -113,19 +113,19 @@ Simply creating a Pod with `stdin: true, tty: true` is not enough - you need to 
 <details>
 <summary>💡 Hint for task 3</summary>
 
-A custom rule in `falco_rules.local.yaml` needs a `condition` that uses `spawned_process` (or `evt.type=execve`) together with `proc.cmdline contains "CKS112_CUSTOM_EVENT"` - without a base condition on the event type the rule may not fire at all or may fire on wrong events. After editing the file run `systemctl restart falco` for a deterministic confirmation that the rules were applied. In current Falco an automatic reload is also possible with `watch_config_files: true` enabled, but this lab uses an explicit restart.
+A custom rule in `falco_rules.local.yaml` needs a `condition` that uses `spawned_process` (or `evt.type=execve`) together with `proc.cmdline contains "CKS112_CUSTOM_EVENT"` - without a base condition on the event type the rule may not fire at all or may fire on wrong events. After editing the file, run `systemctl restart falco` for a deterministic confirmation that the rules were applied. In current Falco an automatic reload is also possible with `watch_config_files: true` enabled, but this lab uses an explicit restart.
 </details>
 
 ---
 | **4** | **Enable audit logging: RequestResponse for ConfigMap, Metadata for Secret** |
 | :---: | :--- |
-| What to do | • On the `control-plane` create `/etc/kubernetes/audit/policy.yaml`. The policy must record `RequestResponse` **only in the namespace `runtime-112`** for the core resource `configmaps` (a controlled forensic example on a non-sensitive resource).<br/>• For the core resource `secrets` use only `Metadata`, **so that the body of the Secret does not end up in the audit log**.<br/>• Really reduce noise with explicit `None` rules for high-volume/low-risk traffic and `omitStages: [RequestReceived]`.<br/>• Finish the policy with a safe catch-all `Metadata` rule as *fallback logging*, and not as noise suppression.<br/>• In the static manifest `/etc/kubernetes/manifests/kube-apiserver.yaml` add `--audit-policy-file=/etc/kubernetes/audit/policy.yaml`, `--audit-log-path=/var/log/kubernetes/audit/audit.log`, and rotation (`--audit-log-maxage`, `--audit-log-maxbackup`, `--audit-log-maxsize`).<br/>• Add the necessary hostPath volume/volumeMount for the policy directory and the log directory. Wait for the API to recover.<br/>• Create a ConfigMap `audit-config` in `runtime-112`, read it (`kubectl get configmap audit-config -n runtime-112 -o json`), and save the RequestResponse event in `/var/work/tests/artifacts/4/configmap-request-response.json`.<br/>• Then read `kubectl get secret audit-secret -n runtime-112 -o json` and save its Metadata event in `/var/work/tests/artifacts/4/secret-metadata.json`. The events are taken from the audit log on the `control-plane`: save them on the node and copy them with `scp`. |
+| What to do | • On the `control-plane` create `/etc/kubernetes/audit/policy.yaml`. The policy must record `RequestResponse` **only in the namespace `runtime-112`** for the core resource `configmaps` (a controlled forensic example on a non-sensitive resource).<br/>• For the core resource `secrets` use only `Metadata`, **so that the body of the Secret does not end up in the audit log**.<br/>• Actually reduce noise with explicit `None` rules for high-volume/low-risk traffic and `omitStages: [RequestReceived]`.<br/>• Finish the policy with a safe catch-all `Metadata` rule as *fallback logging*, and not as noise suppression.<br/>• In the static manifest `/etc/kubernetes/manifests/kube-apiserver.yaml` add `--audit-policy-file=/etc/kubernetes/audit/policy.yaml`, `--audit-log-path=/var/log/kubernetes/audit/audit.log`, and rotation (`--audit-log-maxage`, `--audit-log-maxbackup`, `--audit-log-maxsize`).<br/>• Add the necessary hostPath volume/volumeMount for the policy directory and the log directory. Wait for the API to recover.<br/>• Create a ConfigMap `audit-config` in `runtime-112`, read it (`kubectl get configmap audit-config -n runtime-112 -o json`), and save the RequestResponse event in `/var/work/tests/artifacts/4/configmap-request-response.json`.<br/>• Then read `kubectl get secret audit-secret -n runtime-112 -o json` and save its Metadata event in `/var/work/tests/artifacts/4/secret-metadata.json`. The events are taken from the audit log on the `control-plane`: save them on the node and copy them with `scp`. |
 | Acceptance criteria | • Kube-apiserver is healthy<br/>• The static manifest contains both audit flags and the mounts<br/>• The policy sets `RequestResponse` for `configmaps` and `Metadata` for `secrets`<br/>• In `/var/work/tests/artifacts/4/configmap-request-response.json` there is a RequestResponse event for the ConfigMap<br/>• In `/var/work/tests/artifacts/4/secret-metadata.json` there is a `Metadata`-level Secret event **without the fields `requestObject`/`responseObject`** (the body of the Secret is not logged) |
 
 <details>
 <summary>💡 Hint for task 4</summary>
 
-The order of the rules in an audit policy matters: Kubernetes applies the FIRST matching rule from top to bottom, so the specific rule for `configmaps`/`secrets` in `runtime-112` must come BEFORE the general catch-all `Metadata` at the end of the file - if the catch-all is first, it will "intercept" all the requests before the specific rules. After editing the static manifest the kubelet picks up the changes itself (no `kubectl apply`/restart is needed) - but wait until `kubectl get --raw=/readyz` returns success again before continuing.
+The order of the rules in an audit policy matters: Kubernetes applies the FIRST matching rule from top to bottom, so the specific rule for `configmaps`/`secrets` in `runtime-112` must come BEFORE the general catch-all `Metadata` at the end of the file - if the catch-all is first, it will "intercept" all the requests before the specific rules. After editing the static manifest, the kubelet picks up the changes itself (no `kubectl apply`/restart is needed) - but wait until `kubectl get --raw=/readyz` returns success again before continuing.
 </details>
 
 ---
@@ -143,7 +143,7 @@ Save exactly the ERROR OUTPUT of the command `touch /cks-112-write-denied` (`Rea
 ---
 | **6** | **A minimal containment chain from alert to isolation** |
 | :---: | :--- |
-| What to do | • After enabling the audit backend run a controlled long-lived process in `falco-shell` with `CKS112_CUSTOM_EVENT` in its command line, for example: `kubectl exec -n runtime-112 falco-shell -- sh -c 'sleep 600; echo completed' CKS112_CUSTOM_EVENT &`. The process lives for 10 minutes: while it is alive, its `/proc/<PID>` can be captured.<br/>• **Start the investigation with a new Falco alert**, and not with the Pod manifest. From the alert extract the short container ID and the host PID.<br/>• On the `control-plane` via `crictl ps/inspect/inspectp` match container → Pod sandbox → namespace/Pod; determine the node through the Kubernetes API. Save `crictl inspect` and `inspectp`.<br/>• While the process is alive, save `/proc/<PID>/status`, `cmdline`, `cgroup`, and the PID/PPID/user tree.<br/>• In the audit log find the `pods/exec` event for `runtime-112/falco-shell` and save it without the request/response body.<br/>• Classify the phase as `Execution`, the technique as `Container Administration Command`, compose `evidence-summary.txt`. Copy the files captured on the `control-plane` with `scp` into `/var/work/tests/artifacts/6/`.<br/>• Then apply a default-deny ingress+egress `NetworkPolicy` `incident-quarantine`, delete the compromised Pod, and save a negative check: a repeated `kubectl exec` fails.<br/>• This is a minimal containment chain: credential revocation/rotation and full remediation require a separate incident-response process. |
+| What to do | • After enabling the audit backend, run a controlled long-lived process in `falco-shell` with `CKS112_CUSTOM_EVENT` in its command line, for example: `kubectl exec -n runtime-112 falco-shell -- sh -c 'sleep 600; echo completed' CKS112_CUSTOM_EVENT &`. The process lives for 10 minutes: while it is alive, its `/proc/<PID>` can be captured.<br/>• **Start the investigation with a new Falco alert**, and not with the Pod manifest. From the alert extract the short container ID and the host PID.<br/>• On the `control-plane` via `crictl ps/inspect/inspectp` match container → Pod sandbox → namespace/Pod; determine the node through the Kubernetes API. Save `crictl inspect` and `inspectp`.<br/>• While the process is alive, save `/proc/<PID>/status`, `cmdline`, `cgroup`, and the PID/PPID/user tree.<br/>• In the audit log find the `pods/exec` event for `runtime-112/falco-shell` and save it without the request/response body.<br/>• Classify the phase as `Execution`, the technique as `Container Administration Command`, compose `evidence-summary.txt`. Copy the files captured on the `control-plane` with `scp` into `/var/work/tests/artifacts/6/`.<br/>• Then apply a default-deny ingress+egress `NetworkPolicy` `incident-quarantine`, delete the compromised Pod, and save a negative check: a repeated `kubectl exec` fails.<br/>• This is a minimal containment chain: credential revocation/rotation and full remediation require a separate incident-response process. |
 | Acceptance criteria | • In `/var/work/tests/artifacts/6/` there are a real Falco alert, CRI inspect/inspectp, three `/proc` artifacts, the process lineage, the Metadata audit event for `pods/exec`, the final summary, and the containment result<br/>• The Pod `falco-shell` is absent<br/>• `incident-quarantine` selects all Pods and closes ingress+egress<br/>• A repeated exec has a non-zero exit code |
 
 <details>
@@ -209,7 +209,7 @@ check_result
 The check contains Init and ten independent tests. It checks the state of Falco and
 kube-apiserver over SSH, the API objects, the CRI/`/proc` evidence, the audit correlation, the containment,
 and the real denial of the write to the rootfs. After
-changing the static Pod manifest do not restart the kubelet unnecessarily: the kubelet will
+changing the static Pod manifest, do not restart the kubelet unnecessarily: the kubelet will
 notice the change itself. If the API is temporarily unavailable, wait for `kubectl get --raw=/readyz`.
 Keep the backup of the file `kube-apiserver.yaml` only outside `/etc/kubernetes/manifests`: the kubelet reads any file without a leading dot in this directory.
 

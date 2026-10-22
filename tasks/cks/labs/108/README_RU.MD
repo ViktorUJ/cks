@@ -6,7 +6,7 @@
 
 В этой CKS-лабе вы установите Kyverno и защитите namespace `policy-108` policy-as-code
 правилами. Практика охватывает validating admission: запрет тега `latest`, обязательный
-`runAsNonRoot`, allowlist registry; в последнем, опциональном этапе - mutation Pod при
+`runAsNonRoot`, allowlist registry; в опциональном этапе - mutation Pod при
 admission. Задание 6 сравнивает этот подход с другим механизмом - встроенным
 `ImagePolicyWebhook`, где решение об image принимает внешний HTTP(S)-backend через API
 `ImageReview`, а не CEL-выражение внутри кластера. Финальное задание 7 - третий, отдельный

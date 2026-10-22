@@ -20,7 +20,7 @@ Secret-ებს და შეზღუდავთ მონაცემებ�
 
 Encryption at rest იცავს storage compromise-ისგან: დავუშვათ, რომ თავდამსხმელმა მიიღო read-only წვდომა etcd snapshot-ზე ან storage layer-ზე, მაგალითად backup-ის ან volume snapshot-ის გავლით, მაგრამ ავტორიზებული API-წვდომა არ აქვს. დავალება 1 სწორედ ამ საწყის რისკს ამტკიცებს etcd-ის raw კითხვით.
 
-encryption at rest-ის ჩართვის შემდეგ დავალებები 2–4 ამცირებენ ასეთი წვდომის blast radius-ს: პირდაპირ წაკითხულმა მონაცემებმა Secret არ უნდა გაამჟღავნონ. ეს უნივერსალური დაცვა არ არის და API-ზე წვდომის კონტროლის შემცვლელიც არ არის.
+Encryption at rest-ის ჩართვის შემდეგ დავალებები 2–4 ამცირებენ ასეთი წვდომის blast radius-ს: პირდაპირ წაკითხულმა მონაცემებმა Secret არ უნდა გაამჟღავნონ. ეს უნივერსალური დაცვა არ არის და API-ზე წვდომის კონტროლის შემცვლელიც არ არის.
 
 თუ თავდამსხმელს აქვს ლეგიტიმური API-წვდომა Secret-ის წაკითხვის უფლებებით, encryption at rest ამ საფრთხისგან არ იცავს: API დააბრუნებს მნიშვნელობას გაშიფვრის შემდეგ. ამიტომ დავალება 5 ცალკე ზღუდავს RBAC-სა და automount-ს და ამით ამცირებს ასეთი უფლებების მქონე workload-identity-ის blast radius-ს.
 
@@ -35,13 +35,13 @@ base64 - უბრალოდ კოდირებაა, გასაღე�
 <details>
 <summary>2. რატომ უნდა იდგეს `identity` provider providers-ის სიაში ბოლო ადგილზე და არა პირველზე?</summary>
 
-`EncryptionConfiguration`-ში providers რიგრიგობით იცდება არსებული ჩანაწერების წასაკითხად, ხოლო პირველი provider გამოიყენება ახალი მონაცემების ჩასაწერად. თუ `identity` ("დაშიფვრის გარეშე") პირველია, ყველა ახალი ჩანაწერი დაუშიფრავად ჩაიწერება, მიუხედავად იმისა, რომ სიაში `aescbc` არის. `identity` ბოლოს საშუალებას იძლევა წავიკითხოთ ძველი (ჯერ არმიგრირებული) plaintext-ჩანაწერები, მაგრამ იძლევა გარანტიას, რომ ყველა ახალი ჩანაწერი პირველი provider-ით იშიფრება.
+`EncryptionConfiguration`-ში providers რიგრიგობით იცდება არსებული ჩანაწერების წასაკითხად, ხოლო პირველი provider გამოიყენება ახალი მონაცემების ჩასაწერად. თუ `identity` („დაშიფვრის გარეშე“) პირველია, ყველა ახალი ჩანაწერი დაუშიფრავად ჩაიწერება, მიუხედავად იმისა, რომ სიაში `aescbc` არის. `identity` ბოლოს საშუალებას იძლევა წავიკითხოთ ძველი (ჯერ არმიგრირებული) plaintext-ჩანაწერები, მაგრამ იძლევა გარანტიას, რომ ყველა ახალი ჩანაწერი პირველი provider-ით იშიფრება.
 </details>
 
 <details>
 <summary>3. რატომ არ შეიძლება ძველი დაშიფვრის გასაღების წაშლა ახლის დამატებისთანავე?</summary>
 
-etcd-ში არსებული ჩანაწერები ძველი გასაღებით დაშიფრული რჩება მანამ, სანამ მათ ცალსახად (explicit) არ გადაწერენ (re-encryption). თუ ძველ გასაღებს active `EncryptionConfiguration`-იდან ამოიღებთ უფრო ადრე, ვიდრე ყველა ჩანაწერი ახლით გადაიწერება, API server ვერ შეძლებს დარჩენილი ძველი ჩანაწერების გაშიფვრას მიმდინარე provider chain-ით - ისინი წაუკითხავი გახდება, სანამ ძველ გასაღებს კონფიგურაციაში არ დააბრუნებენ. კონფიგიდან გასაღების თავისთავად წაშლა key material-ს ფიზიკურად არ ანადგურებს: თუ შენახულ ძველ გასაღებს provider chain-ში ისევ დაამატებენ, წვდომა აღდგება. მონაცემების შეუქცევადი დაკარგვა წარმოიშობა მხოლოდ იმ შემთხვევაში, თუ თავად key material მართლაც დაიკარგა ან განადგურდა (მაგალითად, გასაღები წაშლამდე არსად შეუნახავთ). თანმიმდევრობა: ახალი გასაღების პირველად დამატება → ყველა Secret-ის გადაწერა → დადასტურება, რომ ყველა ჩანაწერი ახალ გასაღებს იყენებს → ძველი გასაღების შენახვა სანდო ადგილას rollback-ისთვის → მხოლოდ შემდეგ მისი კონფიგიდან ამოღება.
+etcd-ში არსებული ჩანაწერები ძველი გასაღებით დაშიფრული რჩება მანამ, სანამ მათ ცალსახად (explicit) არ გადაწერენ (re-encryption). თუ ძველ გასაღებს active `EncryptionConfiguration`-იდან ამოიღებთ უფრო ადრე, ვიდრე ყველა ჩანაწერი ახლით გადაიწერება, API server ვერ შეძლებს დარჩენილი ძველი ჩანაწერების გაშიფვრას მიმდინარე provider chain-ით - ისინი წაუკითხავი გახდება, სანამ ძველ გასაღებს კონფიგურაციაში არ დააბრუნებენ. კონფიგიდან გასაღების თავისთავად წაშლა key material-ს ფიზიკურად არ ანადგურებს: თუ შენახულ ძველ გასაღებს provider chain-ში ისევ დაამატებენ, წვდომა აღდგება. მონაცემების შეუქცევადი დაკარგვა წარმოიშობა მხოლოდ იმ შემთხვევაში, თუ თავად key material მართლაც დაიკარგა ან განადგურდა (მაგალითად, გასაღები წაშლამდე არსად შეუნახავთ). თანმიმდევრობა: ახალი გასაღების პირველ ადგილზე დამატება → ყველა Secret-ის გადაწერა → დადასტურება, რომ ყველა ჩანაწერი ახალ გასაღებს იყენებს → ძველი გასაღების შენახვა სანდო ადგილას rollback-ისთვის → მხოლოდ შემდეგ მისი კონფიგიდან ამოღება.
 </details>
 
 ## ინფრასტრუქტურა
@@ -90,7 +90,7 @@ check_result
 <details>
 <summary>💡 მინიშნება დავალება 1-ისთვის</summary>
 
-ეს დავალება უნდა შესრულდეს პირველად, დავალება 2-მდე - როგორც კი EncryptionConfiguration-ს ჩართავთ და Secret-ს გადაწერთ, plaintext-დადასტურება გაქრება და მას post-hoc ვეღარ დააფიქსირებთ. ბრძანება `etcdctl` ფლაგებით `--cacert/--cert/--key` აღებულია Kubernetes-ის ოფიციალური დოკუმენტაციიდან (განყოფილება „Verify that newly written data is encrypted“ გვერდზე Encrypting Confidential Data at Rest); kubeadm-ის სერტიფიკატების გზები: `/etc/kubernetes/pki/etcd/ca.crt`, `server.crt`, `server.key`. ზუსტი ბმულები - ეტალონური ამოხსნის განყოფილებაში „სად ვიპოვოთ მაგალითები დოკუმენტაციაში“.
+ეს დავალება უნდა შესრულდეს პირველ რიგში, დავალება 2-მდე - როგორც კი EncryptionConfiguration-ს ჩართავთ და Secret-ს გადაწერთ, plaintext-დადასტურება გაქრება და მას post-hoc ვეღარ დააფიქსირებთ. ბრძანება `etcdctl` ფლაგებით `--cacert/--cert/--key` აღებულია Kubernetes-ის ოფიციალური დოკუმენტაციიდან (განყოფილება „Verify that newly written data is encrypted“ გვერდზე Encrypting Confidential Data at Rest); kubeadm-ის სერტიფიკატების გზები: `/etc/kubernetes/pki/etcd/ca.crt`, `server.crt`, `server.key`. ზუსტი ბმულები - ეტალონური ამოხსნის განყოფილებაში „სად ვიპოვოთ მაგალითები დოკუმენტაციაში“.
 </details>
 
 ---
@@ -126,19 +126,19 @@ check_result
 <details>
 <summary>💡 მინიშნება დავალება 4-ისთვის</summary>
 
-თანმიმდევრობა კრიტიკულია: `encrypted-secret`-ის შექმნა → ყველა არსებული Secret-ის გადაწერა `kubectl replace`-ით → raw etcd-ის შემოწმება ორივესთვის (legacy და encrypted) → მხოლოდ შემდეგ `identity`-ის კონფიგიდან ამოღება. თუ `identity`-ს უფრო ადრე ამოიღებთ, ვიდრე `legacy-secret` გადაიწერება, API server provider chain-ით ძველ plaintext-ჩანაწერს აღარ წაიკითხავს, და `legacy-secret` მიუწვდომელი გახდება.
+თანმიმდევრობა კრიტიკულია: `encrypted-secret`-ის შექმნა → ყველა არსებული Secret-ის გადაწერა `kubectl replace`-ით → raw etcd-ის შემოწმება ორივესთვის (legacy და encrypted) → მხოლოდ შემდეგ `identity`-ის კონფიგიდან ამოღება. თუ `identity`-ს უფრო ადრე ამოიღებთ, ვიდრე `legacy-secret` გადაიწერება, API server provider chain-ით ძველ plaintext-ჩანაწერს ვეღარ წაიკითხავს, და `legacy-secret` მიუწვდომელი გახდება.
 </details>
 
 ---
 | **5** | **RBAC-ის მინიმიზაცია და automount-ის გამორთვა** |
 | :---: | :--- |
 | რას ვაკეთებთ | • შექმენით ServiceAccount `secret-reader` `encryption-109`-ში `automountServiceAccountToken: false`-ით<br/>• Role `secret-reader-109` უნდა იძლეოდეს მხოლოდ `get`-ს მხოლოდ Secret `encrypted-secret`-ზე<br/>• მიაბით ის ამავე სახელის RoleBinding-ით<br/>• შექმენით Pod `secret-reader-109` ამ ServiceAccount-ით, `automountServiceAccountToken: false`-ით, image-ით `registry.k8s.io/pause:3.10` |
-| მიღების კრიტერიუმები | • ServiceAccount-ის Effective RBAC მისი სტანდარტული ჯგუფებით უშვებს `get encrypted-secret`-ს `encryption-109`-ში და კრძალავს Secret-ის სხვა ოპერაციებს, მათ შორის სხვა namespace-ების Secret-ზე წვდომას<br/>• Role/RoleBinding ზუსტია<br/>• Pod Running-ია ერთი `pause:3.10`-ით, ავტომატურად ან ხელით მიმაგრებული ServiceAccount token-ებისა და სხვა credential-bearing sources-ის გარეშე (Secret/hostPath/CSI/PVC volumes, Secret env/envFrom)<br/>• უვნებელი emptyDir/ConfigMap volumes დასაშვებია<br/>• `automountServiceAccountToken: false` Pod-სა და ServiceAccount-ში |
+| მიღების კრიტერიუმები | • ServiceAccount-ის effective RBAC მისი სტანდარტული ჯგუფებით უშვებს `get encrypted-secret`-ს `encryption-109`-ში და კრძალავს Secret-ის სხვა ოპერაციებს, მათ შორის სხვა namespace-ების Secret-ზე წვდომას<br/>• Role/RoleBinding ზუსტია<br/>• Pod Running-ია ერთი `pause:3.10`-ით, ავტომატურად ან ხელით მიმაგრებული ServiceAccount token-ებისა და სხვა credential-bearing sources-ის გარეშე (Secret/hostPath/CSI/PVC volumes, Secret env/envFrom)<br/>• უვნებელი emptyDir/ConfigMap volumes დასაშვებია<br/>• `automountServiceAccountToken: false` Pod-სა და ServiceAccount-ში |
 
 <details>
 <summary>💡 მინიშნება დავალება 5-ისთვის</summary>
 
-გამოიყენეთ `resourceNames: ["encrypted-secret"]` Role-ში - ამ ველის გარეშე `get`/`list` რესურსზე `secrets` წვდომას მისცემდა namespace-ის ყველა Secret-ზე, `legacy-secret`-ის ჩათვლით, რაც least-privilege-ის მოთხოვნას არღვევს. `pause:3.10` - placeholder image-ია (ცარიელი image-დამკავებელი), რომელსაც Kubernetes API საერთოდ არ სჭირდება, ამიტომ automount ორ დონეზე (SA და Pod) ფუნქციონალური შედეგების გარეშე ითიშება.
+გამოიყენეთ `resourceNames: ["encrypted-secret"]` Role-ში - ამ ველის გარეშე `get`/`list` რესურსზე `secrets` წვდომას მისცემდა namespace-ის ყველა Secret-ზე, `legacy-secret`-ის ჩათვლით, რაც least-privilege-ის მოთხოვნას არღვევს. `pause:3.10` - image-დამკავებელია, რომელსაც Kubernetes API საერთოდ არ სჭირდება, ამიტომ automount ორ დონეზე (SA და Pod) ფუნქციონალური შედეგების გარეშე ითიშება.
 </details>
 
 ## შედეგის შემოწმება

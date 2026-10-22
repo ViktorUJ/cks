@@ -137,7 +137,7 @@ check_result
 <details>
 <summary>💡 課題 5 のヒント</summary>
 
-Role で `resourceNames: ["encrypted-secret"]` を使用してください - このフィールドがないと、リソース `secrets` に対する `get`/`list` は、`legacy-secret` を含む namespace のすべての Secret へのアクセスを与え、least-privilege の要件に反します。`pause:3.10` は Kubernetes API をまったく必要としないダミーのイメージ なので、automount は 2 つのレベル (SA と Pod) で、機能への影響なしに無効にされます。
+Role で `resourceNames: ["encrypted-secret"]` を使用してください - このフィールドがないと、リソース `secrets` に対する `get`/`list` は、`legacy-secret` を含む namespace のすべての Secret へのアクセスを与え、least-privilege の要件に反します。`pause:3.10` は Kubernetes API をまったく必要としないダミーのイメージなので、automount は 2 つのレベル (SA と Pod) で、機能への影響なしに無効にされます。
 </details>
 
 ## 検証
@@ -147,7 +147,7 @@ check_result
 ```
 
 チェックには Init と 5 個の必須テストが含まれます。テスト 4 は、設定ファイルの存在だけでなく、新しい etcd レコードと以前の
-etcd レコードの実際の ciphertext `k8s:enc:aescbc:v1:` と、最終的な設定に migration 専用の `identity` がないことを確認します。実際の環境での大量の re-encryption の前には、snapshot、鍵の
+etcd レコードの実際の ciphertext `k8s:enc:aescbc:v1:` があること、および最終的な設定に migration 専用の `identity` がないことを確認します。実際の環境での大量の re-encryption の前には、snapshot、鍵の
 ローテーション計画、管理されたメンテナンスウィンドウが必要です；この実習は production の runbook ではありません。
 
 ## 解答

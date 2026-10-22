@@ -100,7 +100,7 @@ exit   # von der control-plane
 scp <cp-name>:/tmp/kubeadm-upgrade-apply.txt /var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt
 ```
 
-Erst jetzt, NACH dem erfolgreichen `kubeadm upgrade apply`, drain des Nodes und das Aktualisieren von kubelet/kubectl:
+Erst jetzt, NACH dem erfolgreichen `kubeadm upgrade apply`, folgen der drain des Nodes und das Aktualisieren von kubelet/kubectl:
 
 ```bash
 # auf der Arbeitsmaschine

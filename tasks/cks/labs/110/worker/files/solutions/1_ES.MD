@@ -290,8 +290,8 @@ ip route get $remote_ip
 # 10.110.2.172 dev ens5 src 10.110.1.x   <- la interfaz (ens5), no any / cilium_* / lxc* / veth*
 ```
 
-**Baseline: WireGuard desactivado.** Desactivamos temporalmente WireGuard y repetimos LA MISMA petición con EL MISMO
-capture scope. Al final restableceremos obligatoriamente `enable-wireguard: "true"`.
+**Baseline: WireGuard desactivado.** Desactivamos temporalmente WireGuard y ejecutamos una petición con el capture scope
+`host <remote-node-ip>`. Al final restableceremos obligatoriamente `enable-wireguard: "true"`.
 
 ```bash
 # terminal 2
@@ -503,7 +503,7 @@ cat /var/work/tests/artifacts/6/market-outside.txt
 
 `PeerAuthentication` controla el inbound server mode. El client interno recibe un
 certificado y usa mTLS automáticamente; el Pod en `default` no tiene sidecar y envía
-plaintext, por lo que el Envoy server con `STRICT` corta la conexión con un reset (RST). Termina con:
+plaintext, por lo que el Envoy server con `STRICT` corta la conexión con un reset (RST). Al final, ejecuta la comprobación:
 
 ```bash
 check_result

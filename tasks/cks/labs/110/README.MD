@@ -46,7 +46,7 @@ Terragrunt creates Kubernetes `1.36.0` in `eu-central-1`:
 | CNI | **Cilium** (installed via the Cilium CLI with the Helm release `cilium`); WireGuard is deliberately switched off until task 4 |
 | `worker` | a work machine with `kubectl`, `cilium`, `istioctl`, `check_result`, and SSH aliases to the nodes |
 
-The matrix verified on 2026-08-31 (check it before each build): the training Kubernetes is
+The matrix verified on 2026-08-31 (check it before each build): Kubernetes in the lab is
 `1.36.0`; the Cilium data plane is a supported lab build whose compatibility with
 Kubernetes `1.36` must be confirmed against the current requirements matrix; Cilium CLI `0.19.7`
 (compatible with Cilium `1.17+`); Istio `1.30.4` (the `1.30` branch officially supports Kubernetes
@@ -66,7 +66,7 @@ The control-plane is available for regular Pods without tolerations. The gVisor 
 
 The namespaces `sandbox-110` and `market` already exist. `market` has the label
 `istio-injection=enabled` set in advance; the Istio control plane is not installed. To access the
-sandbox node from the worker use the alias `k8s110_node_gvisor`, for the control-plane -
+sandbox node from the worker, use the alias `k8s110_node_gvisor`, for the control-plane -
 `k8s110_controlPlane_1`.
 
 ## Deployment
@@ -101,7 +101,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6}
 <details>
 <summary>💡 Hint for task 1</summary>
 
-The backup `/etc/containerd/config.toml.bak` is the fastest way to restore, but check its content before copying it back (`diff` with the current file), to understand what exactly is missing. After restoring the `runtimes.runsc` section be sure to `systemctl restart containerd` - simply editing the file does not apply the changes to an already running process.
+The backup `/etc/containerd/config.toml.bak` is the fastest way to restore, but check its content before copying it back (`diff` with the current file), to understand what exactly is missing. After restoring the `runtimes.runsc` section, be sure to `systemctl restart containerd` - simply editing the file does not apply the changes to an already running process.
 </details>
 
 ---
@@ -113,7 +113,7 @@ The backup `/etc/containerd/config.toml.bak` is the fastest way to restore, but 
 <details>
 <summary>💡 Hint for task 2</summary>
 
-If the Pod does not start (it hangs in `ContainerCreating` with the event `FailedCreatePodSandBox`, for example `no runtime for "runsc" is configured`), most likely task 1 is not fully completed - the RuntimeClass must really point to a working containerd handler. The `busybox:1.36` in use has the applet `httpd` - use `httpd -f -p 8080 -h /www` for a minimal HTTP server (you can check the presence of the applet via `busybox --list | grep '^httpd$'`).
+If the Pod does not start (it hangs in `ContainerCreating` with the event `FailedCreatePodSandBox`, for example `no runtime for "runsc" is configured`), most likely task 1 is not fully completed - the RuntimeClass must really point to a working containerd handler. The `busybox:1.36` image in use has the applet `httpd` - use `httpd -f -p 8080 -h /www` for a minimal HTTP server (you can check the presence of the applet via `busybox --list | grep '^httpd$'`).
 </details>
 
 ---

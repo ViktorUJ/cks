@@ -28,8 +28,8 @@ k auth can-i delete secrets -n security-104 \
 ## 2. Projected token des ServiceAccount
 
 Ein TokenRequest volume stellt einen kurzlebigen token aus; das gewöhnliche automount ist deaktiviert.
-Wir legen `audience: kubernetes.default.svc` nicht fest: Für kubeadm ist das nicht garantiert der vom
-API server akzeptierte Wert. Wird `audience` weggelassen, verwendet das kubelet den Standard-identifier des
+Wir legen `audience: kubernetes.default.svc` nicht fest: Für kubeadm ist das nicht unbedingt ein Wert, den der
+API server akzeptiert. Wird `audience` weggelassen, verwendet das kubelet den Standard-identifier des
 API server. Eine eigene audience darf erst nach der Prüfung von
 `--api-audiences` (oder dem default aus `--service-account-issuer`) auf der control-plane angegeben werden.
 `expirationSeconds` muss im Bereich `600`-`3600` einschließlich liegen - die Kubernetes API
@@ -39,7 +39,7 @@ projected source als invalid ab, unabhängig davon, was im Manifest steht.
 Die genaue Syntax von `projected.sources[].serviceAccountToken` musst du in der Prüfung nicht aus dem Gedächtnis
 abrufen - auf `kubernetes.io/docs` steht sie im Abschnitt Concepts → Storage →
 [Projected Volumes](https://kubernetes.io/docs/concepts/storage/projected-volumes/), unter der
-Überschrift **"serviceAccountToken projected volumes"** (dort gibt es ein fertiges Beispiel eines Pods mit diesem
+Überschrift **„serviceAccountToken projected volumes“** (dort gibt es ein fertiges Beispiel eines Pods mit diesem
 volume - übernimm die Struktur von dort und schreibe sie nicht von Grund auf). `kubectl run` kann
 ein solches volume nicht über Flags hinzufügen - wir erzeugen das Pod-Skelett über `--dry-run=client -o yaml` und
 ergänzen in `vim` nur die nötigen, aus dem Beispiel in der Dokumentation kopierten Felder:
@@ -150,7 +150,7 @@ echo "exit code: $?"
 
 Mounte auch kein legacy `Secret` mit `type: kubernetes.io/service-account-token` separat -
 selbst bei deaktiviertem automount kann ein solches Secret manuell über
-`volumes[].secret` gemountet werden, und dann ist der Pod formal "ohne token" nach dem automount-Feld, hat aber faktisch
+`volumes[].secret` gemountet werden, und dann ist der Pod formal „ohne token“ nach dem automount-Feld, hat aber faktisch
 trotzdem einen gültigen API-token im Container.
 
 ## 4. Entfernen der wildcard-Rechte
@@ -171,7 +171,7 @@ Ein einfaches `--anonymous-auth=false` ist hier nicht geeignet: kubeadm `release
 static Pod des kube-apiserver mit HTTPS liveness/readiness/startup probes auf `/livez` und
 `/readyz`, und HTTP probes des kubelet übergeben keine client credentials - bei vollständiger Deaktivierung von
 anonymous access erhalten diese Anfragen `401`, und das kubelet beginnt, den kube-apiserver für
-ungesund zu halten (was wiederum auch Aufgabe 9 bricht, die von einem stabil laufenden API
+ungesund zu halten (was wiederum auch Aufgabe 9 zum Scheitern bringt, die von einem stabil laufenden API
 server abhängt). Stattdessen verwenden wir die `AuthenticationConfiguration` mit `anonymous.conditions`,
 die anonymous access nur auf drei Health-Pfade beschränken. Setze in der Prüfung nicht vor
 jeden Befehl `sudo` - werde einmal root (`sudo -i`), das ist schneller:
@@ -196,7 +196,7 @@ Wir bearbeiten das static manifest: Wir entfernen `--anonymous-auth=true` vollst
 `--authentication-config` stehen bleiben - kube-apiserver verweigert den Start, wenn beide gesetzt sind),
 fügen `--authentication-config` hinzu sowie ein `hostPath` volume/volumeMount für die neue
 Konfigurationsdatei - kube-apiserver liest `authentication-config.yaml` vom Dateisystem des Nodes,
-daher muss die Datei im container über ein volumeMount sichtbar sein und nicht
+daher muss die Datei im Container über ein volumeMount sichtbar sein und nicht
 nur auf dem Host liegen:
 
 ```bash
@@ -276,7 +276,7 @@ sie nicht an. Das ist nicht dasselbe wie `anonymous.conditions` aus derselben Au
 begrenzt, auf welchen Pfaden eine Anfrage in der Phase authentication überhaupt eine anonymous identity erhält
 (dort nur `/livez`/`/readyz`/`/healthz`) - `/version` liefert anonym
 `401` gerade deshalb, weil dort keine anonymous identity zugewiesen wird, und nicht deshalb, weil
-`system:public-info-viewer` dort zu wenige Rechte hat. `lab104-unintended-anonymous-access` -
+`system:public-info-viewer` dort zu wenige Rechte hat. `lab104-unintended-anonymous-access`
 ist der absichtliche lab-owned Befund: Seine ClusterRole `lab104-anonymous-debug-access` gibt
 vollwertiges RBAC `get`/`list` auf `pods`/`secrets`/`configmaps` clusterweit, das heißt JEDE
 anonyme Anfrage kann sie lesen. Wir löschen beide Objekte, wie in den Aufgaben 4/7:
@@ -343,7 +343,7 @@ Wir erstellen den Pod mit demselben Namen neu: Wir entfernen `envFrom`, mounten 
 im Container; der Prozess der Anwendung selbst muss trotzdem unter dieser UID laufen, sonst
 kann er die Datei nicht lesen.
 
-Das Feld ist unveränderlich; der Pod muss gelöscht und mit demselben Namen neu erstellt werden. Wieder ist es günstiger,
+Die meisten Felder eines Pods (einschließlich `volumes`) sind unveränderlich, deshalb muss der Pod gelöscht und mit demselben Namen neu erstellt werden. Wieder ist es günstiger,
 ein Skelett über `--dry-run` zu erzeugen und das volume in `vim` zu ergänzen, als das gesamte YAML zu schreiben:
 
 ```bash
@@ -376,10 +376,10 @@ k apply -f app-vulnerable-fixed.yaml
 k wait -n security-104 --for=condition=Ready po/app-vulnerable --timeout=120s
 ```
 
-Wir bestätigen drei finale Eigenschaften und nicht nur "das Secret ist nicht im environment": Die Dateirechte
+Wir bestätigen drei finale Eigenschaften und nicht nur „das Secret ist nicht im environment“: Die Dateirechte
 sind genau `400` (und enthalten nicht bloß irgendwo den Substring `400`), und, was wichtiger ist, die Anwendung
 kann den Wert des Secrets weiterhin TATSÄCHLICH lesen - sonst könnte das hardening unbemerkt die
-Funktionalität der Anwendung selbst brechen:
+Funktionalität der Anwendung selbst beeinträchtigen:
 
 ```bash
 k exec -n security-104 app-vulnerable -- cat /proc/1/environ | tr '\0' '\n' | grep DB_PASSWORD
@@ -387,8 +387,8 @@ k exec -n security-104 app-vulnerable -- cat /proc/1/environ | tr '\0' '\n' | gr
 
 k exec -n security-104 app-vulnerable -- stat -L -c '%a' /etc/secrets/DB_PASSWORD \
   | tee /var/work/tests/artifacts/6/secret-file-mode.txt
-# 400 - genau dieser Wert und kein beliebiger Text, der irgendwo "400" enthält. Das Flag -L
-# ist Pflicht: Das Secret-volume wird über eine Kette von Symlinks gemountet ("..data"), und ohne -L
+# 400 - genau dieser Wert und kein beliebiger Text, der irgendwo „400“ enthält. Das Flag -L
+# ist Pflicht: Das Secret-volume wird über eine Kette von Symlinks gemountet („..data“), und ohne -L
 # zeigt stat den Modus des Symlinks selbst (unter Linux immer 777) und nicht der echten Datei.
 
 # Positive control: Der Prozess der Anwendung muss den Wert des Secrets tatsächlich lesen können.
@@ -397,7 +397,7 @@ k exec -n security-104 app-vulnerable -- cat /etc/secrets/DB_PASSWORD
 ```
 
 `defaultMode: 0400` schützt vor dem Lesen durch andere UIDs im selben Pod (zum Beispiel einen benachbarten
-sidecar-container ohne die nötige UID), ersetzt aber nicht die encryption at rest von etcd und hindert
+Sidecar-Container ohne die nötige UID), ersetzt aber nicht die encryption at rest von etcd und hindert
 einen unter der erwarteten UID laufenden Prozess nicht daran, die Datei selbst zu lesen - der mount erlaubt genau das.
 Vergewissere dich auch, dass `db-creds` nicht gleichzeitig auf einem ZWEITEN Weg gemountet ist
 (zum Beispiel zusätzlich über ein `projected` volume) - es muss genau ein volume übrig bleiben,
@@ -457,7 +457,7 @@ Wir bestätigen den Widerruf ALLER genannten gefährlichen Rechte und nicht nur 
 Die fixture gibt `impersonate` gleich auf drei Ressourcentypen (`users`/`groups`/`serviceaccounts`) -
 die Prüfung nur von `users` beweist den Widerruf der anderen beiden nicht; und `TYPE/NAME` in `kubectl auth
 can-i` ist ein resourceName und keine subresource (`kubectl auth can-i --help` zeigt direkt
-das Beispiel "jobs.batch/bar" - Prüfung eines Objekts, das buchstäblich `bar` heißt), daher braucht es für
+das Beispiel „jobs.batch/bar“ - Prüfung eines Objekts, das buchstäblich `bar` heißt), daher braucht es für
 `certificatesigningrequests/approval` ein separates Flag `--subresource=approval` und keinen
 Schrägstrich:
 
@@ -519,9 +519,9 @@ k exec -n security-104-baseline implicit-default-sa -- \
   test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
 echo "exit code: $?"
 # exit code: 0 - die Datei existiert nicht, und der exec selbst wurde erfolgreich ausgeführt (anders als bei einem banalen
-# "cat" auf eine nicht existierende Datei, dessen exit code von cat ebenfalls ungleich null ist, aber aus einem anderen
+# „cat“ auf eine nicht existierende Datei, dessen exit code von cat ebenfalls ungleich null ist, aber aus einem anderen
 # Grund - test ! -e führt genau die benötigte Prüfung aus, und ihr eigener Erfolg
-# muss separat verlangt werden und nicht einfach "jeder Fehler = Datei existiert nicht")
+# muss separat verlangt werden und nicht einfach „jeder Fehler = Datei existiert nicht“)
 ```
 
 Der Wert des SA gilt nur, wenn der Pod ihn nicht selbst überschreibt. Wenn derselbe Namespace
@@ -538,7 +538,7 @@ Führe am Ende `check_result` aus.
 Die Aufgaben 1-8 haben konkrete Pfade der privilege escalation geschlossen, die `build-agent` selbst zugänglich waren
 (wildcard, impersonate/bind/escalate, automount). Hier geht es um eine andere Schutzschicht -
 die Erkennung eines **gefährlichen RBAC grant, der von einem Administrator vergeben wurde** (versehentlich, durch
-kompromittierte Automatisierung oder böswillig) und nicht nur der aktuelle Snapshot von RBAC.
+kompromittierte Automatisierung oder böswillig) und nicht nur um den aktuellen Snapshot von RBAC.
 Wir verbinden uns mit der control-plane und bereiten ein minimales audit backend vor:
 
 ```bash
@@ -562,7 +562,7 @@ EOF
 Die RBAC-Regel steht an erster Stelle - die spezifischere Regel muss dem allgemeinen
 catch-all vorausgehen, sonst fängt `Metadata` das Ereignis früher ab. `omitStages: [RequestReceived]`
 auf Ebene der gesamten policy entfernt den überflüssigen Eintrag vor der Verarbeitung der Anfrage - er hat kein
-`requestObject`/`responseStatus`, der Checker verwirft solche Einträge ohnehin (`stage ==
+`requestObject`/`responseStatus`, und der Checker verwirft solche Einträge ohnehin (`stage ==
 "ResponseComplete"`), und mit der catch-all `Metadata`-Regel auf ALLE übrigen Anfragen des Clusters
 würde diese Stage das Volumen von audit.log ohne Nutzen verdoppeln.
 
@@ -633,7 +633,7 @@ ohne spezielle jq-Syntax.
 Für die echte Prüfung genügt das, aber dieses Lab verlangt zusätzlich eine artifact-Datei mit dem
 Ereignis - nicht, weil es dem Checker nicht reichen würde zu wissen, dass die Regel funktioniert (er liest `audit.log` auf der
 control-plane selbst, unabhängig, über SSH), sondern um eine separate Fähigkeit zu prüfen:
-gerade den ECHTEN Eintrag als forensic evidence zu extrahieren und zu speichern und ihn nicht mit
+genau den ECHTEN Eintrag als forensic evidence zu extrahieren und zu speichern und ihn nicht mit
 eigenen Worten nachzuerzählen (der Checker gleicht die `auditID` deiner Datei mit der `auditID` des echten Eintrags im log ab).
 `/var/work/tests/artifacts/9/` ist ein Pfad auf der ARBEITSMASCHINE und nicht auf der control-plane, daher
 speichern wir von der Arbeitsmaschine aus über `ssh control-plane "..."`, mit derselben Kombination von grep auf gewöhnliche
@@ -730,7 +730,7 @@ k exec -n security-104 secret-workflow -- cat /etc/rehydrated/SERVICE_TOKEN
 
 Führe am Ende `check_result` aus.
 
-## 11. Eine bestehende Role reparieren und an eine SA aus einem anderen Namespace binden
+## 11. Eine bestehende Role reparieren und an einen SA aus einem anderen Namespace binden
 
 Die vorhandene Role `pod-role` in `rbac-a` erlaubt `get`, `list`, `delete` - wir entfernen
 das überflüssige `delete` und fügen das benötigte `watch` hinzu:
@@ -827,7 +827,7 @@ k auth can-i create pods -n security-104 --as=john # no
 ```
 
 `--as=john` beweist nur die RBAC-Logik (impersonation, jedem admin zugänglich,
-unabhängig davon, ob ein echtes Zertifikat ausgestellt wurde). Separat beweisen wir, dass gerade das
+unabhängig davon, ob ein echtes Zertifikat ausgestellt wurde). Separat beweisen wir, dass genau das
 AUSGESTELLTE Zertifikat vom API server über eine echte TLS client-auth
 Anfrage akzeptiert wird:
 

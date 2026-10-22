@@ -137,7 +137,7 @@ external HTTP:000
 in-cluster HTTP:200
 ```
 
-`kubernetes-public:30114` ya no lo escucha kube-proxy en el nodo (transport deny); la ruta dentro del clúster
+kube-proxy en el nodo ya no atiende `kubernetes-public:30114` (transport deny); la ruta dentro del clúster
 por Service DNS no ha sufrido una regresión.
 
 ```bash

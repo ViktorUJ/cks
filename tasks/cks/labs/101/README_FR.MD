@@ -128,7 +128,7 @@ Configurer une allow-list ingress/egress minimale, figer l'image digest, démont
 check_result
 ```
 
-Le Checker crée et supprime ses propres namespace `imds-control` et probes : avant et après le deny dans `cks-101`, il confirme que l'IMDS réel répond depuis un namespace indépendant sans policy. Il ne fait pas confiance aux ressources de contrôle d'une tentative précédente et ne remplace pas vos propres vérifications de baseline/runtime. Les policies supplémentaires qui élargissent les flux autorisés provoquent une erreur.
+Le checker crée et supprime son propre namespace `imds-control` et ses propres probes : avant et après le deny dans `cks-101`, il confirme que l'IMDS réel répond depuis un namespace indépendant sans policy. Il ne fait pas confiance aux ressources de contrôle d'une tentative précédente et ne remplace pas vos propres vérifications de baseline/runtime. Les policies supplémentaires qui élargissent les flux autorisés provoquent une erreur.
 
 Solution de référence : [worker/files/solutions/1_FR.MD](worker/files/solutions/1_FR.MD).
 

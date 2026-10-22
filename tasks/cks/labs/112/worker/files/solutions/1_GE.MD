@@ -196,7 +196,7 @@ rules:
 EOF
 ```
 
-დაარედაქტირეთ `/etc/kubernetes/manifests/kube-apiserver.yaml` control-plane-ზე (`vim`). კონტეინერის `kube-apiserver`-ის `command`-ში
+დაარედაქტირეთ `/etc/kubernetes/manifests/kube-apiserver.yaml` control-plane-ზე (`vim`). `kube-apiserver` კონტეინერის `command`-ში
 დაამატეთ:
 
 ```yaml
@@ -346,7 +346,7 @@ INCIDENT_EXEC_PID=$!
 ```
 
 შემდეგ ყველაფერს control-plane-ზე ვაკეთებთ, სანამ პროცესი ცოცხალია: ვიღებთ alert-ს, ხოლო მისგან - container id-სა და
-host pid-ს (ვიწყებთ alert-ით და არ ვმკითხაობთ):
+host pid-ს (ვიწყებთ alert-ით და არ ვარაუდობთ):
 
 ```bash
 # ტერმინალი 1 (control-plane, root)
@@ -443,7 +443,7 @@ cat "$DIR/containment.txt"
 
 სტანდარტული წესი **Terminal shell in container** ლეგიტიმურ ინსტრუმენტზეც
 გააქტიურდება. environment-specific გამონაკლისის სწორი ადგილია არა
-თავად წესის რედაქტირება, არამედ სწორედ ამ წესის დარეზერვებული upstream-მაკროს override:
+თავად წესის რედაქტირება, არამედ სწორედ ამ წესისთვის სპეციალურად გათვალისწინებული upstream-მაკროს override:
 `user_expected_terminal_shell_in_container_conditions` (ნაგულისხმევად `(never_true)`, ანუ
 გამონაკლისები არ არის). ნუ აგრევთ მას სახელით მსგავს `user_shell_container_exclusions`-თან -
 ის ცალკე წესს ეკუთვნის **Run shell untrusted** ("Shell spawned by untrusted
@@ -487,7 +487,7 @@ kubectl wait -n runtime-112 --for=condition=Ready pod/ci-runner --timeout=60s
 kubectl exec -n runtime-112 -it ci-runner -- sh -c 'echo shell-open; sleep 2'
 ```
 
-ცალკე შეამოწმეთ, რომ `immutable-app` დავალება 5-დან (გამონაკლისის გარეშე) აგრძელებს alert-ის მიცემას - override
+ცალკე შეამოწმეთ, რომ `immutable-app` დავალება 5-დან (გამონაკლისის გარეშე) აგრძელებს alert-ის მიცემას - override-მა
 წესი მთლიანად ჩუმად არ უნდა ჩააქროს:
 
 ```bash
@@ -631,14 +631,14 @@ containerd-ით არის შექმნილი, kube-apiserver-ის �
 kernel syscalls-ის დონეზე და ხედავს node-ზე **ყველა** კონტეინერს იმის მიუხედავად, როგორ იყო ისინი
 გაშვებული.
 
-**ამას ნუ აურევთ ლაბ 111-თან**: იქ policy ამოწმებს კრიპტოგრაფიულ ხელმოწერას
+**მნიშვნელოვანია, არ აურიოთ ეს ლაბ 111-თან**: იქ policy ამოწმებს კრიპტოგრაფიულ ხელმოწერას
 (Cosign). აქ policy ამოწმებს მხოლოდ registry/repository allowlist-ს - უფრო მარტივ
 admission control-ს signature/attestor-ის გარეშე. ორივესთვის საერთო პრინციპი ერთია: admission მუშაობს
 მხოლოდ API admission path-ზე.
 
 Lab-owned local registry names მომზადებულია bootstrap-ით (არა საჯარო Docker Hub - ამ დავალების controlled
 abuse fixture უნდა იყოს safe და lab-owned, და არ უნდა იყოს დამოკიდებული გარე
-registry-ის ხელმისაწვდომობაზე შემოწმების მომენტში). ისინი დევს `/etc/cks112/registry.env`-ში control-plane-ზე; დაუკავშირეთ
+registry-ის ხელმისაწვდომობაზე შემოწმების მომენტში). ისინი დევს `/etc/cks112/registry.env`-ში control-plane-ზე; ჩატვირთეთ
 ისინი ორივე ტერმინალში:
 
 ```bash
@@ -723,7 +723,7 @@ container runtime-ში CRI-ით, kube-apiserver-ის მთლიანა
 helper `cks112-run <image> <id> '<ბრძანება>'` (wrapper `crictl runp/create/start`-ზე) და
 `cks112-rm <id>` გასაწმენდად. რატომ არა `ctr run`: `ctr`-ით შექმნილი კონტეინერები
 CRI-ისთვის უცნობია, და Falco მათთვის ყოველთვის წერს `container.image.repository = <NA>` - trusted და
-untrusted image-ები განურჩეველი იქნებოდა. CRI-ით შექმნილ კონტეინერს Falco image-ით ხედავს.
+untrusted image-ები ერთმანეთისგან გარჩევადი არ იქნებოდა. CRI-ით შექმნილ კონტეინერს Falco image-ით ხედავს.
 ყოველი გაშვება იღებს ერთ უნიკალურ სუფიქსს `$RUN_ID`, ხოლო მის მიერ შექმნილი ყველა ID იყენებს
 ამ სუფიქსს, ამიტომ განმეორებითი გაშვება წინა მცდელობის ნარჩენებს არ შეეჯახება:
 
@@ -894,9 +894,9 @@ signature verification-ზე ლაბ 111-ში - განსხვავე
 
 Deployment `mem-scanner` (2 replica) უკვე განთავსებულია bootstrap-ით; ორივე replica პერიოდულად
 ხსნის `/dev/mem`-ს კონტეინერის შიგნიდან. გზა `/dev/mem` კონტეინერის შიგნით - synthetic
-safe fixture-ია (backing device სინამდვილეში host-ის `/dev/null`-ია, და არა ჰოსტის რეალური ფიზიკური
+safe fixture-ია (backing device სინამდვილეში ჰოსტის `/dev/null`-ია, და არა ჰოსტის რეალური ფიზიკური
 მეხსიერება); Falco-ს პირობისთვის ფაილის სახელით (`fd.name = /dev/mem`) ეს არ განირჩევა -
-აღმოიჩინება თავად სისტემური გამოძახება `open`/`openat`/`openat2`. დაამატეთ წესი
+წესი აღმოაჩენს თავად სისტემურ გამოძახებას `open`/`openat`/`openat2`. დაამატეთ წესი
 `control-plane`-ზე:
 
 ```bash
@@ -936,9 +936,9 @@ exit   # control-plane-იდან
 scp control-plane:/tmp/art/10/falco-devmem.log /var/work/tests/artifacts/10/
 ```
 
-დარწმუნების შემდეგ, რომ აღმოჩენა დადასტურებულია თავად Falco-ს მიერ (და არა Pod manifest-ით), შეინახეთ alert-ში
-დასახელებული Pod და დარწმუნდით, რომ ის მართლაც Deployment `mem-scanner`-ის ReplicaSet-ს ეკუთვნის
-დამასშტაბებამდე:
+მას შემდეგ, რაც დარწმუნდებით, რომ აღმოჩენა დადასტურებულია თავად Falco-ს მიერ (და არა Pod manifest-ით), შეინახეთ alert-ში
+დასახელებული Pod მასშტაბირებამდე (შენახულ JSON-ში ჩანს owner-ის ჯაჭვი:
+Deployment `mem-scanner`-ის ReplicaSet):
 
 ```bash
 # ტერმინალი 2

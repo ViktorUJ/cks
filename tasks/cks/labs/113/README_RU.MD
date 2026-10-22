@@ -115,7 +115,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
 
-Если вы уже начали (или тем более закончили) upgrade worker-узла до control-plane - остановитесь: откатить worker обратно на пакеты `1.35.x` простым способом невозможно, правильный путь - завершить upgrade control-plane, затем продолжить/повторить upgrade worker-узла. Главное - следующий upgrade worker-узла (когда бы он ни был начат) должен произойти позже полностью завершённого upgrade control-plane. Не начинайте задание 2, пока `kubectl get node <cp-имя>` не покажет `v1.36.x` и `Ready`.
+Если вы уже начали (или тем более закончили) upgrade worker-узла до control-plane - остановитесь: откатить worker обратно на пакеты `1.35.x` простым способом невозможно, правильный путь - завершить upgrade control-plane, затем продолжить/повторить upgrade worker-узла. Главное - следующий upgrade worker-узла (когда бы он ни был начат) должен произойти позже полностью завершённого upgrade control-plane. Не начинайте задание 2, пока `kubectl get node <cp-имя>` (имя control-plane из `kubectl get no`) не покажет `v1.36.x` и `Ready`.
 </details>
 
 ---
@@ -127,7 +127,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
 
-Пример цикла опроса, который можно оставить работать в отдельном терминале/`screen`/`tmux` на всё время выполнения заданий 1-2: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. Если Deployment на короткое время терял все реплики - проверьте `kubectl get pods -n upgrade-113 -o wide` и что последовательные drain соблюдают PDB и required anti-affinity.
+Пример цикла опроса, который можно оставить работать в отдельном терминале/`screen`/`tmux` на всё время выполнения заданий 1-2: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. Если Deployment на короткое время терял все реплики - проверьте `kubectl get pods -n upgrade-113 -o wide` и что последовательные drain соблюдают PDB и required anti-affinity.
 </details>
 
 ## Проверка

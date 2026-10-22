@@ -6,7 +6,7 @@
 
 In diesem CKS-Lab installierst du Kyverno und schützt den Namespace `policy-108` mit
 policy-as-code-Regeln. Die Praxis umfasst validating admission: Verbot des Tags `latest`, obligatorisches
-`runAsNonRoot`, Allowlist für Registries; in der letzten, optionalen Phase - mutation des Pods bei
+`runAsNonRoot`, Allowlist für Registries; in der optionalen Phase - mutation des Pods bei
 admission. Aufgabe 6 vergleicht diesen Ansatz mit einem anderen Mechanismus - dem eingebauten
 `ImagePolicyWebhook`, bei dem die Entscheidung über das Image ein externes HTTP(S)-Backend über die API
 `ImageReview` trifft und nicht ein CEL-Ausdruck innerhalb des Clusters. Die abschließende Aufgabe 7 ist eine dritte, separate
@@ -25,7 +25,7 @@ Wenn ein Image überhaupt ohne Tag angegeben wird (zum Beispiel `nginx`), löst 
 <details>
 <summary>2. Warum muss eine validating policy `ephemeralContainers` getrennt von `containers`/`initContainers` prüfen?</summary>
 
-`kubectl debug` fügt einen ephemeral container einem BEREITS vorhandenen Pod über eine separate subresource API (`pods/ephemeralcontainers`) hinzu und nicht über ein gewöhnliches CREATE/UPDATE des Pods. Wenn die policy nur die Ressource `pods` matcht, ohne diese subresource explizit einzuschließen, kann der Versuch, einen ungeprüften/untrusted ephemeral container hinzuzufügen, an allen validating policies vorbeigehen, die für gewöhnliche containers geschrieben wurden.
+`kubectl debug` fügt einen ephemeral container einem BEREITS vorhandenen Pod über eine separate subresource API (`pods/ephemeralcontainers`) hinzu und nicht über ein gewöhnliches CREATE/UPDATE des Pods. Wenn die policy nur die Ressource `pods` matcht, ohne diese subresource explizit einzuschließen, kann der Versuch, einen ungeprüften/untrusted ephemeral container hinzuzufügen, an allen validating policies vorbeigehen, die für gewöhnliche Container geschrieben wurden.
 </details>
 
 <details>
@@ -123,7 +123,7 @@ erlaubter Fall, der überhaupt nicht unter den Tag fällt.
 <details>
 <summary>🔍 Prüfe dich vor `check_result`</summary>
 
-Bevor du die policy anwendest, vergewissere dich, dass der verletzende Pod überhaupt admission besteht
+Bevor du die policy anwendest, vergewissere dich, dass der gegen die Regel verstoßende Pod überhaupt admission besteht
 (Baseline) - sonst ist unklar, ob das denial von deiner policy oder von etwas anderem verursacht wurde:
 
 ```bash
@@ -166,7 +166,7 @@ echo "after-policy exit: $?"
 ```
 
 Wiederhole denselben Zyklus baseline→apply→probe→compare für: ein Image überhaupt ohne Tag
-(`registry.k8s.io/pause`), `registry.example:5000/app` (der Doppelpunkt vor dem letzten `/` ist der Port der Registry und kein Tag), `:latest` in `initContainers`, und `:latest`/untagged über
+(`registry.k8s.io/pause`), `registry.example:5000/app` (der Doppelpunkt vor dem letzten `/` ist der Port der Registry und kein Tag), `:latest` in `initContainers` und `:latest`/untagged über
 `kubectl debug --image=...` auf einem bereits laufenden erlaubten Pod (`pods/ephemeralcontainers`
 subresource). Prüfe schließlich die positive control - ein versionierter Tag muss auch
 nach dem Anwenden der policy durchgehen und nicht nur davor.
@@ -181,7 +181,7 @@ nach dem Anwenden der policy durchgehen und nicht nur davor.
 <details>
 <summary>💡 Hinweis zu Aufgabe 3</summary>
 
-Prüfe genau den EXPLIZITEN Wert `true` und nicht "das Fehlen von `false`" - ein CEL-Ausdruck der Form `object.spec.securityContext.runAsNonRoot == true` besteht nicht, wenn das Feld überhaupt nicht gesetzt ist (`null != true`), und das wird hier GEFORDERT: Die Aufgabe lehnt sowohl ein explizites `false` als auch ein fehlendes Feld ab - beide Fälle müssen denied werden und nicht nur ein explizites `false`.
+Prüfe genau den EXPLIZITEN Wert `true` und nicht „das Fehlen von `false`“ - ein CEL-Ausdruck der Form `object.spec.securityContext.runAsNonRoot == true` besteht nicht, wenn das Feld überhaupt nicht gesetzt ist (`null != true`), und das wird hier GEFORDERT: Die Aufgabe lehnt sowohl ein explizites `false` als auch ein fehlendes Feld ab - beide Fälle müssen denied werden und nicht nur ein explizites `false`.
 </details>
 
 <details>
@@ -230,7 +230,7 @@ Prüfe dann die positive control: derselbe Pod, aber mit explizitem
 <details>
 <summary>💡 Hinweis zu Aufgabe 4</summary>
 
-`startsWith('registry.k8s.io/')` ist die zuverlässigste Prüfung des Präfixes, stelle aber sicher, dass beide erlaubten Registries über OR geprüft werden (eine der beiden passt), und nicht über AND (beide gleichzeitig, was für ein Image unmöglich ist). Prüfe gegen eine ALLOWLIST (ein Image wird NUR zugelassen, wenn es einem der beiden Präfixe entspricht) und nicht gegen eine Denylist speziell für `docker.io` - eine policy, die als "wenn `docker.io` - deny, sonst allow" geschrieben ist, lässt `quay.io`, unqualified images und jede andere Drittanbieter-Registry durch. Stelle außerdem sicher, dass das Präfix mit dem ABSCHLIESSENDEN `/` verglichen wird (`registry.k8s.io/`, nicht nur `registry.k8s.io`), sonst kann ein ähnlich geschriebener Host (`registry.k8s.io.evil.example`) durch einen case-insensitive oder unvollständigen Treffer durchgehen. Vergiss wie in Aufgabe 2 nicht `ephemeralContainers` - das ist dasselbe Muster der Prüfung dreier Listen von Containern.
+`startsWith('registry.k8s.io/')` ist die zuverlässigste Prüfung des Präfixes, stelle aber sicher, dass beide erlaubten Registries über OR geprüft werden (eine der beiden passt), und nicht über AND (beide gleichzeitig, was für ein Image unmöglich ist). Prüfe gegen eine ALLOWLIST (ein Image wird NUR zugelassen, wenn es einem der beiden Präfixe entspricht) und nicht gegen eine Denylist speziell für `docker.io` - eine policy, die als „wenn `docker.io` - deny, sonst allow“ geschrieben ist, lässt `quay.io`, unqualified images und jede andere Drittanbieter-Registry durch. Stelle außerdem sicher, dass das Präfix mit dem ABSCHLIESSENDEN `/` verglichen wird (`registry.k8s.io/`, nicht nur `registry.k8s.io`), sonst kann ein ähnlich geschriebener Host (`registry.k8s.io.evil.example`) durch einen case-insensitive oder unvollständigen Treffer durchgehen. Vergiss wie in Aufgabe 2 nicht `ephemeralContainers` - das ist dasselbe Muster der Prüfung dreier Listen von Containern.
 </details>
 
 <details>
@@ -260,7 +260,7 @@ Allowlist - eine policy, die einfach buchstäblich `docker.io` verbietet, aber z
 Prüfung. Wiederhole denselben baseline→apply→probe→compare mindestens für: ein unqualified
 image (`busybox:1.36` überhaupt ohne Host), eine andere explizite Drittanbieter-Registry
 (`quay.io/...`), einen ähnlich geschriebenen Host/path (`registry.k8s.io.evil.example/...`,
-`ghcr.io/cks-lab.evil/...`), ein untrusted image in `initContainers`, und ein untrusted/trusted
+`ghcr.io/cks-lab.evil/...`), ein untrusted image in `initContainers` und ein untrusted/trusted
 image über `kubectl debug` auf einem bereits laufenden erlaubten Pod. Schließlich die positive control: Ein Pod mit BEIDEN Containern (main + init) aus
 `registry.k8s.io`/`ghcr.io/cks-lab` muss durchgehen; prüfe auch `ghcr.io/cks-lab/*`
 in init- und ephemeral-Containern und nicht nur in `containers`.
@@ -282,7 +282,7 @@ Diese Phase ist optional - wenn dir die Zeit ausgeht, kannst du sie ohne Risiko 
 | **6** | **ImagePolicyWebhook: externes Backend statt CEL policy** |
 | :---: | :--- |
 | Was wir tun | • Auf der Arbeitsmaschine ist bereits `/opt/image-policy-backend/server.py` vorbereitet - ein minimaler HTTPS-Server, der die `ImageReview` API implementiert (lehnt Images mit dem Tag `:latest` oder überhaupt ohne Tag ab).<br/>• Rolle ihn als Deployment im Namespace `image-policy` aus, hinter dem Service `image-policy-backend` auf Port `8443`. Das Backend muss Verbindungen über TLS annehmen (der upstream-Vertrag von `ImagePolicyWebhook` verlangt HTTPS, plain HTTP wird nicht unterstützt).<br/>• Konfiguriere auf der `control-plane` (`ssh`, dann `sudo -i`) eine `AdmissionConfiguration` für das plugin `ImagePolicyWebhook` (`defaultAllow: false`) und eine kubeconfig, die auf dein Backend zeigt.<br/>• **Füge** im static manifest `kube-apiserver.yaml` `ImagePolicyWebhook` zur bereits vorhandenen Liste `--enable-admission-plugins` **hinzu** (ersetze nicht die ganze Liste - sonst riskierst du, bereits aktivierte plugins auszuschalten) und aktiviere `--runtime-config=imagepolicy.k8s.io/v1alpha1=true`.<br/>• Erstelle nach der Wiederherstellung der API einen Pod mit `:latest` - er muss abgelehnt werden; dann einen Pod mit festgelegtem Tag - er muss erstellt werden. |
-| Abnahmekriterien | • `image-policy-backend` ist Available<br/>• Kube-apiserver ist healthy mit hinzugefügtem (nicht ersetztem) plugin und `--runtime-config`<br/>• Die kubeconfig des Backends verwendet HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy`<br/>• Ein Pod mit `:latest` und implicit latest (auch Registry-Port ohne Tag) wird genau von ImagePolicyWebhook im Namespace `default` abgelehnt - sowohl im gewöhnlichen Pod als auch im init/ephemeral container<br/>• Die Benutzer-Annotation `alpha.image-policy.k8s.io/break-glass: "true"` gibt keine Ausnahme<br/>• Der Namespace `policy-108` ist für Kyverno aus den Aufgaben 2–4 reserviert, damit zwei unabhängige admission-Mechanismen die Ablehnung des jeweils anderen nicht verdecken<br/>• Dazu delegiert das Backend bei `ImageReview.spec.namespace == policy-108` die Entscheidung an Kyverno, während in allen übrigen Namespaces ImagePolicyWebhook weiterarbeitet<br/>• Ein Pod mit festgelegtem Tag wurde erstellt und ist Running<br/>• Der Service verliert während des Backend-Ausfalls tatsächlich die Endpoints, die API lehnt wegen der Nichterreichbarkeit dieses Endpoints ab (`defaultAllow: false`), dann werden Service selector und admission exakt in den ursprünglichen Zustand zurückversetzt |
+| Abnahmekriterien | • `image-policy-backend` ist Available<br/>• Kube-apiserver ist healthy mit hinzugefügtem (nicht ersetztem) plugin und `--runtime-config`<br/>• Die kubeconfig des Backends verwendet HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy`<br/>• Ein Pod mit `:latest` und implicit latest (auch Registry-Port ohne Tag) wird genau von ImagePolicyWebhook im Namespace `default` abgelehnt - sowohl im gewöhnlichen Pod als auch im init/ephemeral container<br/>• Die Benutzer-Annotation `alpha.image-policy.k8s.io/break-glass: "true"` gewährt keine Ausnahme<br/>• Der Namespace `policy-108` ist für Kyverno aus den Aufgaben 2–4 reserviert, damit zwei unabhängige admission-Mechanismen die Ablehnung des jeweils anderen nicht verdecken<br/>• Dazu delegiert das Backend bei `ImageReview.spec.namespace == policy-108` die Entscheidung an Kyverno, während in allen übrigen Namespaces ImagePolicyWebhook weiterarbeitet<br/>• Ein Pod mit festgelegtem Tag wurde erstellt und ist Running<br/>• Der Service verliert während des Backend-Ausfalls tatsächlich die Endpoints, die API lehnt wegen der Nichterreichbarkeit dieses Endpoints ab (`defaultAllow: false`), dann werden Service selector und admission exakt in den ursprünglichen Zustand zurückversetzt |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 6</summary>
@@ -305,7 +305,7 @@ Finde das ConstraintTemplate über `kubectl get constrainttemplate k8sblockedreg
 <details>
 <summary>🔍 Prüfe dich vor `check_result`</summary>
 
-Baseline - VOR der Korrektur: Ein Pod aus `very-bad-registry.test` muss durchgehen (das Rego deckt ihn bisher nicht ab), während das bereits blockierte `untrusted-registry.example` abgelehnt werden muss:
+Baseline - VOR der Korrektur: Ein Pod aus `very-bad-registry.test` muss durchgehen (das Rego deckt ihn bisher nicht ab), während ein Pod aus dem bereits blockierten `untrusted-registry.example` abgelehnt werden muss:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -336,7 +336,7 @@ echo "old-bad baseline exit: $?"
 ```
 
 Ergänze das Rego und wiederhole DASSELBE Manifest (unter neuem Namen, der alte Pod wurde bereits
-über dry-run "erstellt" und wird nicht gespeichert) - jetzt wird ein admission-Fehler von
+über dry-run „erstellt“ und wird nicht gespeichert) - jetzt wird ein admission-Fehler von
 Gatekeeper erwartet, der ausdrücklich auf `k8sblockedregistries` verweist, für BEIDE Registries:
 
 ```bash

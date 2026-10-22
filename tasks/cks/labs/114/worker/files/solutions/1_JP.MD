@@ -18,7 +18,7 @@ CURRENT   NAME                        CLUSTER     AUTHINFO         NAMESPACE
 staging-admin@staging
 ```
 
-`staging`/`legacy` は decoy で、サーバーは名前解決できない/応答しません。実際のものに切り替えます：
+`staging`/`legacy` は decoy で、サーバーは名前解決できず、応答しません。実際のものに切り替えます：
 
 ```bash
 kubectl config use-context cluster1-admin@cluster1
@@ -137,7 +137,7 @@ external HTTP:000
 in-cluster HTTP:200
 ```
 
-`kubernetes-public:30114` は、ノード上の kube-proxy でもう listen されていません (transport deny)。Service DNS 経由の
+ノード上の kube-proxy は `kubernetes-public:30114` をもう処理していません (transport deny)。Service DNS 経由の
 クラスター内部の経路は影響を受けず、引き続き動作しています。
 
 ```bash

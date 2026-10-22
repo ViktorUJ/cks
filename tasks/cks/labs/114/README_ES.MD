@@ -4,7 +4,7 @@
 
 ## Descripción
 
-El kubeconfig que se entrega al estudiante contiene varios contexts: el operativo `cluster1-admin@cluster1`
+El kubeconfig que se entrega al estudiante contiene varios context: el operativo `cluster1-admin@cluster1`
 y dos deliberadamente inoperativos (`staging-admin@staging`, `legacy-admin@legacy`), que apuntan a API server
 inexistentes. `current-context` justo después del login está establecido en el inoperativo `staging-admin@staging`: esto
 reproduce a propósito una situación real del examen, en la que al candidato se le entrega un kubeconfig con varios
@@ -44,7 +44,7 @@ las tareas, y abre la solución de referencia solo después de un intento propio
 
 ## Objetivo
 
-Aprender a trabajar de forma segura con un kubeconfig que contiene varios contextos, a extraer y comprobar un
+Aprender a trabajar de forma segura con un kubeconfig que contiene varios context, a extraer y comprobar un
 client certificate sin usarlo para la autenticación, y a gestionar de forma consciente el exposure de un Service
 mediante el cambio `NodePort` -> `ClusterIP`.
 
@@ -86,7 +86,7 @@ mediante el cambio `NodePort` -> `ClusterIP`.
 
 |           **4**           | **Reduce exposure: NodePort -> ClusterIP** |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|       Qué hacemos       | • Cambia `kubernetes-public` al tipo `ClusterIP`.<br/>• Recuerda: el API server no admite un `nodePort` indicado explícitamente con el tipo `ClusterIP`: es más seguro quitar el campo explícitamente (`kubectl edit svc kubernetes-public` y elimina la línea `nodePort`, o un JSON patch con `op: remove` para `/spec/ports/0/nodePort`). |
+|       Qué hacemos       | • Cambia `kubernetes-public` al tipo `ClusterIP`.<br/>• Recuerda: el API server no admite un `nodePort` indicado explícitamente con el tipo `ClusterIP`, por lo que es más seguro quitar el campo explícitamente (`kubectl edit svc kubernetes-public` y elimina la línea `nodePort`, o un JSON patch con `op: remove` para `/spec/ports/0/nodePort`). |
 | Criterios de aceptación | • La ruta externa `<node-internal-ip>:30114` ahora está bloqueada a nivel de transporte (connection refused/timeout).<br/>• La ruta dentro del clúster sigue funcionando.<br/>• El Pod del backend sigue Ready. |
 |        Comprobación        | Desde el worker: `curl -m5 http://<node-internal-ip>:30114/` -> error de conexión (no un código HTTP).<br/>Desde dentro del clúster: `curl http://kubernetes-public.cks-114.svc.cluster.local/` -> HTTP 200 como antes.<br/>`kubectl -n cks-114 get svc kubernetes-public -o yaml` -> `type: ClusterIP`, ningún puerto tiene `nodePort`. |
 

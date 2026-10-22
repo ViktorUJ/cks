@@ -195,7 +195,9 @@ registry を禁止する) であり、単に文字列として `docker.io` を�
 
 Positive controls は、`containers`、`initContainers`、`ephemeralContainers` で、許可された 2 つの prefix (`registry.k8s.io/` と
 `ghcr.io/cks-lab/`) の両方をカバーする必要があります；どちらかの registry を通常のコンテナだけに
-限定しないでください：
+限定しないでください。
+
+Negative controls (これらの各 manifest は、いずれも拒否される必要があります)：
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -589,7 +591,7 @@ kubectl get pod webhook-pinned-ok
 latest を禁止します；`policy-108` は、課題 2-4 の 3 つの Kyverno-policy が完全に制御します。
 これは仕組みを分離するための実習上の措置であり、一般的な production パターンではありません。
 ユーザー定義のアノテーション `alpha.image-policy.k8s.io/break-glass` は許可を**与えません**：
-ImageReview の forwarding annotations は認証の確認ではありません。
+ImageReview へのアノテーションの受け渡しは認証の確認ではありません。
 
 `defaultAllow: false` は fail-closed を意味します：backend が利用できない場合、新しい Pod/image は
 許可されず、禁止されます。これを明示的に確認してください - ただし `image-policy-backend` を 0 レプリカに

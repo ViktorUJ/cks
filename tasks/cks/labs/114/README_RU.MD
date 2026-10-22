@@ -4,7 +4,7 @@
 
 ## Описание
 
-Kubeconfig, который выдаётся студенту, содержит несколько contexts: рабочий `cluster1-admin@cluster1`
+Kubeconfig, который выдаётся студенту, содержит несколько context: рабочий `cluster1-admin@cluster1`
 и два заведомо нерабочих (`staging-admin@staging`, `legacy-admin@legacy`), указывающих на несуществующие
 API server. `current-context` сразу после логина выставлен на нерабочий `staging-admin@staging` - это
 намеренно воспроизводит реальную ситуацию на экзамене, когда кандидату выдают kubeconfig с несколькими
@@ -44,7 +44,7 @@ ssh ubuntu@<IP>
 
 ## Цель
 
-Научиться безопасно работать с kubeconfig, содержащим несколько контекстов, извлекать и проверять
+Научиться безопасно работать с kubeconfig, содержащим несколько context, извлекать и проверять
 client certificate без его использования для аутентификации, и осознанно управлять exposure Service
 через переключение `NodePort` -> `ClusterIP`.
 

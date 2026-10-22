@@ -207,7 +207,7 @@ declared vs effective შემოწმება: `ufw show added` - დეკ�
 dpt:22/6443 წესს ზუსტი source-მისამართებით, ხოლო `ufw6-user-input` - ზუსტად ერთ სტრიქონს, იგივე
 loopback ACCEPT-ს v6-ისთვის (`ufw allow in on lo` - წესია ინტერფეისის მიხედვით აშკარა IP-ის გარეშე,
 ამიტომ ufw ყოველთვის ქმნის როგორც v4-, ისე v6-ვერსიას). ნებისმიერი სხვა/დამატებითი სტრიქონი იქ -
-გარეშე bypass-ია:
+უცხო bypass-ია:
 
 ```bash
 ssh "$CP" 'sudo ufw show user-rules'
@@ -330,7 +330,7 @@ systemctl cat docker.socket                          # ... SocketGroup=root ... 
 `docker.socket` არ უნდა შეიცავდეს TCP `ListenStream`-ს:
 
 ```bash
-ss -ltnp | grep dockerd                        # ცარიელი გამოტანა (systemd-ის TCP-სოკეტს docker.socket-იდან შემდეგი სტრიქონი იჭერს)
+ss -ltnp | grep dockerd                        # ცარიელი გამოტანა (systemd-ის TCP-სოკეტი docker.socket-იდან მოწმდება შემდეგი სტრიქონით)
 systemctl cat docker.socket | grep ListenStream # მხოლოდ /run/docker.sock (და ცარიელი reset)
 stat -c '%U %G %a' /var/run/docker.sock         # root root 660
 sudo -u developer docker ps                     # permission denied
@@ -361,9 +361,9 @@ ssh docker-host 'if sudo -u developer docker ps >/dev/null 2>&1; then echo "deve
 როგორც `blacklist`-ით, ისე `install` override-ით. ორივე დირექტივა მოქმედებს
 `modprobe`-ის დონეზე (alias resolution და აშკარა `modprobe sctp`) და ჩატვირთვის ჩვეულებრივ გზას აღმოფხვრის;
 ისინი kernel-level enforcement-ს არ ანაცვლებენ (`insmod` მოდულს პირდაპირ ტვირთავს syscall-ით
-და `modprobe.d`-ს არ კითხულობს, ხოლო `modprobe --ignore-install`-ს შეუძლია `install`-ის გვერდის ავლა თანაბარი
-root-წვდომის დროს) - ამ ლაბისთვის მნიშვნელოვანია სწორედ მოსალოდნელი ავტოჩატვირთვის გზის აღმოფხვრა, და არა
-იმ მომხმარებლისგან დაცვის მოდელირება, რომელსაც node-ზე უკვე აქვს root.
+და `modprobe.d`-ს არ კითხულობს, ხოლო `modprobe --ignore-install`-ს შეუძლია `install`-ის გვერდის ავლა
+ჰოსტზე root-წვდომის არსებობისას) - ამ ლაბისთვის მნიშვნელოვანია სწორედ მოსალოდნელი ავტოჩატვირთვის გზის აღმოფხვრა, და არა
+იმ მომხმარებლისგან დაცვის უზრუნველყოფა, რომელსაც node-ზე უკვე აქვს root.
 
 **`modprobe -r sctp` შეიძლება არ შესრულდეს უკვე ცოცხალ კლასტერზე** - ეს მოსალოდნელია და
 სტუდენტის შეცდომა არ არის. ბირთვის პროტოკოლური მოდულები (მათ შორის `sctp`) იღებენ persistent

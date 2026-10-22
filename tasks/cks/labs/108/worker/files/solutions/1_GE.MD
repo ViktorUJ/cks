@@ -14,7 +14,7 @@ kubectl config use-context "$CTX"
 
 ## 1. Kyverno-ს დაყენება
 
-worker-ზე მომზადებულია დაფიქსირებული installer: ის აყენებს Kyverno-ს Helm chart-ს
+Worker-ზე მომზადებულია დაფიქსირებული installer: ის აყენებს Kyverno-ს Helm chart-ს
 `3.9.0` (Kyverno `1.19`) namespace `kyverno`-ში. გაშვებამდე მისი დათვალიერება შეიძლება.
 
 ```bash
@@ -101,7 +101,7 @@ image tag-ს არ შეიცავს და implicit latest-ად უნ�
 
 ## 3. `runAsNonRoot`-ის მოთხოვნა
 
-პოლიტიკა მოითხოვს სწორედ `true` მნიშვნელობას Pod-level `securityContext`-ში; არაპირდაპირი
+Policy მოითხოვს სწორედ `true` მნიშვნელობას Pod-level `securityContext`-ში; არაცხადი (მიუთითებელი)
 მნიშვნელობა და `false` არ გადის. დამატებით აკრძალულია `runAsUser: 0` Pod-ის დონეზე
 და container-level overrides `runAsNonRoot: false` / `runAsUser: 0` სამივე
 container list-ში, წინააღმდეგ შემთხვევაში container-level securityContext შეძლებს Pod-level
@@ -151,7 +151,7 @@ kubectl apply -f require-run-as-non-root.yaml
 ## 4. მხოლოდ დამტკიცებული registry-ების დაშვება
 
 დაშვებულია `registry.k8s.io` და გამოყოფილი ორგანიზაციული გზა `ghcr.io/cks-lab`. CEL
-აერთიანებს container lists-ის სამივეს და ყოველ image-ზე ერთ allowlist-ს იყენებს.
+აერთიანებს სამივე container list-ს და ყოველ image-ზე ერთ allowlist-ს იყენებს.
 
 ```yaml
 # allow-approved-registries.yaml
@@ -196,7 +196,9 @@ registry-ს ორი დაშვებულის გარდა), და �
 
 Positive controls უნდა ფარავდეს ორივე დაშვებულ prefix-ს (`registry.k8s.io/` და
 `ghcr.io/cks-lab/`) `containers`-ში, `initContainers`-სა და `ephemeralContainers`-ში; ნუ შემოფარგლავთ registry-ებიდან ერთ-ერთს
-მხოლოდ ჩვეულებრივი კონტეინერებით:
+მხოლოდ ჩვეულებრივი კონტეინერებით.
+
+Negative controls (თითოეული ეს manifest უნდა იყოს უარყოფილი):
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -590,10 +592,10 @@ kubectl get pod webhook-pinned-ok
 
 `ImagePolicyWebhook` იყენებს backend-ს `/opt/image-policy-backend/server.py`-დან:
 `default`-სა და დანარჩენ namespace-ებში (`policy-108`-ის გარდა) ის კრძალავს explicit/implicit
-latest-ს; `policy-108`-ს მთლიანად აკონტროლებს სამი Kyverno-პოლიტიკა დავალებებიდან 2–4.
+latest-ს; `policy-108`-ს მთლიანად აკონტროლებს სამი Kyverno policy დავალებებიდან 2–4.
 ეს მექანიზმების ლაბორატორიული იზოლაციაა, და არა უნივერსალური production pattern.
 მომხმარებლის annotation `alpha.image-policy.k8s.io/break-glass` ნებართვას არ იძლევა:
-ImageReview forwarding annotations ავთენტურობის შემოწმება არ არის.
+annotation-ების ImageReview-ში გადაცემა ავთენტურობის შემოწმება არ არის.
 
 `defaultAllow: false` ნიშნავს fail-closed-ს: თუ backend მიუწვდომელია, ახალი Pod/image
 იკრძალება, და არა დაიშვება. შეამოწმეთ ეს აშკარად - მაგრამ `image-policy-backend`-ს
@@ -636,7 +638,7 @@ Gatekeeper და საწყისი (არასრული) `ConstraintTe
 admission engine-ია ამ ლაბში (Kyverno-სა და ImagePolicyWebhook-ის შემდეგ), რომელიც სწორედ
 OPA/Rego-უნარს ამოწმებს. `gatekeeper-108` Kyverno-ს დავალებებისგან 1-5 (`policy-108`) იზოლირებულია
 სპეციალურად: წინააღმდეგ შემთხვევაში ერთი და იგივე სატესტო Pod ერთდროულად შეიძლებოდა Kyverno-მაც და
-Gatekeeper-მაც უარეყო, და denial-ის წყარო ორაზროვანი იქნებოდა. ნახეთ მიმდინარე Rego:
+Gatekeeper-მაც უარყოს, და denial-ის წყარო ორაზროვანი იქნებოდა. ნახეთ მიმდინარე Rego:
 
 ```bash
 kubectl get constrainttemplate k8sblockedregistries -o yaml

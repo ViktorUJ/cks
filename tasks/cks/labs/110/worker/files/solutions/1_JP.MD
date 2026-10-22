@@ -289,8 +289,8 @@ ip route get $remote_ip
 # 10.110.2.172 dev ens5 src 10.110.1.x   <- インターフェース (ens5)、any / cilium_* / lxc* / veth* ではありません
 ```
 
-**Baseline: WireGuard 無効。** 一時的に WireGuard を無効にして、同じリクエストを同じ
-capture scope で繰り返します。最後に必ず `enable-wireguard: "true"` を戻します。
+**Baseline: WireGuard 無効。** 一時的に WireGuard を無効にして、capture scope
+`host <remote-node-ip>` でリクエストを実行します。最後に必ず `enable-wireguard: "true"` を戻します。
 
 ```bash
 # ターミナル 2
@@ -315,7 +315,7 @@ kubectl exec -n sandbox-110 runc-baseline -- \
 grep CKS110-WIREGUARD-MARKER /tmp/wireguard-baseline.txt
 ```
 
-**変更後: WireGuard 有効。** WireGuard を復元し、同じリクエストを同じ
+**変更後：WireGuard 有効。** WireGuard を復元し、同じリクエストを同じ
 キャプチャ scope で繰り返します：今度は WireGuard UDP/51871 が見え、marker はないはずです。
 
 ```bash

@@ -139,8 +139,8 @@ ls -la /opt/lab106-fixtures/
 ---
 | **3** | **Localhost AppArmor Pod და ჩაწერის ბლოკირება** |
 | :---: | :--- |
-| რას ვაკეთებთ | შექმენით namespace `security-106` და Pod `apparmor-writer`. Pod-მა უნდა აირჩიოს ინფრასტრუქტურიდან node-ის label, გამორთოს ServiceAccount token-ის automount და Pod-ის დონეზე დააყენოს `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. გამოიყენეთ `busybox:1.36`, კონტეინერი `app`, ძილის ბრძანება `sleep 3600` და `emptyDir`, მიმაგრებული `/work`-ზე. გაშვების შემდეგ დაადასტურეთ ეფექტური profile ბრძანებით `cat /proc/1/attr/current` (თუ ინტერფეისი ხელმისაწვდომია), შეასრულეთ დაშვებული წაკითხვის ოპერაცია, მაგალითად `cat /etc/hostname >/dev/null`, და შემდეგ სცადეთ ფაილის ჩაწერა `/work`-ში; ოპერაცია აუცილებლად უარით უნდა დასრულდეს. node-ზე დააფიქსირეთ AppArmor denial profile/process-ისთვის `journalctl -k \| grep -i apparmor`-დან ან `dmesg \| grep -i apparmor`-დან. |
-| მიღების კრიტერიუმები | Pod გაშვებულია, იყენებს სწორედ Localhost profile-ს და სწორ nodeSelector-ს; პროცესის effective profile აჩვენებს `k8s-106-deny-write`-ს enforce mode-ში (როცა `/proc/.../attr/current` ხელმისაწვდომია); დაშვებული წაკითხვის ოპერაცია (მაგალითად, `cat /etc/hostname` ან `ls /work`) გადის, ხოლო checker independently წერს თავის საკუთარ უნიკალურ (per-run) ფაილს `/work`-ში და იღებს AppArmor-უარს. kernel journal/audit log-ში არის სწორედ ამ მცდელობასთან დაკავშირებული (ფაილის უნიკალური სახელით) მოვლენა `apparmor="DENIED"` ამ profile-ით - ეს გამორიცხავს false pass-ს ჟურნალში მოძველებული denial-მოვლენისგან. |
+| რას ვაკეთებთ | შექმენით namespace `security-106` და Pod `apparmor-writer`. Pod-მა უნდა აირჩიოს ინფრასტრუქტურიდან node-ის label, გამორთოს ServiceAccount token-ის automount და Pod-ის დონეზე დააყენოს `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. გამოიყენეთ `busybox:1.36`, კონტეინერი `app`, ძილის ბრძანება `sleep 3600` და `emptyDir`, მიმაგრებული `/work`-ზე. გაშვების შემდეგ დაადასტურეთ ეფექტური profile ბრძანებით `cat /proc/1/attr/current` (თუ ინტერფეისი ხელმისაწვდომია), შეასრულეთ დაშვებული წაკითხვის ოპერაცია, მაგალითად, `cat /etc/hostname >/dev/null`, და შემდეგ სცადეთ ფაილის ჩაწერა `/work`-ში; ოპერაცია აუცილებლად უარით უნდა დასრულდეს. node-ზე დააფიქსირეთ AppArmor denial profile/process-ისთვის `journalctl -k \| grep -i apparmor`-დან ან `dmesg \| grep -i apparmor`-დან. |
+| მიღების კრიტერიუმები | Pod გაშვებულია, იყენებს სწორედ Localhost profile-ს და სწორ nodeSelector-ს; პროცესის effective profile აჩვენებს `k8s-106-deny-write`-ს enforce mode-ში (როცა `/proc/.../attr/current` ხელმისაწვდომია); დაშვებული წაკითხვის ოპერაცია (მაგალითად, `cat /etc/hostname` ან `ls /work`) გადის, ხოლო checker დამოუკიდებლად წერს თავის საკუთარ უნიკალურ (per-run) ფაილს `/work`-ში და იღებს AppArmor-უარს. kernel journal/audit log-ში არის სწორედ ამ მცდელობასთან დაკავშირებული (ფაილის უნიკალური სახელით) მოვლენა `apparmor="DENIED"` ამ profile-ით - ეს გამორიცხავს false pass-ს ჟურნალში მოძველებული denial-მოვლენისგან. |
 
 <details>
 <summary>💡 მინიშნება დავალება 3-ისთვის</summary>
@@ -157,7 +157,7 @@ ls -la /opt/lab106-fixtures/
 <details>
 <summary>💡 მინიშნება დავალება 4-ისთვის</summary>
 
-`Seccomp: 2` `/proc/1/status`-ში ნიშნავს "filter mode აქტიურია" (SECCOMP_MODE_FILTER) - სწორედ ეს უნდა დაინახოთ. `Seccomp: 0` ნიშნავდა seccomp filter-ის საერთოდ არარსებობას (`Unconfined`). ეს ამ ჯგუფის ხუთიდან ყველაზე მარტივი დავალებაა - თუ არ გადის, სავარაუდოდ პრობლემა nodeSelector-შია და არა თავად seccompProfile-ში.
+`Seccomp: 2` `/proc/1/status`-ში ნიშნავს "filter mode აქტიურია" (SECCOMP_MODE_FILTER) - სწორედ ეს უნდა დაინახოთ. `Seccomp: 0` ნიშნავდა seccomp filter-ის საერთოდ არარსებობას (`Unconfined`). ეს სამი seccomp-დავალებიდან (4-6) ყველაზე მარტივია - თუ არ გადის, სავარაუდოდ პრობლემა nodeSelector-შია და არა თავად seccompProfile-ში.
 </details>
 
 ---
@@ -187,7 +187,7 @@ BusyBox `unshare -m` წარმატებული `unshare(2)`-ის შ�
 დამოუკიდებელ `mount(2)` syscall-ს (`mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL)`
 private propagation-ის იძულებისთვის - ეს unshare-ის ქცევაა, ნაგულისხმევად აქტიური,
 თუ აშკარად არ არის გადაცემული `--propagation unchanged`, და მაშინაც კი `mount()` მაინც
-გამოიძახება, უბრალოდ ნულოვანი ფლაგებით). containerd's default AppArmor-პროფილი (`RuntimeDefault`,
+გამოიძახება, უბრალოდ ნულოვანი ფლაგებით). containerd-ის სტანდარტული AppArmor-პროფილი (`RuntimeDefault`,
 რომელსაც Pod იღებს აშკარა `securityContext.appArmorProfile`-ის გარეშე) შეიცავს `deny mount,`-ს
 ფლაგებზე რაიმე პირობის გარეშე - ეს აკრძალვა capabilities-სა და seccomp-ისგან დამოუკიდებლად მოქმედებს.
 ამიტომ `unshare -m true` შეიძლება `EPERM`-ით ჩავარდეს AppArmor-ის გამო, თუნდაც
@@ -215,7 +215,7 @@ file capabilities), მაგრამ არ შლის `SYS_ADMIN`-ს, რ�
 <details>
 <summary>💡 მინიშნება დავალება 7-ისთვის</summary>
 
-`id` კონტეინერის შიგნით აჩვენებს `uid=0(root)`-ს `hostUsers`-ის მიუხედავად - ეს მოსალოდნელია, კონტეინერი ხედავს თავის საკუთარ namespace-ს, სადაც მისი root ნამდვილად UID 0-ია ამ namespace-ში. რეალური დაცვა ჩანს მხოლოდ გარედან: თავად node-ზე, `/proc/<host PID>/uid_map`-ში, სადაც UID 0 კონტეინერის შიგნით ჰოსტზე რაღაც დიდ არაპრივილეგირებულ UID-ზე აისახება. host PID-ის საპოვნელად გამოიყენეთ `crictl inspect <container-id>` - სწორედ იქიდან, და არა `kubectl get pod`-იდან, რომელმაც მხოლოდ Kubernetes-ობიექტი იცის, და არა პროცესის host-level PID.
+`id` კონტეინერის შიგნით აჩვენებს `uid=0(root)`-ს `hostUsers`-ის მიუხედავად - ეს მოსალოდნელია, კონტეინერი ხედავს თავის საკუთარ namespace-ს, სადაც მისი root ნამდვილად UID 0-ია ამ namespace-ში. რეალური დაცვა ჩანს მხოლოდ გარედან: თავად node-ზე, `/proc/<host PID>/uid_map`-ში, სადაც UID 0 კონტეინერის შიგნით ჰოსტზე რაღაც დიდ არაპრივილეგირებულ UID-ზე აისახება. host PID-ის საპოვნელად გამოიყენეთ `crictl inspect <container-id>` - სწორედ იქიდან, და არა `kubectl get pod`-იდან, რომელიც მხოლოდ Kubernetes-ობიექტს იცნობს, და არა პროცესის host-level PID-ს.
 </details>
 
 ---

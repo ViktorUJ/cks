@@ -244,7 +244,7 @@ kubectl get --raw=/readyz
 ```
 
 ```bash
-# 終端機 1:旗標進入了執行中的 manifest
+# 終端機 1:確認旗標已寫入實際使用的 manifest
 grep -E -- '--audit-(policy-file|log-path|log-max)' /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
@@ -328,7 +328,7 @@ kubectl exec -n "$NS" immutable-app -- sh -c 'touch /tmp/allowed && test -f /tmp
 
 Audit backend 已經在運作，因此新的 `kubectl exec` 會留下 API evidence。我們啟動
 受控的、長時間執行的行程：marker 會在命令列中停留足夠長的時間，以便
-檢查 `/proc`。在 production 中，不會重新啟動可疑的行程；這裡則是
+檢查 `/proc`。在 production 中，不會再次執行可疑的行程；這裡則是
 一次性實驗中安全的 planted evidence。
 
 ```bash
@@ -370,7 +370,7 @@ cat /proc/$HOST_PID/cgroup > proc-cgroup.txt
 ps -eo pid,ppid,user,lstart,args --forest > process-tree.txt
 ```
 
-現在對 API event 做 correlation。現代的 `kubectl exec` 運作在 WebSocket 之上，因此在 audit 中它
+現在對 API event 做 correlation。較新版本的 `kubectl exec` 運作在 WebSocket 之上，因此在 audit 中它
 顯示為 `get`(在 SPDY fallback 時則為 `create`)，兩種都可以。對於 `pods/exec`,
 `Metadata` 就足夠：request body 中的 command 可能包含 secret，因此這裡不需要 `RequestResponse`。
 
@@ -849,7 +849,7 @@ cks112-rm $BYPASS_2
 
 最後，證明 prefix-trap 本身：以 `${TRUSTED_REPO}-evil` 建構的 repository,
 「以」與允許的 `$TRUSTED_REPO` 相同的子字串「開頭」，但並不精確相等。
-如果 Falco condition 使用 `startswith`(如這條規則的樸素版本)，這個 image 就會「不被發現地」
+如果 Falco condition 使用 `startswith`(如這條規則的單純版本)，這個 image 就會「不被發現地」
 通過 - 這正是為什麼修正後的條件
 `!=` 必須抓到它。Prefix-trap 映像由 bootstrap 準備(`$CKS112_PREFIX_IMAGE`,
 獨立的 digest):
@@ -890,7 +890,7 @@ Falco 無法事先**阻擋**這樣的容器的建立，但在它
 任務 3、7 與 9 圍繞 `spawned_process`/`proc.cmdline` 建構 condition - 依
 行程的「啟動」與它的參數來偵測。這裡使用的是本質上不同類別的
 Falco 條件：依「開啟」具體檔案/裝置來偵測，與
-哪個行程、帶有什麼命令列參數來做無關。
+哪個行程、以什麼命令列參數執行此操作無關。
 
 Deployment `mem-scanner`(2 個 replica)已經由 bootstrap 部署；兩個 replica 都會定期
 在容器內開啟 `/dev/mem`。容器內的路徑 `/dev/mem` 是 synthetic
@@ -936,9 +936,9 @@ exit   # 離開 control-plane
 scp control-plane:/tmp/art/10/falco-devmem.log /var/work/tests/artifacts/10/
 ```
 
-在確認偵測是由 Falco 本身(而不是 Pod manifest)證實之後，儲存 alert 中
-指名的 Pod，並確認它在縮減之前確實屬於 Deployment
-`mem-scanner` 的 ReplicaSet:
+在確認偵測是由 Falco 本身(而不是 Pod manifest)證實之後，在縮減之前儲存 alert 中
+指名的 Pod(儲存的 JSON 中會看到 owner 鏈：Deployment
+`mem-scanner` 的 ReplicaSet)：
 
 ```bash
 # 終端機 2

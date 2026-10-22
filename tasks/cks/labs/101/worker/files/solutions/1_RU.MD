@@ -28,7 +28,7 @@ k -n cks-101 expose deployment backend --port=8080
 k -n cks-101 wait --for=condition=Available deploy/frontend deploy/backend --timeout=60s
 ```
 
-Проверяем что образы совпадают:
+Проверяем, что образы совпадают:
 ```bash
 k -n cks-101 get deploy frontend backend -o yaml | grep 'image:'
 ```

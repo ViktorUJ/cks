@@ -161,7 +161,7 @@ kubectl get pod -n sandbox-110 gvisor-sandbox -o wide
 
 gVisor Sentry montre au workload un kernel view synthétique ; `dmesg` n'affiche pas le log du noyau
 du nœud, mais un bref log synthétique commençant par la ligne `Starting gVisor...` (c'est elle qu'attend
-le checker). C'est attendu et ce n'est pas une raison de donner au conteneur des privileges superflus.
+le checker). C'est attendu et ce n'est pas une raison de donner au conteneur des privilèges superflus.
 
 ## 3. Un Pod runc ordinaire pour comparer
 
@@ -239,7 +239,7 @@ test "$(kubectl -n kube-system get cm cilium-config -o jsonpath='{.data.enable-w
 cilium status --wait
 ```
 
-L'état du chiffrement se lit chez l'agent via `cilium-dbg` : c'est le debug CLI in-pod, fourni avec le Cilium agent. Le CLI `cilium` local reste un outil d'install/cluster-level et ne le remplace pas à l'intérieur du Pod. `cilium-dbg status` N'A PAS de flag `--all-encryption` (dans 1.20.x, seuls sont disponibles `--all-addresses`, `--all-clusters`, `--all-controllers`, `--all-health`, `--all-nodes`, `--all-redirects`, `--verbose`) - l'evidence détaillée de peer/allowed-IP/remote-node, nous l'obtenons via `cilium-dbg debuginfo --output json`, et non via un flag inexistant.
+L'état du chiffrement se lit chez l'agent via `cilium-dbg` : c'est le debug CLI in-pod, fourni avec le Cilium agent. Le CLI `cilium` local reste un outil d'install/cluster-level et ne le remplace pas à l'intérieur du Pod. `cilium-dbg status` N'A PAS de flag `--all-encryption` (dans la version 1.20.x, seuls sont disponibles `--all-addresses`, `--all-clusters`, `--all-controllers`, `--all-health`, `--all-nodes`, `--all-redirects`, `--verbose`) - l'evidence détaillée de peer/allowed-IP/remote-node, nous l'obtenons via `cilium-dbg debuginfo --output json`, et non via un flag inexistant.
 
 ```bash
 agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0].metadata.name}')
@@ -262,7 +262,7 @@ le TCP plaintext du résultat et ne démontre donc PAS son absence - à la place
 nous utilisons un même capture scope (`host <remote-node-ip>`, sans filtre de port) et comparons
 AVANT/APRÈS l'activation de WireGuard sur un même flow inter-nœuds.
 
-La capture sur `any` N'est PAS un point d'observation correct de l'on-wire state : `any` voit aussi
+La capture sur `any` n'est PAS un point d'observation correct de l'on-wire state : `any` voit aussi
 l'interface interne de Cilium `cilium_wg0`, par laquelle, par conception du tunnel, passe du trafic DÉJÀ DÉCHIFFRÉ.
 Il faut capturer sur l'interface physique d'egress vers le nœud distant (pas `any`, `cilium_*`,
 `lxc*`, `veth*`).
@@ -271,7 +271,7 @@ Il faudra deux terminaux : le **terminal 1** est le control-plane (là, `tcpdump
 machine de travail (requêtes et `kubectl`).
 
 ```bash
-# terminal 2 (machine de travail) : IP du nœud avec le gVisor-Pod : c'est le nœud « distant » pour le control-plane
+# terminal 2 (machine de travail) : IP du nœud avec le gVisor-Pod - c'est le nœud « distant » pour le control-plane
 gvisor_node=$(kubectl get pod gvisor-sandbox -n sandbox-110 -o jsonpath='{.spec.nodeName}')
 remote_ip=$(kubectl get node "$gvisor_node" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
 echo "remote_ip=$remote_ip"
@@ -290,8 +290,8 @@ ip route get $remote_ip
 # 10.110.2.172 dev ens5 src 10.110.1.x   <- l'interface (ens5), pas any / cilium_* / lxc* / veth*
 ```
 
-**Baseline : WireGuard désactivé.** Nous désactivons temporairement WireGuard et répétons LA MÊME requête avec LE MÊME
-capture scope. À la fin, rétablissez obligatoirement `enable-wireguard: "true"`.
+**Baseline : WireGuard désactivé.** Nous désactivons temporairement WireGuard et exécutons une requête avec le capture scope
+`host <remote-node-ip>`. À la fin, nous rétablirons obligatoirement `enable-wireguard: "true"`.
 
 ```bash
 # terminal 2
@@ -457,7 +457,7 @@ kubectl rollout status -n market deployment/market-client --timeout=180s
 kubectl wait -n default --for=condition=Ready pod/mesh-outside --timeout=180s
 kubectl get pods -n market
 
-# Baseline (STRICT pas encore appliquée) : un plaintext client hors du mesh doit recevoir 200 :
+# Baseline (STRICT pas encore appliquée) : un plaintext client hors du mesh doit recevoir 200 -
 # cela démontre que la connectivité fonctionne en principe et que tout refus ultérieur
 # sera causé précisément par STRICT mTLS, et non par un problème indépendant de DNS/network.
 kubectl exec -n default mesh-outside -- \
@@ -503,7 +503,7 @@ cat /var/work/tests/artifacts/6/market-outside.txt
 
 `PeerAuthentication` contrôle l'inbound server mode. Le client interne reçoit un
 certificat et utilise mTLS automatiquement ; le Pod dans `default` n'a pas de sidecar et envoie du
-plaintext, c'est pourquoi l'Envoy server avec `STRICT` réinitialise la connexion. Terminez par :
+plaintext, c'est pourquoi l'Envoy server avec `STRICT` réinitialise la connexion. À la fin, lancez la vérification :
 
 ```bash
 check_result

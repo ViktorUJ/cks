@@ -6,7 +6,7 @@
 
 在這個 CKS 實驗中，你要安裝 Kyverno，並用 policy-as-code 規則保護 namespace `policy-108`。
 實作涵蓋 validating admission：禁止 `latest` 標籤、強制 `runAsNonRoot`、registry 的 allowlist;
-在最後的選擇性階段中，則是 admission 時對 Pod 的 mutation。任務 6 把這種做法與另一種機制比較 - 內建的
+在選擇性階段中，則是 admission 時對 Pod 的 mutation。任務 6 把這種做法與另一種機制比較 - 內建的
 `ImagePolicyWebhook`，其中 image 的決定由外部 HTTP(S)-backend 透過 `ImageReview` API 做出，
 而不是叢集內部的 CEL 運算式。最後的任務 7 是第三個、獨立的
 admission engine:**Gatekeeper (OPA/Rego)**，你要修復一個已經部署、但不完整的

@@ -4,10 +4,10 @@
 
 ## 概要
 
-受講者に渡される kubeconfig には、複数の contexts が含まれています：動作する `cluster1-admin@cluster1` と、
+受講者に渡される kubeconfig には、複数の context が含まれています：動作する `cluster1-admin@cluster1` と、
 意図的に動作しない 2 つ (`staging-admin@staging`、`legacy-admin@legacy`) で、後者は存在しない
 API server を指しています。ログイン直後の `current-context` は、動作しない `staging-admin@staging` に設定されています。これは
-意図的に、実際の試験で起こる状況を再現したもので、候補者に複数の
+意図的に、実際の試験で起こる状況を再現したものです。試験では、候補者に複数の
 context を持つ kubeconfig が渡され、どれが動作するのかを自分で見極める必要があります。
 
 これとは別に、同じ kubeconfig には、本物の、実際に生成された自己署名の client certificate
@@ -44,7 +44,7 @@ ssh ubuntu@<IP>
 
 ## 目的
 
-複数のコンテキストを含む kubeconfig を安全に扱い、client certificate を認証に使用することなく
+複数の context を含む kubeconfig を安全に扱い、client certificate を認証に使用することなく
 抽出して検証し、`NodePort` -> `ClusterIP` の切り替えを通じて Service の exposure を
 意識的に管理できるようになります。
 
@@ -86,7 +86,7 @@ ssh ubuntu@<IP>
 
 |           **4**           | **Reduce exposure: NodePort -> ClusterIP** |
 | :-----: | :----- |
-|       やること       | • `kubernetes-public` のタイプを `ClusterIP` に変更します。<br/>• 覚えておいてください：API server は、タイプ `ClusterIP` のとき明示的に指定された `nodePort` を許可しません - このフィールドは明示的に取り除くのが確実です (`kubectl edit svc kubernetes-public` で `nodePort` の行を削除するか、`/spec/ports/0/nodePort` に対して `op: remove` を指定した JSON patch を使います)。 |
+|       やること       | • `kubernetes-public` のタイプを `ClusterIP` に変更します。<br/>• 覚えておいてください：API server は、タイプ `ClusterIP` のとき明示的に指定された `nodePort` を許可しません。このフィールドは明示的に取り除くのが確実です (`kubectl edit svc kubernetes-public` で `nodePort` の行を削除するか、`/spec/ports/0/nodePort` に対して `op: remove` を指定した JSON patch を使います)。 |
 | 受け入れ基準 | • 外部の経路 `<node-internal-ip>:30114` が、トランスポートレベルでブロックされている (connection refused/timeout)。<br/>• クラスター内部の経路は引き続き動作する。<br/>• Backend Pod が Ready のままである。 |
 |        検証        | worker から：`curl -m5 http://<node-internal-ip>:30114/` -> 接続エラー (HTTP コードではない)。<br/>クラスターの内部から：`curl http://kubernetes-public.cks-114.svc.cluster.local/` -> 以前と同じ HTTP 200。<br/>`kubectl -n cks-114 get svc kubernetes-public -o yaml` -> `type: ClusterIP`、どのポートにも `nodePort` がない。 |
 
@@ -97,7 +97,7 @@ check_result
 ```
 
 Checker は、`current-context` とそれを通じた API への live リクエストを確認し、`cluster9-admin` の証明書を独立して抽出して解析し、
-元の bootstrap の fingerprint と照合し、あなたの成果物と比較します。また、Service DNS 経由でクラスター内部の HTTP 200 プローブを実行し、Deployment、EndpointSlice、`default/kubernetes` が変更されていないことを確認します。NodePort の過去のフェーズは、Service の切り替え前の 2 つの live プローブを持つ root-owned の monitor が確認します。ClusterIP の状態では、checker は live の DNS と NodePort のトランスポートでの拒否を確認します。
+元の bootstrap の fingerprint と照合し、あなたの成果物と比較します。また、Service DNS 経由でクラスター内部の HTTP 200 プローブを実行し、Deployment と EndpointSlice の状態を確認し、`default/kubernetes` が変更されていないことも確認します。NodePort の過去のフェーズは、Service の切り替え前の 2 つの live プローブを持つ root-owned の monitor が確認します。ClusterIP の状態では、checker は live の DNS と NodePort のトランスポートでの拒否を確認します。
 
 参考解答：[worker/files/solutions/1_JP.MD](worker/files/solutions/1_JP.MD)。
 

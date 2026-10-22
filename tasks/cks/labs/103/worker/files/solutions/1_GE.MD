@@ -315,7 +315,7 @@ grep -A1 '1.1.1' /var/work/tests/artifacts/7/before.txt
 # [FAIL] 1.1.1 Ensure that the API server pod specification file permissions ...
 ```
 
-შეამოწმეთ ფაქტობრივი წვდომის უფლება node-ზე და გაასწორეთ `600`-მდე - ეს file-only
+შეამოწმეთ ფაქტობრივი წვდომის უფლებები node-ზე და გაასწორეთ ისინი `600`-მდე - ეს file-only
 ცვლილებაა, kubelet static Pod-ს უფლებების შეცვლის გამო თავიდან არ ქმნის, მხოლოდ manifest-ის
 შიგთავსის შეცვლის გამო:
 
@@ -328,7 +328,7 @@ ssh control-plane 'sudo stat -c "%a %n" /etc/kubernetes/manifests/kube-apiserver
 # 600 /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
-იგივე check-ის განმეორებითმა წერტილოვანმა გაშვებამ უნდა აჩვენოს `PASS`:
+იგივე check-ის ცალკეულმა განმეორებითმა გაშვებამ უნდა აჩვენოს `PASS`:
 
 ```bash
 ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.1.1' \
@@ -417,7 +417,7 @@ k -n kube-system get pods -l component=kube-scheduler
 ```
 
 ვამოწმებთ არა ფაილის ტექსტს, არამედ რეალურად გაშვებულ Pod-ს (kubelet static Pod-ს manifest-ის ცვლილების
-შემდეგ მყისიერად არ ქმნის თავიდან), და იგივე check-ის განმეორებითმა წერტილოვანმა გაშვებამ უნდა
+შემდეგ მყისიერად არ ქმნის თავიდან), და იგივე check-ის ცალკეულმა განმეორებითმა გაშვებამ უნდა
 აჩვენოს `PASS`:
 
 ```bash
@@ -446,7 +446,7 @@ grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 იგივე ხერხი, რაც დავალებებში 7-9, ახლა რეალურ worker-node-ზე (და არა control-plane-ზე), მაგრამ
 სხვა პროფილისთვის. დაფიქსირებული `kube-bench 0.16.0`/`cis-1.12` (გამოყენებული ამ ლაბის ყველა დანარჩენ
 დავალებაში) check protect-kernel-defaults-ს საერთოდ არ შეიცავს - CIS-მა ის ამოიღო/
-გადანომრა პროფილის ამ ვერსიიდან მოყოლებული; საკუთარი `4.2.6` `cis-1.12`-ში - ეს
+გადაანომრა პროფილის ამ ვერსიიდან მოყოლებული; საკუთარი `4.2.6` `cis-1.12`-ში - ეს
 სხვა check-ია (`--make-iptables-util-chains`, `PASS` ნაგულისხმევად, protect-kernel-defaults-თან
 კავშირი არ აქვს). საჭირო check იმავე ID-ით `4.2.6` არსებობს იმავე binary-ის უფრო ძველ პროფილში
 `cis-1.24` - გამოიყენეთ სწორედ ის, აშკარა `--benchmark cis-1.24`-ით, მხოლოდ
@@ -467,8 +467,8 @@ workdir=$(mktemp -d)
 asset="kube-bench_${KUBE_BENCH_VERSION}_linux_${arch}.tar.gz"
 base="https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}"
 curl -fsSL -o "$workdir/$asset" "$base/$asset"
-# იგივე ხერხი, რაც დავალება 6-ში: ვადარებთ დამოუკიდებლად გამოქვეყნებულ ჯამს, და არა
-# თავად ფაილიდან გამოთვლილ ჯამს.
+# იგივე ხერხი, რაც დავალება 6-ში: ვადარებთ დამოუკიდებლად გამოქვეყნებულ საკონტროლო ჯამს, და არა
+# თავად ფაილიდან გამოთვლილ საკონტროლო ჯამს.
 curl -fsSL -o "$workdir/checksums.txt" "$base/kube-bench_${KUBE_BENCH_VERSION}_checksums.txt"
 (cd "$workdir" && grep -E "[[:space:]]${asset}\$" checksums.txt | sha256sum --check --strict -)
 tar -xzf "$workdir/$asset" -C "$workdir"
@@ -500,7 +500,7 @@ k get node "$WORKER_NODE" -o jsonpath='{.status.conditions[?(@.type=="Ready")].s
 ```
 
 დაადასტურეთ `/configz`-ით (რეალურად გამოყენებული კონფიგურაცია, და არა ფაილის ტექსტი) და
-check-ის განმეორებითი წერტილოვანი გაშვებით:
+check-ის ცალკეული განმეორებითი გაშვებით:
 
 ```bash
 k get --raw="/api/v1/nodes/$WORKER_NODE/proxy/configz" \

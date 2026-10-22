@@ -11,8 +11,7 @@
 監査に使える状態でなければなりません。
 
 これは security tooling と supply chain に関する CKS の課題であり、CKA の演習ではありません。成果物の大半は
-worker 上でローカルに分析されます；唯一の例外は課題 4 で、そこでは hardened な Deployment を適用して
-Ready/Available と HTTP の smoke test を確認します。
+worker 上でローカルに分析されます；クラスターを追加で使用するのは、課題 1c、4、5b、9a-9c です (live な Deployment、Ready/Available と HTTP の smoke test を確認する hardened な Deployment、Kyverno の policy と Pod)。
 
 ## Threat model
 
@@ -21,8 +20,8 @@ Ready/Available と HTTP の smoke test を確認します。
 kube-linter、Hadolint によって検出されます。
 
 layer に誤って残された secret や token には、別の確認が必要です：secret
-scanning (たとえば Trivy の secret scanning) と、image の history の inspection (`docker history`、
-layer の抽出) です。SBOM は別の課題を解決します - コンポーネントとパッケージのバージョンの棚卸しです；
+scanning (たとえば Trivy の secret scanning) と、image の history の確認 (`docker history`、
+layer の抽出) です。SBOM は別の目的に対応します - コンポーネントとパッケージのバージョンの棚卸しです；
 supply-chain の調査 (たとえば脆弱なライブラリを見つける) には役立ちますが、
 layer の history から secret を見つけるための信頼できる仕組みではなく、secret
 scanning の代わりにもなりません。稼働中の設定にもう secret が含まれていなくても、
@@ -126,7 +125,7 @@ control-plane 上の `registry:2` - は bootstrap によって立ち上げられ
 - データはノードのローカル PV (`/var/lib/cks111-registry`) に保存されるため、registry の Pod の
   再起動後も保持されます；
 - 公開した image の digest は `podman push --digestfile` から取得し、manifest の存在は
-  `/v2/` へのリクエストで確認してください (registry には `docker buildx imagetools` のような HTTPS 専用のツールはありません)；
+  `/v2/` へのリクエストで確認してください (この registry には `docker buildx imagetools` のような HTTPS 専用のツールは使えません)；
 - コマンドの詳細な手順は、[解答](worker/files/solutions/1_JP.MD)のステップ「0. 準備」にあります。
 
 **Docker Hub の制限。** 同じ IP からの匿名の pull には制限があります (6 時間で約 100 リクエスト)。
@@ -192,7 +191,7 @@ check_result
 </details>
 
 ---
-| **1c** | **CRITICAL severity による Workload image の triage** |
+| **1c** | **CRITICAL severity による workload image の triage** |
 | :---: | :--- |
 | やること | • namespace `cks-111` には、すでに 4 つの Deployment (label `cks.io/task=1c`) がデプロイされており、それぞれが 1 つの immutable な digest 固定の image を持っています。<br/>• これらの live な Deployments から image references を取得し (タグの名前から推測しないでください)、**4 つすべての** image を `--severity CRITICAL` で Trivy でスキャンし、それぞれの一意の CRITICAL `VulnerabilityID` の数を数えます。<br/>• CRITICAL の数が最も多い Deployment (「最も脆弱」) と、最も少ない 2 つの Deployment (「最も脆弱でない 2 つ」) を特定します。それらの名前を `/var/work/tests/artifacts/1c/ranking.txt` に `MOST_VULNERABLE=<deployment-name>`、`LEAST_VULNERABLE_1=<deployment-name>`、`LEAST_VULNERABLE_2=<deployment-name>` として書きます。<br/>• 最も脆弱な Deployment の image について、**まさに Trivy で** (`trivy image --format cyclonedx`) CycloneDX SBOM を `1c/cyclonedx.json` に生成します。<br/>• その後 remediate します：`replicas > 0` を最も脆弱でない 2 つの Deployment にのみ残し、残りの 2 つ (最も脆弱なものを含む) は `replicas: 0` にスケールします。 |
 | 受け入れ基準 | • **Ranking:** checker が 4 つすべての live images の Trivy CRITICAL スキャンを自分で繰り返して ranking を再計算する - `ranking.txt` は、古い/推測したものではなく、この新しいスキャンと一致している必要がある。<br/>• **SBOM:** `cyclonedx.json` が、まさに Trivy による有効な CycloneDX ドキュメントであり、実際に最も脆弱な Deployment の image に関するものである。<br/>• **Remediation:** ちょうど 2 つの Deployment (新しいスキャンで最も脆弱でないもの) が `replicas > 0` を持ち、残りの 2 つは `replicas: 0` である。 |
@@ -231,12 +230,12 @@ image references は `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jso
 | **4** | **kubesec と kube-linter に従って workload の YAML を修正する** |
 | :---: | :--- |
 | やること | • まず課題 3 の hardened image をビルドして公開し、次に `deployment.yaml` にその immutable な manifest reference `registry/.../catalog@sha256:<manifest-digest>` を指定します (upstream の nginx ではありません)。<br/>• Pod レベルで `automountServiceAccountToken: false`、`runAsNonRoot: true`、`seccompProfile: RuntimeDefault` を追加します。<br/>• コンテナで `allowPrivilegeEscalation: false`、`readOnlyRootFilesystem: true`、`capabilities.drop: ["ALL"]`、CPU と memory の requests/limits を設定します。<br/>• nginx については、temp、pid/run、cache、config のパスに writable な `emptyDir`/tmpfs をマウントし、起動前に config を準備します。<br/>• `privileged` を削除し、Deployment を適用して、Ready/Available と成功した HTTP リクエストを確認します。<br/>• 新しいレポート `4/kubesec-after.json` と `4/kube-linter-after.json` を保存します。 |
-| 受け入れ基準 | • **イメージ:** YAML が、upstream の nginx ではなく、`USER 101` を持つ digest 固定の hardened image を使用している。<br/>• **マニフェスト:** 必要なフィールド、init container `prepare-nginx-config`、writable な mounts が存在する；`privileged` がない。<br/>• **動作：** Deployment が Available で、HTTP リクエストが成功する。<br/>• **レポート：** 最終的な 2 つのレポートがどちらも有効な JSON である。 |
+| 受け入れ基準 | • **image:** YAML が、upstream の nginx ではなく、`USER 101` を持つ digest 固定の hardened image を使用している。<br/>• **manifest:** 必要なフィールド、init container `prepare-nginx-config`、writable な mounts が存在する；`privileged` がない。<br/>• **動作：** Deployment が Available で、HTTP リクエストが成功する。<br/>• **レポート：** 最終的な 2 つのレポートがどちらも有効な JSON である。 |
 
 <details>
 <summary>💡 課題 4 のヒント</summary>
 
-`readOnlyRootFilesystem: true` では、nginx が通常書き込むすべてのディレクトリに writable なパスが必要です：`/tmp`、`/var/run` (PID ファイル)、`/var/cache/nginx` (キャッシュ)、`/etc/nginx/conf.d` (config が起動時に生成される場合)。1 つでも漏らすと、コンテナは起動しても、nginx が最初にそこへ何かを書き込もうとしたときに落ちます。Init container `prepare-nginx-config` は、メインのコンテナが起動する前に、デフォルトの config を別の writable volume にコピーするために必要です - だからこそ、受け入れ基準で別途言及されています。
+`readOnlyRootFilesystem: true` では、nginx が通常書き込むすべてのディレクトリに writable なパスが必要です：`/tmp`、`/var/run` (PID ファイル)、`/var/cache/nginx` (キャッシュ)、`/etc/nginx/conf.d` (config が起動時に生成される場合)。1 つでも抜かすと、コンテナは起動しても、nginx が最初にそこへ何かを書き込もうとしたときに落ちます。Init container `prepare-nginx-config` は、メインのコンテナが起動する前に、デフォルトの config を別の writable volume にコピーするために必要です - だからこそ、受け入れ基準で別途言及されています。
 </details>
 
 ---
@@ -315,18 +314,18 @@ Syft は、フラグ `-o cyclonedx-json` で CycloneDX を生成します (同�
 | **9b** | **Fresh signed ALLOW: policy の作成後の新しい Pod** |
 | :---: | :--- |
 | やること | • 課題 9a の policy は、署名された `$HARDENED_IMAGE` を許可する必要があります - しかし、すでに存在する Deployment を再度 `kubectl apply` しても、これは**証明されません**：template が変わっていなければ、新しい ReplicaSet/Pod は作成されないことがあり、`Running` は単に、policy の前に作成された古い Pod である可能性があります。<br/>• **新しい**、以前には存在しなかったオブジェクトを作成します：`kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`。<br/>• この Pod の `creationTimestamp`、9a の policy の `creationTimestamp`、そして最終的な `status.phase`/`Ready` condition を `9b/signed-admission-check.json` に保存します。 |
-| 受け入れ基準 | • **Pod:** `signed-admission-check` が存在し、まさに `$HARDENED_IMAGE` を使用している；それに対して `cosign verify --key cosign.pub "$HARDENED_IMAGE"` が成功し、`status.phase` が `Failed` ではなく、`Ready` 条件が `True` に達している。<br/>• **成果物：** `9b/signed-admission-check.json` にこの image が含まれ、Pod の `creationTimestamp` が `ImageValidatingPolicy require-signed-catalog-images` の `creationTimestamp` より**後**である。<br/>• これは、policy を生き延びた古い Pod ではなく、検証可能な形で署名された image の、policy の後の新しい admission を実証する。 |
+| 受け入れ基準 | • **Pod:** `signed-admission-check` が存在し、まさに `$HARDENED_IMAGE` を使用している；それに対して `cosign verify --key cosign.pub "$HARDENED_IMAGE"` が成功し、`status.phase` が `Failed` ではなく、`Ready` 条件が `True` に達している。<br/>• **成果物：** `9b/signed-admission-check.json` にこの image が含まれ、Pod の `creationTimestamp` が `ImageValidatingPolicy require-signed-catalog-images` の `creationTimestamp` **以降**である。<br/>• これは、policy の作成前から残っている古い Pod ではなく、検証可能な形で署名された image の、policy の後の新しい admission を実証する。 |
 
 <details>
 <summary>💡 課題 9b のヒント</summary>
 
-この確認のために、課題 4 の Deployment `catalog` を再利用しないでください - 課題で指定されているとおり、新しい Pod 名で、文字どおり新しい `kubectl run` を使用してください。2 つの timestamp (Pod と policy) は UTC の ISO8601 文字列であり、通常の文字列として辞書順に比較できます (`"2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z"` は、bash でこの形式に対して正しく動作します)。
+この確認のために、課題 4 の Deployment `catalog` を再利用しないでください - 課題で指定されているとおり、新しい Pod 名で、文字どおり新しい `kubectl run` を使用してください。2 つの timestamp (Pod と policy) は UTC の ISO8601 文字列であり、通常の文字列として辞書順に比較できます (`[[ "2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z" ]]` は、bash でこの形式に対して正しく動作します)。
 </details>
 
 ---
 | **9c** | **Signature-specific DENY: 同じ repository に実際に存在する、署名されていない digest** |
 | :---: | :--- |
-| やること | • `$HARDENED_IMAGE` と同じ repository に、**2 つ目の** tag (たとえば `${HARDENED_TAG%:*}:unsigned-1.0`) をビルドして公開し、署名はしません。<br/>• この image は、すでに署名された `$HARDENED_IMAGE` と同じ digest ではなく、**物理的に異なる artifact** である必要があります：変更なしで同じ `Dockerfile`/context をビルドすると、reproducible/cached なビルドが同一の digest を生成することがあり、その場合「署名されていない」タグは実際にはすでに署名された artifact を指し、`cosign verify` が予期せず通ってしまいます。<br/>• build-arg (たとえば、Dockerfile の対応する `ARG`/`LABEL` を使った `--build-arg CKS_SIGNATURE_TEST=unsigned-1`) による制御された差異を加え、`$UNSIGNED_DIGEST != $HARDENED_DIGEST` の証明を `9c/digest-comparison.txt` に明示的に保存します。<br/>• registry の manifest digest を、課題 3 と同じ方法 (`podman push --digestfile`) で取得し、同じ repository の `$UNSIGNED_IMAGE` を組み立てます。<br/>• この digest が**存在して pullable である**こと (registry への `GET /v2/catalog/manifests/<digest>` リクエストが成功する) と、あなたの鍵による有効な署名を**持たない**こと (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` がエラーで終了する) を明示的に実証し、両方の出力を `9c/unsigned-exists.txt` と `9c/unsigned-not-signed.txt` に保存します。<br/>• その後、この `$UNSIGNED_IMAGE` を持つ Pod `catalog-unsigned-probe` を作成し、admission denial を `9c/admission-deny.txt` に保存します。 |
+| やること | • `$HARDENED_IMAGE` と同じ repository に、**2 つ目の** tag (たとえば `${HARDENED_TAG%:*}:unsigned-1.0`) をビルドして公開し、署名はしません。<br/>• この image は、すでに署名された `$HARDENED_IMAGE` と同じ digest ではなく、**物理的に異なる artifact** である必要があります：変更なしで同じ `Dockerfile`/context をビルドすると、reproducible/cached なビルドが同一の digest を生成することがあり、その場合「署名されていない」タグは実際にはすでに署名された artifact を指し、`cosign verify` が予期せず通ってしまいます。<br/>• build-arg (たとえば、Dockerfile の対応する `ARG`/`LABEL` を使った `--build-arg CKS_SIGNATURE_TEST=unsigned-1`) による制御された差異を加え、`$UNSIGNED_DIGEST != $HARDENED_DIGEST` の証明を `9c/digest-comparison.txt` に明示的に保存します。<br/>• registry の manifest digest を、課題 3 と同じ方法 (`podman push --digestfile`) で取得し、同じ repository の `$UNSIGNED_IMAGE` を組み立てます。<br/>• この digest が**存在して pullable である**こと (registry への `HEAD` または `GET` による `/v2/catalog/manifests/<digest>` リクエストが成功する) と、あなたの鍵による有効な署名を**持たない**こと (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` がエラーで終了する) を明示的に実証し、両方の出力を `9c/unsigned-exists.txt` と `9c/unsigned-not-signed.txt` に保存します。<br/>• その後、この `$UNSIGNED_IMAGE` を持つ Pod `catalog-unsigned-probe` を作成し、admission denial を `9c/admission-deny.txt` に保存します。 |
 | 受け入れ基準 | • **成果物：** `9c/digest-comparison.txt` に `hardened_digest=`、`unsigned_digest=`、`unsigned_image=` (`$HARDENED_IMAGE` と同じ repository の完全な `tag@digest` 参照で、本当に異なる digest を持つもの) が含まれている。<br/>• **checker の確認：** `unsigned_image` を registry で自分で解決し、自分の `cosign verify` で有効な署名がないことを確認し、この image を持つ独自の新しい Pod を作成して、自分の policy の一意の validation message `catalog image must have a valid release signature` を要求する。<br/>• このメッセージだけが有効とみなされ、任意の admission エラーでは不十分である：他の policy による一般的な admission/signature error は PASS にならず、`manifest unknown`/registry lookup のエラーも不十分である。<br/>• 実際の admission control を伴わない手書きの evidence ファイルは PASS にならない - checker は、確認する実際の image を指すものとしての `unsigned_image=` を除いて、どのテキストファイルも信用しない。 |
 
 <details>

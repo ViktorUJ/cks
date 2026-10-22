@@ -35,13 +35,13 @@ k -n cks-101 get deploy frontend backend -o yaml | grep 'image:'
 
 ## 2. Default-deny und Baseline-Prüfung
 
-Wir erstellen den Probe für die Tests:
+Wir erstellen die Probe für die Tests:
 ```bash
 k -n cks-101 run probe --image=curlimages/curl:8.11.1 -l app=frontend --command -- sleep 3600
 k -n cks-101 wait --for=condition=Ready pod/probe --timeout=60s
 ```
 
-Wir erstellen den unabhängigen Namespace für den Control-Probe:
+Wir erstellen den unabhängigen Namespace für die Control-Probe:
 ```bash
 k create ns imds-control
 k -n imds-control run imds-control --image=curlimages/curl:8.11.1 --command -- sleep 3600

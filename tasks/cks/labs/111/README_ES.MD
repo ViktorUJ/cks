@@ -11,8 +11,9 @@ la firma de la imagen. El resultado no es simplemente la salida de un terminal: 
 guardado en el lugar indicado y ser apto para una auditoría.
 
 Esta es una tarea de CKS sobre security tooling y supply chain, y no un ejercicio de CKA. La mayoría de los
-artefactos se analizan localmente en el worker; la única excepción es la tarea 4, donde
-hay que aplicar un Deployment hardened para comprobar Ready/Available y un HTTP smoke test.
+artefactos se analizan localmente en el worker; con el clúster trabajan además las tareas
+1c, 4, 5b y 9a-9c (live Deployments, un Deployment hardened con comprobación de Ready/Available y
+un HTTP smoke test, una Kyverno policy y un Pod).
 
 ## Threat model
 
@@ -21,25 +22,25 @@ malicioso o las debilidades conocidas en la image las detectan los escáneres Tr
 kube-linter y Hadolint en los niveles correspondientes de la imagen, el Dockerfile y los manifests.
 
 Los secrets y tokens olvidados por accidente en un layer requieren una comprobación aparte: secret
-scanning (por ejemplo, Trivy secret scanning) e inspection del history de la imagen (`docker history`,
+scanning (por ejemplo, Trivy secret scanning) y la revisión del historial de la imagen (`docker history`,
 extracción de capas). El SBOM resuelve otra tarea: el inventario de componentes y versiones de
 paquetes; ayuda a la supply-chain investigation (por ejemplo, a encontrar una biblioteca vulnerable),
 pero no es un mecanismo fiable para buscar secrets en el historial de capas y no sustituye al secret
 scanning. Incluso si la configuración de trabajo ya no contiene el secret, este puede seguir
 accesible en el historial de capas.
 
-La amenaza de mutable-tag tampering consiste en que, tras el despliegue, detrás de la misma referencia con etiqueta, sin modificar,
-se puede colocar otra imagen maliciosa. Precisamente por eso el digest pinning es importante en
+La amenaza de mutable-tag tampering consiste en que, tras el despliegue con una referencia de etiqueta sin modificar,
+se puede sustituir la imagen por otra, maliciosa. Precisamente por eso el digest pinning es importante en
 las tareas 3–5: fija el contenido concreto de la imagen, y no solo su nombre y etiqueta.
 
 La verificación de la firma en la tarea 7 demuestra que un digest concreto está firmado por una
-key/identity de confianza (signature integrity), mientras que el Trivy scan de la tarea 1 no detecta
-vulnerabilidades conocidas que entren en su detection coverage con la vulnerability DB actual
+key/identity de confianza (signature integrity), mientras que el Trivy scan de la tarea 1 solo muestra que
+no se han encontrado vulnerabilidades conocidas en su detection coverage con la vulnerability DB actual
 (el propio Trivy documenta un trade-off en favor de la precision, en el que son posibles false
-negatives: "0 findings" no es igual a una formal proof de ausencia de vulnerabilidades). Son ejes distintos de
+negatives: "0 findings" no equivale a una prueba formal de la ausencia de vulnerabilidades). Son ejes distintos de
 protección: ninguno sustituye al otro, ya que vulnerability != signature. La firma
 NO es lo mismo que provenance/attestation
-(por ejemplo, build metadata de estilo SLSA sobre de qué y cómo se construyó el artifact): `cosign
+(por ejemplo, build metadata de estilo SLSA que indica de qué y cómo se construyó el artifact): `cosign
 verify` confirma la autenticidad de la firma, y no el historial completo de la build; para attestation
 Sigstore ofrece comandos aparte `cosign attest`/`cosign verify-attestation`, no
 utilizados en este laboratorio.
@@ -90,7 +91,7 @@ El entorno lo crea Terragrunt en AWS `eu-central-1`.
 | `k8s-1` | kubeadm de un solo nodo con Kubernetes `1.36.0`, containerd y **Calico** |
 | `worker` | estación de trabajo para el análisis, `kubectl`, `check_result` y security tools |
 
-Infraestructura de estilo CKA: el único nodo control-plane está permitido para workload y
+Infraestructura de estilo CKA: el único nodo control-plane admite workloads y está
 marcado con `cks.io/lab=111`. Los comandos principales y las security tools se ejecutan en el worker.
 El clúster de Kubernetes se usa como target environment para comprobar el workload hardened y
 la signature policy admission-time: la tarea 4 despliega `catalog`, y las tareas 9b/9c
@@ -130,7 +131,7 @@ garantizado; al actualizar Kyverno, retira esta excepción.
 - los datos se guardan en un PV local del nodo (`/var/lib/cks111-registry`), por lo que sobreviven al
   reinicio del Pod del registry;
 - el digest de la imagen publicada obtenlo de `podman push --digestfile`, y la presencia del manifest
-  compruébala con una petición a `/v2/` (en el registry no hay herramientas solo-HTTPS como `docker buildx imagetools`);
+  compruébala con una petición a `/v2/` (a este registry no le sirven las herramientas solo-HTTPS como `docker buildx imagetools`);
 - la secuencia detallada de comandos está en el paso «0. Preparación» de la [solución](worker/files/solutions/1_ES.MD).
 
 **Límite de Docker Hub.** Los pull anónimos desde una misma IP tienen un límite (unas 100 peticiones cada 6 horas).
@@ -186,7 +187,7 @@ solo en `/var/work/tests/artifacts/<número>/`.
 ---
 | **1b** | **Multi-image CVE triage: encontrar la imagen que contiene una CVE concreta** |
 | :---: | :--- |
-| Qué hacemos | • Abre `~/cks-111/candidates.txt`: allí hay tres immutable image reference (`CANDIDATE_1/2/3`) y el `TARGET_CVE` objetivo, definidos individualmente para tu instancia del laboratorio durante el bootstrap.<br/>• Escanea **las tres** imágenes con Trivy y encuentra cuál de ellas realmente contiene `TARGET_CVE`.<br/>• Guarda el informe JSON precisamente de esa imagen en `/var/work/tests/artifacts/1b/target-scan.json`.<br/>• La línea `OFFENDING_IMAGE=<referencia completa de esta imagen>` guárdala en `/var/work/tests/artifacts/1b/answer.txt`. |
+| Qué hacemos | • Abre `~/cks-111/candidates.txt`: allí hay tres immutable image references (`CANDIDATE_1/2/3`) y el `TARGET_CVE` objetivo, definidos individualmente para tu instancia del laboratorio durante el bootstrap.<br/>• Escanea **las tres** imágenes con Trivy y encuentra cuál de ellas realmente contiene `TARGET_CVE`.<br/>• Guarda el informe JSON precisamente de esa imagen en `/var/work/tests/artifacts/1b/target-scan.json`.<br/>• La línea `OFFENDING_IMAGE=<referencia completa de esta imagen>` guárdala en `/var/work/tests/artifacts/1b/answer.txt`. |
 | Criterios de aceptación | • **Respuesta:** `answer.txt` indica precisamente el `CANDIDATE_N` cuyo escaneo real de Trivy contiene `TARGET_CVE`.<br/>• **Informe:** `target-scan.json` es la salida genuina de Trivy para esa misma imagen (el checker repite el escaneo por sí mismo y compara). |
 
 <details>
@@ -240,7 +241,7 @@ Un exit code distinto de cero del linter al detectar problemas es un comportamie
 <details>
 <summary>💡 Pista para la tarea 4</summary>
 
-`readOnlyRootFilesystem: true` requiere rutas writable para CADA directorio en el que nginx suele escribir: `/tmp`, `/var/run` (archivo PID), `/var/cache/nginx` (caché) y `/etc/nginx/conf.d` (si la config se genera al arrancar). Si omites aunque sea uno, el contenedor arrancará, pero fallará en el primer intento de nginx de escribir allí algo. El init container `prepare-nginx-config` hace falta para copiar la config por defecto a un volume writable aparte ANTES del arranque del contenedor principal: precisamente por eso se menciona aparte en los criterios de aceptación.
+`readOnlyRootFilesystem: true` requiere rutas writable para CADA directorio en el que nginx suele escribir: `/tmp`, `/var/run` (archivo PID), `/var/cache/nginx` (caché) y `/etc/nginx/conf.d` (si la config se genera al arrancar). Si omites aunque sea uno, el contenedor arrancará, pero fallará en cuanto nginx intente escribir allí algo por primera vez. El init container `prepare-nginx-config` hace falta para copiar la config por defecto a un volume writable aparte ANTES del arranque del contenedor principal: precisamente por eso se menciona aparte en los criterios de aceptación.
 </details>
 
 ---
@@ -252,7 +253,7 @@ Un exit code distinto de cero del linter al detectar problemas es un comportamie
 <details>
 <summary>💡 Pista para la tarea 5</summary>
 
-El flag se llama precisamente `--list-all-pkgs`, y no `--list-packages` ni una variante parecida: comprueba el nombre exacto del flag en `trivy image --help`, si el comando no funciona. Guarda la salida REAL del comando en el archivo (por ejemplo mediante `tee`), no reescribas a mano unas cuantas líneas package=version "de memoria": el test busca la línea con el propio comando como prueba de que los datos vinieron de la herramienta.
+El flag se llama precisamente `--list-all-pkgs`, y no `--list-packages` ni una variante parecida: comprueba el nombre exacto del flag en `trivy image --help` si el comando no funciona. Guarda la salida REAL del comando en el archivo (por ejemplo mediante `tee`), no reescribas a mano unas cuantas líneas package=version "de memoria": el test busca la línea con el propio comando como prueba de que los datos vinieron de la herramienta.
 </details>
 
 ---
@@ -318,19 +319,19 @@ El comando es `trivy sbom <ruta-al-archivo-sbom>`, y NO `trivy image <ruta-al-ar
 ---
 | **9b** | **Fresh signed ALLOW: un Pod nuevo tras crear la policy** |
 | :---: | :--- |
-| Qué hacemos | • La policy de la tarea 9a debe admitir el `$HARDENED_IMAGE` firmado, pero un nuevo `kubectl apply` de un Deployment ya existente **no demuestra** esto: si el template no cambió, puede que no se cree un nuevo ReplicaSet/Pod, y `Running` resultará ser simplemente un Pod antiguo, creado antes de la policy.<br/>• Crea un objeto **nuevo**, que no existía antes: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`.<br/>• Guarda el `creationTimestamp` de este Pod, el `creationTimestamp` de la policy de 9a y el `status.phase`/condition `Ready` final en `9b/signed-admission-check.json`. |
-| Criterios de aceptación | • **Pod:** `signed-admission-check` existe, usa precisamente `$HARDENED_IMAGE`; para él se ejecuta con éxito `cosign verify --key cosign.pub "$HARDENED_IMAGE"`, `status.phase` no es `Failed`, y la condición `Ready` llega a `True`.<br/>• **Artefacto:** `9b/signed-admission-check.json` contiene esta image y el `creationTimestamp` del Pod **posterior** al `creationTimestamp` de la `ImageValidatingPolicy require-signed-catalog-images`.<br/>• Esto demuestra el fresh post-policy admission precisamente de una image verificablemente firmada, y no un Pod antiguo que sobrevivió a la policy. |
+| Qué hacemos | • La policy de la tarea 9a debe admitir la `$HARDENED_IMAGE` firmada, pero un nuevo `kubectl apply` de un Deployment ya existente **no demuestra** esto: si el template no cambió, puede que no se cree un nuevo ReplicaSet/Pod, y `Running` resultará ser simplemente un Pod antiguo, creado antes de la policy.<br/>• Crea un objeto **nuevo**, que no existía antes: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`.<br/>• Guarda el `creationTimestamp` de este Pod, el `creationTimestamp` de la policy de 9a y el `status.phase`/condition `Ready` final en `9b/signed-admission-check.json`. |
+| Criterios de aceptación | • **Pod:** `signed-admission-check` existe, usa precisamente `$HARDENED_IMAGE`; para él se ejecuta con éxito `cosign verify --key cosign.pub "$HARDENED_IMAGE"`, `status.phase` no es `Failed`, y la condición `Ready` llega a `True`.<br/>• **Artefacto:** `9b/signed-admission-check.json` contiene esta image y el `creationTimestamp` del Pod **no anterior** al `creationTimestamp` de la `ImageValidatingPolicy require-signed-catalog-images`.<br/>• Esto demuestra el fresh post-policy admission precisamente de una image verificablemente firmada, y no un Pod antiguo que sobrevivió a la policy. |
 
 <details>
 <summary>💡 Pista para la tarea 9b</summary>
 
-No reutilices el Deployment `catalog` de la tarea 4 para esta comprobación: usa literalmente un nuevo `kubectl run` con un nuevo nombre de Pod, como se indica en la tarea. Ambos timestamp (del Pod y de la policy) son cadenas ISO8601 en UTC, se pueden comparar lexicográficamente como cadenas normales (`"2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z"` en bash funciona correctamente para este formato).
+No reutilices el Deployment `catalog` de la tarea 4 para esta comprobación: usa literalmente un nuevo `kubectl run` con un nuevo nombre de Pod, como se indica en la tarea. Ambos timestamp (del Pod y de la policy) son cadenas ISO8601 en UTC, por lo que se pueden comparar lexicográficamente como cadenas normales (`[[ "2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z" ]]` en bash funciona correctamente para este formato).
 </details>
 
 ---
 | **9c** | **Signature-specific DENY: un digest unsigned que realmente existe en el mismo repository** |
 | :---: | :--- |
-| Qué hacemos | • Construye y publica un **segundo** tag en el mismo repository que `$HARDENED_IMAGE` (por ejemplo, `${HARDENED_TAG%:*}:unsigned-1.0`), sin firmarlo.<br/>• Esta imagen debe ser un **artifact físicamente distinto**, y no el mismo digest que el `$HARDENED_IMAGE` ya firmado: si construyes el mismo `Dockerfile`/context sin cambios, un reproducible/cached build puede dar un digest idéntico, y entonces el tag "unsigned" en realidad apuntará a un artifact ya firmado, y `cosign verify` pasará inesperadamente.<br/>• Introduce una diferencia controlada mediante un build-arg (por ejemplo `--build-arg CKS_SIGNATURE_TEST=unsigned-1` con el correspondiente `ARG`/`LABEL` en el Dockerfile) y guarda explícitamente la prueba `$UNSIGNED_DIGEST != $HARDENED_DIGEST` en `9c/digest-comparison.txt`.<br/>• Obtén el registry manifest digest del mismo modo que en la tarea 3 (`podman push --digestfile`), forma `$UNSIGNED_IMAGE` en el mismo repository.<br/>• Demuestra explícitamente que este digest **existe y es pullable** (una petición `GET /v2/catalog/manifests/<digest>` al registry tiene éxito) y **no tiene** una firma válida con tu clave (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` termina con un error); guarda ambas salidas en `9c/unsigned-exists.txt` y `9c/unsigned-not-signed.txt`.<br/>• Después crea un Pod `catalog-unsigned-probe` con esta `$UNSIGNED_IMAGE` y guarda el admission denial en `9c/admission-deny.txt`. |
+| Qué hacemos | • Construye y publica un **segundo** tag en el mismo repository que `$HARDENED_IMAGE` (por ejemplo, `${HARDENED_TAG%:*}:unsigned-1.0`), sin firmarlo.<br/>• Esta imagen debe ser un **artifact físicamente distinto**, y no el mismo digest que la `$HARDENED_IMAGE` ya firmada: si construyes el mismo `Dockerfile`/context sin cambios, un reproducible/cached build puede dar un digest idéntico, y entonces el tag "unsigned" en realidad apuntará a un artifact ya firmado, y `cosign verify` pasará inesperadamente.<br/>• Introduce una diferencia controlada mediante un build-arg (por ejemplo `--build-arg CKS_SIGNATURE_TEST=unsigned-1` con el correspondiente `ARG`/`LABEL` en el Dockerfile) y guarda explícitamente la prueba `$UNSIGNED_DIGEST != $HARDENED_DIGEST` en `9c/digest-comparison.txt`.<br/>• Obtén el registry manifest digest del mismo modo que en la tarea 3 (`podman push --digestfile`) y forma `$UNSIGNED_IMAGE` en el mismo repository.<br/>• Demuestra explícitamente que este digest **existe y es pullable** (una petición `HEAD` o `GET` a `/v2/catalog/manifests/<digest>` en el registry tiene éxito) y **no tiene** una firma válida con tu clave (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` termina con un error); guarda ambas salidas en `9c/unsigned-exists.txt` y `9c/unsigned-not-signed.txt`.<br/>• Después crea un Pod `catalog-unsigned-probe` con esta `$UNSIGNED_IMAGE` y guarda el admission denial en `9c/admission-deny.txt`. |
 | Criterios de aceptación | • **Artefacto:** `9c/digest-comparison.txt` contiene `hardened_digest=`, `unsigned_digest=` y `unsigned_image=` (una referencia `tag@digest` completa en el mismo repository que `$HARDENED_IMAGE`, con un digest genuinamente distinto).<br/>• **Comprobación del checker:** resuelve por sí mismo `unsigned_image` en el registry, confirma la ausencia de una firma válida mediante su propio `cosign verify`, crea SU nuevo Pod con esta imagen y exige el validation message único de su propia policy: `catalog image must have a valid release signature`.<br/>• Solo cuenta este mensaje, y no cualquier error de admission: un error genérico de admission/signature de otra policy no da PASS, y `manifest unknown`/los errores de registry lookup tampoco bastan.<br/>• Los archivos de evidence escritos a mano sin un admission control real no dan PASS: el checker no se fía de ningún archivo de texto, salvo `unsigned_image=` como indicador de la imagen real que hay que comprobar. |
 
 <details>

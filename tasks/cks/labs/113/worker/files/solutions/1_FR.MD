@@ -3,9 +3,9 @@
 # Lab 113 - solution de référence : kubeadm minor upgrade
 
 > Nous travaillons comme à l'examen : `kubectl` - sur la machine de travail, et les opérations sur le nœud (apt, kubeadm,
-> kubelet) - sur le nœud lui-même : entrez-y avec `ssh <nœud>`, passez en root (`sudo -i`),
+> kubelet) - sur le nœud lui-même : connectez-vous-y avec `ssh <nœud>`, passez en root (`sudo -i`),
 > exécutez les commandes et sortez (`exit`, `exit`). La version de départ du cluster est `1.35.x`, la version cible est
-> `1.36.x`. Les noms des nœuds (`<nom-cp>`, `<nom-worker>`) sont pris dans `kubectl get no` ; à l'examen, ils sont différents, dans ce lab les alias ssh sont : `k8s113_controlPlane_1` et `k8s113_node_worker1`.
+> `1.36.x`. Les noms des nœuds (`<nom-cp>`, `<nom-worker>`) sont pris dans `kubectl get no` ; à l'examen, ils sont différents ; dans ce lab, les alias ssh sont : `k8s113_controlPlane_1` et `k8s113_node_worker1`.
 
 ## Où trouver les commandes dans la documentation
 
@@ -160,7 +160,7 @@ apt-mark unhold kubeadm && apt-get update && apt-get install -y kubeadm='1.36.x-
 
 ```bash
 # sur le worker (root)
-# sur le worker (et les control-plane supplémentaires), on exécute upgrade node à la place de apply
+# sur le worker (et les control-plane supplémentaires), on exécute upgrade node à la place d'apply
 kubeadm upgrade node > /tmp/kubeadm-upgrade-node.txt 2>&1
 tail -3 /tmp/kubeadm-upgrade-node.txt
 exit   # de root

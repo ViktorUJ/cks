@@ -86,7 +86,7 @@ TASK=115 make run_cks_task
 
 |           **5**           | **帶有強制 mutual authentication 的 CiliumNetworkPolicy** |
 | :-----------------------------: | :--- |
-|       要做什麼       | • 建立 `ingress-115`(client)與 `app-115`(backend,label `app=backend`,Service `backend`)<br/>• 在 `app-115` 中建立 `CiliumNetworkPolicy backend-auth-required`：針對 `app=backend` 的 `endpointSelector`,ingress 只來自 namespace `ingress-115`，並在這條 ingress 規則上設定 `authentication.mode: required` |
+|       要做什麼       | • 建立 `ingress-115`(client)與 `app-115`(backend，label `app=backend`，Service `backend`)<br/>• 在 `app-115` 中建立 `CiliumNetworkPolicy backend-auth-required`：針對 `app=backend` 的 `endpointSelector`，ingress 只來自 namespace `ingress-115`，並在這條 ingress 規則上設定 `authentication.mode: required` |
 | 驗收標準 | • Policy 精確地選取 backend，包含一條來自 `ingress-115` 的、TCP/80 上帶有 `authentication.mode: required` 的 ingress 規則<br/>• 沒有額外的 ingress 規則與繞過路徑<br/>• 在隔離的 Lab 115 實驗台中，沒有其他會影響 backend 的 namespaced/global network policies<br/>• Service `backend` 指向 Ready 的 Pod `backend` |
 |        檢查        | `kubectl -n app-115 get ciliumnetworkpolicy backend-auth-required -o yaml` - 檢查 `ingress[0]` 內的 `authentication.mode: required`。 |
 
@@ -94,8 +94,8 @@ TASK=115 make run_cks_task
 
 |           **6**           | **Positive/negative control：已驗證的 identity 被允許，外來的則不行** |
 | :-----------------------------: | :--- |
-|       要做什麼       | • 用即時流量檢查 policy 的效果：來自 `ingress-115` 的用戶端必須能到達 `backend`(在 SPIRE-based mutual auth handshake 成功之後)<br/>• 來自「錯誤的」namespace(`app-115`，而不是 `ingress-115`;backend 對自己的流量 Cilium 永遠放行)的單獨 Pod 必須被阻擋 |
-| 驗收標準 | • 在隔離的鏡像 backend 中，baseline 允許兩個用戶端，套用 policy 的副本之後只允許 `ingress-115`<br/>• 實際運作的 backend 回應被允許的用戶端，拒絕來自 `app-115` 以及新的獨立 namespace 的用戶端<br/>• Cilium BPF auth map 中，針對 client/backend 的精確 identity 組合包含 `spire` |
+|       要做什麼       | • 用即時流量檢查 policy 的效果：來自 `ingress-115` 的用戶端必須能到達 `backend`(在 SPIRE-based mutual auth handshake 成功之後)<br/>• 來自「錯誤的」namespace(`app-115`，而不是 `ingress-115`；backend 對自己的流量 Cilium 永遠放行)的單獨 Pod 必須被阻擋 |
+| 驗收標準 | • 在隔離的鏡像 backend 中，baseline 允許兩個用戶端，套用 policy 的副本之後只允許 `ingress-115`<br/>• 實際運作的 backend 回應被允許的用戶端，拒絕來自 `app-115` 以及新的獨立 namespace 的用戶端<br/>• Cilium BPF auth map 中，針對用戶端/backend 的精確 identity 組合包含 `spire` |
 |        檢查        | 從 `ingress-115` 中的 client Pod 對 `http://backend.app-115.svc.cluster.local/` 執行 `curl` -> HTTP response。從 `app-115` 中沒有 client label 的 Pod 執行同樣的 curl -> 連線錯誤。 |
 
 ## 檢查

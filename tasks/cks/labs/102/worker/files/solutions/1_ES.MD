@@ -83,7 +83,7 @@ GET HTTP:200
 POST HTTP:405
 ```
 
-Reemplazamos la regla (no añadimos una segunda regla L4 amplia al lado; de lo contrario el filtro L7 no funcionará):
+Reemplazamos la regla (no añadimos una segunda regla L4 amplia al lado; de lo contrario, el filtro L7 no funcionará):
 
 ```bash
 k apply -f - <<EOF
@@ -130,9 +130,9 @@ POST es rechazado por el Envoy proxy de Cilium en L7 (`403`), no por un transpor
 `allowed.cks102.test`/`blocked.cks102.test` son un lab-owned fixture que se resuelve a
 `198.18.0.10`/`198.18.0.20` (IP sintéticas fuera del Kubernetes address space, un
 network namespace aparte en el nodo control-plane, y NO un ClusterIP: `toFQDNs` en Cilium no aplica
-la regla allow a una IP dentro del clúster), levantado e inscrito en CoreDNS ya durante el bootstrap:
+la regla allow a una IP dentro del clúster), levantado y registrado en CoreDNS ya durante el bootstrap:
 a diferencia de `example.com`, estos nombres siempre están disponibles y no dependen de Internet. Comprobamos ANTES de la
-policy: DNS y los tres endpoint de control (`allowed:443`, `allowed:80`, `blocked:443`) deben ser realmente accesibles (`-k` - certificado
+policy: DNS y los tres endpoints de control (`allowed:443`, `allowed:80`, `blocked:443`) deben ser realmente accesibles (`-k` - certificado
 autofirmado del fixture):
 
 ```bash
@@ -230,11 +230,11 @@ cks-102/frontend:xxxxx -> cks-102/backend:80 http-request FORWARDED (HTTP/1.1 GE
 cks-102/frontend:xxxxx -> cks-102/backend:80 http-request DROPPED (HTTP/1.1 POST http://backend/)
 ```
 
-Deben verse exactamente dos flow: `GET /` con verdict `FORWARDED` y `POST /` con verdict `DROPPED`. Si no aparecen, `hubble observe` no se lanzó durante las peticiones; repite.
+Deben verse exactamente dos flows: `GET /` con verdict `FORWARDED` y `POST /` con verdict `DROPPED`. Si no aparecen, `hubble observe` no se lanzó durante las peticiones; repite.
 
 ## 6. L7 policy compuesta: public/private path scopes
 
-Un segundo backend independiente con dos path-scope. Reemplazamos por completo la configuración de nginx
+Un segundo backend independiente con dos path-scopes. Reemplazamos por completo la configuración de nginx
 (`default.conf`), para que `location` devuelva `200` en un prefix concreto y `404` en todo lo
 demás; sin esto no hay forma de distinguir "permitido" de "denegado" por el código HTTP.
 
@@ -280,7 +280,7 @@ k -n production wait --for=condition=Ready pod/portal --timeout=60s
 k -n finance wait --for=condition=Ready pod/finance-client --timeout=60s
 ```
 
-Baseline ANTES de la policy: ambos path desde ambos namespace deben devolver realmente `200`:
+Baseline ANTES de la policy: ambos paths desde ambos namespaces deben devolver realmente `200`:
 
 ```bash
 k -n finance exec finance-client -- curl -sS -o /dev/null -w 'public:%{http_code}\n' -m5 http://portal.production/public/
@@ -302,7 +302,7 @@ todo el clúster": Cilium añade implícitamente la restricción por el namespac
 selector de `fromEndpoints` sin un namespace-label explícito, incluido un `{}` vacío. Es decir, `{}`
 aquí, en la práctica, hace match solo con endpoints del namespace `production`, y no con `finance`/`cks-102`;
 la comprobación en vivo lo confirma: con un `{}` literal el client externo recibe un transport
-timeout en AMBOS path (la regla no se aplica en absoluto a su namespace), y `finance` recibe
+timeout en AMBOS paths (la regla no se aplica en absoluto a su namespace), y `finance` recibe
 `403` en `/public/*` (hace match solo con la regla 2, que permite únicamente `/private/*`).
 Para hacer match realmente con cualquier identity con independencia del namespace, hace falta `matchExpressions` con
 `operator: Exists` sobre el reserved-label `k8s:io.kubernetes.pod.namespace` (la mera presencia de
@@ -369,9 +369,9 @@ public:200
 private:403
 ```
 
-`finance-client` -> ambos path `200`. `cks-102/client` (cualquier otro namespace) -> `/public/*`
+`finance-client` -> ambos paths `200`. `cks-102/client` (cualquier otro namespace) -> `/public/*`
 sigue dando `200`, y `/private/*`, `403` (Envoy L7 deny, no un transport-level `000`: la regla 1
-ya permitió la propia conexión TCP para todas las identity).
+ya permitió la propia conexión TCP para todas las identities).
 
 ---
 

@@ -12,7 +12,7 @@ contexts et où il doit déterminer lui-même lequel est fonctionnel.
 
 Séparément, dans le même kubeconfig, il y a un utilisateur `cluster9-admin` avec un client certificate auto-signé complet,
 réellement généré (`client-certificate-data`/`client-key-data`). Ce certificat ne donne
-aucun droit dans le cluster (l'apiserver ne fait pas confiance à son CA) - la tâche apprend à lire et à analyser
+aucun droit dans le cluster (l'apiserver ne fait pas confiance à son CA) - la tâche enseigne à lire et à analyser
 un client certificate depuis le kubeconfig, et non à s'authentifier avec lui.
 
 Le lab couvre aussi le scénario classique de réduction de la surface d'attaque d'un Service : d'abord vous
@@ -44,7 +44,7 @@ les tâches, n'ouvrez la solution de référence qu'après votre propre tentativ
 
 ## Objectif
 
-Apprendre à travailler en toute sécurité avec un kubeconfig contenant plusieurs contextes, à extraire et à vérifier
+Apprendre à travailler en toute sécurité avec un kubeconfig contenant plusieurs contexts, à extraire et à vérifier
 un client certificate sans l'utiliser pour l'authentification, et à gérer consciemment l'exposure d'un Service
 en basculant de `NodePort` vers `ClusterIP`.
 

@@ -24,7 +24,7 @@
 
 Le profil se trouve uniquement sur la machine de travail. Nous le copions sur le nœud (depuis le `worker`), puis sur le nœud
 nous le plaçons à sa place et le chargeons dans le noyau. Le fichier contient déjà le flag `complain`, donc
-un seul `apparmor_parser -r` suffit pour le chargement initial (sans `aa-complain` qui, comme
+un seul `apparmor_parser -r` suffit pour le chargement initial (sans `aa-complain`, qui, comme
 `aa-enforce`, analyse tous les fichiers de `/etc/apparmor.d/` et échouerait sur le `k8s-106-broken-profile`
 encore cassé de la tâche 9) :
 
@@ -135,7 +135,7 @@ kubectl exec -n security-106 apparmor-writer -- \
 # on attend un code non nul : Permission denied / Operation not permitted
 ```
 
-Un exit code non nul et le texte 'permission denied' ne démontrent PAS à eux seuls que c'est précisément
+Un exit code non nul et le texte « permission denied » ne démontrent PAS à eux seuls que c'est précisément
 cette règle AppArmor qui a agi - une erreur DAC/filesystem ordinaire aurait l'air identique du
 point de vue du shell. Reliez le refus précisément à ce profile via le kernel audit log ; nous le consultons
 sur le nœud juste après la tentative ci-dessus :
@@ -223,7 +223,7 @@ pour la forced private propagation - et le profil AppArmor par défaut de contai
 que reçoit ce Pod, puisqu'aucun `appArmorProfile` explicite n'est défini ici) contient
 `deny mount,` sans aucune condition sur les flags, indépendamment des capabilities/seccomp. C'est pourquoi
 `unshare -m true` peut échouer avec `EPERM` à cause d'AppArmor, même si seccomp ne
-limite pas du tout `unshare` - un tel probe mélangerait deux security control différents. `unshare -n`
+limite pas du tout `unshare` - un tel probe mélangerait deux security controls différents. `unshare -n`
 n'appelle que le syscall `unshare(2)` lui-même, sans `mount()` collatéral.
 
 ```yaml
@@ -310,7 +310,7 @@ cat /var/work/tests/artifacts/6/userns.txt
 # uid=0(root) gid=0(root) groups=0(root)
 ```
 
-Le host PID du conteneur ne coïncide ni avec le PID dans le conteneur ni n'est visible directement via
+Le host PID du conteneur ne coïncide pas avec le PID dans le conteneur et n'est pas non plus visible directement via
 `kubectl`. Nous prenons l'ID du conteneur sur le worker et obtenons le PID via `crictl inspect` sur le nœud
 où le Pod s'exécute réellement :
 
@@ -356,7 +356,7 @@ contraire : `0 <host-uid-non-nul> <plage-per-pod>`.
 
 ## 8. `seccompDefault: true` sur le kubelet
 
-Tous les Pod précédents indiquaient explicitement `seccompProfile`. Ici, nous vérifions le node-level baseline :
+Les Pod précédents avec un profil seccomp (tâches 4–6) indiquaient explicitement `seccompProfile`. Ici, nous vérifions le node-level baseline :
 si le développeur oublie ce champ, le kubelet doit appliquer `RuntimeDefault` lui-même, et ne pas
 laisser le processus `Unconfined`. Nous modifions la configuration du kubelet sur le nœud :
 
@@ -436,10 +436,10 @@ cat /var/work/tests/artifacts/8/apparmor-debug.txt
 
 Nous utilisons `sudo` aussi pour la vérification compile-only `-Q` : sur le nœud du lab (apparmor 3.0.4, Ubuntu),
 sans privilèges, le parser tente à chaque lancement de configurer le policy cache dans
-`/var/cache/apparmor` et échoue avec "Failed setting up policy cache (/var/cache/apparmor):
-Permission denied" AVANT la vérification de la syntaxe - vous obtiendrez une erreur trompeuse de droits au lieu de
+`/var/cache/apparmor` et échoue avec « Failed setting up policy cache (/var/cache/apparmor):
+Permission denied » AVANT la vérification de la syntaxe - vous obtiendrez une erreur trompeuse de droits au lieu de
 la vraie erreur de syntaxe, et `apparmor-debug.txt` ne contiendra pas le texte nécessaire
-"syntax error". Vérifié sur le nœud lui-même, y compris sur un profil délibérément cassé.
+« syntax error ». Vérifié sur le nœud lui-même, y compris sur un profil délibérément cassé.
 L'alternative sans `sudo` est d'ajouter `-K`/`--skip-cache` (`apparmor_parser -Q -K ...`) : sans
 mise en cache, le parser arrive jusqu'à l'analyse du profil. `sudo` a été choisi dans ce lab pour un workflow
 unifié avec le `-r` suivant, qui nécessite de toute façon des privilèges.

@@ -33,7 +33,7 @@ kubectl get nodes
 ```
 
 > `cilium status` de cilium-cli 0.19 n'affiche pas les lignes `KubeProxyReplacement`/`Encryption` ;
-> elles sont affichées par `cilium-dbg status` à l'intérieur du Pod de l'agent (c'est ainsi que vérifie aussi le checker).
+> elles sont affichées par `cilium-dbg status` à l'intérieur du Pod de l'agent (c'est aussi ainsi que le checker vérifie).
 
 ```
 KubeProxyReplacement:   True   [ens5 10.115.1.x (Direct Routing)]
@@ -96,7 +96,7 @@ Trois paramètres en plus des paramètres minimaux de la tâche sont nécessaire
   `spire-data-spire-server-0` reste indéfiniment `Pending`, et `spire-server-0` reste lui aussi `Pending`
   (pour le lab, un stockage éphémère suffit).
 - `install.server.securityContext.runAsUser=0` - l'image `spire-server` démarre sous l'uid 1000 et
-  ne peut pas créer `api.sock` dans le répertoire hostPath `root:755` ; le serveur ferme silencieusement les
+  ne peut pas créer `api.sock` dans le répertoire hostPath `root:755` ; le serveur omet silencieusement de démarrer ses
   endpoints et est tué par la liveness probe (`Waiting for spire-server to start...` dans `cilium-init`).
 
 ```bash

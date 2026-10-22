@@ -25,28 +25,28 @@ placement、プロセスの実際の挙動を確認する必要があります�
 ## 開始前のセルフチェック
 
 <details>
-<summary>1. AppArmor の `complain` は `enforce` と何が違うか、そしてなぜ `complain` を防御の証拠として示してはいけないのか?</summary>
+<summary>1. AppArmor の `complain` は `enforce` と何が違うか、そしてなぜ `complain` を防御の証拠として示してはいけないのか？</summary>
 
-`complain` モードでは、AppArmor はプロファイル違反をログに記録するだけで、ブロックは「しません」 - 禁止されるべき操作はそれでも実行され、ただジャーナルに記録が残るだけです。`enforce` では操作が実際にブロックされます。課題 2 がプロファイルを `enforce` に切り替えることを明示的に求めているのは、`complain` で「ログに違反がある」ことを示しても防御の証明にはならないからです - プロセスは結局その操作を実行できてしまいます。
+`complain` モードでは、AppArmor はプロファイル違反をログに記録するだけで、ブロックは**しません** - 禁止されるべき操作はそれでも実行され、ただジャーナルに記録が残るだけです。`enforce` では操作が実際にブロックされます。課題 2 がプロファイルを `enforce` に切り替えることを明示的に求めているのは、`complain` で「ログに違反がある」ことを示しても防御の証明にはならないからです - プロセスは結局その操作を実行できてしまいます。
 </details>
 
 <details>
-<summary>2. `allowPrivilegeEscalation: false` が、すでに付与された capability `SYS_ADMIN` を取り除かないのはなぜか?</summary>
+<summary>2. `allowPrivilegeEscalation: false` が、すでに付与された capability `SYS_ADMIN` を取り除かないのはなぜか？</summary>
 
 `allowPrivilegeEscalation: false` は、カーネルのフラグ `no_new_privs` を有効にし、プロセスが `execve` を通じて (たとえば setuid バイナリや file capabilities を通じて) 新しい権限を得ることを禁止します。これは、プロセスがすでに effective/bounding set に持っている権限には影響しません - コンテナが manifest で明示的に capability `SYS_ADMIN` 付きで起動されていれば、`allowPrivilegeEscalation` の値に関係なく、その capability は利用可能なままです。
 </details>
 
 <details>
-<summary>3. Pod の manifest の `localhostProfile` が、絶対パスではなく相対パスで指定されるのはなぜか?</summary>
+<summary>3. Pod の manifest の `localhostProfile` が、絶対パスではなく相対パスで指定されるのはなぜか？</summary>
 
 Kubelet は、相対パスを自身の seccomp root (デフォルトは `/var/lib/kubelet/seccomp/`) からの相対として自分で解決します。絶対パスを指定すると、kubelet は seccomp root の内部でまさにその絶対パスのファイルを探すことになり、実際のファイルの場所とほぼ確実に一致せず - Pod は `CreateContainerError` を受け取ります。
 </details>
 
 ## コースとの関連
 
-- [第 16 章。AppArmor](../../course/16/jp.md)
-- [第 17 章。seccomp](../../course/17/jp.md)
-- [第 03 章。Container Runtime Security](../../course/03/jp.md)
+- [第 16 章 AppArmor](../../course/16/jp.md)
+- [第 17 章 seccomp](../../course/17/jp.md)
+- [第 03 章 Container Runtime Security](../../course/03/jp.md)
 
 ## インフラ
 
@@ -155,7 +155,7 @@ ls -la /opt/lab106-fixtures/
 <details>
 <summary>💡 課題 4 のヒント</summary>
 
-`/proc/1/status` の `Seccomp: 2` は「filter mode が有効」(SECCOMP_MODE_FILTER) を意味します - これが表示されるはずのものです。`Seccomp: 0` であれば、seccomp filter がまったくない (`Unconfined`) ことを意味します。これはこのグループの 5 つの課題の中で最も単純なものです - 通らない場合は、seccompProfile 自体ではなく nodeSelector に問題がある可能性が高いです。
+`/proc/1/status` の `Seccomp: 2` は「filter mode が有効」(SECCOMP_MODE_FILTER) を意味します - これが表示されるはずのものです。`Seccomp: 0` であれば、seccomp filter がまったくない (`Unconfined`) ことを意味します。これは 3 つの seccomp の課題 (4-6) の中で最も単純なものです - 通らない場合は、seccompProfile 自体ではなく nodeSelector に問題がある可能性が高いです。
 </details>
 
 ---
@@ -184,7 +184,7 @@ ls -la /opt/lab106-fixtures/
 BusyBox の `unshare -m` は、`unshare(2)` が成功した後に、さらに 2 つ目の
 独立した `mount(2)` syscall (`mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL)`、
 private propagation を強制するため - これは、`--propagation unchanged` が明示的に渡されない限りデフォルトで有効な unshare の挙動で、
-渡された場合でも `mount()` は呼び出され、ただフラグがゼロになるだけです) を実行します。containerd の default AppArmor-プロファイル (`RuntimeDefault`、
+渡された場合でも `mount()` は呼び出され、ただフラグがゼロになるだけです) を実行します。containerd の標準の AppArmor プロファイル (`RuntimeDefault`、
 明示的な `securityContext.appArmorProfile` のない Pod が受け取るもの) には `deny mount,` が含まれており、
 フラグに関する条件は一切ありません - この禁止は capabilities とも seccomp とも無関係に作用します。そのため、
 `unshare -m true` は、seccomp が `unshare` をまったく制限していない場合でも AppArmor が原因で `EPERM` で失敗する可能性があり、
@@ -193,7 +193,7 @@ syscall `unshare(2)` 自体のみで、その後の `mount()` は一切なく - 
 `sysadmin-control` も同じ `SYS_ADMIN` を使用するため、結果の違いは、AppArmor の副作用ではなく、
 まさに seccomp filter によるものだと一意に説明できます。
 
-証拠性のためには、コマンドの順序が重要です：まず `unshare -n true` を実行してエラー (ゼロ以外の exit code) で失敗することを確認し、その後でのみ行 `unshare denied by seccomp` を `/tmp/unshare-result` に書いてください - 結果を「想定して」あらかじめ行を書かないでください。Negative control (`sysadmin-control`) は、同じ capability `SYS_ADMIN` を使いつつ `seccompProfile.type: Unconfined` を使う必要があります - `Unconfined` を明示するのを忘れると、Pod がデフォルトで `RuntimeDefault` を受け取る可能性があり (課題 8 の `seccompDefault` が有効な場合)、テストは違いを示しません。
+検証として意味を持たせるためには、コマンドの順序が重要です：まず `unshare -n true` を実行してエラー (ゼロ以外の exit code) で失敗することを確認し、その後でのみ行 `unshare denied by seccomp` を `/tmp/unshare-result` に書いてください - 結果を「想定して」あらかじめ行を書かないでください。Negative control (`sysadmin-control`) は、同じ capability `SYS_ADMIN` を使いつつ `seccompProfile.type: Unconfined` を使う必要があります - `Unconfined` を明示するのを忘れると、Pod がデフォルトで `RuntimeDefault` を受け取る可能性があり (課題 8 の `seccompDefault` が有効な場合)、テストは違いを示しません。
 </details>
 
 Linux の capabilities と privilege escalation は別の軸です。`allowPrivilegeEscalation: false` は
@@ -225,7 +225,7 @@ file capabilities) **新しい**権限を得ることを禁止しますが、bou
 
 重要な要件は、Pod が Pod レベルでもコンテナレベルでも、`seccompProfile` に「一切」言及していないことです。課題 4-6 の manifest をコピーして、このフィールドを削除し忘れると - テストは本来示すべきこと、つまり `Seccomp: 2` をもたらしたのが (manifest での明示ではなく) まさに node-level の `seccompDefault` であることを実証しません。
 
-確認では、ディスク上のファイルのテキストではなく、kubelet に実際に適用された設定を基準にします：
+チェックでは、ディスク上のファイルのテキストではなく、kubelet に実際に適用された設定を基準にします：
 `curl`/`kubectl get --raw /api/v1/nodes/<node>/proxy/configz | jq .kubeletconfig.seccompDefault`。
 `/var/lib/kubelet/config.yaml` に対する単純な grep では、起動している kubelet がまさにこのファイルを
 使っていることは証明されません - コマンドラインフラグや drop-in が、ファイル自体を変更せずに

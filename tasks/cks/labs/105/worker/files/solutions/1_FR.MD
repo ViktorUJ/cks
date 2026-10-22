@@ -26,7 +26,7 @@
 > nœud et une vérification rapide du résultat suffisent. Les commandes enregistrent la sortie dans un fichier (`>`), le contenu se consulte
 > séparément via `cat <fichier>` - le résultat attendu est indiqué dans les commentaires `# ...` sous le bloc.
 >
-> Pour le Docker-host, on entre de la même façon : `ssh docker-host`, puis `sudo -i`.
+> Pour le Docker-host, on se connecte de la même façon : `ssh docker-host`, puis `sudo -i`.
 
 ## 1. Désactiver un service systemd inutile
 
@@ -140,10 +140,10 @@ exit
 
 Artefacts (sur le `worker`). `ufw show added` est la représentation normalisée des règles que
 vous avez réellement ajoutées (la forme/l'ordre d'origine des commandes n'est PAS garanti : UFW les normalise à
-l'affichage). La vérification compare précisément cette liste avec l'allowlist attendu - enregistrez-la
+l'affichage). La vérification compare précisément cette liste avec l'allowlist attendue - enregistrez-la
 aussi, c'est l'evidence la plus fiable de l'exact allow-set. Gérez le firewall uniquement via `ufw` :
 NE modifiez PAS `/etc/ufw/before*.rules` ni `/etc/ufw/after*.rules` à la main, ce sont des
-framework-files avec les default-règles communes, et non un endroit pour des source-scoped rules ; le checker
+framework-files avec les règles par défaut communes, et non un endroit pour des source-scoped rules ; le checker
 compare leur hash avec le bootstrap-baseline propriété du checker et remarquera la modification directe.
 
 ```bash
@@ -360,10 +360,10 @@ Après avoir exécuté toutes les étapes, lancez `check_result`.
 décharger le module déjà chargé, puis dans tous les cas nous bloquons le rechargement
 aussi bien par `blacklist` que par un override `install`. Les deux directives agissent au niveau de
 `modprobe` (alias resolution et un `modprobe sctp` explicite) et éliminent le chemin de chargement habituel ;
-elles ne remplacent pas un kernel-level enforcement (`insmod` insère le module directement via syscall
-et ne lit pas `modprobe.d`, et `modprobe --ignore-install` peut contourner `install` avec un
-accès root égal) - pour ce lab, l'important est d'éliminer précisément le chemin attendu d'autochargement, et non de
-modéliser une protection contre un utilisateur qui a déjà root sur le nœud.
+elles ne remplacent pas un kernel-level enforcement (`insmod` insère le module directement via un syscall
+et ne lit pas `modprobe.d`, et `modprobe --ignore-install` peut contourner `install` en présence d'un
+accès root sur l'hôte) - pour ce lab, l'important est d'éliminer précisément le chemin attendu de chargement automatique, et non de
+fournir une protection contre un utilisateur qui a déjà root sur le nœud.
 
 **`modprobe -r sctp` peut ne pas fonctionner sur un cluster déjà actif** - c'est attendu et ce n'est
 pas une erreur de l'étudiant. Les modules de protocole du noyau (y compris `sctp`) reçoivent une référence persistante

@@ -11,8 +11,9 @@
 сохранён в указанном месте и пригоден для аудита.
 
 Это CKS-задача по security tooling и supply chain, а не упражнение CKA. Большинство
-артефактов анализируются локально на worker; единственное исключение - задание 4, где
-нужно применить hardened Deployment для проверки Ready/Available и HTTP smoke test.
+артефактов анализируются локально на worker; с кластером дополнительно работают задания
+1c, 4, 5b и 9a-9c (live Deployments, hardened Deployment с проверкой Ready/Available и
+HTTP smoke test, Kyverno policy и Pod).
 
 ## Threat model
 
@@ -21,7 +22,7 @@
 kube-linter и Hadolint на соответствующих уровнях образа, Dockerfile и манифестов.
 
 Секреты и токены, случайно оставленные в layer, требуют отдельной проверки: secret
-scanning (например Trivy secret scanning) и inspection history образа (`docker history`,
+scanning (например Trivy secret scanning) и просмотр истории образа (`docker history`,
 извлечение слоёв). SBOM решает другую задачу - инвентаризацию компонентов и версий
 пакетов; он помогает supply-chain investigation (например, найти уязвимую библиотеку),
 но не является надёжным механизмом поиска секретов в истории слоёв и не заменяет secret
@@ -130,7 +131,7 @@ Helm и `install-kyverno` также доступны на worker, но Kyverno 
 - данные хранятся на локальном PV узла (`/var/lib/cks111-registry`), поэтому переживают
   перезапуск Pod'а registry;
 - digest опубликованного образа получайте из `podman push --digestfile`, а наличие манифеста
-  проверяйте запросом к `/v2/` (в registry нет HTTPS-only инструментов вроде `docker buildx imagetools`);
+  проверяйте запросом к `/v2/` (для этого registry не подходят HTTPS-only инструменты вроде `docker buildx imagetools`);
 - подробная последовательность команд - в шаге «0. Подготовка» [решения](worker/files/solutions/1_RU.MD).
 
 **Лимит Docker Hub.** У анонимных pull с одного IP лимит (около 100 запросов за 6 часов).
@@ -319,18 +320,18 @@ Syft генерирует CycloneDX через флаг `-o cyclonedx-json` (н�
 | **9b** | **Fresh signed ALLOW: новый Pod после создания policy** |
 | :---: | :--- |
 | Что делаем | • Policy из задания 9a должна допустить подписанный `$HARDENED_IMAGE` - но повторный `kubectl apply` уже существующего Deployment **не доказывает** это: если template не изменился, новый ReplicaSet/Pod может не создаться, и `Running` окажется просто старым Pod, созданным до policy.<br/>• Создайте **новый**, ранее не существовавший объект: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`.<br/>• Сохраните `creationTimestamp` этого Pod, `creationTimestamp` policy из 9a, и итоговый `status.phase`/`Ready` condition в `9b/signed-admission-check.json`. |
-| Критерии приёмки | • **Pod:** `signed-admission-check` существует, использует именно `$HARDENED_IMAGE`; для него успешно выполняется `cosign verify --key cosign.pub "$HARDENED_IMAGE"`, `status.phase` не `Failed`, а `Ready` условие достигает `True`.<br/>• **Артефакт:** `9b/signed-admission-check.json` содержит этот image и `creationTimestamp` Pod **позже**, чем `creationTimestamp` `ImageValidatingPolicy require-signed-catalog-images`.<br/>• Это доказывает fresh post-policy admission именно верифицируемо подписанного image, а не переживший policy старый Pod. |
+| Критерии приёмки | • **Pod:** `signed-admission-check` существует, использует именно `$HARDENED_IMAGE`; для него успешно выполняется `cosign verify --key cosign.pub "$HARDENED_IMAGE"`, `status.phase` не `Failed`, а `Ready` condition достигает `True`.<br/>• **Артефакт:** `9b/signed-admission-check.json` содержит этот image и `creationTimestamp` Pod **не раньше**, чем `creationTimestamp` `ImageValidatingPolicy require-signed-catalog-images`.<br/>• Это доказывает fresh post-policy admission именно верифицируемо подписанного image, а не переживший policy старый Pod. |
 
 <details>
 <summary>💡 Подсказка к заданию 9b</summary>
 
-Не переиспользуйте Deployment `catalog` из задания 4 для этой проверки - используйте буквально новый `kubectl run` с новым именем Pod, как указано в задании. Оба timestamp (Pod и policy) - строки ISO8601 в UTC, их можно сравнивать лексикографически как обычные строки (`"2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z"` в bash работает корректно для этого формата).
+Не переиспользуйте Deployment `catalog` из задания 4 для этой проверки - используйте буквально новый `kubectl run` с новым именем Pod, как указано в задании. Оба timestamp (Pod и policy) - строки ISO8601 в UTC, их можно сравнивать лексикографически как обычные строки (`[[ "2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z" ]]` в bash работает корректно для этого формата).
 </details>
 
 ---
 | **9c** | **Signature-specific DENY: unsigned digest, реально существующий в том же repository** |
 | :---: | :--- |
-| Что делаем | • Соберите и опубликуйте **второй** tag в том же repository, что и `$HARDENED_IMAGE` (например, `${HARDENED_TAG%:*}:unsigned-1.0`), не подписывая его.<br/>• Этот образ должен быть **физически другим artifact**, а не тем же digest, что уже подписанный `$HARDENED_IMAGE`: если собрать тот же `Dockerfile`/context без изменений, reproducible/cached build может дать идентичный digest, и тогда "unsigned" тег на самом деле укажет на уже подписанный artifact, а `cosign verify` неожиданно пройдёт.<br/>• Внесите контролируемое отличие через build-arg (например `--build-arg CKS_SIGNATURE_TEST=unsigned-1` с соответствующим `ARG`/`LABEL` в Dockerfile) и явно сохраните доказательство `$UNSIGNED_DIGEST != $HARDENED_DIGEST` в `9c/digest-comparison.txt`.<br/>• Получите registry manifest digest тем же способом, что в задании 3 (`podman push --digestfile`), сформируйте `$UNSIGNED_IMAGE` в том же repository.<br/>• Явно докажите, что этот digest **существует и pullable** (запрос `GET /v2/catalog/manifests/<digest>` к registry успешен) и **не имеет** валидной подписи вашим ключом (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` завершается ошибкой) - сохраните оба вывода в `9c/unsigned-exists.txt` и `9c/unsigned-not-signed.txt`.<br/>• Затем создайте Pod `catalog-unsigned-probe` с этим `$UNSIGNED_IMAGE` и сохраните admission denial в `9c/admission-deny.txt`. |
+| Что делаем | • Соберите и опубликуйте **второй** tag в том же repository, что и `$HARDENED_IMAGE` (например, `${HARDENED_TAG%:*}:unsigned-1.0`), не подписывая его.<br/>• Этот образ должен быть **физически другим artifact**, а не тем же digest, что уже подписанный `$HARDENED_IMAGE`: если собрать тот же `Dockerfile`/context без изменений, reproducible/cached build может дать идентичный digest, и тогда "unsigned" тег на самом деле укажет на уже подписанный artifact, а `cosign verify` неожиданно пройдёт.<br/>• Внесите контролируемое отличие через build-arg (например `--build-arg CKS_SIGNATURE_TEST=unsigned-1` с соответствующим `ARG`/`LABEL` в Dockerfile) и явно сохраните доказательство `$UNSIGNED_DIGEST != $HARDENED_DIGEST` в `9c/digest-comparison.txt`.<br/>• Получите registry manifest digest тем же способом, что в задании 3 (`podman push --digestfile`), сформируйте `$UNSIGNED_IMAGE` в том же repository.<br/>• Явно докажите, что этот digest **существует и pullable** (запрос `HEAD` или `GET` к `/v2/catalog/manifests/<digest>` в registry успешен) и **не имеет** валидной подписи вашим ключом (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` завершается ошибкой) - сохраните оба вывода в `9c/unsigned-exists.txt` и `9c/unsigned-not-signed.txt`.<br/>• Затем создайте Pod `catalog-unsigned-probe` с этим `$UNSIGNED_IMAGE` и сохраните admission denial в `9c/admission-deny.txt`. |
 | Критерии приёмки | • **Артефакт:** `9c/digest-comparison.txt` содержит `hardened_digest=`, `unsigned_digest=` и `unsigned_image=` (полная `tag@digest`-ссылка в том же repository, что `$HARDENED_IMAGE`, с genuinely другим digest).<br/>• **Проверка checker:** сам резолвит `unsigned_image` в registry, подтверждает отсутствие валидной подписи через собственный `cosign verify`, создаёт СВОЙ новый Pod с этим образом и требует уникальный validation message собственной policy: `catalog image must have a valid release signature`.<br/>• Засчитывается только это сообщение, а не любая admission-ошибка: generic admission/signature error от другой policy не даёт PASS, `manifest unknown`/ошибки registry lookup тоже недостаточны.<br/>• Написанные вручную evidence-файлы без реального admission control не дают PASS - checker не доверяет никаким текстовым файлам, кроме `unsigned_image=` как указателя на реальный образ для проверки. |
 
 <details>

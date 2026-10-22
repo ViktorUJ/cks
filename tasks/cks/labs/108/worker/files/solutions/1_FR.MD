@@ -101,10 +101,10 @@ accepté aussi dans les autres listes de conteneurs - par exemple, dans `initCon
 
 ## 3. Exiger `runAsNonRoot`
 
-La politique exige précisément la valeur `true` dans le `securityContext` au niveau du Pod ; la valeur
+La policy exige précisément la valeur `true` dans le `securityContext` au niveau du Pod ; la valeur
 implicite et `false` ne passent pas. De plus, sont interdits `runAsUser: 0` au niveau du
 Pod et les container-level overrides `runAsNonRoot: false` / `runAsUser: 0` dans les
-trois container lists, sinon le securityContext au niveau du container pourra redéfinir le
+trois container lists, sinon le securityContext au niveau du conteneur pourra redéfinir le
 `runAsNonRoot: true` au niveau du Pod et lancer un processus root.
 
 ```yaml
@@ -196,7 +196,9 @@ facilement à côté.
 
 Les positive controls doivent couvrir les deux préfixes autorisés (`registry.k8s.io/` et
 `ghcr.io/cks-lab/`) dans `containers`, `initContainers` et `ephemeralContainers` ; ne
-limitez pas l'un des registry aux seuls conteneurs ordinaires :
+limitez pas l'un des registry aux seuls conteneurs ordinaires.
+
+Les negative controls (chacun de ces manifests doit être rejeté) :
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -478,7 +480,7 @@ EOF
 kubectl rollout status deployment/image-policy-backend -n image-policy --timeout=90s
 ```
 
-Copiez le certificat CA (ici auto-signé, donc le certificat du serveur est à la fois sa
+Copiez le certificat CA (ici auto-signé, donc le certificat du serveur est lui-même sa
 propre CA) sur le `control-plane`, afin que kube-apiserver puisse vérifier la chaîne lors de la
 connexion au backend, et connectez-vous au nœud :
 
@@ -590,11 +592,11 @@ kubectl get pod webhook-pinned-ok
 ```
 
 `ImagePolicyWebhook` utilise le backend de `/opt/image-policy-backend/server.py` :
-dans `default` et les autres namespace (sauf `policy-108`), il interdit le latest
-explicite/implicite ; `policy-108` est entièrement contrôlé par les trois politiques Kyverno des tâches 2–4.
+dans `default` et les autres namespaces (sauf `policy-108`), il interdit le latest
+explicite/implicite ; `policy-108` est entièrement contrôlé par les trois policies Kyverno des tâches 2–4.
 C'est une isolation de mécanismes de lab, et non un pattern universel de production.
 L'annotation utilisateur `alpha.image-policy.k8s.io/break-glass` NE donne PAS l'autorisation :
-la transmission des annotations via ImageReview (forwarding) n'est pas une vérification d'authenticité.
+la transmission des annotations dans ImageReview n'est pas une authentification.
 
 `defaultAllow: false` signifie fail-closed : si le backend est indisponible, les nouveaux Pod/image
 sont interdits, et non autorisés. Vérifiez-le explicitement - mais ne scalez PAS

@@ -11,17 +11,17 @@
 იყოს შენახული მითითებულ ადგილას და აუდიტისთვის ვარგისი.
 
 ეს CKS-ამოცანაა security tooling-სა და supply chain-ზე, და არა CKA-ს სავარჯიშო. Artifacts-ის უმეტესობა
-ლოკალურად ანალიზდება worker-ზე; ერთადერთი გამონაკლისი - დავალება 4, სადაც
-საჭიროა hardened Deployment-ის გამოყენება Ready/Available-ისა და HTTP smoke test-ის შესამოწმებლად.
+ლოკალურად ანალიზდება worker-ზე; კლასტერთან დამატებით მუშაობს დავალებები 1c, 4, 5b და 9a-9c
+(live Deployments, hardened Deployment Ready/Available-ის შემოწმებითა და HTTP smoke test-ით, Kyverno policy და Pod).
 
 ## Threat model
 
 ლაბი ახდენს supply chain-ის ნდობის მოდელირებას რამდენიმე დამოუკიდებელი საფრთხით. მავნე
-კოდი ან ცნობილი სისუსტეები image-ში აღმოიჩინება სკანერებით Trivy, kubesec,
+კოდი ან ცნობილი სისუსტეები image-ში გამოვლინდება სკანერებით Trivy, kubesec,
 kube-linter და Hadolint image-ის, Dockerfile-ისა და manifest-ების შესაბამის დონეებზე.
 
 Secrets და token-ები, რომლებიც შემთხვევით დარჩა layer-ში, ცალკე შემოწმებას მოითხოვს: secret
-scanning (მაგალითად Trivy secret scanning) და image-ის history-ის inspection (`docker history`,
+scanning (მაგალითად Trivy secret scanning) და image-ის history-ის დათვალიერება (`docker history`,
 ფენების ამოღება). SBOM სხვა ამოცანას წყვეტს - კომპონენტებისა და პაკეტების ვერსიების ინვენტარიზაციას;
 ის ეხმარება supply-chain investigation-ს (მაგალითად, მოწყვლადი ბიბლიოთეკის პოვნაში),
 მაგრამ არ წარმოადგენს ფენების history-ში secrets-ის ძიების საიმედო მექანიზმს და secret
@@ -33,9 +33,9 @@ mutable-tag tampering-ის საფრთხე იმაში მდგო�
 დავალებებში 3–5: ის აფიქსირებს image-ის კონკრეტულ შიგთავსს, და არა მხოლოდ მის სახელსა და ტეგს.
 
 ხელმოწერის შემოწმება დავალება 7-ში ამტკიცებს, რომ კონკრეტული digest ხელმოწერილია სანდო
-key/identity-ით (signature integrity), მაშინ როცა Trivy scan დავალება 1-ში არ აღმოაჩენს
-ცნობილ მოწყვლადობებს, რომლებიც მის detection coverage-ში ხვდება მიმდინარე vulnerability DB-ის პირობებში
-(თავად Trivy აფიქსირებს trade-off-ს precision-ის სასარგებლოდ, რომლის დროსაც false
+key/identity-ით (signature integrity), მაშინ როცა Trivy scan დავალება 1-ში მხოლოდ აჩვენებს, რომ
+მის detection coverage-ში შემავალი ცნობილი მოწყვლადობები მიმდინარე vulnerability DB-ის პირობებში ვერ მოიძებნა
+(თავად Trivy დოკუმენტაციაში აღწერს trade-off-ს precision-ის სასარგებლოდ, რომლის დროსაც false
 negatives შესაძლებელია - "0 findings" არ ნიშნავს მოწყვლადობების არარსებობის formal proof-ს). ეს დაცვის განსხვავებული
 ღერძებია: არც ერთი მათგანი მეორეს არ ანაცვლებს, რადგან vulnerability != signature. ხელმოწერა -
 ეს არ არის იგივე, რაც provenance/attestation
@@ -128,7 +128,7 @@ Helm და `install-kyverno` ასევე ხელმისაწვდო�
 - მონაცემები ინახება node-ის ლოკალურ PV-ზე (`/var/lib/cks111-registry`), ამიტომ გადაიტანს
   registry-ის Pod-ის გადატვირთვას;
 - გამოქვეყნებული image-ის digest-ს იღებთ `podman push --digestfile`-დან, ხოლო manifest-ის არსებობას
-  ამოწმებთ მოთხოვნით `/v2/`-ზე (registry-ში არ არის HTTPS-only ინსტრუმენტები, როგორიცაა `docker buildx imagetools`);
+  ამოწმებთ მოთხოვნით `/v2/`-ზე (ამ registry-სთვის HTTPS-only ინსტრუმენტები, როგორიცაა `docker buildx imagetools`, არ გამოდგება);
 - ბრძანებების დეტალური თანმიმდევრობა - [ამოხსნის](worker/files/solutions/1_GE.MD) ნაბიჯში «0. მომზადება».
 
 **Docker Hub-ის ლიმიტი.** ერთი IP-დან ანონიმურ pull-ებს აქვთ ლიმიტი (დაახლოებით 100 მოთხოვნა 6 საათში).
@@ -286,7 +286,7 @@ linter-ის არანულოვანი exit code პრობლემ�
 <details>
 <summary>💡 მინიშნება დავალება 7-ისთვის</summary>
 
-Syft აგენერირებს CycloneDX-ს ფლაგით `-o cyclonedx-json` (არ აურიოთ ამავე ინსტრუმენტის SPDX-გამოტანასთან). Distroless-ის keyless verification-ისთვის არც გასაღებია საჭირო და არც `cosign generate-key-pair` - გამოიყენეთ `cosign verify --certificate-identity <identity> --certificate-oidc-issuer <issuer>` დავალებაში მითითებული issuer/identity სტრიქონებით ზუსტად - რომელიმე მათგანში შეცდომა დაგიბრუნებთ ვერიფიკაციის შეცდომას.
+Syft აგენერირებს CycloneDX-ს ფლაგით `-o cyclonedx-json` (არ აურიოთ ამავე ინსტრუმენტის SPDX-გამოტანასთან). Distroless-ის keyless verification-ისთვის არც გასაღებია საჭირო და არც `cosign generate-key-pair` - გამოიყენეთ `cosign verify --certificate-identity <identity> --certificate-oidc-issuer <issuer>` დავალებაში მითითებული issuer/identity სტრიქონებით ზუსტად - რომელიმე მათგანში დაშვებული ბეჭდვითი შეცდომა ვერიფიკაციის წარუმატებლობას გამოიწვევს.
 </details>
 
 ---
@@ -317,18 +317,18 @@ Syft აგენერირებს CycloneDX-ს ფლაგით `-o cycl
 | **9b** | **Fresh signed ALLOW: ახალი Pod policy-ის შექმნის შემდეგ** |
 | :---: | :--- |
 | რას ვაკეთებთ | • policy დავალება 9a-დან უნდა დაუშვას ხელმოწერილი `$HARDENED_IMAGE` - მაგრამ უკვე არსებული Deployment-ის განმეორებითი `kubectl apply` ამას **არ ამტკიცებს**: თუ template არ შეცვლილა, ახალი ReplicaSet/Pod შეიძლება არ შეიქმნას, და `Running` უბრალოდ policy-მდე შექმნილი ძველი Pod აღმოჩნდება.<br/>• შექმენით **ახალი**, ადრე არარსებული ობიექტი: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`.<br/>• შეინახეთ ამ Pod-ის `creationTimestamp`, policy-ის `creationTimestamp` 9a-დან და საბოლოო `status.phase`/`Ready` condition `9b/signed-admission-check.json`-ში. |
-| მიღების კრიტერიუმები | • **Pod:** `signed-admission-check` არსებობს, იყენებს სწორედ `$HARDENED_IMAGE`-ს; მისთვის წარმატებით სრულდება `cosign verify --key cosign.pub "$HARDENED_IMAGE"`, `status.phase` არა `Failed`, ხოლო `Ready` პირობა აღწევს `True`-ს.<br/>• **Artifact:** `9b/signed-admission-check.json` შეიცავს ამ image-ს და Pod-ის `creationTimestamp`-ს **უფრო გვიან**, ვიდრე `ImageValidatingPolicy require-signed-catalog-images`-ის `creationTimestamp`.<br/>• ეს ამტკიცებს სწორედ ვერიფიცირებადად ხელმოწერილი image-ის fresh post-policy admission-ს, და არა policy-მდე შექმნილ და შემორჩენილ ძველ Pod-ს. |
+| მიღების კრიტერიუმები | • **Pod:** `signed-admission-check` არსებობს, იყენებს სწორედ `$HARDENED_IMAGE`-ს; მისთვის წარმატებით სრულდება `cosign verify --key cosign.pub "$HARDENED_IMAGE"`, `status.phase` არა `Failed`, ხოლო `Ready` condition აღწევს `True`-ს.<br/>• **Artifact:** `9b/signed-admission-check.json` შეიცავს ამ image-ს და Pod-ის `creationTimestamp`-ს **არა უფრო ადრე**, ვიდრე `ImageValidatingPolicy require-signed-catalog-images`-ის `creationTimestamp`.<br/>• ეს ამტკიცებს სწორედ ვერიფიცირებადად ხელმოწერილი image-ის fresh post-policy admission-ს, და არა policy-მდე შექმნილ და შემორჩენილ ძველ Pod-ს. |
 
 <details>
 <summary>💡 მინიშნება დავალება 9b-სთვის</summary>
 
-ამ შემოწმებისთვის Deployment `catalog`-ს დავალება 4-დან ნუ გამოიყენებთ - გამოიყენეთ სიტყვასიტყვით ახალი `kubectl run` Pod-ის ახალი სახელით, როგორც დავალებაშია მითითებული. ორივე timestamp (Pod-ისა და policy-ის) - UTC-ში ISO8601 სტრიქონებია, მათი შედარება შეიძლება ლექსიკოგრაფიულად როგორც ჩვეულებრივი სტრიქონები (`"2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z"` bash-ში ამ ფორმატისთვის სწორად მუშაობს).
+ამ შემოწმებისთვის Deployment `catalog`-ს დავალება 4-დან ნუ გამოიყენებთ - გამოიყენეთ სიტყვასიტყვით ახალი `kubectl run` Pod-ის ახალი სახელით, როგორც დავალებაშია მითითებული. ორივე timestamp (Pod-ისა და policy-ის) - UTC-ში ISO8601 სტრიქონებია, მათი შედარება შეიძლება ლექსიკოგრაფიულად როგორც ჩვეულებრივი სტრიქონები (`[[ "2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z" ]]` bash-ში ამ ფორმატისთვის სწორად მუშაობს).
 </details>
 
 ---
 | **9c** | **Signature-specific DENY: unsigned digest, რეალურად არსებული იმავე repository-ში** |
 | :---: | :--- |
-| რას ვაკეთებთ | • ააგეთ და გამოაქვეყნეთ **მეორე** tag იმავე repository-ში, რაც `$HARDENED_IMAGE` (მაგალითად, `${HARDENED_TAG%:*}:unsigned-1.0`), მისი ხელმოწერის გარეშე.<br/>• ეს image უნდა იყოს **ფიზიკურად სხვა artifact**, და არა იგივე digest, რაც უკვე ხელმოწერილ `$HARDENED_IMAGE`-ს აქვს: თუ იმავე `Dockerfile`/context-ს ცვლილებების გარეშე ააგებთ, reproducible/cached build-მა შეიძლება იდენტური digest მოგცეთ, და მაშინ "unsigned" ტეგი სინამდვილეში უკვე ხელმოწერილ artifact-ზე მიუთითებს, ხოლო `cosign verify` მოულოდნელად გაივლის.<br/>• შეიტანეთ კონტროლირებადი განსხვავება build-arg-ით (მაგალითად `--build-arg CKS_SIGNATURE_TEST=unsigned-1` Dockerfile-ში შესაბამისი `ARG`/`LABEL`-ით) და აშკარად შეინახეთ დადასტურება `$UNSIGNED_DIGEST != $HARDENED_DIGEST` `9c/digest-comparison.txt`-ში.<br/>• მიიღეთ registry manifest digest იმავე გზით, რაც დავალება 3-ში (`podman push --digestfile`), ჩამოაყალიბეთ `$UNSIGNED_IMAGE` იმავე repository-ში.<br/>• აშკარად დაამტკიცეთ, რომ ეს digest **არსებობს და pullable-ია** (მოთხოვნა `GET /v2/catalog/manifests/<digest>` registry-ზე წარმატებულია) და **არ აქვს** თქვენი გასაღებით ვალიდური ხელმოწერა (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` შეცდომით სრულდება) - შეინახეთ ორივე გამოტანა `9c/unsigned-exists.txt`-სა და `9c/unsigned-not-signed.txt`-ში.<br/>• შემდეგ შექმენით Pod `catalog-unsigned-probe` ამ `$UNSIGNED_IMAGE`-ით და შეინახეთ admission denial `9c/admission-deny.txt`-ში. |
+| რას ვაკეთებთ | • ააგეთ და გამოაქვეყნეთ **მეორე** tag იმავე repository-ში, რაც `$HARDENED_IMAGE` (მაგალითად, `${HARDENED_TAG%:*}:unsigned-1.0`), მისი ხელმოწერის გარეშე.<br/>• ეს image უნდა იყოს **ფიზიკურად სხვა artifact**, და არა იგივე digest, რაც უკვე ხელმოწერილ `$HARDENED_IMAGE`-ს აქვს: თუ იმავე `Dockerfile`/context-ს ცვლილებების გარეშე ააგებთ, reproducible/cached build-მა შეიძლება იდენტური digest მოგცეთ, და მაშინ "unsigned" ტეგი სინამდვილეში უკვე ხელმოწერილ artifact-ზე მიუთითებს, ხოლო `cosign verify` მოულოდნელად გაივლის.<br/>• შეიტანეთ კონტროლირებადი განსხვავება build-arg-ით (მაგალითად `--build-arg CKS_SIGNATURE_TEST=unsigned-1` Dockerfile-ში შესაბამისი `ARG`/`LABEL`-ით) და აშკარად შეინახეთ დადასტურება `$UNSIGNED_DIGEST != $HARDENED_DIGEST` `9c/digest-comparison.txt`-ში.<br/>• მიიღეთ registry manifest digest იმავე გზით, რაც დავალება 3-ში (`podman push --digestfile`), ჩამოაყალიბეთ `$UNSIGNED_IMAGE` იმავე repository-ში.<br/>• აშკარად დაამტკიცეთ, რომ ეს digest **არსებობს და pullable-ია** (`HEAD` ან `GET` მოთხოვნა `/v2/catalog/manifests/<digest>`-ზე registry-ში წარმატებულია) და **არ აქვს** თქვენი გასაღებით ვალიდური ხელმოწერა (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` შეცდომით სრულდება) - შეინახეთ ორივე გამოტანა `9c/unsigned-exists.txt`-სა და `9c/unsigned-not-signed.txt`-ში.<br/>• შემდეგ შექმენით Pod `catalog-unsigned-probe` ამ `$UNSIGNED_IMAGE`-ით და შეინახეთ admission denial `9c/admission-deny.txt`-ში. |
 | მიღების კრიტერიუმები | • **Artifact:** `9c/digest-comparison.txt` შეიცავს `hardened_digest=`-ს, `unsigned_digest=`-ს და `unsigned_image=`-ს (სრული `tag@digest`-მითითება იმავე repository-ში, რაც `$HARDENED_IMAGE`, genuinely სხვა digest-ით).<br/>• **checker-ის შემოწმება:** თავად resolve-ს უკეთებს `unsigned_image`-ს registry-ში, ადასტურებს ვალიდური ხელმოწერის არარსებობას საკუთარი `cosign verify`-ით, ქმნის თავის ახალ Pod-ს ამ image-ით და მოითხოვს საკუთარი policy-ის უნიკალურ validation message-ს: `catalog image must have a valid release signature`.<br/>• ითვლება მხოლოდ ეს შეტყობინება, და არა ნებისმიერი admission-შეცდომა: სხვა policy-ის generic admission/signature error PASS-ს არ იძლევა, `manifest unknown`/registry lookup-ის შეცდომებიც საკმარისი არ არის.<br/>• ხელით დაწერილი evidence-ფაილები რეალური admission control-ის გარეშე PASS-ს არ იძლევა - checker არც ერთ ტექსტურ ფაილს არ ენდობა, გარდა `unsigned_image=`-ისა, როგორც რეალურ image-ზე მითითებისა შესამოწმებლად. |
 
 <details>

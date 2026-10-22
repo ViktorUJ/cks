@@ -300,7 +300,7 @@ YAML
 ```
 
 `Binding.matchResources.namespaceSelector` limita la policy solo a `psa-restricted-107`:
-los Pod de otros namespace (por ejemplo `psa-observe-107`) no los comprueba esta regla y no
+los Pods de otros namespaces (por ejemplo `psa-observe-107`) no los comprueba esta regla y no
 reciben un Deny de más.
 
 ## 7. Controller-driven admission denial

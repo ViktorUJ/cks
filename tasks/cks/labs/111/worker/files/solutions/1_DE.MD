@@ -3,7 +3,7 @@
 # Lab 111 - Referenzlösung
 
 Alle Befehle werden auf dem worker ausgeführt. Das sind gewöhnliche Befehle der Werkzeuge (trivy, kubesec,
-kube-linter, hadolint, podman, syft, bom, cosign), die es in der Prüfung gibt; es gibt keine Skripte; wo
+kube-linter, hadolint, podman, syft, bom, cosign), die es in der CKS-Prüfung gibt; es gibt keine Skripte; wo
 mehrere Ergebnisse verglichen werden müssen, geschieht das per Sichtprüfung anhand der Ausgabe. Lege zuerst die gemeinsamen
 Variablen fest:
 
@@ -22,7 +22,7 @@ Zum Bauen und Veröffentlichen von Images wird `podman` verwendet (er steht in d
 rootless, läuft als `ubuntu`). Die Registry wurde bereits vom bootstrap hochgefahren: Das ist `registry:2` auf der control-plane
 (`<IP des Nodes>:5000`, plain HTTP innerhalb der VPC, Daten auf dem lokalen PV des Nodes). Podman auf dem worker ist
 darauf als insecure registry eingestellt (`/etc/containers/registries.conf.d/cks111.conf`), containerd auf dem
-Node - ebenfalls, daher wird das Flag `--tls-verify=false` nicht gebraucht. Die Images der Lab sind vorab in einen lokalen
+Node - ebenfalls, daher wird das Flag `--tls-verify=false` nicht gebraucht. Die Images des Labs sind vorab in einen lokalen
 Cache geladen, den Trivy und Syft verwenden, daher stoßen wiederholte Scans nicht an das Limit von Docker Hub.
 
 Adresse der Registry:
@@ -282,14 +282,14 @@ comm -12 /tmp/c1.pkgs /tmp/c3.pkgs | wc -l
 comm -12 /tmp/c2.pkgs /tmp/c3.pkgs | wc -l
 ```
 
-Das Paar mit den gemeinsamen Paketen sind die offending Container (nehmen wir an, `c1` und `c2`). Sie haben viele
+Das Paar mit den gemeinsamen Paketen - das sind die offending Container (nehmen wir an, `c1` und `c2`). Sie haben viele
 gemeinsame Pakete: **Jedes** `name=version`, das im dritten Image fehlt, passt:
 
 ```bash
 comm -12 /tmp/c1.pkgs /tmp/c2.pkgs | grep -vxFf /tmp/c3.pkgs | head -3
 ```
 
-Schreibe das gefundene Paar auf und entferne GENAU diese zwei Container (`kubectl edit`), sodass der "saubere" übrig bleibt:
+Schreibe das gefundene Paar auf und entferne GENAU diese zwei Container (`kubectl edit`), sodass der „saubere“ übrig bleibt:
 
 ```bash
 printf 'TARGET_PACKAGE=%s\nTARGET_VERSION=%s\n' <name> <version> > $ART/5b/answer.txt     # zum Beispiel apt und 3.0.3
@@ -316,7 +316,7 @@ nicht `--insecure-ignore-tlog` und überspringe nicht die certificate identity.
 ```bash
 mkdir -p "$ART/7"
 # Bei einer Referenz der Form tag@digest schreibt Syft in metadata.component.version nur den tag; eine Referenz
-# ohne tag ("nginx@sha256:...") ergibt version = manifest digest, und gerade er wird geprüft.
+# ohne tag ("nginx@sha256:...") ergibt version = manifest digest, und genau dieser wird geprüft.
 syft "nginx@${IMAGE#*@}" -o "cyclonedx-json=$ART/7/syft.cdx.json"
 ```
 
@@ -375,11 +375,11 @@ kubectl -n kyverno get deployment kyverno-admission-controller
 kubectl -n kyverno wait --for=condition=Available deployment/kyverno-admission-controller --timeout=180s
 ```
 
-Erzeuge das Lern-Schlüsselpaar AUSSERHALB von `$ROOT` - dieses Verzeichnis wird in Aufgabe 9c erneut als
+Erzeuge das Übungs-Schlüsselpaar AUSSERHALB von `$ROOT` - dieses Verzeichnis wird in Aufgabe 9c erneut als
 Docker build context verwendet (`COPY . /usr/share/nginx/html` im Dockerfile kopiert
 ALLES aus dem build context), daher gelangt ein in `$ROOT` zurückgelassenes `cosign.key`
 in das Dateisystem des veröffentlichten Images, als Leck des private signing key in die Registry. Signiere
-gerade `$HARDENED_IMAGE` aus Aufgabe 3/4 und nicht das upstream `nginx`. Übertrage dieses
+genau `$HARDENED_IMAGE` aus Aufgabe 3/4 und nicht das upstream `nginx`. Übertrage dieses
 `cosign.key` nicht in eine production CI.
 
 ```bash
@@ -410,7 +410,7 @@ spec:
   failurePolicy: Fail
   validationActions: [Deny]
   credentials:
-    allowInsecureRegistry: true   # die Registry der Lab arbeitet über HTTP
+    allowInsecureRegistry: true   # die Registry des Labs arbeitet über HTTP
   matchConstraints:
     resourceRules:
     - apiGroups: [""]
@@ -444,7 +444,7 @@ Führe zum Schluss `check_result` aus (teilweise, Test 9a).
 Ein erneutes `kubectl apply` des bereits vorhandenen Deployments `catalog` **beweist** die
 post-policy admission **nicht**: Wenn sich das template nicht geändert hat, erstellt Kubernetes kein neues
 ReplicaSet/Pod, und das beobachtete `Running` kann derselbe Pod sein, der schon vor
-`require-signed-catalog-images` existierte. Um gerade die fresh admission zu belegen, erstellen wir ein **neues**
+`require-signed-catalog-images` existierte. Um genau die fresh admission zu belegen, erstellen wir ein **neues**
 Objekt, das es bis zu diesem Moment nicht gab:
 
 ```bash
@@ -470,7 +470,7 @@ cat "$ART/9b/signed-admission-check.json"
 ```
 
 Kriterium (`creationTimestamp` hat eine Genauigkeit von 1 s, daher ist der Vergleich nicht strikt): `createdAfterPolicy == true` und `ready == true`. Das - und nur das - belegt,
-dass gerade **diese** policy gerade **diesen** zuvor nicht existierenden Pod mit einem
+dass genau **diese** policy genau **diesen** zuvor nicht existierenden Pod mit einem
 signierten Image durchgelassen hat und nicht, dass ein alter Pod einfach weiterläuft.
 
 Führe zum Schluss `check_result` aus (teilweise, Test 9b).
@@ -483,7 +483,7 @@ registry lookup ablehnen und nicht wegen des Fehlens einer Signatur, und das den
 security property nicht. Wir bauen und veröffentlichen einen zweiten, bewusst unsignierten tag im selben
 repository - und **unbedingt** mit einem Inhalt, der sich von `$HARDENED_IMAGE` unterscheidet: Wenn man
 dasselbe `Dockerfile`/denselben context ohne Änderungen baut, kann ein reproducible/cached build **denselben**
-manifest digest ergeben wie das bereits signierte Image, und dann besteht `cosign verify` auf den "unsigned" Tag
+manifest digest ergeben wie das bereits signierte Image, und dann besteht `cosign verify` für den „unsigned“ tag
 unerwartet - weil er physisch auf ein bereits signiertes artifact zeigt. Daher
 führen wir über `ARG`/`LABEL` einen kontrollierten Unterschied ein, der den digest garantiert ändert:
 
@@ -529,7 +529,7 @@ cosign verify --key "$KEYDIR/cosign.pub" "$UNSIGNED_IMAGE" > "$ART/9c/unsigned-n
 cat "$ART/9c/unsigned-not-signed.txt"     # error: no matching signatures
 ```
 
-Erst jetzt versuchen wir, den Pod zu erstellen, und bestätigen, dass das denial gerade auf die policy/
+Erst jetzt versuchen wir, den Pod zu erstellen, und bestätigen, dass das denial genau auf die policy/
 signature verweist und nicht auf einen generischen admission-Fehler:
 
 ```bash
@@ -541,7 +541,7 @@ kubectl get pod catalog-unsigned-probe -n cks-111       # NotFound: Der Pod wurd
 Unterschied zur naiven Prüfung: Wenn wir stattdessen den digest aus einem anderen repository genommen hätten
 (zum Beispiel den digest des upstream `nginx` aus Aufgabe 1), hätte admission aus einem völlig
 anderen Grund ablehnen können (`manifest unknown`, fehlender pull-Zugriff) - und ein solches denial hätte
-ausgesehen wie "die policy funktioniert", obwohl die Prüfung der signature in Wirklichkeit gar nicht erreicht wurde.
+ausgesehen wie „die policy funktioniert“, obwohl die Prüfung der signature in Wirklichkeit gar nicht erreicht wurde.
 
 Führe zum Schluss `check_result` aus.
 

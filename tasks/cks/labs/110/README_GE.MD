@@ -7,7 +7,7 @@
 ამ CKS-ლაბში თქვენ ააწყობთ workload-ის დაცვის სამ დამოუკიდებელ ფენას: sandboxed runtime
 **gVisor** `runsc`-ის გავლით, Cilium WireGuard-ის node-თაშორისი დაშიფვრა და Istio-ს service-to-service
 mTLS. ბოლოს თქვენ არა მხოლოდ პარამეტრებს ნახავთ, არამედ დაამტკიცებთ მათ დაკვირვებადი
-შედეგებით: gVisor-ის kernel view-ს განსხვავებით, WireGuard-პაკეტებით HTTP marker-ის გარეშე და mesh-იდან და mesh-ის გარეთ plaintext-კლიენტიდან გამოძახების განსხვავებული
+შედეგებით: gVisor-ის kernel view-ის სხვაობით, WireGuard-პაკეტებით HTTP marker-ის გარეშე და mesh-იდან და mesh-ის გარეთ plaintext-კლიენტიდან გამოძახების განსხვავებული
 შედეგით.
 
 ## შეამოწმეთ თავი სტარტამდე
@@ -46,7 +46,7 @@ Terragrunt ქმნის Kubernetes `1.36.0`-ს `eu-central-1`-ში:
 | CNI | **Cilium** (დაყენებულია Cilium CLI-ით Helm release `cilium`-ით); WireGuard განზრახ გამორთულია დავალება 4-მდე |
 | `worker` | სამუშაო მანქანა `kubectl`-ით, `cilium`-ით, `istioctl`-ით, `check_result`-ით და SSH aliases-ით node-ებზე |
 
-2026-08-31-ს შემოწმებული მატრიცა (გადაამოწმეთ ყოველი აწყობის წინ): სასწავლო Kubernetes
+2026-08-31-ს შემოწმებული მატრიცა (გადაამოწმეთ ყოველი აწყობის წინ): Kubernetes ლაბში -
 `1.36.0`; Cilium data plane - მხარდაჭერილი lab-აწყობა, რომლის თავსებადობა
 Kubernetes `1.36`-თან აქტუალური requirements matrix-ით უნდა დადასტურდეს; Cilium CLI `0.19.7`
 (თავსებადია Cilium `1.17+`-თან); Istio `1.30.4` (ტოტი `1.30` ოფიციალურად უჭერს მხარს Kubernetes
@@ -132,12 +132,12 @@ mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6}
 | **4** | **Cilium transparent encryption-ის ჩართვა** |
 | :---: | :--- |
 | რას ვაკეთებთ | • ჯერ დააფიქსირეთ Kubernetes-ის, Cilium agent-ისა და Cilium CLI-ის ვერსიები `/var/work/tests/artifacts/4/tool-versions.txt`-ში და დარწმუნდით, რომ data plane Kubernetes `1.36`-ს უჭერს მხარს.<br/>• ჩართეთ WireGuard არსებულ Helm release-ში, რომელიც `cilium install`-მა შექმნა: `cilium upgrade --version 1.20.1 --set encryption.enabled=true --set encryption.type=wireguard --wait`.<br/>• გადატვირთეთ აგენტები (`kubectl -n kube-system rollout restart daemonset/cilium`): Helm მხოლოდ ConfigMap-ს ცვლის, ხოლო DaemonSet-ის შაბლონი უცვლელი რჩება.<br/>• შეამოწმეთ `cilium-config` (`enable-wireguard: "true"`) და ორივე Cilium agent-ის მზადყოფნა.<br/>• ConfigMap-ის პირდაპირი patch დასაშვებია მხოლოდ როგორც მოკლევადიანი სასწავლო baseline-ცდა სავალდებულო დადასტურებული rollback-ით. ნუ ეძებთ ბრძანებას `cilium encrypt enable`: კლიენტურ `cilium` CLI-ს ასეთი ქვებრძანება არ აქვს.<br/>• შეინახეთ agent-side `cilium-dbg encrypt status` და `cilium-dbg debuginfo --output json` `/var/work/tests/artifacts/4/cilium-encrypt-status.txt`-ში (`cilium-dbg status`-ს ფლაგი `--all-encryption` არ აქვს). |
-| მიღების კრიტერიუმები | • Version evidence არსებობს და ემთხვევა DaemonSet `kube-system/cilium`-ის რეალურ image-ს<br/>• Cilium agents (DaemonSet) სრულად Ready-ა<br/>• Status აჩვენებს WireGuard-ს და ერთდროულად IPsec-ს არ აჩვენებს<br/>• Debuginfo JSON შეიცავს peer/allowed-IP (ან remote-node) evidence-ს node-თაშორისი მდგომარეობისთვის<br/>• ConfigMap `kube-system/cilium-config` შეიცავს `enable-wireguard: "true"`-ს როგორც Helm values-იდან გამოყენებულ effective-კონფიგურაციას<br/>• პარამეტრი უძლებს ერთი agent Pod-ის restart-ს (checker Pod-ს ხელახლა რთავს და სტატუსს ხელახლა ამოწმებს) |
+| მიღების კრიტერიუმები | • Version evidence არსებობს და ემთხვევა DaemonSet `kube-system/cilium`-ის რეალურ image-ს<br/>• Cilium agents (DaemonSet) სრულად Ready-ა<br/>• Status აჩვენებს WireGuard-ს და ერთდროულად IPsec-ს არ აჩვენებს<br/>• Debuginfo JSON შეიცავს peer/allowed-IP (ან remote-node) evidence-ს node-თაშორისი მდგომარეობისთვის<br/>• ConfigMap `kube-system/cilium-config` შეიცავს `enable-wireguard: "true"`-ს როგორც Helm values-იდან გამოყენებულ effective-კონფიგურაციას<br/>• პარამეტრი უძლებს ერთი agent Pod-ის restart-ს (checker Pod-ს გადატვირთავს და სტატუსს ხელახლა ამოწმებს) |
 
 <details>
 <summary>💡 მინიშნება დავალება 4-ისთვის</summary>
 
-გამოიყენეთ არსებული release `cilium`-ის Helm values როგორც WireGuard-ის ჩასართავად გრძელვადიანი source-of-truth, და არა ეფემერული ბრძანებები - Helm values-ის გარეთ გაკეთებულ ცვლილებას შეიძლება აგენტის restart-ი ან Helm release-ის განახლება არ გაუძლოს, ხოლო ტესტი სპეციალურად ამოწმებს, რომ პარამეტრი restart-ს უძლებს. `cilium-dbg` გამოიძახება აგენტის Pod-ის შიგნით `kubectl exec`-ით, და არა როგორც ცალკე ლოკალური binary worker-ზე. `cilium-dbg status`-ს ფლაგი `--all-encryption` არ აქვს - peer/allowed-IP-ის დეტალური evidence-ისთვის გამოიყენეთ `cilium-dbg debuginfo --output json`.
+გამოიყენეთ არსებული release `cilium`-ის Helm values როგორც WireGuard-ის ჩასართავად გრძელვადიანი source-of-truth, და არა ეფემერული ბრძანებები - Helm values-ის გარეთ გაკეთებულმა ცვლილებამ შეიძლება აგენტის restart-ს ან Helm release-ის განახლებას არ გაუძლოს, ხოლო ტესტი სპეციალურად ამოწმებს, რომ პარამეტრი restart-ს უძლებს. `cilium-dbg` გამოიძახება აგენტის Pod-ის შიგნით `kubectl exec`-ით, და არა როგორც ცალკე ლოკალური binary worker-ზე. `cilium-dbg status`-ს ფლაგი `--all-encryption` არ აქვს - peer/allowed-IP-ის დეტალური evidence-ისთვის გამოიყენეთ `cilium-dbg debuginfo --output json`.
 </details>
 
 ---

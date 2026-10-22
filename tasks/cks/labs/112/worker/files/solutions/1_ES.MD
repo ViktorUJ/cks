@@ -75,7 +75,7 @@ sleep 20
 `sleep 20` hace falta porque en el primer arranque el modern eBPF probe se abre con varios
 reintentos (en el journal se ven varias líneas `Opening 'syscall' source`): mientras no está
 abierto, Falco no registra eventos, y la shell de la tarea 2 puede pasar desapercibida. Si
-no hay alerta, repite el `exec` pasados unos segundos.
+no hay alert, repite el `exec` pasados unos segundos.
 
 Si el servicio no arranca, primero mira `journalctl -u falco-modern-bpf -b --no-pager`.
 No sustituyas el engine por un kernel module: en este laboratorio se exige precisamente `modern_ebpf`.
@@ -163,7 +163,7 @@ Crearemos la policy según la regla del capítulo 32: el request/response comple
 el recurso no sensible `configmaps` en `runtime-112`; para `secrets` tomamos `Metadata`, para que el cuerpo del Secret
 (tokens, contraseñas) no llegue al audit log. `None` y `omitStages` realmente reducen el high-volume
 noise; el catch-all final `Metadata` es fallback logging, y no supresión de ruido. El orden de las reglas es importante:
-las reglas específicas van antes del catch-all. La estructura del archivo es del ejemplo de la documentación (sección Audit
+las reglas específicas van antes del catch-all. La estructura del archivo está tomada del ejemplo de la documentación (sección Audit
 policy).
 
 ```bash
@@ -439,11 +439,11 @@ cat "$DIR/containment.txt"
 # exec_exit=1 (no 0)
 ```
 
-## 7. Override de un macro upstream y salida a JSON/archivo
+## 7. Override de una macro upstream y salida a JSON/archivo
 
 La regla estándar **Terminal shell in container** se disparará también con una herramienta
 legítima. El lugar correcto para una excepción environment-specific no es editar
-la propia regla, sino hacer un override del macro upstream reservado precisamente para esta regla:
+la propia regla, sino hacer un override de la macro upstream reservada precisamente para esta regla:
 `user_expected_terminal_shell_in_container_conditions` (por defecto `(never_true)`, es decir,
 no hay excepciones). No lo confundas con el `user_shell_container_exclusions` de nombre parecido:
 ese pertenece a la regla aparte **Run shell untrusted** ("Shell spawned by untrusted
@@ -658,7 +658,7 @@ echo "CKS112_REGISTRY=$CKS112_REGISTRY CKS112_TRUSTED_REPO=$CKS112_TRUSTED_REPO"
 
 (`install-kyverno` es la misma versión de Kyverno que en el laboratorio 111.)
 
-Creamos una `ValidatingPolicy` native con un allowlist sobre el trusted registry. Usamos la Kyverno CEL
+Creamos una `ValidatingPolicy` nativa con un allowlist sobre el trusted registry. Usamos la Kyverno CEL
 Image library (`image(...).registry()`/`.repository()`) para una comparación exacta, y no
 `startsWith`; de lo contrario `${CKS112_TRUSTED_REPO}-evil` también pasaría la policy, porque su
 image string simplemente empieza por la subcadena permitida. El mensaje de denial contiene
@@ -721,7 +721,7 @@ cat /var/work/tests/artifacts/9/admission-deny.txt
 Ahora modelamos un camino que el admission controller no ve: el contenedor se crea directamente
 en el container runtime mediante CRI, esquivando por completo kube-apiserver. Para ello en el control-plane hay
 un helper `cks112-run <imagen> <id> '<comando>'` (un wrapper de `crictl runp/create/start`) y
-`cks112-rm <id>` para la limpieza. Por qué no `ctr run`: los contenedores creados mediante `ctr` no son
+`cks112-rm <id>` para la limpieza. El motivo de no usar `ctr run` es este: los contenedores creados mediante `ctr` no son
 conocidos por CRI, y Falco para ellos siempre escribe `container.image.repository = <NA>`: las imágenes trusted y
 untrusted serían indistinguibles. Un contenedor creado mediante CRI, Falco lo ve con la imagen.
 Cada ejecución recibe un sufijo único `$RUN_ID`, y todos los ID creados por ella usan
@@ -753,7 +753,7 @@ Antes de escribir la condición exacta, determinamos el valor REAL observed de
 `%container.image.repository` de la imagen de confianza en este stack containerd/Falco:
 no lo suponemos de antemano. Distintas versiones de container runtime/Falco pueden formar
 este campo de forma distinta (con el hostname del registry o sin él), por lo que la única forma
-fiable es ejecutar un contenedor de confianza con una observe-regla temporal y ver qué
+fiable es ejecutar un contenedor de confianza con una regla temporal de observación y ver qué
 escribe realmente Falco:
 
 ```bash
@@ -787,7 +787,7 @@ echo "$TRUSTED_REPO" > /tmp/art/9/observed-trusted-repo.txt
 cat /tmp/art/9/observed-trusted-repo.txt
 ```
 
-Ahora añadimos la regla final a continuación de la observe-regla temporal (`>>`, sin
+Ahora añadimos la regla final a continuación de la regla temporal de observación (`>>`, sin
 sobrescribir el archivo, para no perder las reglas de las tareas 3 y 7). La condición usa la comparación
 **exacta** con el `$TRUSTED_REPO` observado, y no una comprobación `startswith`/prefix:
 `not container.image.repository startswith "$TRUSTED_REPO"` dejaría pasar (no notaría)
@@ -822,19 +822,19 @@ systemctl restart falco && sleep 10
 
 Antes de repetir el bypass con una imagen untrusted, comprobamos ambos casos controlados, para
 demostrar que la comparación realmente es exacta, y no prefix-based. Primero la imagen de confianza: para
-ella no debe haber alerta (negative control):
+ella no debe haber alert (negative control):
 
 ```bash
 # terminal 1 (control-plane, root)
 cks112-run $CKS112_TRUSTED_IMAGE $PROBE_ALLOWED 'echo CKS112_CTR_BYPASS; sleep 5'
 sleep 3
 journalctl -u falco-modern-bpf --since "$START_TS" --no-pager | grep -F 'CKS112 runtime bypass of admission' | grep -F 'CKS112_CTR_BYPASS' > /tmp/art/9/probe-trusted.log
-wc -l < /tmp/art/9/probe-trusted.log        # 0: no hay alerta para el repository permitido
+wc -l < /tmp/art/9/probe-trusted.log        # 0: no hay alert para el repository permitido
 cks112-rm $PROBE_ALLOWED
 ```
 
 Retiramos el primer container/task antes de repetir, para no dejar un proceso "colgado", y
-lanzamos el segundo con un nuevo ID único: para él la alerta es obligatoria:
+lanzamos el segundo con un nuevo ID único: para él el alert es obligatorio:
 
 ```bash
 # terminal 1 (control-plane, root)
@@ -869,8 +869,8 @@ scp 'control-plane:/tmp/art/9/*' /var/work/tests/artifacts/9/
 ```
 
 > **Estructura de los archivos de evidence de la tarea 9.** `falco-bypass-attempt.log` es el artifact
-> combinado principal que se verifica en la aceptación automática (contiene ambas alertas:
-> untrusted y prefix-trap, pero no debe contener una alerta para el trusted repo). Además
+> combinado principal que se verifica en la aceptación automática (contiene ambos alerts:
+> untrusted y prefix-trap, pero no debe contener un alert para el trusted repo). Además
 > cada probe escribe su propio archivo para el diagnóstico manual: `probe-trusted.log` (debe estar
 > vacío: ese es el negative control), `probe-untrusted.log` y `probe-prefix.log`.
 
@@ -883,7 +883,7 @@ se aplica a la signature verification del laboratorio 111: la diferencia es solo
 comprueba la firma, y aquí simplemente el registry/repository. Una conclusión adicional de
 la comprobación prefix-trap de arriba: la Falco condition y la Kyverno CEL policy deben usar la MISMA
 semántica de comparación (`==`/`!=`, y no `startsWith`/prefix); de lo contrario dejan de ser
-security-controles equivalentes, aunque ambas comprueben formalmente "el mismo" repository.
+controles de seguridad equivalentes, aunque ambas comprueben formalmente "el mismo" repository.
 
 ## 10. Detectar el acceso a `/dev/mem` mediante una file/device-open condition
 
@@ -937,8 +937,8 @@ scp control-plane:/tmp/art/10/falco-devmem.log /var/work/tests/artifacts/10/
 ```
 
 Una vez confirmada la detección por el propio Falco (y no por el Pod manifest), guarda el Pod
-nombrado en el alert y asegúrate de que realmente pertenece al ReplicaSet del Deployment
-`mem-scanner` antes del escalado:
+nombrado en el alert antes del escalado (en el JSON guardado se verá la cadena de owner:
+un ReplicaSet que pertenece al Deployment `mem-scanner`):
 
 ```bash
 # terminal 2

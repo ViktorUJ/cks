@@ -17,7 +17,7 @@ kubectl label namespace psa-restricted-107 \
   pod-security.kubernetes.io/enforce-version=v1.36
 ```
 
-Wir prüfen admission, ohne das gefährliche Objekt zu speichern. `hostNetwork` ist durch die Stufe
+Wir prüfen die admission, ohne das gefährliche Objekt zu speichern. `hostNetwork` ist durch die Stufe
 `restricted` verboten, daher muss der Befehl mit dem Fehler `violates PodSecurity` enden:
 
 ```bash
@@ -82,7 +82,7 @@ kubectl apply -f restricted-app.yaml
 kubectl get pod restricted-app -n psa-restricted-107
 ```
 
-Belege beide Ausgänge durch einen Live-Aufruf und nicht nur durch das Lesen von YAML: Der Container läuft mit
+Belege beide Ergebnisse durch einen Live-Aufruf und nicht nur durch das Lesen von YAML: Der Container läuft mit
 `runAsUser: 1000` und read-only root, daher muss ein Schreiben außerhalb von `/tmp` mit einem
 Dateisystemfehler enden, während ein Schreiben in das gemountete `emptyDir` gelingen muss:
 
@@ -119,7 +119,7 @@ kubectl label namespace psa-observe-107 \
 ```
 
 > **Versionsvorbehalt.** `v1.36` ist für Kubernetes 1.36.0 in dieser Lerninfrastruktur festgelegt.
-> Stand 2026-09-06 orientiert sich die offizielle CKS an `v1.35`; das ist ein
+> Stand 2026-09-06 orientiert sich die offizielle CKS-Prüfung an `v1.35`; das ist ein
 > forward-looking Beispiel, und bei der Vorbereitung auf die Prüfung verwende `*-version=v1.35`.
 
 > **Grenze des audit-Nachweises.** Das Lab konfiguriert keinen audit-log sink, daher
@@ -158,10 +158,10 @@ kubectl get namespace psa-observe-107 --show-labels
 ## 6. Native ValidatingAdmissionPolicy ohne Kyverno/Gatekeeper
 
 PSA `restricted` verlangt bereits `allowPrivilegeEscalation: false` und `capabilities.drop`
-mit `ALL` - Aufgabe 2 zeigt gerade das, und das ist ein eingebauter Teil des Pod Security
-Standard und keine Lücke. Aber PSS `restricted` **prüft nicht** `automountServiceAccountToken`:
+mit `ALL` - Aufgabe 2 zeigt genau das, und das ist ein eingebauter Teil des Pod Security
+Standards und keine Lücke. Aber PSS `restricted` **prüft nicht** `automountServiceAccountToken`:
 Ein Pod kann still einen gemounteten ServiceAccount token erhalten und PSA vollständig bestehen. Für
-diesen separaten, tatsächlich nicht abgedeckten control ist gerade eine custom `ValidatingAdmissionPolicy` angebracht.
+dieses separate, tatsächlich nicht abgedeckte control ist genau eine custom `ValidatingAdmissionPolicy` angebracht.
 
 ```yaml
 # require-no-automount-token.yaml

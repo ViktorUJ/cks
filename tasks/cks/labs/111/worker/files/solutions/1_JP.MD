@@ -84,7 +84,7 @@ cat $ART/1b/answer.txt
 # OFFENDING_IMAGE=python:3.9-slim@sha256:...
 ```
 
-## 1c. CRITICAL severity による Workload image の triage
+## 1c. CRITICAL severity による workload image の triage
 
 image は live な Deployments から取得してそれぞれをスキャンします；一意の CRITICAL の数は
 Deployment の名前の隣に出力されます：
@@ -111,7 +111,7 @@ EOF
 # dep-d は 4 つ目の Deployment (CRITICAL の数が 2 番目に多い) で、ranking.txt には書きません
 ```
 
-最も脆弱な Deployment の CycloneDX SBOM (その Deployment の image から) と、残りのスケール：
+最も脆弱な Deployment の CycloneDX SBOM (その Deployment の image から) と、残りの Deployment のスケール：
 
 ```bash
 kubectl -n cks-111 get deployment dep-a -o jsonpath='{.spec.template.spec.containers[0].image}'; echo
@@ -469,7 +469,7 @@ kubectl get pod signed-admission-check -n cks-111 -o json \
 cat "$ART/9b/signed-admission-check.json"
 ```
 
-基準 (`creationTimestamp` の精度は 1 秒なので、比較は非厳密です)：`createdAfterPolicy == true` かつ `ready == true`。これが - そしてこれだけが - 証明するのは、
+基準 (`creationTimestamp` の精度は 1 秒なので、比較は「以上」(>=) で行います)：`createdAfterPolicy == true` かつ `ready == true`。これが - そしてこれだけが - 証明するのは、
 まさに**この** policy が、署名された image を持つ、以前には存在しなかったまさに**この** Pod を通したことであり、
 古い Pod が単に動作し続けているのではないことです。
 

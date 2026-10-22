@@ -446,8 +446,8 @@ légitime. L'endroit correct pour une exception environment-specific n'est pas l
 la règle elle-même, mais l'override de la macro upstream réservée précisément à cette règle :
 `user_expected_terminal_shell_in_container_conditions` (par défaut `(never_true)`, c'est-à-dire
 qu'il n'y a pas d'exceptions). Ne la confondez pas avec `user_shell_container_exclusions`, de nom proche -
-celle-ci relève de la règle distincte **Run shell untrusted** ("Shell spawned by untrusted
-binary") et n'influe pas sur **Terminal shell in container**. Utilisez `k8s.pod.name` et
+celle-ci relève de la règle distincte **Run shell untrusted** (« Shell spawned by untrusted
+binary ») et n'influe pas sur **Terminal shell in container**. Utilisez `k8s.pod.name` et
 `k8s.ns.name`, et non `container.name` : `container.name` est le nom du **conteneur** (ici
 `app`), et non du Pod, et la correspondance par le nom du conteneur donne presque toujours un allowlist incorrect ou trop
 large.
@@ -502,7 +502,7 @@ journalctl -u falco-modern-bpf -b --no-pager -n 200 | grep -F 'A shell was spawn
 
 L'output standard de la règle **Terminal shell in container** ne contient pas `k8s.pod.name`/
 `k8s.ns.name` (on peut s'en assurer sur le control-plane : `grep -A3 "rule: Terminal shell in container" /etc/falco/falco_rules.yaml`
-montrera l'`output` sans ces champs). Sans l'evidence de Pod/namespace dans l'alert lui-même, une correlation fiable
+montrera l'`output` sans ces champs). Sans l'evidence de Pod/namespace dans l'alert lui-même, une corrélation fiable
 d'un déclenchement précis avec un Pod précis est impossible - un `grep` textuel sur le nom du Pod dans le journal
 ne trouvera tout simplement aucune correspondance. Nous ajoutons ces champs par le même mécanisme `override`, mais avec
 `output: append` au lieu de `condition: replace` :
@@ -724,7 +724,7 @@ du helper `cks112-run <image> <id> '<commande>'` (une surcouche de `crictl runp/
 `cks112-rm <id>` pour le nettoyage. Pourquoi pas `ctr run` : les conteneurs créés via `ctr` ne sont pas
 connus de CRI, et Falco écrit toujours pour eux `container.image.repository = <NA>` - les images trusted et
 untrusted seraient indiscernables. Un conteneur créé via CRI, Falco le voit avec son image.
-Chaque lancement reçoit un unique suffixe `$RUN_ID`, et tous les ID qu'il a créés utilisent
+Chaque lancement reçoit un suffixe unique `$RUN_ID`, et tous les ID qu'il a créés utilisent
 ce suffixe, donc une nouvelle exécution n'entrera pas en collision avec les restes de la tentative précédente :
 
 ```bash
@@ -749,11 +749,11 @@ cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_1 'echo CKS112_CTR_BYPASS; sleep 5'
 > nom d'image (une image peut avoir plusieurs noms). C'est pourquoi les noms des images du lab utilisent
 > l'hôte de registry `cks112.local:5000`, qui est trié avant `docker.io`.
 
-Avant d'écrire la condition exacte, nous déterminons la valeur observed RÉELLE de
+Avant d'écrire la condition exacte, nous déterminons la valeur RÉELLEMENT observée de
 `%container.image.repository` pour l'image de confiance sur cette stack containerd/Falco -
 sans la présumer à l'avance. Différentes versions de container runtime/Falco peuvent former
 ce champ différemment (avec ou sans le hostname du registry), donc la seule façon fiable est de
-lancer un conteneur de confiance avec une observe-règle temporaire et de regarder ce que
+lancer un conteneur de confiance avec une règle d'observation temporaire et de regarder ce que
 Falco écrit réellement :
 
 ```bash
@@ -787,7 +787,7 @@ echo "$TRUSTED_REPO" > /tmp/art/9/observed-trusted-repo.txt
 cat /tmp/art/9/observed-trusted-repo.txt
 ```
 
-Maintenant, nous ajoutons la règle finale à la suite de l'observe-règle temporaire (`>>`, sans
+Maintenant, nous ajoutons la règle finale à la suite de la règle d'observation temporaire (`>>`, sans
 écraser le fichier, pour ne pas perdre les règles des tâches 3 et 7). La condition utilise une comparaison **exacte**
 avec le `$TRUSTED_REPO` observé, et non une vérification `startswith`/prefix :
 `not container.image.repository startswith "$TRUSTED_REPO"` laisserait passer (ne remarquerait pas)
@@ -937,8 +937,8 @@ scp control-plane:/tmp/art/10/falco-devmem.log /var/work/tests/artifacts/10/
 ```
 
 Après vous être assuré que la détection est confirmée par Falco lui-même (et non par le Pod manifest), enregistrez le Pod
-nommé dans l'alert, et assurez-vous qu'il appartient bien au ReplicaSet du Deployment
-`mem-scanner` avant le scaling :
+nommé dans l'alert avant le scaling (dans le JSON enregistré, la chaîne d'owner contiendra un ReplicaSet
+appartenant au Deployment `mem-scanner`) :
 
 ```bash
 # terminal 2

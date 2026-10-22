@@ -4,7 +4,7 @@
 
 > Kubernetes 指令(`kubectl`)請在工作機(`worker`)上執行。所有與
 > 節點本身有關的事(AppArmor、kubelet、`crictl`)，請**直接在節點上**操作：用 `ssh` 登入一
-> 次並切換成 root(`sudo -i`)- 這比把每個指令都用單獨的
+> 次並切換成 root(`sudo -i`) - 這比把每個指令都用單獨的
 > `ssh control-plane '...'` 送出更快，在考試中也應該這樣操作。Namespace
 > `security-106` 在任務 3 中建立。
 >
@@ -23,7 +23,7 @@
 ## 1. 搬移並載入 AppArmor profile
 
 Profile 只存在於工作機上。我們把它複製到節點(從 `worker`)，然後在節點上
-放到定位並載入核心。檔案已經包含旗標 `complain`，因此單單
+放到正確的位置並載入核心。檔案已經包含旗標 `complain`，因此單單
 `apparmor_parser -r` 就足以完成首次載入(不用 `aa-complain`，它和
 `aa-enforce` 一樣會解析 `/etc/apparmor.d/` 中的所有檔案，並且會在任務 9 中
 仍然損壞的 `k8s-106-broken-profile` 上失敗):
@@ -344,7 +344,7 @@ ssh control-plane "sudo cat /proc/<host PID>/uid_map" >> /var/work/tests/artifac
 ```
 
 如果 `host-uid-start` 等於 `0` - 表示 user namespace 沒有套用(例如由於
-不相容的 containerd/runc，或實際套用的 Pod 中缺少 `hostUsers: false`)- 這就不是 hardening，而是主機上一般的 root。作為比較：沒有
+不相容的 containerd/runc，或實際套用的 Pod 中缺少 `hostUsers: false`) - 這就不是 hardening，而是主機上一般的 root。作為比較：沒有
 `hostUsers: false` 的一般 Pod，其 `/proc/<host-PID>/uid_map` 檔案同樣存在，但行程仍然留在
 host(initial)user namespace 中。因此 mapping 從 UID 0 -> host UID 0 開始(通常
 是形如 `0 0 4294967295` 的行，例如節點上的 `cat /proc/1/uid_map`)，而不是從
@@ -353,7 +353,7 @@ host(initial)user namespace 中。因此 mapping 從 UID 0 -> host UID 0 開始(
 
 ## 8. kubelet 上的 `seccompDefault: true`
 
-先前所有的 Pod 都明確設定了 `seccompProfile`。這裡我們檢查 node-level baseline:
+先前帶有 seccomp profile 的 Pod(任務 4–6)都明確設定了 `seccompProfile`。這裡我們檢查 node-level baseline:
 如果開發者忘了這個欄位，kubelet 必須自己套用 `RuntimeDefault`，而不是
 讓行程保持 `Unconfined`。在節點上修改 kubelet 的設定：
 
@@ -407,13 +407,13 @@ kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" | jq '.kubeletconfig.sec
 # true
 ```
 
-沒有 `seccompDefault: true` 時，同一個 manifest 會得到 `Seccomp: 0`(`Unconfined`)- 如果需要確認差異，
+沒有 `seccompDefault: true` 時，同一個 manifest 會得到 `Seccomp: 0`(`Unconfined`) - 如果需要確認差異，
 只要還原旗標並重新建立 Pod 就很容易驗證。
 
 ## 9. 除錯損壞的 AppArmor profile
 
 `/etc/apparmor.d/k8s-106-broken-profile` 已經在磁碟上，但從未被載入：其中在規則 `deny /work/** w` 之後
-缺少逗號。首先在不載入核心的情況下找出錯誤。`-p`/`--preprocess` 在這裡「不適用」- 它是 preprocessing(把
+缺少逗號。首先在不載入核心的情況下找出錯誤。`-p`/`--preprocess` 在這裡「不適用」 - 它是 preprocessing(把
 `#include` 展開到 stdout)，而不是安全的 dry-run/syntax-check。我們使用 `-Q`/`--skip-kernel-load`
 (完整的編譯/檢查，不載入核心)或 `-d`/`--debug`
 (只指定一次 - 只做 syntax check)。

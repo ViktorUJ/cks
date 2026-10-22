@@ -96,7 +96,7 @@ api HTTP:403
   `spire-data-spire-server-0` სამუდამოდ `Pending`-ში რჩება, ხოლო `spire-server-0` - `Pending`-ში
   (ლაბისთვის ეფემერული საცავი საკმარისია).
 - `install.server.securityContext.runAsUser=0` - image `spire-server` ეშვება uid 1000-ით და
-  ვერ ქმნის `api.sock`-ს hostPath-დირექტორიაში `root:755`; სერვერი ჩუმად ხურავს
+  ვერ ქმნის `api.sock`-ს hostPath-დირექტორიაში `root:755`; სერვერი ჩუმად არ ამუშავებს თავის
   endpoint-ებს და liveness-probe მას კლავს (`Waiting for spire-server to start...` `cilium-init`-ში).
 
 ```bash
@@ -199,7 +199,7 @@ SRC IDENTITY   DST IDENTITY   REMOTE NODE ID   AUTH TYPE   EXPIRATION
 
 `client` `ingress-115`-დან გადის mutual authentication-ს (ჩანაწერი `spire` `auth list`-ში) და
 იღებს `200`-ს; `intruder` `app-115`-დან - transport deny (მისი identity-სთვის allow არ არის).
-ახალი კლიენტის პირველ მოთხოვნას შეიძლება რამდენიმე წამი დასჭირდეს: SYN იგდება, სანამ
+ახალი კლიენტის პირველ მოთხოვნას შეიძლება რამდენიმე წამი დასჭირდეს: SYN პაკეტი იკარგება (drop), სანამ
 SPIFFE-handshake მიმდინარეობს, შემდეგ retransmit გადის.
 
 ---

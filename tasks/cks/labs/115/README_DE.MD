@@ -41,7 +41,7 @@ zwei Namespaces verlangt.
 | --- | --- |
 | control-plane EC2 | kubeadm-Cluster ohne kube-proxy und ohne CNI zum Zeitpunkt der Ausgabe des Labs |
 | `ingress-115` | Namespace des Clients, der die mutual authentication bestehen muss |
-| `app-115` | Namespace des Backends, das durch eine CiliumNetworkPolicy geschützt ist, mit `authentication.mode: required` |
+| `app-115` | Namespace des Backends, das durch eine CiliumNetworkPolicy mit `authentication.mode: required` geschützt ist |
 | worker EC2 | `cilium`/`hubble` CLI, konfiguriertes kubeconfig |
 
 ## Aufgaben
@@ -58,7 +58,7 @@ zwei Namespaces verlangt.
 
 | **2** | **Installation von Cilium als Ersatz für kube-proxy** |
 | :---: | :--- |
-| Was wir tun | • Installiere den Cilium agent/chart der Version `1.20.1` über die auf dem worker installierte `cilium` CLI der Version `v0.19.7`, mit `kubeProxyReplacement=true` und explizit gesetzten `k8sServiceHost`/`k8sServicePort`, die auf den echten API server zeigen (nicht auf den Service ClusterIP - ohne kube-proxy erreicht der Traffic an die ClusterIP von `kubernetes.default` den API server nicht, bevor Cilium selbst hochgefahren ist) |
+| Was wir tun | • Installiere den Cilium agent/chart der Version `1.20.1` über die auf dem worker installierte `cilium` CLI der Version `v0.19.7`, mit `kubeProxyReplacement=true` und explizit gesetzten `k8sServiceHost`/`k8sServicePort`, die auf den echten API server zeigen (nicht auf die ClusterIP eines Service - ohne kube-proxy erreicht der Traffic an die ClusterIP von `kubernetes.default` den API server nicht, bevor Cilium selbst hochgefahren ist) |
 | Abnahmekriterien | • `KubeProxyReplacement: True/Strict` (in `cilium-dbg status` des Agents)<br/>• Der Node wird `Ready`<br/>• Der ClusterIP Service ist ohne kube-proxy erreichbar |
 | Prüfung | `cilium status --wait`, `kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status \| grep KubeProxyReplacement`, dann `kubectl get nodes` -> `Ready`. Aus einem Test-Pod: `curl https://kubernetes.default.svc.cluster.local/` muss eine HTTP response erhalten (keinen connection error). |
 
@@ -96,7 +96,7 @@ zwei Namespaces verlangt.
 
 | **6** | **Positive/negative control: eine authenticated identity ist erlaubt, eine fremde nicht** |
 | :---: | :--- |
-| Was wir tun | • Prüfe die Wirkung der policy mit Live-Traffic: Ein Client aus `ingress-115` muss `backend` erreichen (nach einem erfolgreichen SPIRE-based mutual auth handshake)<br/>• Ein separater Pod aus dem "falschen" Namespace (`app-115`, nicht `ingress-115`; Traffic des Backends zu sich selbst lässt Cilium immer durch) muss blockiert werden |
+| Was wir tun | • Prüfe die Wirkung der policy mit Live-Traffic: Ein Client aus `ingress-115` muss `backend` erreichen (nach einem erfolgreichen SPIRE-based mutual auth handshake)<br/>• Ein separater Pod aus dem „falschen“ Namespace (`app-115`, nicht `ingress-115`; Traffic des Backends zu sich selbst lässt Cilium immer durch) muss blockiert werden |
 | Abnahmekriterien | • In einem isolierten gespiegelten backend erlaubt die baseline beide Clients, nach dem Anwenden einer Kopie der policy ist nur `ingress-115` erlaubt<br/>• Das aktive backend antwortet dem erlaubten Client, lehnt Clients aus `app-115` und aus einem neuen unabhängigen Namespace ab<br/>• Die Cilium BPF auth map enthält `spire` für das exakte Paar der identities von Client/backend |
 | Prüfung | `curl` aus einem client-Pod in `ingress-115` an `http://backend.app-115.svc.cluster.local/` -> HTTP response. Dasselbe curl aus einem Pod in `app-115` ohne client-label -> connection error. |
 

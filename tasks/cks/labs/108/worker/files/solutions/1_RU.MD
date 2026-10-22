@@ -25,7 +25,7 @@ kubectl get crd validatingpolicies.policies.kyverno.io
 kubectl get crd mutatingpolicies.policies.kyverno.io
 ```
 
-Дождитесь, пока хотя бы один Deployment в `kyverno` имеет `AVAILABLE > 0`.
+Дождитесь, пока хотя бы один Deployment в `kyverno` будет иметь `AVAILABLE > 0`.
 
 > **Migration note.** Старые примеры `kyverno.io/v1` `Policy`/`ClusterPolicy` остаются
 > полезны только при сопровождении существующих кластеров. В Kyverno `1.19` они deprecated,
@@ -101,7 +101,7 @@ EOF
 
 ## 3. Требовать `runAsNonRoot`
 
-Политика требует значение именно `true` в Pod-level `securityContext`; неявное
+Policy требует значение именно `true` в Pod-level `securityContext`; неявное
 значение и `false` не проходят. Дополнительно запрещены `runAsUser: 0` на уровне
 Pod и container-level overrides `runAsNonRoot: false` / `runAsUser: 0` во всех
 трёх container lists, иначе container-level securityContext сможет переопределить
@@ -196,7 +196,9 @@ registry, кроме двух разрешённых), а не просто deny
 
 Positive controls должны покрывать оба разрешённых prefix (`registry.k8s.io/` и
 `ghcr.io/cks-lab/`) в `containers`, `initContainers` и `ephemeralContainers`; не
-ограничивайте один из registry только обычными контейнерами:
+ограничивайте один из registry только обычными контейнерами.
+
+Negative controls (каждый из этих манифестов должен быть отклонён):
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -594,7 +596,7 @@ kubectl get pod webhook-pinned-ok
 latest; `policy-108` целиком контролируют три Kyverno-политики из заданий 2–4.
 Это лабораторная изоляция механизмов, а не универсальный production pattern.
 Пользовательская аннотация `alpha.image-policy.k8s.io/break-glass` разрешение НЕ даёт:
-ImageReview forwarding annotations не является проверкой подлинности.
+передача аннотаций в ImageReview не является проверкой подлинности.
 
 `defaultAllow: false` означает fail-closed: если backend недоступен, новые Pod/image
 запрещаются, а не разрешаются. Проверьте это явно - но НЕ масштабируйте

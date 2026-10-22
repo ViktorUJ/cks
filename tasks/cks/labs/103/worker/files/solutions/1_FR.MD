@@ -198,7 +198,7 @@ k get ing secure-ingress -n cks-103 -o yaml
 Nous ne nous arrêtons pas à `k get ... -o yaml` - nous confirmons que le TLS Ingress fonctionne réellement
 via un vrai controller. `secure.cks.local` se résout déjà en une vraie node IP
 (le bootstrap a ajouté l'entrée dans `/etc/hosts`), et `ingress-nginx-controller` est un Service de type
-`NodePort`, ouvert sur chaque nœud, curl est donc exécuté directement depuis cette machine, sans SSH
+`NodePort`, ouvert sur chaque nœud ; curl est donc exécuté directement depuis cette machine, sans SSH
 vers le cluster :
 
 ```bash
@@ -235,8 +235,8 @@ Dans les deux static Pod manifests, ajoutez les paramètres au `command`. Sur ku
 LES DEUX flags, bien que la protection réelle avec `VersionTLS13` soit assurée précisément par `--tls-min-version`
 (Go choisit lui-même les TLS 1.3 cipher suites, `--tls-cipher-suites` n'a pas d'effet sur elles - voir la question
 2 de la section « Vérifiez-vous avant de commencer »). `--tls-cipher-suites` reste tout de même nécessaire explicitement - c'est
-de la defense-in-depth : si la version minimale est ensuite abaissée à 1.2, les ensembles de chiffrements faibles ne
-s'activeront pas d'eux-mêmes. Sur etcd (où TLS 1.2 est admis), `--cipher-suites` limite déjà réellement
+de la defense-in-depth : si la version minimale est ensuite abaissée à 1.2, les cipher suites faibles ne
+s'activeront pas d'elles-mêmes. Sur etcd (où TLS 1.2 est admis), `--cipher-suites` limite déjà réellement
 l'ensemble dès maintenant, et pas pour l'avenir.
 
 ```bash
@@ -315,7 +315,7 @@ grep -A1 '1.1.1' /var/work/tests/artifacts/7/before.txt
 # [FAIL] 1.1.1 Ensure that the API server pod specification file permissions ...
 ```
 
-Vérifiez le droit d'accès réel sur le nœud et corrigez-le en `600` - c'est une modification
+Vérifiez les droits d'accès réels sur le nœud et corrigez-les en `600` - c'est une modification
 file-only, le kubelet ne recrée pas le static Pod à cause d'un changement de droits, seulement à cause d'un changement du
 contenu du manifest :
 
@@ -379,7 +379,7 @@ La même technique que dans les tâches 7-8 (trouver le `[FAIL]` concret via kub
 confirmer `[PASS]`), pour les checks `1.3.2` (kube-controller-manager profiling) et `1.4.1`
 (kube-scheduler profiling). Tous deux, comme toute la section `1.x`, relèvent du target `master` dans
 `cis-1.12`, un `--targets` explicite n'est donc pas nécessaire - exactement comme dans les tâches 7-8. La tâche 3
-a déjà désactivé le profiling uniquement sur kube-apiserver ; kubeadm par défaut N'ajoute PAS du tout
+a déjà désactivé le profiling uniquement sur kube-apiserver ; kubeadm par défaut n'ajoute PAS du tout
 `--profiling=false` aux manifests de kube-controller-manager/kube-scheduler.
 
 ```bash
@@ -446,13 +446,13 @@ ci-dessus doivent afficher `Running`.
 La même technique que dans les tâches 7-9, maintenant sur le nœud worker RÉEL (et non sur le control-plane), mais pour
 un AUTRE profil. Le `kube-bench 0.16.0`/`cis-1.12` figé (utilisé dans toutes les autres
 tâches de ce lab) ne contient pas du tout le check protect-kernel-defaults - CIS l'a supprimé/
-renuméroté à partir de cette version du profil ; le `4.2.6` propre de `cis-1.12` est un AUTRE
+renuméroté à partir de cette version du profil ; le `4.2.6` propre à `cis-1.12` est un AUTRE
 check (`--make-iptables-util-chains`, `PASS` par défaut, sans rapport
 avec protect-kernel-defaults). Le check nécessaire avec le même ID `4.2.6` existe dans le profil plus ancien
 `cis-1.24` du même binaire - utilisez précisément celui-ci, avec un `--benchmark cis-1.24` explicite, uniquement
 pour cette seule tâche.
 
-Contrairement au control-plane, sur le nœud worker `kube-bench` N'est PAS préinstallé - installez-le
+Contrairement au control-plane, sur le nœud worker `kube-bench` n'est PAS préinstallé - installez-le
 ici vous-même (une vraie installation, pas une copie depuis le control-plane ou le worker PC) : téléchargez la même
 release figée depuis GitHub, décompressez `binary` et `cfg` dans le default `--config-dir`
 (`/etc/kube-bench/cfg`), afin de ne pas indiquer ce flag explicitement dans chaque commande :

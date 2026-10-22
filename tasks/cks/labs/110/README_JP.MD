@@ -46,7 +46,7 @@ Terragrunt が `eu-central-1` に Kubernetes `1.36.0` を作成します：
 | CNI | **Cilium** (Cilium CLI でインストール、Helm release `cilium`)；WireGuard は課題 4 まで意図的に無効 |
 | `worker` | `kubectl`、`cilium`、`istioctl`、`check_result`、ノードへの SSH aliases を備えた作業マシン |
 
-2026-08-31 に確認済みのマトリックス (ビルドのたびに照合してください)：学習用の Kubernetes は
+2026-08-31 に確認済みのマトリックス (ビルドのたびに照合してください)：lab の Kubernetes は
 `1.36.0`；Cilium の data plane は、サポートされている lab ビルドで、その
 Kubernetes `1.36` との互換性は最新の requirements matrix で確認する必要があります；Cilium CLI `0.19.7`
 (Cilium `1.17+` と互換)；Istio `1.30.4` (ブランチ `1.30` は Kubernetes
@@ -143,7 +143,7 @@ WireGuard を有効にするための永続的な source-of-truth として、�
 ---
 | **5** | **ノード間に plaintext がないことを実証する** |
 | :---: | :--- |
-| やること | • 同じノード間 flow について、変更前/変更後の baseline の証明を作成します。<br/>• **Baseline (WireGuard 無効):** control-plane で、リモートノードの IP (`host <remote-node-ip>`、`udp port 51871` による事前のフィルターなし) に対して `tcpdump` を起動します；一時的に WireGuard を無効にします (`cilium-config` の `enable-wireguard: "false"`、`rollout restart daemonset/cilium`)；`runc-baseline -> gvisor-echo` のリクエストを実行します；この baseline の capture を保存し、plaintext の `CKS110-WIREGUARD-MARKER` が見えることを確認します。<br/>• **変更後 (WireGuard 有効):** `enable-wireguard: "true"` を復元し、Ready になるのを待って、同じキャプチャ scope (`host <remote-node-ip>`、ポートフィルターなし) で同じリクエストを繰り返します。<br/>• Capture は control-plane で (ノード上のファイルに) 取得し、その後 `scp` で作業マシンの `/var/work/tests/artifacts/5/wireguard-tcpdump.txt` にコピーします：その中には、WireGuard の UDP/`51871` だけが見え、plaintext の marker は見えない必要があります。 |
+| やること | • 同じノード間 flow について、変更前/変更後の baseline の証明を作成します。<br/>• **Baseline (WireGuard 無効):** control-plane で、リモートノードの IP (`host <remote-node-ip>`、`udp port 51871` による事前のフィルターなし) に対して `tcpdump` を起動します；一時的に WireGuard を無効にします (`cilium-config` の `enable-wireguard: "false"`、`rollout restart daemonset/cilium`)；`runc-baseline -> gvisor-echo` のリクエストを実行します；この baseline の capture を保存し、plaintext の `CKS110-WIREGUARD-MARKER` が見えることを確認します。<br/>• **変更後 (WireGuard 有効):** `enable-wireguard: "true"` を復元し、Ready になるのを待って、同じキャプチャ scope (`host <remote-node-ip>`、ポートフィルターなし) で同じリクエストを繰り返します。<br/>• Capture は control-plane で (ノード上のファイルに) 取得し、その後 `scp` で作業マシンの `/var/work/tests/artifacts/5/wireguard-tcpdump.txt` にコピーします：その中には、WireGuard の UDP/`51871` だけが見え、plaintext の marker は見えてはなりません。 |
 | 受け入れ基準 | • 同じ peer/interface scope での最終的な (post-change の) capture に UDP/`51871` が含まれるが、`CKS110-WIREGUARD-MARKER` は**含まれない**<br/>• 異なるノード間の呼び出しが、HTTP レスポンスで marker を正常に受け取る<br/>• Checker は同じ peer/interface scope で post-change の capture を自分で繰り返し (あらかじめ `udp port 51871` だけに限定せず)、さらに WireGuard を自分で一時的に無効にして復元し、plaintext の状態の同じ flow が実際に wire 上で marker を露出させることの、独自の baseline の確認を得る |
 
 <details>

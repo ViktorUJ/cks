@@ -4,7 +4,7 @@
 
 > So wird gearbeitet: Wir melden uns einmal per `ssh` auf dem Node an und führen die Befehle direkt dort aus (unter
 > `sudo -i`, um nicht vor jeden Befehl `sudo` zu schreiben) - das ist schneller, als
-> jeden Befehl über ein separates `ssh` zu senden, und genau so sollte man in der Prüfung arbeiten. Den Namen des
+> jeden Befehl über ein separates `ssh` zu senden, und genau so sollte man in der CKS-Prüfung arbeiten. Den Namen des
 > control-plane Nodes sehen wir über `kubectl get no`:
 >
 > ```bash
@@ -15,14 +15,14 @@
 >
 > Prüfungen und Artefakte: Der Checker liest die Artefakte von der **Arbeitsmaschine** (`worker`), aus
 > `/var/work/tests/artifacts/<Nummer>/`, daher verlassen wir nach den Änderungen auf dem Node die Sitzung (`exit`, `exit`) und
-> speichern das artifact mit einem kurzen Befehl vom `worker`. Lege dafür einmal den Node-Namen fest:
+> speichern das Artefakt mit einem kurzen Befehl vom `worker`. Lege dafür einmal den Node-Namen fest:
 >
 > ```bash
 > CP=<Node-Name-aus-der-Ausgabe>
 > mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6,7,9,10}
 > ```
 >
-> Artifacts werden nur für die Überprüfung des Labs benötigt: In der CKS-Prüfung gibt es sie nicht, dort genügen Befehle auf dem
+> Artefakte werden nur für die Überprüfung des Labs benötigt: In der CKS-Prüfung gibt es sie nicht, dort genügen Befehle auf dem
 > Node und eine flüchtige Prüfung des Ergebnisses. Die Befehle speichern die Ausgabe in einer Datei (`>`), den Inhalt sehen wir
 > separat über `cat <Datei>` - das erwartete Ergebnis steht in den Kommentaren `# ...` unter dem Block.
 >
@@ -45,7 +45,7 @@ exit
 exit
 ```
 
-Artifact (auf `worker`):
+Artefakt (auf `worker`):
 
 ```bash
 ssh "$CP" 'systemctl is-enabled cks-lab105-unused.service; systemctl is-active cks-lab105-unused.service' \
@@ -70,7 +70,7 @@ exit
 exit
 ```
 
-Artifacts (auf `worker`):
+Artefakte (auf `worker`):
 
 ```bash
 ssh "$CP" 'systemctl is-enabled cks-lab105-port.service; systemctl is-active cks-lab105-port.service' \
@@ -104,7 +104,7 @@ printf 'role=control-plane,workload\nworker_ip=%s\nnode_ip=%s\npod_cidr=%s\n' \
 ```
 
 Baseline VOR UFW: Wir prüfen, dass TCP/10250 (kubelet HTTPS) jetzt tatsächlich erreichbar ist - ohne
-dies beweist "blockiert" nach UFW nichts, der Port könnte aus einem anderen Grund unerreichbar gewesen sein
+dies beweist „blockiert“ nach UFW nichts, der Port könnte aus einem anderen Grund unerreichbar gewesen sein
 (security group, routing). Der Checker gleicht separat mit seiner Baseline ab, aber auch dein
 Eintrag wird gebraucht:
 
@@ -138,7 +138,7 @@ exit
 exit
 ```
 
-Artifacts (auf `worker`). `ufw show added` ist die normalisierte Darstellung der Regeln, die
+Artefakte (auf `worker`). `ufw show added` ist die normalisierte Darstellung der Regeln, die
 du tatsächlich hinzugefügt hast (NICHT garantiert die ursprüngliche Form/Reihenfolge der Befehle - UFW normalisiert sie bei
 der Anzeige). Die Prüfung vergleicht genau diese Liste mit der erwarteten allowlist - speichere sie
 ebenfalls, das ist die zuverlässigste evidence des exact allow-set. Verwalte die Firewall nur über `ufw` -
@@ -200,7 +200,7 @@ curl -ksS -o /dev/null -w 'kubelet_http=%{http_code}\n' --connect-timeout 2 --ma
 ```
 
 Prüfung declared vs effective: `ufw show added` ist eine deklarative Liste, rekonstruiert aus den
-`### tuple ###` metadata, die ufw selbst in `user.rules` schreibt, wenn eine Regel über die CLI
+`### tuple ###`-Metadaten, die ufw selbst in `user.rules` schreibt, wenn eine Regel über die CLI
 hinzugefügt wird. Der echte Zustand des Kernels nach `ufw reload` ist dagegen das, was
 `ufw show user-rules` zeigt. Vergleiche nicht nur die ANZAHL der Zeilen, sondern auch ihren INHALT
 (source/port/proto): `ufw-user-input` muss loopback (all, lo) und vier tcp
@@ -221,7 +221,7 @@ CURL_EXIT/HTTPCODE-Vertrag) das erwartete Ergebnis geliefert haben.
 
 ## 4. Kubeconfig des Administrators schützen
 
-`/etc/kubernetes/admin.conf` enthält die cluster-admin credential. Die Datei darf nur von
+`/etc/kubernetes/admin.conf` enthält ein cluster-admin credential. Die Datei darf nur von
 root gelesen werden.
 
 Auf der control-plane:
@@ -235,7 +235,7 @@ exit
 exit
 ```
 
-Artifact (auf `worker`):
+Artefakt (auf `worker`):
 
 ```bash
 ssh "$CP" "stat -c '%U %G %a' /etc/kubernetes/admin.conf" \
@@ -275,7 +275,7 @@ exit
 exit
 ```
 
-Artifact (auf `worker`, nach einer Pause von ein paar Sekunden):
+Artefakt (auf `worker`, nach einer Pause von ein paar Sekunden):
 
 ```bash
 # WORKER_IP und NODE_IP - dieselben Werte wie in Aufgabe 3
@@ -291,8 +291,8 @@ auf den Host. Wir entfernen das Lern-systemd-override mit dem TCP-Listener, setz
 über ein socket override und entfernen `developer` aus der Gruppe `docker`.
 
 Wir wenden die Änderungen über ein vollständiges `daemon-reload` + restart **beider** units an - das ist ein
-obligatorischer Schritt und nicht nur "die Konfiguration neu einlesen": Ohne echten restart kann man die Prüfung
-versehentlich "bestehen", wenn Docker einfach aufgehört hat zu antworten (dann ist TCP/2375 nicht deshalb zu, weil
+obligatorischer Schritt und nicht nur „die Konfiguration neu einlesen“: Ohne echten restart kann man die Prüfung
+versehentlich „bestehen“, wenn Docker einfach aufgehört hat zu antworten (dann ist TCP/2375 nicht deshalb zu, weil
 `-H tcp://` entfernt wurde, sondern weil der daemon überhaupt nicht läuft).
 
 Auf `docker-host`:
@@ -330,7 +330,7 @@ Der Vertrag der Aufgabe ist weiter gefasst als der Port 2375: Die Docker API dar
 `docker.socket` darf kein TCP `ListenStream` enthalten:
 
 ```bash
-ss -ltnp | grep dockerd                        # leere Ausgabe (der von systemd gehaltene TCP-Socket von docker.socket wird von der nächsten Zeile erfasst)
+ss -ltnp | grep dockerd                        # leere Ausgabe (der von systemd gehaltene TCP-Socket von docker.socket wird von der nächsten Zeile geprüft)
 systemctl cat docker.socket | grep ListenStream # nur /run/docker.sock (und ein leerer Reset)
 stat -c '%U %G %a' /var/run/docker.sock         # root root 660
 sudo -u developer docker ps                     # permission denied
@@ -338,7 +338,7 @@ exit
 exit
 ```
 
-Artifacts (auf `worker`):
+Artefakte (auf `worker`):
 
 ```bash
 # der Port 2375 wurde bereits auf docker-host geprüft (`ss -ltnp | grep dockerd` - leer), wir halten das Ergebnis fest:
@@ -361,18 +361,18 @@ das bereits geladene Modul zu entladen, und blockieren dann in jedem Fall das er
 über `blacklist` als auch über ein `install` override. Beide Direktiven wirken auf Ebene von
 `modprobe` (alias resolution und ein explizites `modprobe sctp`) und beseitigen den üblichen Ladepfad;
 sie ersetzen kein kernel-level enforcement (`insmod` fügt das Modul direkt über einen syscall ein
-und liest `modprobe.d` nicht, und `modprobe --ignore-install` kann `install` bei gleichwertigem
-root-Zugriff umgehen) - für diese Lab ist wichtig, gerade den erwarteten Autoload-Pfad zu beseitigen und nicht
-einen Schutz vor einem Benutzer zu modellieren, der bereits root auf dem Node hat.
+und liest `modprobe.d` nicht, und `modprobe --ignore-install` kann `install` bei vorhandenem
+root-Zugriff auf dem Host umgehen) - für dieses Lab ist wichtig, genau den erwarteten Autoload-Pfad zu beseitigen und nicht
+einen Schutz vor einem Benutzer zu gewährleisten, der bereits root auf dem Node hat.
 
-**`modprobe -r sctp` kann auf einem bereits laufenden Cluster scheitern** - das ist erwartet und
+**`modprobe -r sctp` kann auf einem bereits laufenden Cluster scheitern** - das ist zu erwarten und
 kein Fehler des Teilnehmers. Protokoll-Kernelmodule (darunter `sctp`) erhalten eine persistente
 per-network-namespace-Referenz (`try_module_get` in der pernet-Initialisierung) für jedes netns,
 das zum Zeitpunkt des Ladens des Moduls bereits existierte - auf diesem Node laufen bereits Pods
 (calico, coredns, kube-system), daher kann `sctp` im Zustand `in use` mit
 von null verschiedenem refcount und LEEREM `/sys/module/sctp/holders` bleiben (das heißt, es wird nicht von einem anderen Modul gehalten -
 es gibt nichts, was rekursiv entladen werden könnte). Das lässt sich nicht beheben, ohne alle diese Pods zu stoppen, was nicht
-zur Aufgabe gehört. Wichtig und geprüft ist gerade das, was unter Kontrolle des Teilnehmers liegt:
+zur Aufgabe gehört. Wichtig und geprüft ist genau das, was unter Kontrolle des Teilnehmers liegt:
 Das Modul darf nicht NEU geladen werden können.
 
 Auf der control-plane:
@@ -388,7 +388,7 @@ exit
 exit
 ```
 
-Artifact (auf `worker`): der aktuelle Zustand (`absent` oder `present`) und das override in der effective
+Artefakt (auf `worker`): der aktuelle Zustand (`absent` oder `present`) und das override in der effective
 modprobe config:
 
 ```bash
@@ -435,21 +435,21 @@ Der Node muss `Ready` bleiben (vom `worker`):
 kubectl get no
 ```
 
-Wenn das kubelet nach diesem Schritt nicht hochkommt - prüfe gerade die Reihenfolge: Die sysctl müssen
+Wenn das kubelet nach diesem Schritt nicht hochkommt, prüfe genau die Reihenfolge: Die sysctl müssen
 angewendet sein (`sysctl --system`) und nicht nur in die Datei geschrieben, bevor das kubelet
 sie beim Start prüft.
 
 ## 9. Überflüssige SUID-Binärdatei finden und entschärfen
 
 `find` zeigt sowohl die System-SUID-Binärdateien (`sudo`, `passwd`, `mount` - wir fassen sie nicht an) als auch
-das Lern-`/usr/local/bin/cks-lab105-suid-tool`, das keine Komponente von
+die Lern-Binärdatei `/usr/local/bin/cks-lab105-suid-tool`, die keine Komponente von
 Kubernetes auf diesem Node benötigt.
 
 `/var/lib/containerd` ist aus der Ausgabe ausgeschlossen: Seine overlayfs snapshot-Pfade sind der Inhalt der
 container image layers und keine auf dem Host installierten Binärdateien, und sie ändern sich bei jedem
-pull/extract eines Images während der Lab, unabhängig von den Aktionen des Teilnehmers.
+pull/extract eines Images während des Labs, unabhängig von den Aktionen des Teilnehmers.
 
-Das artifact `suid-before.txt` muss **vor** der Korrektur gespeichert werden (auf `worker`):
+Das Artefakt `suid-before.txt` muss **vor** der Korrektur gespeichert werden (auf `worker`):
 
 ```bash
 ssh "$CP" "sudo find / -xdev -perm -4000 -type f 2>/dev/null | grep -v '^/var/lib/containerd/'" \
@@ -457,8 +457,8 @@ ssh "$CP" "sudo find / -xdev -perm -4000 -type f 2>/dev/null | grep -v '^/var/li
 grep cks-lab105-suid-tool /var/work/tests/artifacts/9/suid-before.txt
 ```
 
-Wir entfernen das SUID-Bit nur bei der Lerndatei (auf der control-plane) und stellen sicher, dass die System-
-SUID-Binärdateien nicht angetastet wurden - `sudo`/`passwd` müssen das SUID-Bit behalten, sonst geht die grundlegende
+Wir entfernen das SUID-Bit nur bei der Lerndatei (auf der control-plane) und stellen sicher, dass die
+System-SUID-Binärdateien nicht angetastet wurden - `sudo`/`passwd` müssen das SUID-Bit behalten, sonst geht die grundlegende
 Funktionalität des Betriebssystems kaputt:
 
 ```bash
@@ -471,7 +471,7 @@ exit
 exit
 ```
 
-Artifact `suid-after.txt` (auf `worker`):
+Artefakt `suid-after.txt` (auf `worker`):
 
 ```bash
 ssh "$CP" "stat -c '%a' /usr/local/bin/cks-lab105-suid-tool" \
@@ -511,7 +511,7 @@ printf '* hard core 0\n* soft core 0\n' >> /etc/security/limits.conf
 ```
 
 `limits.conf` wird über PAM auf neue login-Sitzungen angewendet und nicht auf bereits geöffnete shells -
-wir prüfen gerade in einer neuen Sitzung:
+wir prüfen ausdrücklich in einer neuen Sitzung:
 
 ```bash
 su - ubuntu -c 'ulimit -c'      # 0
@@ -519,7 +519,7 @@ exit
 exit
 ```
 
-Artifact `coredump.txt` (auf `worker`). Enthält einen controlled crash probe: Wir bestätigen, dass
+Artefakt `coredump.txt` (auf `worker`). Enthält einen controlled crash probe: Wir bestätigen, dass
 nach einem echten `SIGSEGV` KEIN NEUER retained core dump in den Apport-Verzeichnissen
 (`/var/lib/apport/coredump`, `/var/crash`) erscheint:
 

@@ -322,7 +322,7 @@ check_result
 ### KMS v2: config にローカルの鍵を持たない envelope encryption
 
 上の `aescbc` は学習用の手順のためだけのものです。production では、KMS v2 は
-サポートされている KMS-plugin を、`EncryptionConfiguration` のローカルの Unix socket を通じて接続します。
+サポートされている KMS-plugin を、ローカルの Unix socket を通じて `EncryptionConfiguration` に接続します。
 KMS v2 では、API server は、暗号化された seed/DEK を API server のレベルで使用し、
 個々のレコードの暗号化鍵を導出します。Plugin は外部の KEK を通じて seed を保護します；
 これが、per-resource の KMS v1 との違いです。Etcd にはリソースの ciphertext と

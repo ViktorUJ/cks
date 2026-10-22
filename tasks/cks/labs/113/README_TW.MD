@@ -22,7 +22,7 @@ control-plane 上的 `kubeadm upgrade apply` 會更新 API server 與其他 cont
 <details>
 <summary>2. 為什麼在升級到新的 minor 時必須切換 apt repository `pkgs.k8s.io`，而 patch 升級卻不需要？</summary>
 
-自從從 `packages.cloud.google.com`/`apt.kubernetes.io` 遷移之後，`pkgs.k8s.io` 是以**每個 minor 版本一個獨立的 repository**(`core:/stable:/v1.35`、`core:/stable:/v1.36` 等)的方式組織的，而不是包含所有版本的單一 repository。在已經接上的 repo `v1.35` 內，只有 `1.35.x` 的 patch 版本可用。要讓 `apt install kubeadm=1.36.x-*` 看得到 `1.36` 的版本，必須先在 `sources.list.d/kubernetes.list` 中加入 `core:/stable:/v1.36` 這個 repo(只有 URL 中的版本會改變；包含簽章金鑰 `Release.key` 的 keyring 保持不變)。
+自從由 `packages.cloud.google.com`/`apt.kubernetes.io` 遷移之後，`pkgs.k8s.io` 是以**每個 minor 版本一個獨立的 repository**(`core:/stable:/v1.35`、`core:/stable:/v1.36` 等)的方式組織的，而不是包含所有版本的單一 repository。在已經加入的 repo `v1.35` 內，只有 `1.35.x` 的 patch 版本可用。要讓 `apt install kubeadm=1.36.x-*` 看得到 `1.36` 的版本，必須先在 `sources.list.d/kubernetes.list` 中加入 `core:/stable:/v1.36` 這個 repo(只有 URL 中的版本會改變；包含簽章金鑰 `Release.key` 的 keyring 保持不變)。
 </details>
 
 <details>
@@ -33,7 +33,7 @@ control-plane 上的 `kubeadm upgrade` 會重新建立各元件(kube-apiserver�
 
 ## 與課程的關聯
 
-- [第 13 章。為消除弱點而更新 Kubernetes](../../course/13/tw.md)
+- [第 13 章。為消除漏洞而更新 Kubernetes](../../course/13/tw.md)
 
 ## 基礎架構
 
@@ -57,7 +57,7 @@ Namespace `upgrade-113` 以及 Deployment `canary`(2 個 replica)已經部署 - 
 確認沒有 downtime 的指標。在整個升級過程中，至少要有一個 replica 保持 `Available`;
 每個節點 `uncordon` 之後以及最後，Deployment 必須
 恢復到 `2/2`。Bootstrap 事先把兩個 replica 分散到不同的
-nodes(required `podAntiAffinity`)，並建立帶有 `minAvailable: 1` 的 `PodDisruptionBudget`。
+節點(required `podAntiAffinity`)，並建立帶有 `minAvailable: 1` 的 `PodDisruptionBudget`。
 
 ## 部署
 
@@ -115,7 +115,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 <details>
 <summary>💡 任務 3 的提示</summary>
 
-如果你已經開始(更不用說已經完成)了 worker 節點在 control-plane 之前的升級 - 請停下來 - 透過重新下載 `1.35.x` 套件把 worker 回退，無法用簡單的方式做到；正確的做法是完成 control-plane 的升級，然後繼續/重做 worker 節點的升級。關鍵是 - worker 節點的下一次升級(無論何時開始)必須發生在 control-plane 升級完全完成「之後」。在 `kubectl get node <cp-名稱>` 顯示 `v1.36.x` 與 `Ready` 之前，不要開始任務 2。
+如果你已經開始(更不用說已經完成)了 worker 節點在 control-plane 之前的升級 - 請停下來：要把 worker 退回 `1.35.x` 套件，無法用簡單的方式做到；正確的做法是完成 control-plane 的升級，然後繼續/重做 worker 節點的升級。關鍵是 - worker 節點的下一次升級(無論何時開始)必須發生在 control-plane 升級完全完成「之後」。在 `kubectl get node <cp-名稱>`(`kubectl get no` 中的 control-plane 名稱)顯示 `v1.36.x` 與 `Ready` 之前，不要開始任務 2。
 </details>
 
 ---
@@ -127,7 +127,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 <details>
 <summary>💡 任務 4 的提示</summary>
 
-輪詢迴圈的範例，可以在單獨的終端機/`screen`/`tmux` 中，在執行任務 1-2 的整個期間讓它持續運作：`while true; do if available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`。如果 Deployment 短時間內失去了所有 replica - 請檢查 `kubectl get pods -n upgrade-113 -o wide`，以及連續的 drain 是否遵守了 PDB 與 required anti-affinity。
+輪詢迴圈的範例，可以在單獨的終端機/`screen`/`tmux` 中，在執行任務 1-2 的整個期間讓它持續運作：`while true; do if available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`。如果 Deployment 短時間內失去了所有 replica - 請檢查 `kubectl get pods -n upgrade-113 -o wide`，以及連續的 drain 是否遵守了 PDB 與 required anti-affinity。
 </details>
 
 ## 檢查

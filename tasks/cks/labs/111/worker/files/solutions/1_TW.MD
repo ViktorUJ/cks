@@ -3,7 +3,7 @@
 # Lab 111 - 參考解答
 
 所有指令都在 worker 上執行。這些是考試中會有的一般工具指令(trivy、kubesec、
-kube-linter、hadolint、podman、syft、bom、cosign)；沒有腳本，在需要
+kube-linter、hadolint、podman、syft、bom、cosign)；沒有腳本；在需要
 比較多個結果的地方，是用眼睛看輸出來比較。首先設定共用的
 變數：
 
@@ -98,7 +98,7 @@ while read name ref; do
 done
 ```
 
-從輸出中找出數量最多的 Deployment(最有弱點的)以及數量最少的兩個。把
+從輸出中找出數量最多的 Deployment(最脆弱的)以及數量最少的兩個。把
 名稱寫入 `ranking.txt`(用你自己的名稱取代 `dep-a`、`dep-b`、`dep-c`):
 
 ```bash
@@ -110,12 +110,12 @@ EOF
 # dep-d - 第四個 Deployment(CRITICAL 數量第二多),它不會寫入 ranking.txt
 ```
 
-最有弱點的 Deployment 的 CycloneDX SBOM(取自它的 Deployment 的映像)，以及把其餘的 Deployment scale 到 0:
+最脆弱的 Deployment 的 CycloneDX SBOM(取自它的 Deployment 的映像)，以及把其餘的 Deployment scale 到 0:
 
 ```bash
 kubectl -n cks-111 get deployment dep-a -o jsonpath='{.spec.template.spec.containers[0].image}'; echo
 trivy image --format cyclonedx --output $ART/1c/cyclonedx.json <上面輸出中的映像>
-kubectl -n cks-111 scale deployment dep-a --replicas=0      # 最有弱點的
+kubectl -n cks-111 scale deployment dep-a --replicas=0      # 最脆弱的
 kubectl -n cks-111 scale deployment dep-d --replicas=0      # 第四個(不屬於兩個最不脆弱的)
 kubectl -n cks-111 get deployment -l cks.io/task=1c
 ```
@@ -287,7 +287,7 @@ comm -12 /tmp/c2.pkgs /tmp/c3.pkgs | wc -l
 comm -12 /tmp/c1.pkgs /tmp/c2.pkgs | grep -vxFf /tmp/c3.pkgs | head -3
 ```
 
-寫下找到的組合，並刪除正是這兩個 containers(`kubectl edit`)，留下「乾淨的」：
+寫下找到的組合，並只刪除這兩個 containers(`kubectl edit`)，留下「乾淨的」：
 
 ```bash
 printf 'TARGET_PACKAGE=%s\nTARGET_VERSION=%s\n' <name> <version> > $ART/5b/answer.txt     # 例如 apt 與 3.0.3
@@ -481,7 +481,7 @@ security property。我們在同一個 repository 中建置並發布第二個、
 與 `$HARDENED_IMAGE` 不同的內容：如果不加更改地建置
 同一個 `Dockerfile`/context,reproducible/cached build 可能產生與已簽署映像**相同的**
 manifest digest，那麼對「unsigned」tag 執行 `cosign verify` 會
-出乎意料地通過 - 因為它在物理上會指向已經簽署的 artifact。因此
+出乎意料地通過 - 因為它實際上會指向已經簽署的 artifact。因此
 我們透過 `ARG`/`LABEL` 引入受控的差異，保證它會改變 digest:
 
 ```bash
@@ -492,7 +492,7 @@ export UNSIGNED_DIGEST=$(cat /tmp/cks-111-unsigned.digest)
 export UNSIGNED_IMAGE="${HARDENED_REPO}@${UNSIGNED_DIGEST}"
 export HARDENED_DIGEST="${HARDENED_IMAGE#*@}"
 
-# 必要的檢查:unsigned candidate 必須是物理上不同的 artifact,
+# 必要的檢查:unsigned candidate 必須是實際上不同的 artifact,
 # 而不是與已簽署的 HARDENED_IMAGE 相同的 digest。
 [ "$UNSIGNED_DIGEST" != "$HARDENED_DIGEST" ] && echo "digests differ: OK"
 printf 'hardened_digest=%s\nunsigned_digest=%s\nunsigned_image=%s\ndistinct=true\n' \
@@ -534,7 +534,7 @@ cat "$ART/9c/admission-deny.txt"        # ... catalog image must have a valid re
 kubectl get pod catalog-unsigned-probe -n cks-111       # NotFound:Pod 沒有建立
 ```
 
-與天真的檢查的差別：如果我們改用另一個 repository 的 digest
+與單純作法的差別：如果我們改用另一個 repository 的 digest
 (例如任務 1 的上游 `nginx` 的 digest),admission 可能因為完全不同的
 原因而拒絕(`manifest unknown`、沒有 pull 權限)- 這樣的 denial 看起來
 像是「policy 在運作」，而實際上根本沒有走到 signature 檢查。

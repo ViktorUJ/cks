@@ -4,14 +4,14 @@
 
 ## Ziel
 
-In dieser CKS-Lab wendest du zwei unabhängige Mechanismen zum Schutz des Container-Prozesses auf
+In diesem CKS-Lab wendest du zwei unabhängige Mechanismen zum Schutz des Container-Prozesses auf
 Ebene des Linux-Kernels an. Zuerst überführst du ein vorab geliefertes **AppArmor**-Profil von
 `complain` nach `enforce`, weist es einem Pod über das moderne Feld
 `securityContext.appArmorProfile` zu und belegst die Ablehnung des Schreibens. Dann weist du die sichere
 Baseline `RuntimeDefault` und ein custom **seccomp Localhost**-Profil zu, das den
 Systemaufruf `unshare(2)` blockiert.
 
-Das ist die Fortsetzung des grundlegenden `SecurityContext` aus der CKA-Lab 106: Hier reicht es nicht, das
+Das ist die Fortsetzung des grundlegenden `SecurityContext` aus dem CKA-Lab 106: Hier reicht es nicht, das
 YAML zu schreiben. Localhost-Profile leben auf dem Kubernetes-Node, daher musst du den Node, das
 Placement des Pods und das tatsächliche Verhalten des Prozesses prüfen.
 
@@ -40,7 +40,7 @@ Im Modus `complain` protokolliert AppArmor Verletzungen des Profils nur, blockie
 <details>
 <summary>3. Warum wird `localhostProfile` im Pod-Manifest als relativer und nicht als absoluter Pfad angegeben?</summary>
 
-Das Kubelet löst den relativen Pfad selbst relativ zu seinem seccomp root auf (standardmäßig `/var/lib/kubelet/seccomp/`). Wird ein absoluter Pfad angegeben, sucht das Kubelet die Datei in diesem seccomp root GENAU UNTER DIESEM ABSOLUTEN PFAD, was fast nie mit dem tatsächlichen Speicherort der Datei übereinstimmt - der Pod erhält `CreateContainerError`.
+Das kubelet löst den relativen Pfad selbst relativ zu seinem seccomp root auf (standardmäßig `/var/lib/kubelet/seccomp/`). Wird ein absoluter Pfad angegeben, sucht das kubelet die Datei in diesem seccomp root GENAU UNTER DIESEM ABSOLUTEN PFAD, was fast nie mit dem tatsächlichen Speicherort der Datei übereinstimmt - der Pod erhält `CreateContainerError`.
 </details>
 
 ## Bezug zum Kurs
@@ -62,7 +62,7 @@ Die Umgebung wird über Terragrunt in AWS `eu-central-1` ausgerollt.
 
 Zur Ressourcenschonung ist die control-plane der einzige workload-Node: Von ihr wurde der
 `NoSchedule` taint entfernt. Sie ist mit dem Label
-`security.cks.io/localhost-profiles-106=true` markiert. Alle Pods dieser Lab müssen genau diesen
+`security.cks.io/localhost-profiles-106=true` markiert. Alle Pods dieses Labs müssen genau diesen
 Node auswählen - das Localhost-Profil existiert nur auf diesem Node, und der Scheduler überträgt es nicht auf einen anderen Node.
 
 Der Bootstrap hat **nur** vorbereitet:
@@ -121,7 +121,7 @@ Schritt bietet die Datei auf der Platte überhaupt keinen Schutz und erscheint n
 | **2** | **AppArmor profile in enforce überführen** |
 | :---: | :--- |
 | Was wir tun | Überführe auf dem Node `control-plane` das in Aufgabe 1 geladene profile `k8s-106-deny-write` in den Modus `enforce`. Der ursprüngliche Modus `complain` protokolliert Verletzungen, ist aber kein Schutz. Lösche das profile nicht und ändere seinen Namen nicht. |
-| Abnahmekriterien | Der Node mit dem Label `security.cks.io/localhost-profiles-106=true` existiert; `/etc/apparmor.d/k8s-106-deny-write` ist verfügbar; `/sys/kernel/security/apparmor/profiles` enthält die Zeile `k8s-106-deny-write (enforce)`. Die checker-owned bootstrap-Baseline (VOR der Ausgabe der Lab festgehalten, an einer Zwischenkopie desselben profile, solange sie noch in `complain` war) bestätigt, dass ein dem Muster `/work/**` dieses profile entsprechendes Schreiben damals tatsächlich durchging - ohne dies lässt sich nicht belegen, dass gerade der Übergang nach `enforce` die spätere Ablehnung verursacht hat. |
+| Abnahmekriterien | Der Node mit dem Label `security.cks.io/localhost-profiles-106=true` existiert; `/etc/apparmor.d/k8s-106-deny-write` ist verfügbar; `/sys/kernel/security/apparmor/profiles` enthält die Zeile `k8s-106-deny-write (enforce)`. Die checker-owned bootstrap-Baseline (VOR der Ausgabe des Labs festgehalten, an einer Zwischenkopie desselben profile, solange sie noch in `complain` war) bestätigt, dass ein dem Muster `/work/**` dieses profile entsprechendes Schreiben damals tatsächlich durchging - ohne dies lässt sich nicht belegen, dass gerade der Übergang nach `enforce` die spätere Ablehnung verursacht hat. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 2</summary>
@@ -157,7 +157,7 @@ diese Binärdatei parst im Unterschied zu `aa-enforce` nur die ihr übergebene D
 <details>
 <summary>💡 Hinweis zu Aufgabe 4</summary>
 
-`Seccomp: 2` in `/proc/1/status` bedeutet "filter mode aktiv" (SECCOMP_MODE_FILTER) - das ist es, was du sehen sollst. `Seccomp: 0` würde das Fehlen eines seccomp filter überhaupt bedeuten (`Unconfined`). Das ist die einfachste Aufgabe der fünf in dieser Gruppe - wenn sie fehlschlägt, liegt das Problem sehr wahrscheinlich im nodeSelector und nicht im seccompProfile selbst.
+`Seccomp: 2` in `/proc/1/status` bedeutet „filter mode aktiv“ (SECCOMP_MODE_FILTER) - das ist es, was du sehen sollst. `Seccomp: 0` würde das Fehlen eines seccomp filter überhaupt bedeuten (`Unconfined`). Das ist die einfachste der drei seccomp-Aufgaben (4-6) - wenn sie fehlschlägt, liegt das Problem sehr wahrscheinlich im nodeSelector und nicht im seccompProfile selbst.
 </details>
 
 ---
@@ -187,7 +187,7 @@ BusyBox `unshare -m` führt nach erfolgreichem `unshare(2)` zusätzlich einen ZW
 eigenständigen `mount(2)` syscall aus (`mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL)`
 zur Erzwingung der private propagation - das ist ein standardmäßig aktives Verhalten von unshare,
 wenn nicht explizit `--propagation unchanged` übergeben wird, und selbst dann wird `mount()` trotzdem
-aufgerufen, nur mit Null-Flags). Das default AppArmor-Profil von containerd (`RuntimeDefault`,
+aufgerufen, nur mit Null-Flags). Das Standard-AppArmor-Profil von containerd (`RuntimeDefault`,
 das ein Pod ohne explizites `securityContext.appArmorProfile` erhält) enthält `deny mount,`
 OHNE irgendwelche Bedingungen an Flags - dieses Verbot gilt unabhängig von capabilities und von
 seccomp. Deshalb kann `unshare -m true` wegen AppArmor mit `EPERM` scheitern, SELBST wenn
@@ -197,7 +197,7 @@ syscall `unshare(2)` selbst ohne nachfolgendes `mount()` auf - und `localhost-se
 `sysadmin-control` verwenden dasselbe `SYS_ADMIN`, daher erklärt sich der Unterschied im Ergebnis
 eindeutig gerade durch den seccomp filter und nicht durch einen Nebeneffekt von AppArmor.
 
-Die Reihenfolge der Befehle ist für die Beweiskraft wichtig: Führe zuerst `unshare -n true` aus und vergewissere dich, dass es mit einem Fehler scheitert (Exit-Code ungleich null), ERST DANN schreibe die Zeile `unshare denied by seccomp` nach `/tmp/unshare-result` - schreibe die Zeile nicht vorab, indem du das Ergebnis "annimmst". Der negative control (`sysadmin-control`) muss DIESELBE capability `SYS_ADMIN` verwenden, aber `seccompProfile.type: Unconfined` - wenn du vergisst, `Unconfined` explizit anzugeben, kann der Pod standardmäßig `RuntimeDefault` erhalten (wenn `seccompDefault` aus Aufgabe 8 aktiviert ist), und der Test zeigt den Unterschied nicht.
+Die Reihenfolge der Befehle ist für die Beweiskraft wichtig: Führe zuerst `unshare -n true` aus und vergewissere dich, dass es mit einem Fehler scheitert (Exit-Code ungleich null), ERST DANN schreibe die Zeile `unshare denied by seccomp` nach `/tmp/unshare-result` - schreibe die Zeile nicht vorab, indem du das Ergebnis „annimmst“. Der negative control (`sysadmin-control`) muss DIESELBE capability `SYS_ADMIN` verwenden, aber `seccompProfile.type: Unconfined` - wenn du vergisst, `Unconfined` explizit anzugeben, kann der Pod standardmäßig `RuntimeDefault` erhalten (wenn `seccompDefault` aus Aufgabe 8 aktiviert ist), und der Test zeigt den Unterschied nicht.
 </details>
 
 Linux capabilities und privilege escalation sind unterschiedliche Achsen. `allowPrivilegeEscalation: false`
@@ -221,7 +221,7 @@ Verwende für einen gewöhnlichen workload `capabilities.drop: ["ALL"]` und sepa
 ---
 | **8** | **`seccompDefault: true` auf Ebene des kubelet: Baseline ohne explizites Profil** |
 | :---: | :--- |
-| Was wir tun | Alle Pods in den Aufgaben 4–6 geben `seccompProfile` explizit im Manifest an. In der Realität kann ein Entwickler dieses Feld vergessen - dann erhält der Pod ohne node-level Baseline `Unconfined`. Aktiviere auf dem Node `seccompDefault: true` in `/var/lib/kubelet/config.yaml` und starte kubelet neu (`systemctl restart kubelet`). Erstelle den Pod `no-seccomp-field` in `security-106` auf dem vorbereiteten Node aus `busybox:1.36` (`sleep 3600`), **ohne securityContext.seccompProfile überhaupt anzugeben**, weder auf Pod- noch auf Container-Ebene. Bestätige über `/proc/1/status` im Container, dass das kubelet `RuntimeDefault` automatisch angewendet hat (`Seccomp: 2`) und nicht `Unconfined` (`Seccomp: 0`) belassen hat. |
+| Was wir tun | Alle Pods in den Aufgaben 4–6 geben `seccompProfile` explizit im Manifest an. In der Realität kann ein Entwickler dieses Feld vergessen - dann erhält der Pod ohne node-level Baseline `Unconfined`. Aktiviere auf dem Node `seccompDefault: true` in `/var/lib/kubelet/config.yaml` und starte das kubelet neu (`systemctl restart kubelet`). Erstelle den Pod `no-seccomp-field` in `security-106` auf dem vorbereiteten Node aus `busybox:1.36` (`sleep 3600`), **ohne securityContext.seccompProfile überhaupt anzugeben**, weder auf Pod- noch auf Container-Ebene. Bestätige über `/proc/1/status` im Container, dass das kubelet `RuntimeDefault` automatisch angewendet hat (`Seccomp: 2`) und nicht `Unconfined` (`Seccomp: 0`) belassen hat. |
 | Abnahmekriterien | Die effektive (angewendete) Konfiguration des kubelet - über `/api/v1/nodes/<node>/proxy/configz`, das Feld `.kubeletconfig.seccompDefault` - ist gleich `true`; `systemctl is-active kubelet` gibt `active` zurück, der Node bleibt `Ready`; der Pod `no-seccomp-field` hat auf keiner Ebene seiner Spezifikation ein `seccompProfile`; `/proc/1/status` im Container zeigt `Seccomp: 2`. |
 
 <details>
@@ -240,14 +240,14 @@ Starte das kubelet nach dem Bearbeiten der Datei unbedingt neu - die Konfigurati
 | **9** | **Debuggen und Neuaufbau eines defekten AppArmor-Profils (`apparmor_parser -r -v`)** |
 | :---: | :--- |
 | Was wir tun | Auf der Platte liegt bereits `/etc/apparmor.d/k8s-106-broken-profile` - ein Profil mit einem Syntaxfehler, das **nie in den Kernel geladen** wurde. Finde den Fehler selbstständig über `sudo apparmor_parser -Q /etc/apparmor.d/k8s-106-broken-profile` (`-Q`/`--skip-kernel-load`: führt die Prüfung/Kompilierung des Profils vollständig aus, lädt es aber nicht in den Kernel) oder `sudo apparmor_parser -d /etc/apparmor.d/k8s-106-broken-profile` (`-d`/`--debug`, einmalig - nur Prüfung der syntaktischen Korrektheit), korrigiere die Datei und lade das Profil über `sudo apparmor_parser -r -v /etc/apparmor.d/k8s-106-broken-profile` in den Kernel. Bestätige das Laden über `aa-status \| grep k8s-106-broken-profile`. Speichere die Fehlerausgabe **vor** der Korrektur und die Bestätigung des Ladens **danach** in `/var/work/tests/artifacts/8/apparmor-debug.txt`. |
-| Abnahmekriterien | `apparmor-debug.txt` enthält den Text des Parser-Fehlers (zum Beispiel `syntax error`) aus dem Versuch **vor** der Korrektur; die checker-owned bootstrap-Baseline (VOR der Ausgabe der Lab festgehalten, unabhängig von deinem artifact) bestätigt unabhängig, dass das ursprüngliche Profil tatsächlich einen syntax error enthielt; `/etc/apparmor.d/k8s-106-broken-profile` auf der Platte enthält den ursprünglichen Syntaxfehler nicht mehr; `aa-status` zeigt `k8s-106-broken-profile` unter den geladenen Profilen (in jedem Modus - `enforce` oder `complain`); ein erneutes `apparmor_parser -Q` auf die korrigierte Datei endet ohne Fehler. |
+| Abnahmekriterien | `apparmor-debug.txt` enthält den Text des Parser-Fehlers (zum Beispiel `syntax error`) aus dem Versuch **vor** der Korrektur; die checker-owned bootstrap-Baseline (VOR der Ausgabe des Labs festgehalten, unabhängig von deinem artifact) bestätigt unabhängig, dass das ursprüngliche Profil tatsächlich einen syntax error enthielt; `/etc/apparmor.d/k8s-106-broken-profile` auf der Platte enthält den ursprünglichen Syntaxfehler nicht mehr; `aa-status` zeigt `k8s-106-broken-profile` unter den geladenen Profilen (in jedem Modus - `enforce` oder `complain`); ein erneutes `apparmor_parser -Q` auf die korrigierte Datei endet ohne Fehler. |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 9</summary>
 
 `apparmor_parser -p` (`--preprocess`) ist KEIN sicherer dry-run/Syntaxprüfungs-Modus - das ist
 lediglich preprocessing: Es expandiert `#include`-Direktiven und gibt das entstandene
-Profil auf stdout aus, garantiert an sich nicht, dass keine Nebenwirkungen auftreten und ist nicht
+Profil auf stdout aus, garantiert an sich nicht, dass keine Nebenwirkungen auftreten, und ist nicht
 speziell zur Prüfung der Syntax gedacht. Verwende `-Q`/`--skip-kernel-load`
 (führt die vollständige Kompilierung/Prüfung aus, lädt aber nicht in den Kernel) oder `-d`/`--debug`
 (einmalig - nur Prüfung der syntaktischen Korrektheit), um den Syntaxfehler SICHER und ohne Nebenwirkungen
@@ -258,7 +258,7 @@ fehlt und wo genau.
 
 Starte `apparmor_parser` über `sudo`, auch mit `-Q`/`-d`: Auf dem Lab-Node (apparmor 3.0.4,
 Ubuntu) versucht der Parser ohne Privilegien bei jedem Start, den policy cache in
-`/var/cache/apparmor` einzurichten, und scheitert mit "Failed setting up policy cache: Permission denied" VOR
+`/var/cache/apparmor` einzurichten, und scheitert mit „Failed setting up policy cache: Permission denied“ VOR
 der Syntaxprüfung - du erhältst eine irreführende Berechtigungsfehlermeldung statt des echten Syntaxfehlers
 des Profils. Das wurde auf dem Node selbst verifiziert (auch an einem nachweislich defekten Profil).
 Wenn du ohne `sudo` starten musst, füge `-K` hinzu (`--skip-cache`: kein Caching) -

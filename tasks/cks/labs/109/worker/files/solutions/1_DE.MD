@@ -3,7 +3,7 @@
 # Lab 109 - Referenzlösung: encryption at rest für Secrets
 
 > Wir arbeiten wie in der Prüfung: `kubectl`-Befehle werden auf der Arbeitsmaschine ausgeführt, und Operationen am
-> Node (etcd, Dateien und manifest der control-plane) - auf der control-plane selbst: Melde dich dort mit
+> Node (etcd, Dateien und Manifest der control-plane) - auf der control-plane selbst: Melde dich dort mit
 > `ssh control-plane` an, führe die Befehle aus und verlasse sie wieder (`exit`). Das ist **nur ein Ein-Node-Lerncluster**; in production gibt man Benutzern keinen direkten Zugriff auf etcd.
 
 ## Wo du Beispiele in der Dokumentation findest
@@ -123,8 +123,8 @@ Bei Verlust des Schlüssels wird das encrypted Secret aus einem snapshot unlesba
 
 ## 3. Die Konfiguration an den static kube-apiserver anbinden
 
-Zuerst speichern wir das manifest **außerhalb** des Verzeichnisses `/etc/kubernetes/manifests/`: Das kubelet liest jede nicht versteckte Datei dieses Verzeichnisses als static
-Pod, einschließlich `*.bak`. Eine Kopie des ursprünglichen manifest innerhalb des
+Zuerst speichern wir das Manifest **außerhalb** des Verzeichnisses `/etc/kubernetes/manifests/`: Das kubelet liest jede nicht versteckte Datei dieses Verzeichnisses als static
+Pod, einschließlich `*.bak`. Eine Kopie des ursprünglichen Manifests innerhalb des
 Verzeichnisses ist ein zweiter static Pod mit demselben Namen; das kubelet kann weiterhin genau diesen starten
 (die alte Konfiguration ohne `--encryption-provider-config`), und die Änderung der Hauptdatei
 wird stillschweigend nicht wirksam, und die Verschlüsselung bleibt bei äußerlich gesundem API server ausgeschaltet.
@@ -161,11 +161,11 @@ volumes:
     type: Directory
 ```
 
-Das Kubelet bemerkt die Änderung und startet den static Pod neu. Warte vor dem Fortfahren auf den API
+Das kubelet bemerkt die Änderung und startet den static Pod neu. Warte vor dem Fortfahren auf den API
 server, sonst kann ein Fehler im YAML/Pfad die control-plane unzugänglich lassen.
 
 ```bash
-# immer noch auf der control-plane: prüfen, dass das Flag ins laufende manifest gelangt ist, dann verlassen
+# immer noch auf der control-plane: prüfen, dass das Flag ins laufende Manifest gelangt ist, dann verlassen
 grep -n -- '--encryption-provider-config\|encryption-config' /etc/kubernetes/manifests/kube-apiserver.yaml
 exit   # aus root
 exit   # von der control-plane
@@ -223,7 +223,7 @@ Verschlüsselung at rest nicht. Der Nachweis ist hier: Rohes etcd enthält `k8s:
 alten und den neuen Eintrag und enthält den legacy marker nicht mehr.
 
 Jetzt wird der migration fallback nicht mehr gebraucht. Wir entfernen `identity`, starten den
-static kube-apiserver zwangsweise über CRI neu und prüfen erneut Gesundheit und Lesen. Tue das nur
+static kube-apiserver zwangsweise über CRI neu und prüfen erneut den Zustand (health) des API servers und das Lesen der Secrets. Tue das nur
 nach einem snapshot und der Bestätigung des ciphertext aller betroffenen Ressourcentypen.
 
 ```bash
@@ -315,7 +315,7 @@ check_result
 ```
 
 `automountServiceAccountToken: false` verringert die für den Pod verfügbare credential surface, schränkt aber das RBAC des
-ServiceAccount selbst nicht ein, falls die Anwendung andere credentials erhält.
+ServiceAccounts selbst nicht ein, falls die Anwendung andere credentials erhält.
 
 ## Zusatz: Wie KMS v2 und die vollständige Schlüsselrotation aussehen
 
@@ -326,14 +326,14 @@ unterstütztes KMS-plugin über einen lokalen Unix socket in der `EncryptionConf
 Bei KMS v2 verwendet der API server einen verschlüsselten seed/DEK auf Ebene des API servers und
 leitet daraus die Verschlüsselungsschlüssel einzelner Einträge ab. Das plugin schützt den seed über einen externen KEK;
 dadurch unterscheidet sich KMS v2 vom per-resource KMS v1. Etcd speichert den ciphertext der Ressourcen und die
-für die Entschlüsselung nötigen metadata. Der KEK bleibt im externen KMS und nicht in etcd oder Git. Das Schema
+für die Entschlüsselung nötigen Metadaten. Der KEK bleibt im externen KMS und nicht in etcd oder Git. Das Schema
 der Konfiguration hängt von der Kubernetes- und der plugin-Version ab, aber grundsätzlich werden ein provider `kms`,
 ein stabiler key-Name und der Endpoint des sockets gebraucht. Kopiere keinen Beispiel-Endpoint aus einem fremden Cluster:
 gleiche das Format von KMS v2 und die health/ACL-Anforderungen mit der Dokumentation deiner Version von Kubernetes ab.
 
 ### Vollständiger lifecycle der Rotation des aescbc key
 
-Der Übergang `identity -> aescbc` in Aufgabe 4 ist eine migration und keine Rotation des Schlüssels für bereits
+Der Übergang `identity -> aescbc` in Aufgabe 4 ist eine Migration und keine Rotation des Schlüssels für bereits
 verschlüsselte Daten. Mache vor der Rotation einen verschlüsselten etcd snapshot und speichere
 den alten Schlüssel für ein rollback. Füge den neuen Schlüssel **an erster Stelle** hinzu, und lasse den alten vorübergehend
 an zweiter Stelle: providers werden der Reihe nach gelesen, und neue Einträge werden mit dem ersten Schlüssel geschrieben.
@@ -369,8 +369,8 @@ exit   # aus root
 exit   # von der control-plane
 ```
 
-Wenn die migration aller Secrets bestätigt ist, das backup gemacht wurde, die API die Daten liest und `/readyz`
+Wenn die Migration aller Secrets bestätigt ist, das backup gemacht wurde, die API die Daten liest und `/readyz`
 `ok` zurückgibt, entferne den alten key aus der Liste, starte den API server neu und wiederhole die
 Prüfungen. Entferne den alten key nicht früher: Einträge, die nicht vom neuen provider neu geschrieben wurden, werden
 unlesbar. Bei KMS v2 ist die Reihenfolge dieselbe: zuerst der neue primary KEK/das plugin, dann
-re-encryption, Prüfung und erst nach der migration die Außerbetriebnahme des alten KEK.
+re-encryption, Prüfung und erst nach der Migration die Außerbetriebnahme des alten KEK.

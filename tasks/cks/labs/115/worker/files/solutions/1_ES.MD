@@ -96,7 +96,7 @@ Además de los parámetros mínimos de la tarea, este banco de pruebas requiere 
   `spire-data-spire-server-0` se queda para siempre en `Pending`, y `spire-server-0` en `Pending`
   (para el laboratorio basta con un almacenamiento efímero).
 - `install.server.securityContext.runAsUser=0`: la imagen `spire-server` arranca con uid 1000 y
-  no puede crear `api.sock` en el directorio hostPath `root:755`; el servidor cierra silenciosamente sus
+  no puede crear `api.sock` en el directorio hostPath `root:755`; el servidor silenciosamente no levanta sus
   endpoints y la liveness probe lo mata (`Waiting for spire-server to start...` en `cilium-init`).
 
 ```bash

@@ -47,7 +47,7 @@ Calico CNI:
 | `worker` | máquina de trabajo con `kubectl`, `check_result` y acceso SSH a ambos nodos del clúster |
 
 La versión objetivo del upgrade es `1.36.x` (el último patch disponible en el momento del laboratorio), es decir,
-tras completar las tareas el clúster quedará en la misma training baseline que
+tras completar las tareas el clúster quedará en la misma versión training baseline que
 el resto de los core labs 101-112. Los saltos de versiones minor (por ejemplo, un paso directo `1.35` → `1.37`)
 kubeadm no los admite; en este laboratorio tal paso tampoco hace falta.
 
@@ -86,7 +86,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 | **1** | **Upgrade del control-plane al minor objetivo** |
 | :---: | :--- |
 | Qué hacemos | • Entra en `k8s113_controlPlane_1` (`ssh`, luego `sudo -i`).<br/>• Cambia el repositorio apt `pkgs.k8s.io` de `core:/stable:/v1.35` a `core:/stable:/v1.36`: en `/etc/apt/sources.list.d/kubernetes.list` solo cambia la versión en la URL (así lo describe la documentación de Kubernetes, el keyring es el mismo).<br/>• Actualiza el paquete `kubeadm` a `1.36.x`, ejecuta `kubeadm upgrade plan` y luego `kubeadm upgrade apply v1.36.x`.<br/>• Solo después de un `apply` exitoso ejecuta `kubectl drain` de este nodo.<br/>• Actualiza los paquetes `kubelet`/`kubectl` a `1.36.x`, reinicia `kubelet` y luego ejecuta `kubectl uncordon`. |
-| Criterios de aceptación | • `kubeadm version`, `kubelet --version`, el `kubectl version --client` local y la versión del API server (`kubectl version`) en el control-plane informan `v1.36.x`.<br/>• El nodo control-plane (`<cp-nombre>` de `kubectl get no`) en estado `Ready`.<br/>• La salida completa del comando `kubeadm upgrade apply` (con la línea `SUCCESS` y la versión objetivo) está guardada literalmente en `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt` en la máquina de trabajo (el comando se ejecuta en el nodo, la salida se escribe en un archivo en el nodo, luego se copia con `scp`). |
+| Criterios de aceptación | • `kubeadm version`, `kubelet --version`, el `kubectl version --client` local y la versión del API server (`kubectl version`) en el control-plane informan `v1.36.x`.<br/>• El nodo control-plane (`<nombre-cp>` de `kubectl get no`) en estado `Ready`.<br/>• La salida completa del comando `kubeadm upgrade apply` (con la línea `SUCCESS` y la versión objetivo) está guardada literalmente en `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt` en la máquina de trabajo (el comando se ejecuta en el nodo, la salida se escribe en un archivo en el nodo, luego se copia con `scp`). |
 
 <details>
 <summary>💡 Pista para la tarea 1</summary>
@@ -115,7 +115,7 @@ El orden es esencial: primero `apt-mark unhold kubeadm` → actualizar el paquet
 <details>
 <summary>💡 Pista para la tarea 3</summary>
 
-Si ya empezaste (y más aún si terminaste) el upgrade del nodo worker antes que el del control-plane, detente: revertir el worker a los paquetes `1.35.x` no es posible de forma sencilla, pero el camino correcto es terminar el upgrade del control-plane y luego continuar/repetir el upgrade del nodo worker. Lo principal es que el siguiente upgrade del nodo worker (independientemente de cuándo se inicie) debe producirse después del upgrade completamente terminado del control-plane. No empieces la tarea 2 mientras `kubectl get node <cp-nombre>` no muestre `v1.36.x` y `Ready`.
+Si ya empezaste (y más aún si terminaste) el upgrade del nodo worker antes que el del control-plane, detente: revertir el worker a los paquetes `1.35.x` no es posible de forma sencilla; el camino correcto es terminar el upgrade del control-plane y luego continuar/repetir el upgrade del nodo worker. Lo principal es que el siguiente upgrade del nodo worker (independientemente de cuándo se inicie) debe producirse después del upgrade completamente terminado del control-plane. No empieces la tarea 2 mientras `kubectl get node <nombre-cp>` (el nombre del control-plane de `kubectl get no`) no muestre `v1.36.x` y `Ready`.
 </details>
 
 ---
@@ -127,7 +127,7 @@ Si ya empezaste (y más aún si terminaste) el upgrade del nodo worker antes que
 <details>
 <summary>💡 Pista para la tarea 4</summary>
 
-Un ejemplo de bucle de sondeo que se puede dejar funcionando en un terminal/`screen`/`tmux` aparte durante toda la ejecución de las tareas 1-2: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. Si el Deployment perdió todas las réplicas durante un breve tiempo, comprueba `kubectl get pods -n upgrade-113 -o wide` y que los drain sucesivos respetan el PDB y la required anti-affinity.
+Un ejemplo de bucle de sondeo que se puede dejar funcionando en un terminal/`screen`/`tmux` aparte durante toda la ejecución de las tareas 1-2: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. Si el Deployment perdió todas las réplicas durante un breve tiempo, comprueba `kubectl get pods -n upgrade-113 -o wide` y que los drain sucesivos respetan el PDB y la required anti-affinity.
 </details>
 
 ## Comprobación

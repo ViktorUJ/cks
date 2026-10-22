@@ -157,7 +157,7 @@ ce binaire, contrairement à `aa-enforce`, n'analyse que le fichier qui lui est 
 <details>
 <summary>💡 Indice pour la tâche 4</summary>
 
-`Seccomp: 2` dans `/proc/1/status` signifie « filter mode actif » (SECCOMP_MODE_FILTER) - c'est ce que vous devez voir. `Seccomp: 0` signifierait l'absence totale de seccomp filter (`Unconfined`). C'est la tâche la plus simple des cinq de ce groupe - si elle ne passe pas, le problème vient très probablement du nodeSelector, et non du seccompProfile lui-même.
+`Seccomp: 2` dans `/proc/1/status` signifie « filter mode actif » (SECCOMP_MODE_FILTER) - c'est ce que vous devez voir. `Seccomp: 0` signifierait l'absence totale de seccomp filter (`Unconfined`). C'est la plus simple des trois tâches seccomp (4-6) - si elle ne passe pas, le problème vient très probablement du nodeSelector, et non du seccompProfile lui-même.
 </details>
 
 ---
@@ -259,7 +259,7 @@ manque et où exactement.
 
 Exécutez `apparmor_parser` via `sudo`, même avec `-Q`/`-d` : sur le nœud du lab (apparmor 3.0.4,
 Ubuntu), sans privilèges, le parser tente à chaque lancement de configurer le policy cache dans
-`/var/cache/apparmor` et échoue avec "Failed setting up policy cache: Permission denied" AVANT
+`/var/cache/apparmor` et échoue avec « Failed setting up policy cache: Permission denied » AVANT
 la vérification de la syntaxe - vous obtiendrez une erreur trompeuse de droits au lieu de la vraie
 erreur de syntaxe du profil. Cela a été vérifié sur le nœud lui-même (y compris sur un profil délibérément cassé).
 Si vous avez besoin d'un lancement sans `sudo`, ajoutez `-K` (`--skip-cache` : pas de caching) -

@@ -35,7 +35,7 @@ base64 ist nur eine Kodierung, ohne Schlüssel umkehrbar: Jeder, der Zugriff auf
 <details>
 <summary>2. Warum muss der `identity` provider als LETZTER in der Liste der providers stehen und nicht als erster?</summary>
 
-Die providers in `EncryptionConfiguration` werden der Reihe nach zum LESEN vorhandener Einträge probiert, und der erste provider wird zum SCHREIBEN neuer Daten verwendet. Steht `identity` (also "ohne Verschlüsselung") an erster Stelle, werden alle neuen Einträge UNverschlüsselt geschrieben, trotz des Vorhandenseins von `aescbc` in der Liste. `identity` an letzter Stelle erlaubt das Lesen alter (noch nicht migrierter) plaintext-Einträge, garantiert aber, dass alle neuen Einträge vom ersten provider verschlüsselt werden.
+Die providers in `EncryptionConfiguration` werden der Reihe nach zum LESEN vorhandener Einträge probiert, und der erste provider wird zum SCHREIBEN neuer Daten verwendet. Steht `identity` (also „ohne Verschlüsselung“) an erster Stelle, werden alle neuen Einträge UNverschlüsselt geschrieben, trotz des Vorhandenseins von `aescbc` in der Liste. `identity` an letzter Stelle erlaubt das Lesen alter (noch nicht migrierter) plaintext-Einträge, garantiert aber, dass alle neuen Einträge vom ersten provider verschlüsselt werden.
 </details>
 
 <details>
@@ -85,7 +85,7 @@ check_result
 | **1** | **Das ursprüngliche plaintext Secret belegen** |
 | :---: | :--- |
 | Was wir tun | • Fordere vor dem Aktivieren der Verschlüsselung den rohen Eintrag `/registry/secrets/encryption-109/legacy-secret` mit dem Standard-`etcdctl get ... --print-value-only` an<br/>• Melde dich auf der control-plane an (`ssh control-plane`) und arbeite dort, wie in der Prüfung: Leite die Ausgabe durch `strings` und speichere das Ergebnis in einer Datei auf der control-plane (`/tmp/plaintext-proof.txt`), kopiere sie dann mit `scp` auf die Arbeitsmaschine nach `/var/work/109/plaintext-proof.txt` |
-| Abnahmekriterien | • Die Datei enthält die vollständige `strings`-Ausgabe des ursprünglichen rohen Eintrags (stimmt mit dem Snapshot des bootstrap überein, einschließlich des Markers `cks-109-legacy-plaintext`) und enthält nicht `k8s:enc:`<br/>• Eine von Hand eingetippte Zeile wird nicht akzeptiert<br/>• Das ist der Beleg des Ausgangszustands: `Secret.data` ist base64 und nicht encryption at rest |
+| Abnahmekriterien | • Die Datei enthält die vollständige `strings`-Ausgabe des ursprünglichen rohen Eintrags (stimmt mit dem snapshot des bootstrap überein, einschließlich des markers `cks-109-legacy-plaintext`) und enthält nicht `k8s:enc:`<br/>• Eine von Hand eingetippte Zeile wird nicht akzeptiert<br/>• Das ist der Beleg des Ausgangszustands: `Secret.data` ist base64 und nicht encryption at rest |
 
 <details>
 <summary>💡 Hinweis zu Aufgabe 1</summary>
@@ -114,7 +114,7 @@ Erzeuge den Schlüssel über `head -c 32 /dev/urandom | base64` - genau 32 BYTES
 <details>
 <summary>💡 Hinweis zu Aufgabe 3</summary>
 
-Drei separate Änderungen werden gleichzeitig gebraucht: das Flag `--encryption-provider-config` selbst, `volumeMounts` (im Container) UND `volumes` (hostPath auf Ebene der Pod spec) - fehlt eines der drei, führt das entweder zu CrashLoopBackOff (das Flag zeigt auf eine Datei, die der Container nicht sieht) oder dazu, dass das Flag einfach nicht übergeben wird. Speichere das backup **außerhalb** von `/etc/kubernetes/manifests`, zum Beispiel `sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/kube-apiserver.yaml.bak-109`. Das Kubelet liest zusätzliche nicht versteckte Dateien aus dem Verzeichnis der static manifests; ein benachbartes `kube-apiserver.yaml.bak` kann als zweiter static Pod aufgefasst werden und das Anwenden der neuen Konfiguration blockieren.
+Drei separate Änderungen werden gleichzeitig gebraucht: das Flag `--encryption-provider-config` selbst, `volumeMounts` (im Container) UND `volumes` (hostPath auf Ebene der Pod spec) - fehlt eines der drei, führt das entweder zu CrashLoopBackOff (das Flag zeigt auf eine Datei, die der Container nicht sieht) oder dazu, dass das Flag einfach nicht übergeben wird. Speichere das backup **außerhalb** von `/etc/kubernetes/manifests`, zum Beispiel `sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/kube-apiserver.yaml.bak-109`. Das kubelet liest zusätzliche nicht versteckte Dateien aus dem Verzeichnis der static manifests; ein benachbartes `kube-apiserver.yaml.bak` kann als zweiter static Pod aufgefasst werden und das Anwenden der neuen Konfiguration blockieren.
 </details>
 
 ---

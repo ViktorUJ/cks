@@ -113,7 +113,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6}
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
 
-Если Pod не запускается (висит в `ContainerCreating` с событием `FailedCreatePodSandBox`, например `no runtime for "runsc" is configured`), скорее всего задание 1 не полностью завершено - RuntimeClass должен реально указывать на работающий containerd handler. В используемом `busybox:1.36` есть applet `httpd` - используйте `httpd -f -p 8080 -h /www` для минимального HTTP server (проверить наличие applet можно через `busybox --list | grep '^httpd$'`).
+Если Pod не запускается (висит в `ContainerCreating` с событием `FailedCreatePodSandBox`, например `no runtime for "runsc" is configured`), скорее всего задание 1 не полностью завершено - RuntimeClass должен реально указывать на работающий containerd handler. В используемом образе `busybox:1.36` есть applet `httpd` - используйте `httpd -f -p 8080 -h /www` для минимального HTTP server (проверить наличие applet можно через `busybox --list | grep '^httpd$'`).
 </details>
 
 ---

@@ -67,7 +67,7 @@ client HTTP:000
 curl: (28) Connection timed out after 5000 milliseconds
 ```
 
-`client` -> transport-level deny (`000` und Timeout), nicht einfach "nicht 200".
+`client` -> transport-level deny (`000` und Timeout), nicht einfach „nicht 200“.
 
 ## 3. L7-Einschränkung: nur GET /
 
@@ -130,7 +130,7 @@ POST wird vom Envoy proxy von Cilium auf L7 abgelehnt (`403`), nicht durch ein t
 `allowed.cks102.test`/`blocked.cks102.test` sind lab-owned fixtures und werden zu
 `198.18.0.10`/`198.18.0.20` aufgelöst (synthetische IPs außerhalb des Kubernetes address space, ein separater
 network namespace auf dem control-plane Node, und KEINE ClusterIP: `toFQDNs` in Cilium wendet die
-allow-Regel nicht auf IPs innerhalb des Clusters an), die bereits während des bootstrap hochgefahren und in CoreDNS eingetragen wurden:
+allow-Regel nicht auf IPs innerhalb des Clusters an); die fixtures wurden bereits während des bootstrap hochgefahren und in CoreDNS eingetragen:
 Anders als `example.com` sind diese Namen immer verfügbar und hängen nicht vom Internet ab. Prüfung VOR der
 policy - DNS und alle drei Kontroll-Endpoints (`allowed:443`, `allowed:80`, `blocked:443`) müssen tatsächlich erreichbar sein (`-k` - selbstsigniertes
 Zertifikat der fixture):
@@ -190,7 +190,7 @@ spec:
 EOF
 ```
 
-Prüfung NACHHER (warte ein paar Sekunden, das FQDN-mapping erfolgt nicht augenblicklich) und stelle sicher, dass das backend aus den Aufgaben 2-3 nicht regressiert ist:
+Prüfung NACHHER (warte ein paar Sekunden, das FQDN-mapping erfolgt nicht augenblicklich); dabei stellen wir sicher, dass das backend aus den Aufgaben 2-3 nicht regressiert ist:
 
 ```bash
 k -n cks-102 exec frontend -- curl -sSk -o /dev/null -w 'allowed:443 HTTP:%{http_code}\n' -m10 https://allowed.cks102.test/
@@ -236,7 +236,7 @@ Du solltest genau zwei flows sehen: `GET /` mit verdict `FORWARDED` und `POST /`
 
 Ein zweites, unabhängiges backend mit zwei path-scopes. Die nginx-Konfiguration ersetzen wir vollständig
 (`default.conf`), damit `location` für ein konkretes prefix `200` und für alles
-andere `404` zurückgibt - ohne dies gibt es keine Möglichkeit, "erlaubt" von "verboten" am HTTP-Code zu unterscheiden.
+andere `404` zurückgibt - ohne dies gibt es keine Möglichkeit, „erlaubt“ von „verboten“ am HTTP-Code zu unterscheiden.
 
 ```bash
 k create ns production
@@ -297,8 +297,8 @@ private:200
 ```
 
 Policy: zwei ingress-Regeln auf demselben Port. **Wichtige Falle von Cilium**: `fromEndpoints:
-[{}]` (leerer selector) in einer namespaced `CiliumNetworkPolicy` bedeutet NICHT "jede identity im
-gesamten Cluster" - Cilium fügt implizit die Namespace-Einschränkung der policy SELBST zu jedem
+[{}]` (leerer selector) in einer namespaced `CiliumNetworkPolicy` bedeutet NICHT „jede identity im
+gesamten Cluster“ - Cilium fügt implizit die Namespace-Einschränkung der policy SELBST zu jedem
 `fromEndpoints`-selector ohne explizites Namespace-Label hinzu, einschließlich des leeren `{}`. Das heißt, `{}`
 matcht hier in der Praxis nur Endpoints im Namespace `production` und nicht `finance`/`cks-102` -
 die Live-Prüfung bestätigt das: Mit dem buchstäblichen `{}` erhält der externe client einen transport

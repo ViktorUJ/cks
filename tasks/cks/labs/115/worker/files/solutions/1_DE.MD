@@ -33,7 +33,7 @@ kubectl get nodes
 ```
 
 > `cilium status` aus cilium-cli 0.19 gibt die Zeilen `KubeProxyReplacement`/`Encryption` nicht aus;
-> sie zeigt `cilium-dbg status` innerhalb des Agent-Pods (so prüft es auch der Checker).
+> sie werden von `cilium-dbg status` innerhalb des Agent-Pods angezeigt (so prüft es auch der Checker).
 
 ```
 KubeProxyReplacement:   True   [ens5 10.115.1.x (Direct Routing)]
@@ -51,8 +51,8 @@ kubectl exec svc-check -- curl -sSk -o /dev/null -w 'api HTTP:%{http_code}\n' -m
 api HTTP:403
 ```
 
-`403` (nicht `000`) bedeutet, dass TCP/TLS zur API über den Service ClusterIP tatsächlich ohne
-kube-proxy funktioniert; `403` ist hier erwartet, da die Anfrage ohne Token erfolgt, die bloße Tatsache einer Antwort genügt.
+`403` (nicht `000`) bedeutet, dass TCP/TLS zur API über die ClusterIP eines Service tatsächlich ohne
+kube-proxy funktioniert; `403` ist hier erwartet, da die Anfrage ohne Token erfolgt; die bloße Tatsache einer Antwort genügt.
 
 ## 3. WireGuard encryption
 
@@ -96,8 +96,8 @@ Drei Parameter über die minimalen aus der Aufgabe hinaus werden gerade in diese
   `spire-data-spire-server-0` für immer `Pending`, und `spire-server-0` ist `Pending`
   (für das Lab genügt ephemerer Speicher).
 - `install.server.securityContext.runAsUser=0` - das Image `spire-server` startet als uid 1000 und
-  kann `api.sock` im hostPath-Verzeichnis `root:755` nicht erstellen; der Server beendet die
-  endpoints stillschweigend und wird von der liveness-probe getötet (`Waiting for spire-server to start...` in `cilium-init`).
+  kann `api.sock` im hostPath-Verzeichnis `root:755` nicht erstellen; der Server startet seine
+  endpoints stillschweigend nicht und wird von der liveness-probe getötet (`Waiting for spire-server to start...` in `cilium-init`).
 
 ```bash
 cilium upgrade --version 1.20.1 \

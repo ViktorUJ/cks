@@ -53,7 +53,7 @@ exit   # 離開 root
 exit   # 離開 gVisor 節點
 ```
 
-不需要重新啟動 Kubelet:kubelet 會在每次建立 Pod 時，把 `RuntimeClass` 中的 handler 名稱傳給 containerd,
+不需要重新啟動 kubelet:kubelet 會在每次建立 Pod 時，把 `RuntimeClass` 中的 handler 名稱傳給 containerd,
 而不是在 kubelet 啟動時。
 
 ```yaml
@@ -289,8 +289,8 @@ ip route get $remote_ip
 # 10.110.2.172 dev ens5 src 10.110.1.x   <- 介面(ens5),不是 any / cilium_* / lxc* / veth*
 ```
 
-**Baseline:WireGuard 關閉**。暫時停用 WireGuard，並以「相同的」
-capture 範圍重複「同一個」請求。最後務必恢復 `enable-wireguard: "true"`。
+**Baseline:WireGuard 關閉**。暫時停用 WireGuard，並以 capture 範圍
+`host <remote-node-ip>` 執行請求。最後務必恢復 `enable-wireguard: "true"`。
 
 ```bash
 # 終端機 2
@@ -502,7 +502,7 @@ cat /var/work/tests/artifacts/6/market-outside.txt
 
 `PeerAuthentication` 控制 inbound server mode。內部的 client 會取得
 憑證並自動使用 mTLS;`default` 中的 Pod 沒有 sidecar，並傳送
-plaintext，因此在 `STRICT` 下 Envoy server 會重設連線。最後執行：
+plaintext，因此在 `STRICT` 下 Envoy server 會重設連線。最後執行檢查：
 
 ```bash
 check_result

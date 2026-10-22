@@ -358,9 +358,9 @@ ssh docker-host 'if sudo -u developer docker ps >/dev/null 2>&1; then echo "deve
 `install` override の両方で再ロードをブロックします。両方のディレクティブは
 `modprobe` のレベル (alias resolution と明示的な `modprobe sctp`) で作用し、通常のロード経路を排除します；
 カーネルレベルの enforcement の代わりにはなりません (`insmod` は syscall を通じて直接モジュールを挿入し、
-`modprobe.d` を読み取りませんし、`modprobe --ignore-install` は、同等の
+`modprobe.d` を読み取りませんし、`modprobe --ignore-install` は、ホスト上の
 root アクセスがあれば `install` を迂回できます) - この実習で重要なのは、想定される自動ロードの経路を排除することであり、
-すでにノード上で root を持っているユーザーからの防御をモデル化することではありません。
+すでにノード上で root を持っているユーザーからの防御を実現することではありません。
 
 **`modprobe -r sctp` は、すでに稼働中のクラスターでは失敗することがあります** - これは想定内であり、
 受講者の間違いではありません。プロトコルのカーネルモジュール (`sctp` を含む) は、モジュールのロード時に

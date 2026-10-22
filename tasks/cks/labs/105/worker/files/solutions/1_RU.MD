@@ -330,7 +330,7 @@ systemctl cat docker.socket                          # ... SocketGroup=root ... 
 `docker.socket` не должен содержать TCP `ListenStream`:
 
 ```bash
-ss -ltnp | grep dockerd                        # пустой вывод (TCP-сокет systemd от docker.socket ловит следующая строка)
+ss -ltnp | grep dockerd                        # пустой вывод (TCP-сокет systemd от docker.socket проверяется следующей строкой)
 systemctl cat docker.socket | grep ListenStream # только /run/docker.sock (и пустой сброс)
 stat -c '%U %G %a' /var/run/docker.sock         # root root 660
 sudo -u developer docker ps                     # permission denied
@@ -361,9 +361,9 @@ ssh docker-host 'if sudo -u developer docker ps >/dev/null 2>&1; then echo "deve
 через `blacklist`, и через `install` override. Обе директивы действуют на уровне
 `modprobe` (alias resolution и явный `modprobe sctp`) и устраняют обычный путь загрузки;
 они не заменяют kernel-level enforcement (`insmod` вставляет модуль напрямую через syscall
-и не читает `modprobe.d`, а `modprobe --ignore-install` может обойти `install` при равном
-root-доступе) - для этой лабы важно устранить именно ожидаемый путь автозагрузки, а не
-смоделировать защиту от пользователя, уже имеющего root на ноде.
+и не читает `modprobe.d`, а `modprobe --ignore-install` может обойти `install` при наличии
+root-доступа на хосте) - для этой лабы важно устранить именно ожидаемый путь автозагрузки, а не
+обеспечить защиту от пользователя, уже имеющего root на ноде.
 
 **`modprobe -r sctp` может не отработать на уже живом кластере** - это ожидаемо и не
 является ошибкой студента. Протокольные модули ядра (в т.ч. `sctp`) получают persistent

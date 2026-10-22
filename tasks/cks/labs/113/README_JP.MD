@@ -8,7 +8,7 @@
 まず control-plane、次に worker ノードを、正しい順序で、すでに動作している workload の
 計画外の downtime なしに行います。クラスターは Kubernetes `1.35.x` から始まります；あなたの課題は、両方のノードを
 `1.36.x` に移行することです。その際、公式の `kubeadm upgrade` の手順に従い、パッケージリポジトリ
-`pkgs.k8s.io` の新しい minor への切り替えを守ります。
+`pkgs.k8s.io` を新しい minor に切り替えます。
 
 ## 開始前のセルフチェック
 
@@ -19,7 +19,7 @@ control-plane での `kubeadm upgrade apply` は、API server とその他の co
 </details>
 
 <details>
-<summary>2. patch の更新はなくても動作するのに、新しい minor に移行するときは apt リポジトリ `pkgs.k8s.io` の切り替えが必須なのはなぜか？</summary>
+<summary>2. patch の更新は切り替えがなくても動作するのに、新しい minor に移行するときは apt リポジトリ `pkgs.k8s.io` の切り替えが必須なのはなぜか？</summary>
 
 `packages.cloud.google.com`/`apt.kubernetes.io` からの移行以降、`pkgs.k8s.io` は、すべてのバージョンを含む単一のリポジトリではなく、**minor バージョンごとに別のリポジトリ** (`core:/stable:/v1.35`、`core:/stable:/v1.36` など) として構成されています。すでに接続されている repo `v1.35` の中では、`1.35.x` の patch リリースしか利用できません。`apt install kubeadm=1.36.x-*` が `1.36` のバージョンを見つけられるようにするには、まず `sources.list.d/kubernetes.list` で repo `core:/stable:/v1.36` を接続する必要があります (変更するのは URL 内のバージョンだけです；署名鍵 `Release.key` を含む keyring は以前のままです)。
 </details>
@@ -27,7 +27,7 @@ control-plane での `kubeadm upgrade apply` は、API server とその他の co
 <details>
 <summary>3. クラスターの upgrade の前の `kubectl drain` が、単なる「良い習慣」ではなく、具体的に何に対する防御なのか？</summary>
 
-control-plane での `kubeadm upgrade` は、コンポーネント (kube-apiserver、controller-manager、scheduler) の static Pod の manifest を再作成し、どのノードでも kubelet の upgrade にはその restart が必要です - その時点で、ノードは一時的に Pod の status を正しく報告し、新しい Pod を受け付ける能力を失います。`drain` は、この一時的なノードの機能停止がアプリケーションの downtime にならないよう、通常の workload の Pod を事前に他のノードに移します (または evicted とします)。`drain` がないと、更新されるノード上の Pod は、他のノードへの補償的な移動なしに、restart の間利用できなくなる可能性があります。
+control-plane での `kubeadm upgrade` は、コンポーネント (kube-apiserver、controller-manager、scheduler) の static Pod の manifest を再作成し、どのノードでも kubelet の upgrade にはその restart が必要です - その時点で、ノードは一時的に Pod の status を正しく報告し、新しい Pod を受け付ける能力を失います。`drain` は、この一時的なノードの機能停止がアプリケーションの downtime にならないよう、通常の workload の Pod を事前に他のノードに移します (または evicted とします)。`drain` がないと、更新されるノード上の Pod は、それを補う他のノードへの移動なしに、restart の間利用できなくなる可能性があります。
 </details>
 
 ## コースとの関連
@@ -85,7 +85,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 | **1** | **control-plane を目的の minor に upgrade する** |
 | :---: | :--- |
 | やること | • `k8s113_controlPlane_1` に入ります (`ssh`、続いて `sudo -i`)。<br/>• apt リポジトリ `pkgs.k8s.io` を `core:/stable:/v1.35` から `core:/stable:/v1.36` に切り替えます：`/etc/apt/sources.list.d/kubernetes.list` で、URL 内のバージョンだけを変更します (Kubernetes のドキュメントに記載されているとおりで、keyring は以前のままです)。<br/>• パッケージ `kubeadm` を `1.36.x` に更新し、`kubeadm upgrade plan` を実行してから、`kubeadm upgrade apply v1.36.x` を実行します。<br/>• `apply` が成功した後にのみ、このノードの `kubectl drain` を実行します。<br/>• パッケージ `kubelet`/`kubectl` を `1.36.x` に更新し、`kubelet` を再起動してから、`kubectl uncordon` を実行します。 |
-| 受け入れ基準 | • control-plane で、`kubeadm version`、`kubelet --version`、ローカルの `kubectl version --client`、API server のバージョン (`kubectl version`) が `v1.36.x` と報告する。<br/>• control-plane ノード (`kubectl get no` の `<cp-name>`) が `Ready` ステータスである。<br/>• コマンド `kubeadm upgrade apply` の完全な出力 (`SUCCESS` の行と目的のバージョンを含む) が、作業マシンの `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt` に文字どおり保存されている (コマンドはノード上で実行され、出力はノード上のファイルに書き込まれ、その後 `scp` でコピーされます)。 |
+| 受け入れ基準 | • control-plane で、`kubeadm version`、`kubelet --version`、ローカルの `kubectl version --client`、API server のバージョン (`kubectl version`) が `v1.36.x` と報告する。<br/>• control-plane ノード (`kubectl get no` の `<cp-ノード名>`) が `Ready` ステータスである。<br/>• コマンド `kubeadm upgrade apply` の完全な出力 (`SUCCESS` の行と目的のバージョンを含む) が、作業マシンの `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt` に文字どおり保存されている (コマンドはノード上で実行され、出力はノード上のファイルに書き込まれ、その後 `scp` でコピーされる)。 |
 
 <details>
 <summary>💡 課題 1 のヒント</summary>
@@ -114,7 +114,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 <details>
 <summary>💡 課題 3 のヒント</summary>
 
-control-plane の前に worker ノードの upgrade をすでに始めている (あるいは終えている) 場合は、立ち止まってください。worker を `1.35.x` のパッケージに戻す (ダウングレードする) 簡単な方法はありませんが、正しい方法は、control-plane の upgrade を完了させてから、worker ノードの upgrade を続ける/やり直すことです。重要なのは、worker ノードの次の upgrade が (いつ始められても)、control-plane の upgrade が完全に完了した後に行われなければならないことです。`kubectl get node <cp-name>` が `v1.36.x` と `Ready` を示すまで、課題 2 を始めないでください。
+control-plane の前に worker ノードの upgrade をすでに始めている (あるいは終えている) 場合は、立ち止まってください。worker を `1.35.x` のパッケージに戻す (ダウングレードする) 簡単な方法はなく、正しい方法は、control-plane の upgrade を完了させてから、worker ノードの upgrade を続ける/やり直すことです。重要なのは、worker ノードの次の upgrade が (いつ始められても)、control-plane の upgrade が完全に完了した後に行われなければならないことです。`kubectl get node <cp-ノード名>` (`kubectl get no` に表示される control-plane の名前) が `v1.36.x` と `Ready` を示すまで、課題 2 を始めないでください。
 </details>
 
 ---
@@ -126,7 +126,7 @@ control-plane の前に worker ノードの upgrade をすでに始めている 
 <details>
 <summary>💡 課題 4 のヒント</summary>
 
-問い合わせのループの例です。課題 1-2 を実行している間ずっと、別のターミナル/`screen`/`tmux` で動かしたままにできます：`while true; do if available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`。Deployment が一時的にすべての replica を失った場合は、`kubectl get pods -n upgrade-113 -o wide` と、連続する drain が PDB と required の anti-affinity を守っているかを確認してください。
+問い合わせのループの例です。課題 1-2 を実行している間ずっと、別のターミナル/`screen`/`tmux` で動かしたままにできます：`while true; do if available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`。Deployment が一時的にすべての replica を失った場合は、`kubectl get pods -n upgrade-113 -o wide` と、連続する drain が PDB と required の anti-affinity を守っているかを確認してください。
 </details>
 
 ## 検証

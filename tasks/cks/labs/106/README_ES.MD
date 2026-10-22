@@ -140,7 +140,7 @@ este binario, a diferencia de `aa-enforce`, analiza solo el archivo que se le pa
 | **3** | **Localhost AppArmor Pod y bloqueo de escritura** |
 | :---: | :--- |
 | Qué hacemos | Crea el namespace `security-106` y el Pod `apparmor-writer`. El Pod debe elegir el label del nodo de la infraestructura, desactivar el automount del ServiceAccount token y, a nivel de Pod, establecer `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Usa `busybox:1.36`, el contenedor `app`, el comando de espera `sleep 3600` y un `emptyDir` montado en `/work`. Tras el arranque, confirma el profile efectivo con el comando `cat /proc/1/attr/current` (si la interfaz está disponible), ejecuta una operación de lectura permitida, por ejemplo `cat /etc/hostname >/dev/null`, y después intenta escribir un archivo en `/work`; la operación debe terminar con una denegación. En el nodo registra el AppArmor denial para el profile/process mediante `journalctl -k \| grep -i apparmor` o `dmesg \| grep -i apparmor`. |
-| Criterios de aceptación | El Pod está en ejecución, usa precisamente el profile Localhost y el nodeSelector correcto; el profile efectivo del proceso muestra `k8s-106-deny-write` en enforce mode (cuando `/proc/.../attr/current` está disponible); la operación de lectura permitida (por ejemplo, `cat /etc/hostname` o `ls /work`) pasa, y el checker independently escribe su propio archivo único (per-run) en `/work` y recibe una denegación de AppArmor. En el kernel journal/audit log hay un evento `apparmor="DENIED"` con este profile que se refiere precisamente a ESTE intento (por el nombre único del archivo): esto excluye un false pass por un evento denial obsoleto en el journal. |
+| Criterios de aceptación | El Pod está en ejecución, usa precisamente el profile Localhost y el nodeSelector correcto; el profile efectivo del proceso muestra `k8s-106-deny-write` en enforce mode (cuando `/proc/.../attr/current` está disponible); la operación de lectura permitida (por ejemplo, `cat /etc/hostname` o `ls /work`) pasa, y el checker escribe de forma independiente su propio archivo único (per-run) en `/work` y recibe una denegación de AppArmor. En el kernel journal/audit log hay un evento `apparmor="DENIED"` con este profile que se refiere precisamente a ESTE intento (por el nombre único del archivo): esto excluye un false pass por un evento denial obsoleto en el journal. |
 
 <details>
 <summary>💡 Pista para la tarea 3</summary>
@@ -157,7 +157,7 @@ este binario, a diferencia de `aa-enforce`, analiza solo el archivo que se le pa
 <details>
 <summary>💡 Pista para la tarea 4</summary>
 
-`Seccomp: 2` en `/proc/1/status` significa "filter mode activo" (SECCOMP_MODE_FILTER): es lo que debes ver. `Seccomp: 0` significaría la ausencia total de seccomp filter (`Unconfined`). Es la tarea más sencilla de las cinco de este grupo: si no pasa, lo más probable es que el problema esté en el nodeSelector, y no en el propio seccompProfile.
+`Seccomp: 2` en `/proc/1/status` significa "filter mode activo" (SECCOMP_MODE_FILTER): es lo que debes ver. `Seccomp: 0` significaría la ausencia total de seccomp filter (`Unconfined`). Es la más sencilla de las tres tareas de seccomp (4-6): si no pasa, lo más probable es que el problema esté en el nodeSelector, y no en el propio seccompProfile.
 </details>
 
 ---

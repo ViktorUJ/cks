@@ -208,7 +208,7 @@ GET HTTP:200
 POST HTTP:403
 ```
 
-`allowed.cks102.test` の HTTPS は `200` のままです；`allowed.cks102.test:80` と `blocked.cks102.test:443` はハングアップ/タイムアウトします (`000`)；backend の GET/POST は課題 2-3 と同じで、リグレッションはありません。
+`allowed.cks102.test` の HTTPS は `200` のままです。`allowed.cks102.test:80` と `blocked.cks102.test:443` はハングアップ/タイムアウトします (`000`)。backend の GET/POST は課題 2-3 と同じで、リグレッションはありません。
 
 ## 5. Hubble による観察
 

@@ -74,7 +74,7 @@ WireGuard encryption を有効にし、Cilium Mutual Authentication (SPIRE) を�
 | :-----: | :----- |
 |       やること       | • Cilium の helm chart 自体を通じて、組み込みの SPIRE のインストールを有効にします：`authentication.mutual.spire.enabled=true`、`authentication.mutual.spire.install.enabled=true` |
 | 受け入れ基準 | • `spire-server` の StatefulSet と `spire-agent` の DaemonSet が、namespace `cilium-spire` で要求されたすべての Ready な replicas を持つ |
-|        検証        | `kubectl get pods -A \| grep spire` - 両方の種類の Pod が `Running` かつ Ready の状態である。 |
+|        検証        | `kubectl get pods -A \| grep spire` - 両方の種類の Pod が `Running` かつ Ready の状態です。 |
 
 > **環境の特記事項。** クラスターには StorageClass がないため、SPIRE サーバーには一時的な
 > ストレージが必要です (`authentication.mutual.spire.install.server.dataStorage.enabled=false`)。イメージ

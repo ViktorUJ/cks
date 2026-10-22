@@ -195,7 +195,9 @@ registry)，而不只是逐字字串的 `docker.io` denylist -
 
 Positive controls 必須在 `containers`、`initContainers` 與 `ephemeralContainers` 中涵蓋兩個允許的 prefix(`registry.k8s.io/` 與
 `ghcr.io/cks-lab/`)；不要
-讓其中一個 registry 只限於一般的 container:
+讓其中一個 registry 只限於一般的 container。
+
+Negative controls(這些 manifest 中的每一個都必須被拒絕)：
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -591,7 +593,7 @@ kubectl get pod webhook-pinned-ok
 latest;`policy-108` 則完全由任務 2–4 的三個 Kyverno policy 控制。
 這是實驗用的機制隔離，而不是通用的 production pattern。
 使用者 annotation `alpha.image-policy.k8s.io/break-glass` 「不會」給予許可：
-ImageReview 轉發的 annotations 不是身分驗證。
+在 ImageReview 中傳遞 annotations 並不是身分驗證。
 
 `defaultAllow: false` 表示 fail-closed：如果 backend 無法連線，新的 Pod/image
 會被禁止，而不是被允許。請明確檢查這一點 - 但「不要」把

@@ -105,7 +105,7 @@ printf 'role=control-plane,workload\nworker_ip=%s\nnode_ip=%s\npod_cidr=%s\n' \
 
 Baseline ANTES de UFW: comprobamos que TCP/10250 (kubelet HTTPS) es realmente alcanzable ahora; sin
 esto, el "bloqueado" tras UFW no demuestra nada: el puerto podía no estar disponible por otra
-razón (security group, routing). El checker se contrasta aparte con su propio baseline, pero tu
+razón (security group, routing). El checker lo contrasta aparte con su propio baseline, pero tu
 registro también hace falta:
 
 ```bash
@@ -204,7 +204,7 @@ a partir de los metadatos `### tuple ###`, que el propio ufw escribe en `user.ru
 mediante la CLI. El estado real del kernel tras `ufw reload` es lo que muestra
 `ufw show user-rules`. Compara no solo la CANTIDAD de líneas, sino también su CONTENIDO
 (source/port/proto): `ufw-user-input` debe mostrar el loopback (all, lo) y cuatro reglas tcp
-dpt:22/6443 con las source-direcciones exactas, y `ufw6-user-input` - EXACTAMENTE una línea, el mismo
+dpt:22/6443 con las direcciones de origen (source) exactas, y `ufw6-user-input` - EXACTAMENTE una línea, el mismo
 loopback ACCEPT para v6 (`ufw allow in on lo` es una regla por interfaz sin una IP explícita,
 por eso ufw siempre crea tanto la versión v4 como la v6). Cualquier línea DISTINTA o adicional allí es
 un bypass ajeno:
@@ -330,7 +330,7 @@ El contrato de la tarea es más amplio que el puerto 2375: la Docker API no debe
 `docker.socket` no debe contener TCP `ListenStream`:
 
 ```bash
-ss -ltnp | grep dockerd                        # salida vacía (el socket TCP de systemd de docker.socket lo detecta la línea siguiente)
+ss -ltnp | grep dockerd                        # salida vacía (el socket TCP de systemd de docker.socket lo comprueba la línea siguiente)
 systemctl cat docker.socket | grep ListenStream # solo /run/docker.sock (y un reset vacío)
 stat -c '%U %G %a' /var/run/docker.sock         # root root 660
 sudo -u developer docker ps                     # permission denied
@@ -361,9 +361,9 @@ descargar el módulo ya cargado y, en cualquier caso, bloqueamos la recarga tant
 mediante `blacklist` como mediante un override de `install`. Ambas directivas actúan a nivel de
 `modprobe` (alias resolution y un `modprobe sctp` explícito) y eliminan el camino de carga habitual;
 no sustituyen un kernel-level enforcement (`insmod` inserta el módulo directamente mediante syscall
-y no lee `modprobe.d`, y `modprobe --ignore-install` puede eludir `install` con igual
-acceso root): para este laboratorio lo importante es eliminar precisamente el camino esperado de autocarga, y no
-modelar una protección frente a un usuario que ya tiene root en el nodo.
+y no lee `modprobe.d`, y `modprobe --ignore-install` puede eludir `install` si hay
+acceso root en el host): para este laboratorio lo importante es eliminar precisamente el camino esperado de autocarga, y no
+ofrecer protección frente a un usuario que ya tiene root en el nodo.
 
 **`modprobe -r sctp` puede no funcionar en un clúster ya activo**: es lo esperado y no
 es un error del estudiante. Los módulos de protocolo del kernel (incluido `sctp`) obtienen una referencia persistente
@@ -510,7 +510,7 @@ sysctl -n fs.suid_dumpable; cat /proc/sys/kernel/core_pattern   # 0 / |/bin/fals
 printf '* hard core 0\n* soft core 0\n' >> /etc/security/limits.conf
 ```
 
-`limits.conf` se aplica a las nuevas login-sesiones mediante PAM, y no a las shell ya abiertas:
+`limits.conf` se aplica a las nuevas sesiones de login mediante PAM, y no a las shells ya abiertas:
 comprobamos precisamente en una sesión nueva:
 
 ```bash

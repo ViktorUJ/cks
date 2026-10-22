@@ -13,7 +13,7 @@ contexts and has to figure out on their own which of them works.
 Separately, the same kubeconfig has a user `cluster9-admin` with a full-fledged, genuinely generated
 self-signed client certificate (`client-certificate-data`/`client-key-data`). This certificate gives
 no rights in the cluster (its CA is not trusted by the apiserver) - the task teaches how to read and parse a
-client certificate from a kubeconfig, rather than to authenticate with it.
+client certificate from a kubeconfig, rather than how to authenticate with it.
 
 The lab also covers the classic scenario of reducing the attack surface of a Service: first you deliberately
 create a `NodePort` Service (externally reachable on the IP of the control-plane node), then you reduce it to

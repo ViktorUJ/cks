@@ -60,7 +60,7 @@ Before the tasks start, the bootstrap creates the namespace `encryption-109` and
 `legacy-secret`. This Secret is created **before** the EncryptionConfiguration, so it serves as a
 controlled proof of the plaintext state.
 
-Operations on the node are performed on the control-plane itself, as on the exam: log in to it
+Operations on the node are performed on the control-plane itself, as in the exam: log in to it
 (`ssh control-plane`), work there, and exit (`exit`); `kubectl` - from the work machine. A raw etcd record
 is read with the standard `etcdctl` from the Kubernetes documentation using the kubeadm certificates from
 `/etc/kubernetes/pki/etcd/` (`ca.crt`, `server.crt`, `server.key`). Ready-made command examples are
@@ -84,7 +84,7 @@ check_result
 ---
 | **1** | **Prove that the Secret is initially stored in plaintext** |
 | :---: | :--- |
-| What to do | • Before enabling encryption, request the raw record `/registry/secrets/encryption-109/legacy-secret` with the standard `etcdctl get ... --print-value-only`<br/>• Log in to the control-plane (`ssh control-plane`) and work on it, as on the exam: pass the output through `strings` and save the result to a file on the control-plane (`/tmp/plaintext-proof.txt`), then copy it to the work machine with `scp` to `/var/work/109/plaintext-proof.txt` |
+| What to do | • Before enabling encryption, request the raw record `/registry/secrets/encryption-109/legacy-secret` with the standard `etcdctl get ... --print-value-only`<br/>• Log in to the control-plane (`ssh control-plane`) and work on it, as in the exam: pass the output through `strings` and save the result to a file on the control-plane (`/tmp/plaintext-proof.txt`), then copy it to the work machine with `scp` to `/var/work/109/plaintext-proof.txt` |
 | Acceptance criteria | • The file contains the full `strings` output of the original raw record (matches the bootstrap snapshot, including the marker `cks-109-legacy-plaintext`) and does not contain `k8s:enc:`<br/>• A string typed by hand is not accepted<br/>• This is a proof of the initial state: `Secret.data` is base64, not encryption at rest |
 
 <details>
@@ -120,7 +120,7 @@ Three separate changes are needed at the same time: the flag `--encryption-provi
 ---
 | **4** | **Re-encrypt and prove the ciphertext** |
 | :---: | :--- |
-| What to do | • After the API server is ready, create in `encryption-109` a Secret `encrypted-secret` with the literal `token=cks-109-fresh-ciphertext`<br/>• Rewrite all previously existing Secrets through the API (`kubectl get secrets --all-namespaces -o json \| kubectl replace -f -`)<br/>• Check both Secrets through the API and the raw etcd<br/>• Only after this check remove the temporary `identity` fallback, restart the static kube-apiserver, and check `/readyz` again and verify that both Secrets can be read |
+| What to do | • After the API server is ready, create in `encryption-109` a Secret `encrypted-secret` with the literal `token=cks-109-fresh-ciphertext`<br/>• Rewrite all previously existing Secrets through the API (`kubectl get secrets --all-namespaces -o json \| kubectl replace -f -`)<br/>• Check both Secrets through the API and the raw etcd<br/>• Only after this check remove the temporary `identity` fallback, restart the static kube-apiserver, check `/readyz` again, and verify that both Secrets can be read |
 | Acceptance criteria | • `legacy-secret` and `encrypted-secret` are read through the API with the original values<br/>• The raw value of each starts with `k8s:enc:aescbc:v1:`<br/>• The legacy marker is no longer visible in raw etcd data<br/>• The original payload/UID of the whole bootstrap Secret corpus is preserved, all records are encrypted with the first effective key<br/>• The key from the final file is able to decrypt the ciphertext of both canary Secrets<br/>• `identity` is absent from the final configuration, the API is healthy |
 
 <details>
@@ -184,7 +184,7 @@ resources:
 ```
 
 Add the provider first for new records, mount the socket into the static `kube-apiserver`,
-and wait for the plugin health before re-encryption. For a real configuration use a
+and wait until the plugin reports healthy before re-encryption. For a real configuration use a
 supported plugin and the current `kms` v2 format from the documentation of the version of
 Kubernetes in use; this lab does not bring up a KMS plugin and does not provide a working socket.
 

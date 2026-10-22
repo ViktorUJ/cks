@@ -314,7 +314,7 @@ grep -A1 '1.1.1' /var/work/tests/artifacts/7/before.txt
 # [FAIL] 1.1.1 Ensure that the API server pod specification file permissions ...
 ```
 
-ノード上の実際のアクセス権を確認し、`600` に修正します - これは file-only の
+ノード上の実際のパーミッションを確認し、`600` に修正します - これは file-only の
 変更であり、kubelet はパーミッションの変更では static Pod を再作成せず、
 manifest の内容が変わったときにだけ再作成します：
 
@@ -466,7 +466,7 @@ workdir=$(mktemp -d)
 asset="kube-bench_${KUBE_BENCH_VERSION}_linux_${arch}.tar.gz"
 base="https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}"
 curl -fsSL -o "$workdir/$asset" "$base/$asset"
-# 課題 6 と同じ手法: ファイル自体から計算したチェックサムではなく、独立に公開されているチェックサムと照合する。
+# 課題 6 と同じ手法: ファイル自体から計算したチェックサムではなく、独立に公開されているチェックサムと照合します。
 curl -fsSL -o "$workdir/checksums.txt" "$base/kube-bench_${KUBE_BENCH_VERSION}_checksums.txt"
 (cd "$workdir" && grep -E "[[:space:]]${asset}\$" checksums.txt | sha256sum --check --strict -)
 tar -xzf "$workdir/$asset" -C "$workdir"

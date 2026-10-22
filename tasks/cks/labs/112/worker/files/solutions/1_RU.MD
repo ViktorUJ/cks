@@ -286,7 +286,7 @@ jq '{level, verb, objectRef, hasRequestObject: has("requestObject"), hasResponse
 ## 5. Неизменяемый root filesystem
 
 `emptyDir` даёт приложению контролируемое место для runtime-файлов; root filesystem
-остается read-only. `hostPath` не нужен и не допускается.
+остаётся read-only. `hostPath` не нужен и не допускается.
 
 ```bash
 # терминал 2
@@ -937,8 +937,8 @@ scp control-plane:/tmp/art/10/falco-devmem.log /var/work/tests/artifacts/10/
 ```
 
 Убедившись, что обнаружение подтверждено самим Falco (а не Pod manifest), сохраните Pod,
-названный в alert, и убедитесь, что он действительно принадлежит ReplicaSet Deployment
-`mem-scanner` до масштабирования:
+названный в alert, до масштабирования (в сохранённом JSON в цепочке owner будет ReplicaSet,
+принадлежащий Deployment `mem-scanner`):
 
 ```bash
 # терминал 2

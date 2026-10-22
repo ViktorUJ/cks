@@ -12,7 +12,7 @@ production の namespace では、`restricted` を `enforce` モードで有効�
 `emptyDir` に許可します。
 
 課題にあるオブジェクトだけを扱ってください。クラスターには、空の namespace
-`psa-restricted-107`、`psa-observe-107`、`psa-controller-107` があらかじめ作成されています；PSA-labels と workload はそこにはありません。
+`psa-restricted-107`、`psa-observe-107`、`psa-controller-107` があらかじめ作成されています。PSA-labels と workload はそこにはありません。
 
 ## 開始前のセルフチェック
 
@@ -232,7 +232,7 @@ kubectl get namespace psa-restricted-107 psa-observe-107 --show-labels
 ---
 | **5** | **writable な emptyDir を持つ Read-only root filesystem** |
 | :---: | :--- |
-| やること | `restricted-app` を改良します：コンテナで `readOnlyRootFilesystem: true` を有効にします。タイプ `emptyDir` の volume `writable-tmp` を作成し (一時ファイルがノードのディスクに入らないよう `medium: Memory` を推奨)、`readOnly: true` なしで `/tmp` にマウントします。コンテナはこの一時的な volume にのみ書き込めます；`hostPath` は使用しないでください。Pod 内での実際の呼び出しで、両方の結果を実証します：コンテナのルートへの書き込みの試行 (たとえば `touch /root-write-test.txt`) は `Read-only file system` エラーで終了する必要があり、`/tmp/test.txt` への書き込みは成功する必要があります。Pod の変更不可のフィールドを変更するときは、`restricted-app` を削除して同じ名前で作り直してください。 |
+| やること | `restricted-app` を改良します：コンテナで `readOnlyRootFilesystem: true` を有効にします。タイプ `emptyDir` の volume `writable-tmp` を作成し (一時ファイルがノードのディスクに入らないよう `medium: Memory` を推奨)、`readOnly: true` なしで `/tmp` にマウントします。コンテナはこの一時的な volume にのみ書き込めます。`hostPath` は使用しないでください。Pod 内での実際の呼び出しで、両方の結果を実証します：コンテナのルートへの書き込みの試行 (たとえば `touch /root-write-test.txt`) は `Read-only file system` エラーで終了する必要があり、`/tmp/test.txt` への書き込みは成功する必要があります。Pod の変更不可のフィールドを変更するときは、`restricted-app` を削除して同じ名前で作り直してください。 |
 | 受け入れ基準 | コンテナの root filesystem が read-only である；名前 `writable-tmp` の `emptyDir` が `/tmp` に writable でマウントされている；regular containers にとって、これは唯一の writable な宣言的 `volumeMount` であり、追加の `volumeMounts` はすべて read-only である；課題 2 の hardened な設定が維持されている；コンテナのルートへの実際の書き込みの試行が `Read-only file system` を返し、`/tmp/test.txt` への書き込みが成功して、読み取り可能な内容になる。 |
 
 <details>
@@ -438,7 +438,7 @@ namespace への enforce=restricted の label (既存の Pod は影響を受け�
 delete pod -l app=controller-app` - ここで初めて ReplicaSet が admission の deny に遭遇します。
 Pod を手動で削除しないと、何らかの reschedule が自然に起こるまで、拒否はまったく見えません。
 修正すべきは、namespace の label ではなく、まさに Deployment の `spec.template` です (`kubectl
-edit deployment controller-app` または修正した manifest での `kubectl apply`)；enforce を元に戻すことは、この課題の解決ではありません。
+edit deployment controller-app` または修正した manifest での `kubectl apply`)。enforce を元に戻すことは、この課題の解決ではありません。
 </details>
 
 ---
@@ -470,7 +470,7 @@ TASK=107 make delete_cks_task
 ## PSA のバージョンと audit の可観測性についての注記
 
 この実習は、学習用クラスター自体が Kubernetes 1.36.0 で動作しているため、PSA の labels を `v1.36` に意図的に固定しています。2026-09-06 時点で、公式の CKS blueprint は Kubernetes
-`v1.35` を対象としています；そのため、これは **forward-looking** な学習用の構成であり、試験のバージョンについての主張ではありません。
+`v1.35` を対象としています。そのため、これは **forward-looking** な学習用の構成であり、試験のバージョンについての主張ではありません。
 現在の試験の準備には、`*-version` のサフィックスを `v1.35` に置き換え、
 そのバージョンのドキュメントと挙動を照合してください。
 
@@ -479,5 +479,5 @@ TASK=107 make delete_cks_task
 audit-log の sink を設定も提供もしないため、ここでは `kubectl` でこの annotation を
 読み取ることはできません。課題 4 で観察可能な証拠となるのは、server-side admission での PSA の警告
 (`Warning: ... would violate PodSecurity "baseline"`) と、`enforce` なしでの Pod の
-作成の成功です；audit mode は説明されていますが、その log annotation はこの実習では
+作成の成功です。audit mode は説明されていますが、その log annotation はこの実習では
 確認されません。

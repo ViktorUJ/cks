@@ -172,7 +172,7 @@ printf '%s\n' "$HARDENED_IMAGE"   # <IP>:5000/catalog@sha256:<manifest-digest>
 
 ## 4. Corregir el Deployment
 
-`readOnlyRootFilesystem` requiere writable runtime paths de nginx. `emptyDir` los proporciona de forma dirigida; el init container (también una hardened image con `USER 101`) copia la default config a un writable config volume aparte. `$HARDENED_IMAGE` es la referencia construida y fijada por digest de la tarea 3, y no la upstream image.
+`readOnlyRootFilesystem` requiere writable runtime paths de nginx. `emptyDir` los proporciona de forma puntual, solo donde hace falta; el init container (también una hardened image con `USER 101`) copia la default config a un writable config volume aparte. `$HARDENED_IMAGE` es la referencia construida y fijada por digest de la tarea 3, y no la upstream image.
 
 ```bash
 cat > "$ROOT/deployment.yaml" <<EOF
@@ -283,7 +283,7 @@ comm -12 /tmp/c1.pkgs /tmp/c3.pkgs | wc -l
 comm -12 /tmp/c2.pkgs /tmp/c3.pkgs | wc -l
 ```
 
-La pareja con paquetes comunes son los contenedores offending (digamos, `c1` y `c2`). Tienen
+Los contenedores de la pareja con paquetes comunes son los offending (digamos, `c1` y `c2`). Tienen
 muchos paquetes comunes: sirve **cualquier** `name=version` que no esté en la tercera imagen:
 
 ```bash
@@ -510,8 +510,8 @@ las instrucciones existentes); entonces la imagen construida difiere de `$HARDEN
 un `LABEL` inocuo, sin afectar a las propiedades de seguridad comprobadas en las tareas 3-4.
 
 Demostramos explícitamente que este digest existe y es pullable antes de comprobar la policy;
-de lo contrario el denial no demostrará nada. Es un self-check evidence para ti: el checker de la tarea 9c
-no se fía de los archivos de texto como única prueba: él mismo resuelve
+de lo contrario el denial no demostrará nada. Es una self-check evidence para ti: el checker de la tarea 9c
+no se fía de los archivos de texto como única prueba; él mismo resuelve
 `unsigned_image` de `digest-comparison.txt`, comprueba por sí mismo la ausencia de firma y
 crea por sí mismo un nuevo Pod con esta imagen, por lo que escribir estos archivos a mano sin un admission control
 real en funcionamiento no basta para PASS.

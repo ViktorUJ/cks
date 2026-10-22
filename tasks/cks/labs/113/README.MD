@@ -28,7 +28,7 @@ Since the migration from `packages.cloud.google.com`/`apt.kubernetes.io`, `pkgs.
 <details>
 <summary>3. Why is `kubectl drain` before a cluster upgrade not just "good practice" - what exactly does it protect against?</summary>
 
-`kubeadm upgrade` on the control-plane recreates the static Pod manifests of the components (kube-apiserver, controller-manager, scheduler), and on any node upgrading the kubelet requires restarting it - at this moment the node temporarily loses the ability to correctly report the status of Pods and to accept new ones. `drain` relocates the ordinary workload Pods to other nodes in advance (or marks them as evicted), so that this temporary outage of the node does not turn into application downtime. Without `drain`, the Pods on the node being upgraded may become unavailable for the duration of the restart without a compensating move to another node.
+`kubeadm upgrade` on the control-plane recreates the static Pod manifests of the components (kube-apiserver, controller-manager, scheduler), and on any node, upgrading the kubelet requires restarting it - at this moment the node temporarily loses the ability to correctly report the status of Pods and to accept new ones. `drain` relocates the ordinary workload Pods to other nodes in advance (or marks them as evicted), so that this temporary outage of the node does not turn into application downtime. Without `drain`, the Pods on the node being upgraded may become unavailable for the duration of the restart without a compensating move to another node.
 </details>
 
 ## Related Course Chapters
@@ -115,19 +115,19 @@ The order is essential: first `apt-mark unhold kubeadm` → upgrade the package 
 <details>
 <summary>💡 Hint for task 3</summary>
 
-If you have already started (let alone finished) the worker node upgrade before the control-plane - stop; rolling the worker back to the `1.35.x` packages is not possible in a simple way, but the right path is to complete the control-plane upgrade, then continue/repeat the worker node upgrade. The main point is that the next worker node upgrade (whenever it is started) must happen after the fully completed control-plane upgrade. Do not start task 2 until `kubectl get node <cp-name>` shows `v1.36.x` and `Ready`.
+If you have already started (let alone finished) the worker node upgrade before the control-plane - stop: rolling the worker back to the `1.35.x` packages is not possible in a simple way; the right path is to complete the control-plane upgrade, then continue/repeat the worker node upgrade. The main point is that the next worker node upgrade (whenever it is started) must happen after the fully completed control-plane upgrade. Do not start task 2 until `kubectl get node <cp-name>` (the control-plane name from `kubectl get no`) shows `v1.36.x` and `Ready`.
 </details>
 
 ---
 | **4** | **Prove the absence of downtime for the existing workload** |
 | :---: | :--- |
 | What to do | • While you are performing tasks 1-2, open a separate session on the work machine and start a loop that polls the availability of the Deployment `canary` in the namespace `upgrade-113` every few seconds.<br/>• Append each polling line to `/var/work/tests/artifacts/4/canary-availability.log` in a format containing `available=N` (for example `available=2`).<br/>• Keep polling throughout the upgrade of both nodes. |
-| Acceptance criteria | • The Deployment `canary` has `2/2` available replicas at the end, the original Deployment/PDB and the required Pod anti-affinity are preserved.<br/>• The absence of downtime is checked by the checker-owned monitor via Pod Ready and the CRI containers of exactly `upgrade-113`; API/SSH/CRI errors are counted as UNKNOWN, and not as zero.<br/>• The student file `/var/work/tests/artifacts/4/canary-availability.log` contains at least two lines of the format `<unix_timestamp> available=N` or `<unix_timestamp> available=api-unreachable`, with observations from before the control-plane upgrade and after the start of the worker upgrade. |
+| Acceptance criteria | • The Deployment `canary` has `2/2` available replicas at the end, the original Deployment/PDB and the required Pod anti-affinity are preserved.<br/>• The absence of downtime is checked by the checker-owned monitor via Pod Ready and the CRI containers specifically from `upgrade-113`; API/SSH/CRI errors are counted as UNKNOWN, and not as zero.<br/>• The student file `/var/work/tests/artifacts/4/canary-availability.log` contains at least two lines of the format `<unix_timestamp> available=N` or `<unix_timestamp> available=api-unreachable`, with observations from before the control-plane upgrade and after the start of the worker upgrade. |
 
 <details>
 <summary>💡 Hint for task 4</summary>
 
-An example of a polling loop that you can leave running in a separate terminal/`screen`/`tmux` for the whole time you do tasks 1-2: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. If the Deployment lost all replicas for a short time - check `kubectl get pods -n upgrade-113 -o wide` and that the successive drains respect the PDB and the required anti-affinity.
+An example of a polling loop that you can leave running in a separate terminal/`screen`/`tmux` for the whole time you do tasks 1-2: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. If the Deployment lost all replicas for a short time - check `kubectl get pods -n upgrade-113 -o wide` and that the successive drains respect the PDB and the required anti-affinity.
 </details>
 
 ## Verification

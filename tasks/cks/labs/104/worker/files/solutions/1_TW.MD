@@ -229,7 +229,7 @@ k get po -n kube-system -l component=kube-apiserver
 # STATUS 必須變成 Running - 如果還沒有,請等幾秒鐘再重試
 ```
 
-檢查這三種行為：`/version` 拒絕匿名請求，而 `/livez`/`/readyz` -
+檢查這三種行為：`/version` 拒絕匿名請求，而 `/livez`/`/readyz` 則
 接受：
 
 ```bash
@@ -273,7 +273,7 @@ k get clusterrolebinding -o json | jq -r \
 non-resource URL `/livez`、`/readyz`、`/healthz`、`/version`、`/version/` 的 read-only `GET`，而不是一般的
 Kubernetes 資源 - 這是 default Kubernetes RBAC，是 bootstrap 必要的一部分，不要動
 它。這與本任務中的 `anonymous.conditions` 不同：那個清單
-限制的是在哪些路徑上，請求在 authentication 階段才會取得 anonymous identity
+限制的是請求在哪些路徑上才會在 authentication 階段取得 anonymous identity
 (那裡只有 `/livez`/`/readyz`/`/healthz`)- `/version` 匿名存取會回傳
 `401`，正是因為那裡不會指派 anonymous identity，而不是因為
 `system:public-info-viewer` 在那裡權限不足。`lab104-unintended-anonymous-access` -
@@ -316,7 +316,7 @@ done
 未經驗證請求不屬於這個群組，加了之後檢查就不再反映
 真正的 anonymous identity。我們逐一檢查每個 namespace，因為
 RoleBinding 只在它自己的 namespace 中有效：沒有 cluster-wide 綁定，並不
-證明沒有本地綁定，而驗收標準禁止在任何 namespace 中存取。
+證明沒有本地綁定，而驗收標準要求在任何 namespace 中都不得有存取權。
 
 最後執行 `check_result`。
 
@@ -343,7 +343,7 @@ k exec -n security-104 app-vulnerable -- cat /proc/1/environ \
 可以讀取；應用程式行程本身仍然必須以這個 UID 執行，否則
 它無法讀取檔案。
 
-這個欄位是不可變的；必須刪除 Pod 並以相同的名稱重新建立。同樣地，用 `--dry-run` 產生骨架，再在 `vim` 中補上 volume,
+Pod 的大多數欄位(包括 `volumes`)是不可變的，所以必須刪除 Pod 並以相同的名稱重新建立。同樣地，用 `--dry-run` 產生骨架，再在 `vim` 中補上 volume，
 比寫完整的 YAML 更省事：
 
 ```bash
@@ -412,7 +412,7 @@ CSR-approval 是另一類危險的 verbs：它們不會擴大可見的
 資源清單，而是讓人能夠**以他人的名義行動**或**替自己授予
 額外的權限**。在這個版本的 fixture 中，ClusterRole 還包含針對 `clusterroles`/`clusterrolebindings` 的基本
 `create`/`update` - 沒有它們，`bind`/`escalate`
-就是不完整的 escalation primitives(RBAC 要求「要麼」已經擁有該角色中的權限，「要麼」
+就是不完整的 escalation primitives(RBAC 要求「要嘛」已經擁有該角色中的權限，「要嘛」
 在實際嘗試建立/更新 Role/Binding 的前提下，明確擁有 `escalate`/`bind`)。
 找出所有 ClusterRole 允許任何一個危險 verbs 的 ClusterRoleBinding。我們不從
 ClusterRole 出發(叢集中有幾十個，包括標準的 `system:*`)，而是從
@@ -538,7 +538,7 @@ SA 的值只有在 Pod 自己沒有覆寫它時才有效。如果同一個 names
 
 任務 1-8 收斂了 `build-agent` 自己可用的具體 privilege escalation 路徑
 (wildcard、impersonate/bind/escalate、automount)。這裡需要的是另一層防護 -
-偵測**由管理員授予的危險 RBAC grant**(錯誤、由於
+偵測**由管理員授予的危險 RBAC grant**(因操作失誤、因
 被入侵的自動化，或惡意造成)，而不只是 RBAC 目前的快照。
 連線到 control-plane，並準備最小的 audit backend:
 

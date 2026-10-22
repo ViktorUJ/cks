@@ -290,8 +290,8 @@ ip route get $remote_ip
 # 10.110.2.172 dev ens5 src 10.110.1.x   <- ინტერფეისი (ens5), და არა any / cilium_* / lxc* / veth*
 ```
 
-**Baseline: WireGuard გამორთულია.** დროებით ვთიშავთ WireGuard-ს და ვიმეორებთ იმავე მოთხოვნას იმავე
-capture scope-ით. ბოლოს აუცილებლად დავაბრუნებთ `enable-wireguard: "true"`-ს.
+**Baseline: WireGuard გამორთულია.** დროებით ვთიშავთ WireGuard-ს და ვასრულებთ მოთხოვნას capture scope-ით
+`host <remote-node-ip>`. ბოლოს აუცილებლად დავაბრუნებთ `enable-wireguard: "true"`-ს.
 
 ```bash
 # ტერმინალი 2
@@ -503,7 +503,7 @@ cat /var/work/tests/artifacts/6/market-outside.txt
 
 `PeerAuthentication` მართავს inbound server mode-ს. შიდა client იღებს
 სერტიფიკატს და mTLS-ს ავტომატურად იყენებს; Pod-ს `default`-ში sidecar არ აქვს და აგზავნის
-plaintext-ს, ამიტომ Envoy server `STRICT`-ის დროს კავშირს წყვეტს. დაასრულეთ:
+plaintext-ს, ამიტომ Envoy server `STRICT`-ის დროს კავშირს წყვეტს. ბოლოს შეასრულეთ შემოწმება:
 
 ```bash
 check_result

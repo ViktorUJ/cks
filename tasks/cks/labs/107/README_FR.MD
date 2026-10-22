@@ -221,7 +221,7 @@ la création de `baseline-audit-sample`, assurez-vous qu'il existe réellement e
 kubectl get pod baseline-audit-sample -n psa-observe-107 -o jsonpath='{.status.phase}{"\n"}{.spec.hostNetwork}'
 ```
 
-Comparez avec le namespace `psa-restricted-107` (tâche 1) : le même manifest nonsafe là-bas
+Comparez avec le namespace `psa-restricted-107` (tâche 1) : le même manifest non sûr là-bas
 DOIT être rejeté, et ici - accepté. La différence tient précisément au label `enforce`, qui est présent
 dans un namespace et absent dans l'autre :
 
@@ -454,7 +454,7 @@ check_result
 ```
 
 La vérification contient Init et sept tâches indépendantes. Elle exécute en plus un
-server-side dry-run d'un Pod non sûr, l'absence d'un « mauvais » Pod permanent dans le
+server-side dry-run d'un Pod non sûr ; l'absence d'un « mauvais » Pod permanent dans le
 namespace restricted est donc un résultat attendu et correct. Dans la tâche 7, le checker supprime lui-même le
 Pod actuel `controller-app` et vérifie que le ReplicaSet recrée réellement un Pod Ready -
 il n'accepte pas comme preuve le texte des events.
@@ -472,7 +472,7 @@ TASK=107 make delete_cks_task
 ## Note sur la version de PSA et l'observabilité du mode audit
 
 Le lab fige volontairement les PSA labels sur `v1.36`, car le cluster de lab lui-même fonctionne
-sur Kubernetes 1.36.0. Au 2026-09-06, le blueprint officiel de CKS est orienté sur Kubernetes
+sur Kubernetes 1.36.0. Au 2026-09-06, le blueprint officiel du CKS est orienté sur Kubernetes
 `v1.35` ; c'est donc une configuration pédagogique **forward-looking**, et non une affirmation sur la version de
 l'examen. Pour vous préparer à l'examen actuel, remplacez les suffixes `*-version` par `v1.35` et
 comparez le comportement avec la documentation de cette version.

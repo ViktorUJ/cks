@@ -6,7 +6,7 @@
 > Node (containerd, tcpdump) - auf dem Node selbst: Melde dich dort mit `ssh <Node>` an, werde root
 > (`sudo -i`), führe die Befehle aus und verlasse ihn wieder (`exit`, `exit`). Die Namen `gvisor-sandbox`,
 > `runc-baseline`, `gvisor-echo`, `market-api`, `market-client`, `mesh-outside` und die Pfade der
-> artifacts sind Teil des prüfbaren Vertrags der Lab.
+> artifacts sind Teil des prüfbaren Vertrags des Labs.
 
 ## Wo du Beispiele in der Dokumentation findest
 
@@ -53,7 +53,7 @@ exit   # aus root
 exit   # vom gVisor-Node
 ```
 
-Das Kubelet muss nicht neu gestartet werden: das kubelet übergibt den Namen des handlers aus der `RuntimeClass` beim
+Das kubelet muss nicht neu gestartet werden: Das kubelet übergibt den Namen des handlers aus der `RuntimeClass` beim
 Erstellen jedes Pods an containerd und nicht beim Start des kubelet.
 
 ```yaml
@@ -161,7 +161,7 @@ kubectl get pod -n sandbox-110 gvisor-sandbox -o wide
 
 Der gVisor Sentry zeigt dem workload einen synthetischen kernel view; `dmesg` gibt nicht das Kernel-Log
 des Nodes aus, sondern ein kurzes synthetisches Log, das mit der Zeile `Starting gVisor...` beginnt (genau diese erwartet
-der checker). Das ist erwartet und kein Grund, dem Container überflüssige privileges zu geben.
+der checker). Das ist zu erwarten und kein Grund, dem Container überflüssige privileges zu geben.
 
 ## 3. Gewöhnlicher runc Pod zum Vergleich
 
@@ -239,7 +239,7 @@ test "$(kubectl -n kube-system get cm cilium-config -o jsonpath='{.data.enable-w
 cilium status --wait
 ```
 
-Den Verschlüsselungsstatus lesen wir beim Agent über `cilium-dbg`: Das ist das in-pod debug CLI, das mit dem Cilium agent ausgeliefert wird. Das lokale `cilium` CLI bleibt ein install/cluster-level Werkzeug und ersetzt es innerhalb des Pods nicht. `cilium-dbg status` hat KEIN Flag `--all-encryption` (in 1.20.x gibt es nur `--all-addresses`, `--all-clusters`, `--all-controllers`, `--all-health`, `--all-nodes`, `--all-redirects`, `--verbose`) - detaillierte peer/allowed-IP/remote-node evidence erhalten wir über `cilium-dbg debuginfo --output json` und nicht über ein nicht existierendes Flag.
+Den Verschlüsselungsstatus lesen wir vom Agent über `cilium-dbg`: Das ist das in-pod debug CLI, das mit dem Cilium agent ausgeliefert wird. Das lokale `cilium` CLI bleibt ein install/cluster-level Werkzeug und ersetzt es innerhalb des Pods nicht. `cilium-dbg status` hat KEIN Flag `--all-encryption` (in 1.20.x gibt es nur `--all-addresses`, `--all-clusters`, `--all-controllers`, `--all-health`, `--all-nodes`, `--all-redirects`, `--verbose`) - detaillierte peer/allowed-IP/remote-node evidence erhalten wir über `cilium-dbg debuginfo --output json` und nicht über ein nicht existierendes Flag.
 
 ```bash
 agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0].metadata.name}')
@@ -271,7 +271,7 @@ Du brauchst zwei Terminals: **Terminal 1** - control-plane (dort `tcpdump`), **T
 Arbeitsmaschine (Anfragen und `kubectl`).
 
 ```bash
-# Terminal 2 (Arbeitsmaschine): IP des Nodes mit dem gVisor-Pod - das ist der "entfernte" Node für die control-plane
+# Terminal 2 (Arbeitsmaschine): IP des Nodes mit dem gVisor-Pod - das ist der „entfernte“ Node für die control-plane
 gvisor_node=$(kubectl get pod gvisor-sandbox -n sandbox-110 -o jsonpath='{.spec.nodeName}')
 remote_ip=$(kubectl get node "$gvisor_node" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
 echo "remote_ip=$remote_ip"
@@ -290,8 +290,8 @@ ip route get $remote_ip
 # 10.110.2.172 dev ens5 src 10.110.1.x   <- das Interface (ens5), nicht any / cilium_* / lxc* / veth*
 ```
 
-**Baseline: WireGuard aus.** Wir deaktivieren WireGuard vorübergehend und wiederholen DIESELBE Anfrage mit DEMSELBEN
-Capture-Scope. Am Ende stellen wir unbedingt `enable-wireguard: "true"` wieder her.
+**Baseline: WireGuard aus.** Wir deaktivieren WireGuard vorübergehend und führen die Anfrage mit dem Capture-Scope
+`host <remote-node-ip>` aus. Am Ende stellen wir unbedingt `enable-wireguard: "true"` wieder her.
 
 ```bash
 # Terminal 2
@@ -503,7 +503,7 @@ cat /var/work/tests/artifacts/6/market-outside.txt
 
 `PeerAuthentication` steuert den inbound server mode. Der interne client erhält ein
 Zertifikat und verwendet mTLS automatisch; der Pod in `default` hat keinen sidecar und sendet
-plaintext, daher setzt der Envoy server bei `STRICT` die Verbindung zurück. Schließe ab mit:
+plaintext, daher setzt der Envoy server bei `STRICT` die Verbindung zurück. Führe zum Schluss die Prüfung aus:
 
 ```bash
 check_result

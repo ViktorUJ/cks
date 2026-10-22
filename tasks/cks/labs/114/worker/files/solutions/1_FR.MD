@@ -18,7 +18,7 @@ CURRENT   NAME                        CLUSTER     AUTHINFO         NAMESPACE
 staging-admin@staging
 ```
 
-`staging`/`legacy` sont des decoys, le serveur ne se résout pas/ne répond pas. Nous basculons sur le vrai :
+`staging`/`legacy` sont des decoys, le serveur ne se résout pas/ne répond pas. Nous basculons sur le context réellement fonctionnel :
 
 ```bash
 kubectl config use-context cluster1-admin@cluster1
@@ -113,7 +113,7 @@ in-cluster HTTP:200
 ## 4. Reduce exposure: NodePort -> ClusterIP
 
 Nous retirons explicitement `nodePort` : un seul JSON patch change le type et supprime `/spec/ports/0/nodePort`
-(ou `kubectl edit` à la main et retirer la ligne) :
+(ou `kubectl edit` à la main, en retirant la ligne) :
 
 ```bash
 kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
@@ -122,7 +122,7 @@ kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
 ]'
 ```
 
-Nous vérifions la même paire de contrôles (kube-proxy ne retire pas non plus instantanément les règles NodePort, donc d'abord
+Nous répétons les deux mêmes contrôles (kube-proxy ne retire pas non plus instantanément les règles NodePort, donc d'abord
 on attend que le port cesse de répondre) :
 
 ```bash
@@ -137,7 +137,7 @@ external HTTP:000
 in-cluster HTTP:200
 ```
 
-`kubernetes-public:30114` n'est plus écouté par kube-proxy sur le nœud (transport deny) ; le chemin intra-cluster
+kube-proxy sur le nœud ne sert plus `kubernetes-public:30114` (transport deny) ; le chemin intra-cluster
 via le nom DNS du Service n'a pas régressé.
 
 ```bash

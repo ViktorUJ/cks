@@ -17,7 +17,7 @@
 > ```
 >
 > Die Prüfung liest die artifacts von der **Arbeitsmaschine** (`/var/work/tests/artifacts/<Nummer>/`), sie
-> werden nur für die Lab gebraucht - in der CKS-Prüfung gibt es sie nicht. Wir speichern sie mit einem kurzen Befehl vom `worker`
+> werden nur für das Lab gebraucht - in der CKS-Prüfung gibt es sie nicht. Wir speichern sie mit einem kurzen Befehl vom `worker`
 > (`> Datei`), den Inhalt sehen wir separat über `cat <Datei>`.
 
 ## 1. Übertragung und Laden des AppArmor profile
@@ -134,7 +134,7 @@ kubectl exec -n security-106 apparmor-writer -- \
 # erwartet wird ein Code ungleich null: Permission denied / Operation not permitted
 ```
 
-Ein Exit-Code ungleich null und der Text 'permission denied' beweisen für sich genommen NICHT, dass gerade
+Ein Exit-Code ungleich null und der Text ‚permission denied‘ beweisen für sich genommen NICHT, dass gerade
 diese AppArmor-Regel gegriffen hat - ein gewöhnlicher DAC/Dateisystem-Fehler sähe aus Sicht der shell
 identisch aus. Verknüpfe die Ablehnung gerade mit diesem profile über das kernel audit log; wir sehen es
 auf dem Node unmittelbar nach dem obigen Versuch an:
@@ -208,7 +208,7 @@ exit
 
 In der API geben wir den Pfad relativ zum seccomp root an: `profiles/cks-106-deny-unshare.json`.
 
-`SYS_ADMIN` ist hier eine absichtliche gefährliche Ausnahme nur für die Lab (die Prüfung des control ohne seccomp übernimmt der Checker). Ohne den custom
+`SYS_ADMIN` ist hier eine absichtliche, gefährliche Ausnahme nur für das Lab (die Prüfung des control ohne seccomp übernimmt der Checker). Ohne den custom
 filter kann `unshare -n` mit dieser capability funktionieren; seccomp muss `EPERM` zurückgeben.
 Das ist keine hardened Kombination. `allowPrivilegeEscalation: false` aktiviert `no_new_privs`, nimmt aber
 die dem Prozess bereits vergebenen capabilities nicht weg, daher verwenden wir dieses Feld nicht als
@@ -218,7 +218,7 @@ Notwendigkeit gibt. In Kubernetes wird die capability als `SYS_ADMIN` geschriebe
 Wir verwenden `unshare -n` (network namespace, `CLONE_NEWNET`) und NICHT `unshare -m` (mount
 namespace). Beide Operationen erfordern dieselbe `CAP_SYS_ADMIN`, aber BusyBox `unshare -m`
 führt nach erfolgreichem `unshare(2)` zusätzlich einen eigenständigen `mount(2)` syscall
-für forced private propagation aus - und das default AppArmor-Profil von containerd (`RuntimeDefault`,
+für forced private propagation aus - und das Standard-AppArmor-Profil von containerd (`RuntimeDefault`,
 das dieser Pod erhält, da hier kein explizites `appArmorProfile` gesetzt ist) enthält
 `deny mount,` ohne irgendwelche Bedingungen an Flags, unabhängig von capabilities/seccomp. Daher kann
 `unshare -m true` wegen AppArmor mit `EPERM` scheitern, selbst wenn seccomp `unshare` überhaupt nicht
@@ -338,7 +338,7 @@ exit
 exit
 ```
 
-Wir speichern die Zeile `uid_map` im artifact (auf `worker`):
+Wir speichern die Zeile `uid_map` im artifact (auf dem `worker`):
 
 ```bash
 ssh control-plane "sudo cat /proc/<host PID>/uid_map" >> /var/work/tests/artifacts/6/userns.txt
@@ -355,7 +355,7 @@ Gegenteil: `0 <von-null-verschiedene-host-uid> <per-pod-bereich>`.
 
 ## 8. `seccompDefault: true` am kubelet
 
-Alle vorherigen Pods haben `seccompProfile` explizit gesetzt. Hier prüfen wir die node-level Baseline:
+Die vorherigen Pods mit einem seccomp-Profil (Aufgaben 4–6) haben `seccompProfile` explizit gesetzt. Hier prüfen wir die node-level Baseline:
 Wenn der Entwickler dieses Feld vergisst, muss das kubelet selbst `RuntimeDefault` anwenden und nicht
 den Prozess `Unconfined` lassen. Wir korrigieren die Konfiguration des kubelet auf dem Node:
 
@@ -377,7 +377,7 @@ exit
 kubectl get nodes     # Ready
 ```
 
-Wir erstellen einen Pod ohne jede Erwähnung von `seccompProfile` - weder auf Pod- noch auf container level:
+Wir erstellen einen Pod ohne jede Erwähnung von `seccompProfile` - weder auf Pod- noch auf Container-Ebene:
 
 ```yaml
 # no-seccomp-field.yaml
@@ -435,12 +435,12 @@ cat /var/work/tests/artifacts/8/apparmor-debug.txt
 
 Wir verwenden `sudo` auch für die compile-only Prüfung `-Q`: Auf dem Lab-Node (apparmor 3.0.4, Ubuntu)
 versucht der Parser ohne Privilegien bei jedem Start, den policy cache in
-`/var/cache/apparmor` einzurichten, und scheitert mit "Failed setting up policy cache (/var/cache/apparmor):
-Permission denied" VOR der Syntaxprüfung - du erhältst eine irreführende Berechtigungsfehlermeldung statt des
+`/var/cache/apparmor` einzurichten, und scheitert mit „Failed setting up policy cache (/var/cache/apparmor):
+Permission denied“ VOR der Syntaxprüfung - du erhältst eine irreführende Berechtigungsfehlermeldung statt des
 echten Syntaxfehlers, und `apparmor-debug.txt` enthält nicht den benötigten Text
-"syntax error". Auf dem Node selbst verifiziert, auch an einem nachweislich defekten Profil.
+„syntax error“. Auf dem Node selbst verifiziert, auch an einem nachweislich defekten Profil.
 Die Alternative ohne `sudo` ist, `-K`/`--skip-cache` hinzuzufügen (`apparmor_parser -Q -K ...`): Ohne
-Caching gelangt der Parser bis zum Parsen des Profils. `sudo` ist in dieser Lab für einen einheitlichen
+Caching gelangt der Parser bis zum Parsen des Profils. `sudo` ist in diesem Lab für einen einheitlichen
 Workflow mit dem späteren `-r` gewählt, das in jedem Fall Privilegien erfordert.
 
 Wir korrigieren auf dem Node: Eine AppArmor-Regel muss mit einem Komma enden. Dann laden wir das
@@ -475,7 +475,7 @@ ssh control-plane 'sudo aa-status --pretty-json' | grep k8s-106-broken-profile >
 cat /var/work/tests/artifacts/8/apparmor-debug.txt
 ```
 
-Starte zum Schluss (auf `worker`):
+Starte zum Schluss (auf dem `worker`):
 
 ```bash
 check_result

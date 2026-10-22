@@ -17,7 +17,7 @@
 > ```
 >
 > Artifact-ებს შემოწმება კითხულობს **სამუშაო მანქანიდან** (`/var/work/tests/artifacts/<ნომერი>/`), ისინი
-> მხოლოდ ლაბისთვის არის საჭირო - გამოცდაზე მათ არ აქვთ ადგილი. ვინახავთ მათ მოკლე ბრძანებით `worker`-დან
+> მხოლოდ ლაბისთვის არის საჭირო - გამოცდაზე ისინი არ არსებობს. ვინახავთ მათ მოკლე ბრძანებით `worker`-დან
 > (`> ფაილი`), შიგთავსს ცალკე ვუყურებთ `cat <ფაილი>`-ით.
 
 ## 1. AppArmor profile-ის გადატანა და ჩატვირთვა
@@ -219,7 +219,7 @@ filter-ის გარეშე `unshare -n` ამ capability-ით შეი
 ვიყენებთ `unshare -n` (network namespace, `CLONE_NEWNET`), და არა `unshare -m` (mount
 namespace). ორივე ოპერაცია ერთსა და იმავე `CAP_SYS_ADMIN`-ს მოითხოვს, მაგრამ BusyBox `unshare -m`
 წარმატებული `unshare(2)`-ის შემდეგ დამატებით ასრულებს დამოუკიდებელ `mount(2)` syscall-ს
-forced private propagation-ისთვის - ხოლო containerd default AppArmor-პროფილი (`RuntimeDefault`,
+forced private propagation-ისთვის - ხოლო containerd-ის სტანდარტული AppArmor-პროფილი (`RuntimeDefault`,
 რომელსაც ეს Pod იღებს, რადგან აშკარა `appArmorProfile` აქ მითითებული არ არის) შეიცავს
 `deny mount,`-ს ფლაგებზე რაიმე პირობის გარეშე, capabilities/seccomp-ისგან დამოუკიდებლად. ამიტომ
 `unshare -m true` შეიძლება `EPERM`-ით ჩავარდეს AppArmor-ის გამო, თუნდაც seccomp საერთოდ არ
@@ -356,7 +356,7 @@ host (initial) user namespace-ში. ამიტომ mapping იწყებ
 
 ## 8. `seccompDefault: true` kubelet-ზე
 
-ყველა წინა Pod აშკარად ადგენდა `seccompProfile`-ს. აქ ვამოწმებთ node-level baseline-ს:
+seccomp პროფილის მქონე წინა Pod-ები (დავალებები 4–6) აშკარად ადგენდნენ `seccompProfile`-ს. აქ ვამოწმებთ node-level baseline-ს:
 თუ დეველოპერი ამ ველს დაივიწყებს, kubelet-მა თავად უნდა გამოიყენოს `RuntimeDefault`, და არა
 პროცესი `Unconfined` დატოვოს. ვასწორებთ kubelet-ის კონფიგურაციას node-ზე:
 

@@ -212,7 +212,7 @@ etcd のフラグは `--cipher-suites` という名前です (先頭に `tls-` �
 
 | **7** | **Remediation cycle: 具体的な kube-bench の FAIL から PASS へ** |
 | :---: | :--- |
-| やること | 課題 1 のレポートは現在の状態のスナップショットです；ここでは、失敗した 1 つの具体的なテストと、その修正を結びつける必要があります。control-plane で `kube-bench` をまさに `--check 1.1.1` (static Pod manifest kube-apiserver のパーミッション；ラボのインフラは意図的に mode `0644` を設定しており、`cis-1.12` は `600` かそれより厳しい設定を要求します) で実行し、修正**前**の出力を `/var/work/tests/artifacts/7/before.txt` に保存します - このテストに対する `[FAIL]` が含まれている必要があります。ファイル `/etc/kubernetes/manifests/kube-apiserver.yaml` のアクセス権を修正し (`chmod 600`)、同じ `--check 1.1.1` を再度実行して、出力を `/var/work/tests/artifacts/7/after.txt` に保存します - この check に対する `[FAIL]` が 1 つもなく、`[PASS]` が含まれている必要があります。 |
+| やること | 課題 1 のレポートは現在の状態のスナップショットです；ここでは、失敗した 1 つの具体的なテストと、その修正を結びつける必要があります。control-plane で `kube-bench` をまさに `--check 1.1.1` (static Pod manifest kube-apiserver のパーミッション；実習のインフラは意図的に mode `0644` を設定しており、`cis-1.12` は `600` かそれより厳しい設定を要求します) で実行し、修正**前**の出力を `/var/work/tests/artifacts/7/before.txt` に保存します - このテストに対する `[FAIL]` が含まれている必要があります。ファイル `/etc/kubernetes/manifests/kube-apiserver.yaml` のパーミッションを修正し (`chmod 600`)、同じ `--check 1.1.1` を再度実行して、出力を `/var/work/tests/artifacts/7/after.txt` に保存します - この check に対する `[FAIL]` が 1 つもなく、`[PASS]` が含まれている必要があります。 |
 | 受け入れ基準 | `before.txt` に check `1.1.1` の `[FAIL]` 行が含まれている；修正後のノード上のファイルの実際のパーミッションがちょうど `600` である；`after.txt` に check `1.1.1` の `[PASS]` が含まれ、それに対する `[FAIL]` が含まれていない；変更後も kube-apiserver が正常なままである (fs-only の修正で、コンポーネントは再作成されない)。 |
 
 <details>
@@ -225,7 +225,7 @@ etcd のフラグは `--cipher-suites` という名前です (先頭に `tls-` �
 
 | **8** | **Remediation cycle: kube-controller-manager、別のコンポーネントでの同じ手法** |
 | :---: | :--- |
-| やること | 課題 7 と同じことを、`kube-controller-manager` と別の check ID で行います：`--check 1.1.3` (static Pod manifest kube-controller-manager のパーミッション；ラボのインフラは意図的に mode `0644` を設定しています)。修正**前**の出力を `/var/work/tests/artifacts/8/before.txt` に保存し (`1.1.3` に対する `[FAIL]` が含まれている必要があります)、`chmod 600 /etc/kubernetes/manifests/kube-controller-manager.yaml` で修正し、その後、再実行の結果を `/var/work/tests/artifacts/8/after.txt` に保存します (`1.1.3` に対する `[FAIL]` がなく `[PASS]` が含まれている必要があります)。 |
+| やること | 課題 7 と同じことを、`kube-controller-manager` と別の check ID で行います：`--check 1.1.3` (static Pod manifest kube-controller-manager のパーミッション；実習のインフラは意図的に mode `0644` を設定しています)。修正**前**の出力を `/var/work/tests/artifacts/8/before.txt` に保存し (`1.1.3` に対する `[FAIL]` が含まれている必要があります)、`chmod 600 /etc/kubernetes/manifests/kube-controller-manager.yaml` で修正し、その後、再実行の結果を `/var/work/tests/artifacts/8/after.txt` に保存します (`1.1.3` に対する `[FAIL]` がなく `[PASS]` が含まれている必要があります)。 |
 | 受け入れ基準 | `before.txt` に check `1.1.3` の `[FAIL]` 行が含まれている；修正後のファイルのパーミッションがちょうど `600` である；`after.txt` に `1.1.3` の `[PASS]` が含まれ、それに対する `[FAIL]` が含まれていない；`kube-controller-manager` が `Running` のままである (fs-only の修正で、コンポーネントは再作成されない)。 |
 
 <details>

@@ -46,7 +46,7 @@ Terragrunt crea Kubernetes `1.36.0` en `eu-central-1`:
 | CNI | **Cilium** (instalado mediante Cilium CLI con el Helm release `cilium`); WireGuard está deliberadamente desactivado hasta la tarea 4 |
 | `worker` | máquina de trabajo con `kubectl`, `cilium`, `istioctl`, `check_result` y SSH aliases a los nodos |
 
-Matriz comprobada el 2026-08-31 (contrástala antes de cada build): Kubernetes del curso
+Matriz comprobada el 2026-08-31 (contrástala antes de cada build): Kubernetes en el laboratorio:
 `1.36.0`; Cilium data plane: una lab-build soportada, cuya compatibilidad con
 Kubernetes `1.36` hay que confirmar según la requirements matrix vigente; Cilium CLI `0.19.7`
 (compatible con Cilium `1.17+`); Istio `1.30.4` (la rama `1.30` soporta oficialmente Kubernetes
@@ -161,7 +161,7 @@ Captura el tráfico en la interfaz de red física REAL del nodo (por ejemplo `et
 <details>
 <summary>💡 Pista para la tarea 6</summary>
 
-El Service port DEBE llamarse precisamente `http` (no `market-api` ni otra cosa): Istio usa la named port convention para determinar el protocolo y tratar correctamente el tráfico a través del sidecar. `market-client` se crea DESPUÉS de que el namespace recibiera `istio-injection=enabled`: si el Deployment se creó ANTES de esa etiqueta, el sidecar no se añadirá automáticamente y habrá que recrear el Pod (no el Deployment) para la inyección.
+El Service port DEBE llamarse precisamente `http` (no `market-api` ni otra cosa): Istio usa la named port convention para determinar el protocolo y tratar correctamente el tráfico a través del sidecar. `market-client` se crea DESPUÉS de que el namespace reciba `istio-injection=enabled`: si el Deployment se creó ANTES de esa etiqueta, el sidecar no se añadirá automáticamente y habrá que recrear el Pod (no el Deployment) para la inyección.
 </details>
 
 ## Comprobación

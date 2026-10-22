@@ -100,7 +100,7 @@ cilium status --wait
 |           **1**           | **学習用の namespace と endpoints** |
 | :-----: | :----- |
 |       やること       | namespace `cks-102` を作成します。その中に次を作成します：label `app=backend` とイメージ `nginx:1.27-alpine` を持つ Pod `backend`；この Pod をポート `80` で選択する Service `backend`；label `role=frontend` とイメージ `curlimages/curl:8.10.1` を持つ Pod `frontend`；label `role=untrusted` と同じイメージを持つ Pod `client`。client 系の Pod は、コンテナを起動したままにするコマンド (たとえば `sleep 3600`) を持つ必要があります。Ready になるまで待ちます。 |
-| 受け入れ基準 | - namespace `cks-102` が存在する；- 指定した labels を持つ Pods `backend`、`frontend`、`client` が存在する；- Service `backend` のポートが `80` である。 |
+| 受け入れ基準 | - namespace `cks-102` が存在する；<br/>- 指定した labels を持つ Pods `backend`、`frontend`、`client` が存在する；<br/>- Service `backend` のポートが `80` である。 |
 
 <details>
 <summary>💡 課題 1 のヒント</summary>
@@ -113,8 +113,8 @@ labels のスタイルが異なることに注意してください：`backend` 
 
 |           **2**           | **Cilium L3/L4: frontend から backend:80 のみ** |
 | :-----: | :----- |
-|       やること       | `cks-102` に、名前が `backend-policy` の `CiliumNetworkPolicy` を作成します。これは `app=backend` を選択し、`role=frontend` を持つ endpoint からの TCP ポート `80` への ingress のみを許可する必要があります。すべての endpoint に対する広い許可を追加しないでください。policy を適用する前に、`frontend` と `client` の両方が実際に `http://backend/` に到達できることを自分で `curl` で確認してください - そうしないと、policy 適用後の deny は何も実証しません。`backend-policy` を適用した後、両方の Pod を再度確認します。 |
-| 受け入れ基準 | - `backend-policy` が `app=backend` を選択し、source が `role=frontend`、TCP `80` である；- policy 適用後：`frontend` が `200` を受け取る；- policy 適用後：`client` が、単なる「200 ではない」ではなく、transport-level の deny - `HTTPCODE:000` と curl の network/timeout exit code (`7`/`28`) を正確に受け取る。 |
+|       やること       | `cks-102` に、名前が `backend-policy` の `CiliumNetworkPolicy` を作成します。これは `app=backend` を選択し、`role=frontend` を持つ endpoint からの TCP ポート `80` への ingress のみを許可する必要があります。すべての endpoint に対する広い許可を追加しないでください。<br/><br/>policy を適用する前に、`frontend` と `client` の両方が実際に `http://backend/` に到達できることを自分で `curl` で確認してください - そうしないと、policy 適用後の deny は何も実証しません。`backend-policy` を適用した後、両方の Pod を再度確認します。 |
+| 受け入れ基準 | - `backend-policy` が `app=backend` を選択し、source が `role=frontend`、TCP `80` である；<br/>- policy 適用後：`frontend` が `200` を受け取る；<br/>- policy 適用後：`client` が、単なる「200 ではない」ではなく、transport-level の deny - `HTTPCODE:000` と curl の network/timeout exit code (`7`/`28`) を正確に受け取る。 |
 
 <details>
 <summary>💡 課題 2 のヒント</summary>
@@ -127,8 +127,8 @@ policy 自体の `endpointSelector.matchLabels` は `backend` (`app: backend`) �
 
 |           **3**           | **Cilium L7 HTTP: GET / のみ** |
 | :-----: | :----- |
-|       やること       | **同じ** `backend-policy` を変更します：TCP/80 では、`frontend` から path `/` への HTTP `GET` のみを許可します。別の広い L4 allow ルールを残さないでください。そうしないと L7 フィルターは POST を制限しません。変更する前に、(課題 2 の L3/L4-only policy がまだ有効な状態で) `frontend` からの `GET /` と `POST /` の両方が実際に backend に届くことを `curl` で確認してください - L4-only policy は HTTP の中身を見ません。ルールを L7 に置き換えた後、両方のリクエストを再度確認します。 |
-| 受け入れ基準 | - TCP/80 のルールに `method: GET` と `path: /` を持つ `rules.http` がある；- L7 適用後：`frontend` からの `GET http://backend/` が `200` を返す；- L7 適用後：`frontend` からの `POST http://backend/` が `403` を返す。 |
+|       やること       | **同じ** `backend-policy` を変更します：TCP/80 では、`frontend` から path `/` への HTTP `GET` のみを許可します。別の広い L4 allow ルールを残さないでください。そうしないと L7 フィルターは POST を制限しません。<br/><br/>変更する前に、(課題 2 の L3/L4-only policy がまだ有効な状態で) `frontend` からの `GET /` と `POST /` の両方が実際に backend に届くことを `curl` で確認してください - L4-only policy は HTTP の中身を見ません。ルールを L7 に置き換えた後、両方のリクエストを再度確認します。 |
+| 受け入れ基準 | - TCP/80 のルールに `method: GET` と `path: /` を持つ `rules.http` がある；<br/>- L7 適用後：`frontend` からの `GET http://backend/` が `200` を返す；<br/>- L7 適用後：`frontend` からの `POST http://backend/` が `403` を返す。 |
 
 <details>
 <summary>💡 課題 3 のヒント</summary>
@@ -141,8 +141,8 @@ policy 自体の `endpointSelector.matchLabels` は `backend` (`app: backend`) �
 
 |           **4**           | **DNS-aware egress: 1 つの FQDN のみ許可** |
 | :-----: | :----- |
-|       やること       | `role=frontend` を選択する `CiliumNetworkPolicy` `frontend-fqdn` を作成します。`kube-dns` へのポート `53` の DNS を、**L7 DNS proxy rule** `toPorts.rules.dns` (たとえば `matchPattern: "*"`) で許可します：Cilium はこの DNS 通信から、`toFQDNs` 用の FQDN-to-IP mapping を構築します。egress は `toFQDNs` を通じて `allowed.cks102.test` のみ (Kubernetes のアドレス空間の外にある lab-owned fixture - control-plane ノード上の合成 IP を持つ別の network namespace で、bootstrap で CoreDNS 経由で接続されています。これは意図的なもので、Cilium の `toFQDNs` はクラスター内部の IP に対しては allow ルールを適用しません) に、TCP `443` のみで許可します。**課題 2-3 の必須の内部通信も維持してください**：`backend` (`app=backend`) への別の egress ルールを TCP `80` のみで追加します - これがないと、`frontend-fqdn` は `frontend` に対して egress の default-deny を有効にし、課題 2-3 ですでに許可されている `frontend -> backend:80` がブロックされます。適用する前に、DNS resolution と `https://allowed.cks102.test/`、`http://allowed.cks102.test:80/`、`https://blocked.cks102.test/` (`-k` 付き、fixture は自己署名証明書) に実際に到達できることを `curl` で確認してください。`frontend-fqdn` を適用した後、同じアドレスを再度確認し、さらに課題 2-3 の `frontend -> backend GET /` (`200`) と `POST /` (`403`) も確認します - これらがリグレッションしていないことを確かめてください。 |
-| 受け入れ基準 | - policy に `toFQDNs.matchName: allowed.cks102.test` と、TCP `443` の `toPorts` が含まれている；- `kube-dns` への DNS が `rules.dns` を持つ別ルールで許可されている；- `backend` への内部 egress が TCP `80` のみの別ルールで許可されている (これがないと課題 3 がリグレッションする)；- 外部 egress は `allowed.cks102.test:443` のみ許可されている；`allowed.cks102.test:80` と `blocked.cks102.test:443` は許可されない；- `frontend-fqdn` を適用した後も、`frontend -> backend GET /` は `200` を返し、`POST /` は `403` を返す。- `allowed.cks102.test`/`blocked.cks102.test` は bootstrap が立ち上げた lab-owned fixture である；policy の前にそれらに到達できない場合は、inconclusive な結果の理由ではなくインフラのエラーとみなされる。 |
+|       やること       | `role=frontend` を選択する `CiliumNetworkPolicy` `frontend-fqdn` を作成します。`kube-dns` へのポート `53` の DNS を、**L7 DNS proxy rule** `toPorts.rules.dns` (たとえば `matchPattern: "*"`) で許可します：Cilium はこの DNS 通信から、`toFQDNs` 用の FQDN-to-IP mapping を構築します。egress は `toFQDNs` を通じて `allowed.cks102.test` のみ (Kubernetes のアドレス空間の外にある lab-owned fixture - control-plane ノード上の合成 IP を持つ別の network namespace で、bootstrap で CoreDNS 経由で接続されています。これは意図的なもので、Cilium の `toFQDNs` はクラスター内部の IP に対しては allow ルールを適用しません) に、TCP `443` のみで許可します。**課題 2-3 の必須の内部通信も維持してください**：`backend` (`app=backend`) への別の egress ルールを TCP `80` のみで追加します - これがないと、`frontend-fqdn` は `frontend` に対して egress の default-deny を有効にし、課題 2-3 ですでに許可されている `frontend -> backend:80` がブロックされます。<br/><br/>適用する前に、DNS resolution と `https://allowed.cks102.test/`、`http://allowed.cks102.test:80/`、`https://blocked.cks102.test/` (`-k` 付き、fixture は自己署名証明書) に実際に到達できることを `curl` で確認してください。`frontend-fqdn` を適用した後、同じアドレスを再度確認し、さらに課題 2-3 の `frontend -> backend GET /` (`200`) と `POST /` (`403`) も確認します - これらがリグレッションしていないことを確かめてください。 |
+| 受け入れ基準 | - policy に `toFQDNs.matchName: allowed.cks102.test` と、TCP `443` の `toPorts` が含まれている；<br/>- `kube-dns` への DNS が `rules.dns` を持つ別ルールで許可されている；<br/>- `backend` への内部 egress が TCP `80` のみの別ルールで許可されている (これがないと課題 3 がリグレッションする)；<br/>- 外部 egress は `allowed.cks102.test:443` のみ許可されている；`allowed.cks102.test:80` と `blocked.cks102.test:443` は許可されない；<br/>- `frontend-fqdn` を適用した後も、`frontend -> backend GET /` は `200` を返し、`POST /` は `403` を返す；<br/>- `allowed.cks102.test`/`blocked.cks102.test` は bootstrap が立ち上げた lab-owned fixture である；policy の前にそれらに到達できない場合は、inconclusive な結果の理由ではなくインフラのエラーとみなされる。 |
 
 <details>
 <summary>💡 課題 4 のヒント</summary>
@@ -156,7 +156,7 @@ policy 自体の `endpointSelector.matchLabels` は `backend` (`app: backend`) �
 |           **5**           | **Hubble: HTTP 通信の観察** |
 | :-----: | :----- |
 |       やること       | worker で `cilium hubble port-forward` を起動し、続いて別のウィンドウ/バックグラウンドで `hubble observe --from-pod cks-102/frontend --to-pod cks-102/backend --protocol http --follow` を実行します。観察中に、`frontend` から backend へ、許可された `GET /` と禁止された `POST /` を実行し、両方の flow が見えることを確認します：`GET /` は verdict `FORWARDED`、`POST /` は verdict `DROPPED`。 |
-| 受け入れ基準 | - `check_result` は自分で GET/POST を生成し、両方の verdict が Hubble で見えることを自分で確認する - 課題 2-3 の最終的な policy が、実際に GET に対して `FORWARDED`、POST に対して `DROPPED` を与えることを確認してください。 |
+| 受け入れ基準 | - `check_result` は自分で GET/POST を生成し、両方の verdict が Hubble で見えることを自分で確認する - 課題 2-3 の最終的な policy が、実際に GET に対して `FORWARDED`、POST に対して `DROPPED` を与えることを確認すること。 |
 
 <details>
 <summary>💡 課題 5 のヒント</summary>
@@ -169,8 +169,8 @@ controlled capture のためには、`GET`/`POST` の前に `hubble observe --fo
 
 |           **6**           | **複合 L7 policy: `/public/*` は全員、`/private/*` は `finance` のみ** |
 | :-----: | :----- |
-|       やること       | 課題 2-3 では、1 つの source (`frontend`) と 1 つの path 契約を練習します。ここでは、2 つの path-scope を同時に持つ、独立した 2 つ目の backend を扱います。namespace `production` と `finance` を作成します。`production` に Pod `portal` (label `app=portal`、イメージ `nginx:1.27-alpine`) と、nginx に最小限の server block を与える ConfigMap を作成します：`location /public/` は `200` を返し (たとえば `return 200 "public ok\n";`)、`location /private/` も同様に `200` を返し、それ以外の path は `404` を返します。ConfigMap を `/etc/nginx/conf.d/default.conf` としてマウントします。ポート `80` で Service `portal` を作成します。`finance` に Pod `finance-client` (`curlimages/curl:8.10.1`、`sleep 3600`) を作成します。namespace `cks-102` の既存の Pod `client` (課題 1) は、「それ以外/外部」の namespace の source として使用します - そのために別の Pod を作成しないでください。`production` に、`app=portal` を選択する `CiliumNetworkPolicy` `portal-policy` を、TCP/80 に対する 2 つの ingress ルールで作成します：(1) `matchExpressions: [{key: k8s:io.kubernetes.pod.namespace, operator: Exists}]` を持つ `fromEndpoints` (namespace に関係なく任意の Pod) + `/public/*` に対応する path への `rules.http` `GET`；(2) namespace `finance` に対する `matchLabels` を持つ `fromEndpoints` + `/private/*` に対応する path への `rules.http` `GET`。policy を適用する前に、`finance-client` と `cks-102/client` の両方が、両方の path で実際に `200` を受け取ることを `curl` で確認してください - そうしないと deny は何も実証しません。適用後、両方の namespace から両方の path を再度確認します。 |
-| 受け入れ基準 | - `portal-policy` に、上記の分割を持つ TCP/80 の ingress ルールがちょうど 2 つある；- baseline：Pod `portal` 自身が両方の path で `200` を返す (checker は policy を外さずに、Pod 内の loopback 経由でこれを確認する)；- policy 適用後：`finance-client` は `/public/*` と `/private/*` の両方で `200` を受け取る；- policy 適用後：`cks-102/client` は `/public/*` では `200` を受け取るが、`/private/*` では正確に L7 の拒否 (`403`) を受け取る - TCP 接続は最初のルール (`matchExpressions: Exists` を持つルール) によって引き続き許可されているため、これは transport-level の deny ではなく Envoy の L7 `403` である。 |
+|       やること       | 課題 2-3 では、1 つの source (`frontend`) と 1 つの path 契約を練習します。ここでは、2 つの path-scope を同時に持つ、独立した 2 つ目の backend を扱います。namespace `production` と `finance` を作成します。`production` に Pod `portal` (label `app=portal`、イメージ `nginx:1.27-alpine`) と、nginx に最小限の server block を与える ConfigMap を作成します：`location /public/` は `200` を返し (たとえば `return 200 "public ok\n";`)、`location /private/` も同様に `200` を返し、それ以外の path は `404` を返します。ConfigMap を `/etc/nginx/conf.d/default.conf` としてマウントします。ポート `80` で Service `portal` を作成します。`finance` に Pod `finance-client` (`curlimages/curl:8.10.1`、`sleep 3600`) を作成します。namespace `cks-102` の既存の Pod `client` (課題 1) は、「それ以外/外部」の namespace の source として使用します - そのために別の Pod を作成しないでください。<br/><br/>`production` に、`app=portal` を選択する `CiliumNetworkPolicy` `portal-policy` を、TCP/80 に対する 2 つの ingress ルールで作成します：(1) `matchExpressions: [{key: k8s:io.kubernetes.pod.namespace, operator: Exists}]` を持つ `fromEndpoints` (namespace に関係なく任意の Pod) + `/public/*` に対応する path への `rules.http` `GET`；(2) namespace `finance` に対する `matchLabels` を持つ `fromEndpoints` + `/private/*` に対応する path への `rules.http` `GET`。policy を適用する前に、`finance-client` と `cks-102/client` の両方が、両方の path で実際に `200` を受け取ることを `curl` で確認してください - そうしないと deny は何も実証しません。適用後、両方の namespace から両方の path を再度確認します。 |
+| 受け入れ基準 | - `portal-policy` に、上記の分割を持つ TCP/80 の ingress ルールがちょうど 2 つある；<br/>- baseline：Pod `portal` 自身が両方の path で `200` を返す (checker は policy を外さずに、Pod 内の loopback 経由でこれを確認する)；<br/>- policy 適用後：`finance-client` は `/public/*` と `/private/*` の両方で `200` を受け取る；<br/>- policy 適用後：`cks-102/client` は `/public/*` では `200` を受け取るが、`/private/*` では正確に L7 の拒否 (`403`) を受け取る - TCP 接続は最初のルール (`matchExpressions: Exists` を持つルール) によって引き続き許可されているため、これは transport-level の deny ではなく Envoy の L7 `403` である。 |
 
 <details>
 <summary>💡 課題 6 のヒント</summary>

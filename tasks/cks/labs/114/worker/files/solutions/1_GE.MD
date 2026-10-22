@@ -112,7 +112,7 @@ in-cluster HTTP:200
 
 ## 4. Reduce exposure: NodePort -> ClusterIP
 
-`nodePort`-ს აშკარად ვშლით: ერთი JSON patch ცვლის ტიპს და შლის `/spec/ports/0/nodePort`-ს
+`nodePort`-ს ცხადად ვშლით: ერთი JSON patch ცვლის ტიპს და შლის `/spec/ports/0/nodePort`-ს
 (ან `kubectl edit` ხელით და სტრიქონის მოხსნა):
 
 ```bash
@@ -122,7 +122,7 @@ kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
 ]'
 ```
 
-ვასრულებთ იმავე ორ შემოწმებას (kube-proxy NodePort-ის წესებს არც ხსნის მყისიერად, ამიტომ ჯერ
+ვასრულებთ იმავე ორ შემოწმებას (kube-proxy NodePort-ის წესებს არც მოხსნის მყისიერად, ამიტომ ჯერ
 ვიცდით, სანამ პორტი პასუხს არ შეწყვეტს):
 
 ```bash
@@ -137,8 +137,8 @@ external HTTP:000
 in-cluster HTTP:200
 ```
 
-`kubernetes-public:30114` node-ზე kube-proxy-ს მიერ აღარ ისმინება (transport deny); კლასტერის შიდა გზა
-Service DNS-ით არ რეგრესირებულა.
+node-ზე kube-proxy აღარ ემსახურება `kubernetes-public:30114`-ს (transport deny); კლასტერის შიდა გზა
+Service DNS-ით არ გაუარესებულა.
 
 ```bash
 kubectl -n cks-114 delete pod probe --ignore-not-found

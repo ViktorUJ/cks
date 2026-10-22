@@ -315,7 +315,7 @@ grep -A1 '1.1.1' /var/work/tests/artifacts/7/before.txt
 # [FAIL] 1.1.1 Ensure that the API server pod specification file permissions ...
 ```
 
-Comprueba el permiso de acceso real en el nodo y corrígelo a `600`: es un cambio
+Comprueba los permisos de acceso reales en el nodo y corrígelos a `600`: es un cambio
 file-only, el kubelet no recrea el static Pod por un cambio de permisos, solo por un cambio del
 contenido del manifest:
 

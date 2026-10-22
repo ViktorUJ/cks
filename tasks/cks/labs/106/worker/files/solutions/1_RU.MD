@@ -219,7 +219,7 @@ filter `unshare -n` с этой capability может сработать; seccom
 Используем `unshare -n` (network namespace, `CLONE_NEWNET`), а НЕ `unshare -m` (mount
 namespace). Обе операции требуют одну и ту же `CAP_SYS_ADMIN`, но BusyBox `unshare -m`
 после успешного `unshare(2)` дополнительно выполняет самостоятельный `mount(2)` syscall
-для forced private propagation - а containerd default AppArmor-профиль (`RuntimeDefault`,
+для forced private propagation - а стандартный AppArmor-профиль containerd (`RuntimeDefault`,
 который получает этот Pod, так как явный `appArmorProfile` здесь не задан) содержит
 `deny mount,` без каких-либо условий на флаги, независимо от capabilities/seccomp. Поэтому
 `unshare -m true` может провалиться с `EPERM` из-за AppArmor, даже если seccomp вообще не
@@ -310,7 +310,7 @@ cat /var/work/tests/artifacts/6/userns.txt
 # uid=0(root) gid=0(root) groups=0(root)
 ```
 
-Host PID контейнера не совпадает ни с PID внутри контейнера, ни виден напрямую через
+Host PID контейнера не совпадает с PID внутри контейнера и не виден напрямую через
 `kubectl`. Берём ID контейнера на worker, а PID получаем через `crictl inspect` на ноде,
 где реально запущен Pod:
 
@@ -356,7 +356,7 @@ host (initial) user namespace. Поэтому mapping начинается с UI
 
 ## 8. `seccompDefault: true` на kubelet
 
-Все предыдущие Pod явно задавали `seccompProfile`. Здесь проверяем node-level baseline:
+Предыдущие Pod с профилем seccomp (задания 4-6) явно задавали `seccompProfile`. Здесь проверяем node-level baseline:
 если разработчик забудет это поле, kubelet должен сам применить `RuntimeDefault`, а не
 оставить процесс `Unconfined`. Правим конфигурацию kubelet на ноде:
 

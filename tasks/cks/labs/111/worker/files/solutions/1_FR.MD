@@ -40,7 +40,7 @@ export COSIGN_PASSWORD=""
 ```
 
 Le registry fonctionne en HTTP : le digest de l'image publiée, nous l'obtenons à partir de `podman push --digestfile`, et
-existence du manifest, nous la vérifions par une requête à `/v2/`. `cosign` utilise lui-même HTTP pour les adresses de
+l'existence du manifest, nous la vérifions par une requête à `/v2/`. `cosign` utilise lui-même HTTP pour les adresses de
 réseaux privés ; pour Kyverno, dans la policy on définit `credentials.allowInsecureRegistry: true`. `bom` lit
 les images uniquement depuis le registry, il s'adresse donc toujours à Docker Hub ; si vous voyez
 `TOOMANYREQUESTS`, patientez ou exécutez `podman login docker.io` avec votre propre compte.
@@ -86,7 +86,7 @@ cat $ART/1b/answer.txt
 
 ## 1c. Analyse des images de workload par niveau CRITICAL
 
-Nous prenons les images des Deployments LIVE et scannons chacune ; le nombre de CRITICAL uniques est affiché à côté du
+Nous prenons les images des Deployment LIVE et scannons chacune ; le nombre de CRITICAL uniques est affiché à côté du
 nom du Deployment :
 
 ```bash
@@ -278,7 +278,7 @@ bom generate --format json --output $ART/5b/bom/c3.spdx.json --image <image c3>
 for c in c1 c2 c3; do
   jq -r '.packages[]? | select(.versionInfo) | "\(.name)=\(.versionInfo)"' $ART/5b/bom/$c.spdx.json | sort -u > /tmp/$c.pkgs
 done
-comm -12 /tmp/c1.pkgs /tmp/c2.pkgs | wc -l     # combien de paquets communs a chaque paire d'images
+comm -12 /tmp/c1.pkgs /tmp/c2.pkgs | wc -l     # combien de paquets communs à chaque paire d'images
 comm -12 /tmp/c1.pkgs /tmp/c3.pkgs | wc -l
 comm -12 /tmp/c2.pkgs /tmp/c3.pkgs | wc -l
 ```
@@ -358,7 +358,7 @@ jq '{artifact: .ArtifactType, os: .Metadata.OS.Family, results: (.Results | leng
 
 Trivy détermine l'OS d'après le composant `operating-system` du CycloneDX (`alpine 3.20.5`) et
 met en correspondance les paquets avec la base de vulnérabilités - `Results` non vide. Pour comparaison : le SPDX de la tâche 6
-(`bom`) pour une image multi-arch ne contient pas l'OS (`Detected OS family="none"`), et `trivy sbom` sur lui
+(`bom`) pour une image multi-arch ne contient pas l'OS (`Detected OS family="none"`), et `trivy sbom` sur ce fichier
 ne trouve rien (`Results` vide) - c'est pourquoi, pour cette tâche, on prend le CycloneDX.
 
 ## 9a. Kyverno et `ImageValidatingPolicy` de trusted signature
@@ -379,7 +379,7 @@ kubectl -n kyverno wait --for=condition=Available deployment/kyverno-admission-c
 Générez la paire de clés pédagogique EN DEHORS de `$ROOT` - ce répertoire est réutilisé comme
 Docker build context dans la tâche 9c (`COPY . /usr/share/nginx/html` dans le Dockerfile copie
 TOUT le contenu du build context), c'est pourquoi un `cosign.key` laissé dans `$ROOT` se retrouvera
-à l'intérieur de l'image filesystem publié comme une fuite de la private signing key dans le registry. Signez
+à l'intérieur du filesystem de l'image publiée comme une fuite de la private signing key dans le registry. Signez
 précisément `$HARDENED_IMAGE` de la tâche 3/4, et non l'`nginx` upstream. Ne transférez pas ce
 `cosign.key` dans un CI de production.
 
@@ -440,7 +440,7 @@ kubectl get imagevalidatingpolicy require-signed-catalog-images -o yaml
 
 À la fin, exécutez `check_result` (partiellement, le test 9a).
 
-## 9b. Fresh signed ALLOW : un Pod nouveau après la création de la policy
+## 9b. Fresh signed ALLOW : un nouveau Pod après la création de la policy
 
 Un nouveau `kubectl apply` du Deployment déjà existant `catalog` **ne démontre pas**
 le post-policy admission : si le template n'a pas changé, Kubernetes ne crée pas de nouveau
@@ -541,7 +541,7 @@ kubectl get pod catalog-unsigned-probe -n cks-111       # NotFound : le Pod n'es
 
 La différence avec une vérification naïve : si à la place nous avions pris un digest d'un autre repository
 (par exemple, le digest de l'`nginx` upstream de la tâche 1), l'admission aurait pu refuser pour une raison
-tout autre (`manifest unknown`, absence d'accès de pull), et un tel denial aurait donné l'impression que « la policy fonctionne », alors qu'en réalité la vérification de signature n'a même pas été atteinte.
+toute autre (`manifest unknown`, absence d'accès de pull), et un tel denial aurait donné l'impression que « la policy fonctionne », alors qu'en réalité la vérification de signature n'a même pas été atteinte.
 
 À la fin, exécutez `check_result`.
 

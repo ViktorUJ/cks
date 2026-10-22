@@ -276,8 +276,8 @@ Ce n'est pas la même chose que `anonymous.conditions` de cette même tâche : c
 détermine les seuls chemins sur lesquels la requête reçoit une anonymous identity à l'étape
 d'authentication (là uniquement `/livez`/`/readyz`/`/healthz`) - `/version` renvoie `401` anonymement
 précisément parce qu'aucune anonymous identity n'y est attribuée, et non parce que
-`system:public-info-viewer` manque de droits à cet endroit. `lab104-unintended-anonymous-access` est une
-trouvaille lab-owned délibérée : son ClusterRole `lab104-anonymous-debug-access` donne un
+`system:public-info-viewer` manque de droits à cet endroit. `lab104-unintended-anonymous-access` est un
+constat (finding) lab-owned délibéré : son ClusterRole `lab104-anonymous-debug-access` donne un
 RBAC `get`/`list` complet sur `pods`/`secrets`/`configmaps` à l'échelle du cluster, c'est-à-dire que N'IMPORTE QUELLE
 requête anonyme peut les lire. Nous supprimons les deux objets, comme dans les tâches 4/7 :
 
@@ -316,7 +316,7 @@ N'ajoutez pas `--as-group=system:authenticated` à `can-i --as=system:anonymous`
 requête non authentifiée n'appartient pas à ce groupe, et la vérification cesserait de refléter la
 vraie anonymous identity. Nous vérifions chaque namespace séparément, car
 un RoleBinding n'agit que dans son namespace : l'absence d'un binding cluster-wide ne
-démontre pas l'absence d'un binding local, et le critère d'acceptation interdit l'accès dans n'importe quel namespace.
+démontre pas l'absence d'un binding local, et le critère d'acceptation exige l'absence d'accès dans tous les namespaces.
 
 À la fin, exécutez `check_result`.
 
@@ -343,7 +343,7 @@ montre `kubectl get pod -o json`). `0400` est read-only uniquement pour le propr
 à l'intérieur du conteneur ; le processus de l'application doit tout de même s'exécuter sous cet UID, sinon
 il ne pourra pas lire le fichier.
 
-Le champ est immuable ; le Pod doit être supprimé et recréé avec le même nom. De nouveau, il est moins coûteux de
+La plupart des champs du Pod (y compris `volumes`) sont immuables, donc le Pod doit être supprimé et recréé avec le même nom. De nouveau, il est moins coûteux de
 générer le squelette via `--dry-run` et d'ajouter le volume dans `vim` que d'écrire tout le YAML :
 
 ```bash
@@ -433,7 +433,7 @@ Pour chaque candidat, nous regardons son ClusterRole de façon lisible par un hu
 ```bash
 k describe clusterrole build-agent-hidden-privesc
 # Les Verbs dans le tableau PolicyRule afficheront impersonate / bind / escalate / update
-# (sur certificatesigningrequests/approval) - à l'œil, on voit que le rôle est dangereux
+# (sur certificatesigningrequests/approval) - visuellement, on voit que le rôle est dangereux
 ```
 
 Nous enregistrons le nom du ClusterRoleBinding (et non du ClusterRole - ils peuvent ne pas coïncider, dans ce lab
@@ -564,7 +564,7 @@ La règle RBAC est la première - la règle plus spécifique doit précéder le 
 général, sinon `Metadata` interceptera l'événement plus tôt. `omitStages: [RequestReceived]`
 au niveau de toute la policy supprime l'entrée superflue précédant le traitement de la requête - elle n'a pas
 de `requestObject`/`responseStatus`, et le checker écarte de toute façon de telles entrées (`stage ==
-"ResponseComplete"`), et avec la règle catch-all `Metadata` sur TOUTES les autres requêtes du cluster
+"ResponseComplete"`), et avec la règle catch-all `Metadata` sur TOUTES les autres requêtes du cluster,
 cette étape doublerait le volume d'audit.log sans bénéfice.
 
 Nous modifions le static manifest : nous ajoutons `--audit-policy-file`/`--audit-log-path` et des hostPath
@@ -617,7 +617,7 @@ k create clusterrolebinding incident-simulated-escalation \
   --serviceaccount=security-104:build-agent
 ```
 
-D'abord, nous nous assurons simplement à l'œil que la règle d'audit fonctionne réellement et que l'événement est arrivé dans le
+D'abord, nous nous assurons simplement visuellement que la règle d'audit fonctionne réellement et que l'événement est arrivé dans le
 log - à l'examen, c'est généralement précisément cette vérification qu'il faut, et non un artifact tout fait :
 
 ```bash
@@ -629,7 +629,7 @@ exit
 `jq .` imprime chaque entrée du log de façon lisible (un champ par ligne), `grep -A 30`
 montre la ligne trouvée avec le nom et 30 lignes APRÈS elle - c'est suffisant pour voir
 `stage`, `user.username` (l'initiateur réel), `requestObject.roleRef`,
-`requestObject.subjects` à l'œil, sans syntaxe jq particulière.
+`requestObject.subjects` visuellement, sans syntaxe jq particulière.
 
 Cela suffit pour un examen réel, mais ce lab exige en plus un fichier artifact avec
 l'événement - non pas parce qu'il ne suffirait pas au checker de savoir que la règle fonctionne (lui-même, indépendamment,

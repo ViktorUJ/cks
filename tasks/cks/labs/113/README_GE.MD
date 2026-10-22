@@ -108,13 +108,13 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 ---
 | **3** | **upgrade-ის სწორი თანმიმდევრობის დაცვა** |
 | :---: | :--- |
-| რას ვაკეთებთ | • შეასრულეთ control-plane-ის upgrade (დავალება 1) სრულად, uncordon-ის ჩათვლით, მანამდე, სანამ worker-node-ის upgrade-ს დაიწყებთ (დავალება 2).<br/>• ცალკე მოქმედება კლასტერში ეს დავალება არ მოითხოვს: თანმიმდევრობას ავტომატურად ამოწმებს checker-owned მონიტორი კლასტერის მდგომარეობისა და ვერსიების. |
+| რას ვაკეთებთ | • შეასრულეთ control-plane-ის upgrade (დავალება 1) სრულად, uncordon-ის ჩათვლით, მანამდე, სანამ worker-node-ის upgrade-ს დაიწყებთ (დავალება 2).<br/>• ცალკე მოქმედება კლასტერში ეს დავალება არ მოითხოვს: თანმიმდევრობას ავტომატურად ამოწმებს კლასტერის მდგომარეობისა და ვერსიების checker-owned მონიტორი. |
 | მიღების კრიტერიუმები | • Checker-owned monitor აფიქსირებს საწყის `1.35.x` baseline-ს.<br/>• შემდეგ ფიქსირდება control-plane-ის სრული გადასვლა `1.36.x`-ზე (`Ready`-სა და schedulable-ის ჩათვლით) worker-ის `1.35.x`-ზე ყოფნისას, და მხოლოდ ამის შემდეგ worker-node-ის upgrade-ის დაწყება.<br/>• მდგომარეობა უძლებს მონიტორის გადატვირთვას; baseline-ის არარსებობა ან დაკვირვების გაწყვეტა 60 წამზე მეტით არ ითვლება. |
 
 <details>
 <summary>💡 მინიშნება დავალება 3-ისთვის</summary>
 
-თუ worker-node-ის upgrade უკვე დაიწყეთ (ან მით უმეტეს დაასრულეთ) control-plane-მდე - გაჩერდით, worker-ის უკან დაბრუნება `1.35.x` პაკეტების ჩამოტვირთვაზე მარტივი გზით შეუძლებელია, მაგრამ სწორი გზა - control-plane-ის upgrade-ის დასრულებაა, შემდეგ worker-node-ის upgrade-ის გაგრძელება/გამეორება. მთავარია - worker-node-ის შემდეგი upgrade (როდესაც არ უნდა იყოს დაწყებული) უნდა მოხდეს control-plane-ის სრულად დასრულებული upgrade-ის შემდეგ. დავალება 2-ს ნუ დაიწყებთ, სანამ `kubectl get node <cp-სახელი>` არ აჩვენებს `v1.36.x`-სა და `Ready`-ს.
+თუ worker-node-ის upgrade უკვე დაიწყეთ (ან მით უმეტეს დაასრულეთ) control-plane-მდე - გაჩერდით: worker-ის უკან დაბრუნება `1.35.x` პაკეტებზე მარტივი გზით შეუძლებელია, სწორი გზა კი control-plane-ის upgrade-ის დასრულებაა, შემდეგ worker-node-ის upgrade-ის გაგრძელება/გამეორება. მთავარია - worker-node-ის შემდეგი upgrade (როდესაც არ უნდა იყოს დაწყებული) უნდა მოხდეს control-plane-ის სრულად დასრულებული upgrade-ის შემდეგ. დავალება 2-ს ნუ დაიწყებთ, სანამ `kubectl get node <cp-სახელი>` (control-plane-ის სახელი `kubectl get no`-დან) არ აჩვენებს `v1.36.x`-სა და `Ready`-ს.
 </details>
 
 ---
@@ -126,7 +126,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 <details>
 <summary>💡 მინიშნება დავალება 4-ისთვის</summary>
 
-გამოკითხვის ციკლის მაგალითი, რომელიც შეიძლება გაშვებული დატოვოთ ცალკე ტერმინალში/`screen`/`tmux`-ში დავალებების 1-2 შესრულების მთელი დროის განმავლობაში: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. თუ Deployment მოკლე დროით ყველა replica-ს კარგავდა - შეამოწმეთ `kubectl get pods -n upgrade-113 -o wide` და რომ თანმიმდევრული drain-ები PDB-სა და required anti-affinity-ს იცავს.
+გამოკითხვის ციკლის მაგალითი, რომელიც შეიძლება გაშვებული დატოვოთ ცალკე ტერმინალში/`screen`/`tmux`-ში დავალებების 1-2 შესრულების მთელი დროის განმავლობაში: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. თუ Deployment მოკლე დროით ყველა replica-ს კარგავდა - შეამოწმეთ `kubectl get pods -n upgrade-113 -o wide` და რომ თანმიმდევრული drain-ები PDB-სა და required anti-affinity-ს იცავს.
 </details>
 
 ## შედეგის შემოწმება
@@ -138,7 +138,7 @@ check_result
 შემოწმება შეიცავს `0 Init`-სა და ხუთ სავალდებულო ტესტს. ტესტები 1-2 ამოწმებს
 `kubeadm`/`kubelet`/ლოკალური `kubectl`-ის ვერსიებსა და სტატუსს `Ready` control-plane-ზე და worker-node-ზე
 შესაბამისად, ასევე სიტყვასიტყვით evidence-ფაილს `kubeadm upgrade`-ის გამოტანით. ტესტი 3
-ამოწმებს upgrade-ის თანმიმდევრობას checker-owned მონიტორით კლასტერის მდგომარეობის, და არა
+ამოწმებს upgrade-ის თანმიმდევრობას კლასტერის მდგომარეობის checker-owned მონიტორით, და არა
 ფაილების მოდიფიკაციის დროით. ტესტი 4 ამოწმებს, რომ დატვირთვას `canary` არ ჰქონია downtime,
 ჭეშმარიტების წყაროდ იმავე checker-owned monitor-ის გამოყენებით. ტესტი 5 - საბოლოო
 შემოწმებაა, რომ ორივე node მართლაც მიზნობრივ ვერსიაზეა და არ არის დატოვებული მდგომარეობაში

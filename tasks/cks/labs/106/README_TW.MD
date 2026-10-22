@@ -30,7 +30,7 @@ Pod 的 placement，以及行程的實際行為。
 </details>
 
 <details>
-<summary>2. 為什麼 `allowPrivilegeEscalation: false` 不會移除已經授予的 capability `SYS_ADMIN`?</summary>
+<summary>2. 為什麼 `allowPrivilegeEscalation: false` 不會移除已經授予的 capability `SYS_ADMIN`？</summary>
 
 `allowPrivilegeEscalation: false` 會啟用 kernel 旗標 `no_new_privs`，它禁止行程透過 `execve` 取得「新的」權限(例如透過 setuid 二進位檔或 file capabilities)。這不影響行程「已經」在其 effective/bounding set 中擁有的權限 - 如果容器在 manifest 中明確地以 capability `SYS_ADMIN` 啟動，這個 capability 就會保持可用，與 `allowPrivilegeEscalation` 的值無關。
 </details>
@@ -44,8 +44,8 @@ Kubelet 會自己以相對於其 seccomp root(預設為 `/var/lib/kubelet/seccom
 ## 與課程的關聯
 
 - [第 16 章 AppArmor](../../course/16/tw.md)
-- [第 17 章。seccomp](../../course/17/tw.md)
-- [第 03 章。Container Runtime Security](../../course/03/tw.md)
+- [第 17 章 seccomp](../../course/17/tw.md)
+- [第 03 章 Container Runtime Security](../../course/03/tw.md)
 
 ## 基礎架構
 
@@ -70,7 +70,7 @@ Bootstrap「只」準備了：
   (AppArmor profile)與 `cks-106-deny-unshare.json`(自訂 seccomp profile)的原始檔。
 
 AppArmor profile 與 seccomp profile **都沒有**預先安裝在 workload 節點上，也沒有
-載入其核心 - 它們各自的搬移與首次載入，是任務 1 與 5 的一部分。
+載入到其核心中 - 它們各自的搬移與首次載入，是任務 1 與 5 的一部分。
 不要更改 seccomp profile 的路徑，也不要在一般的 Pod 內建立 profile：把
 檔案搬到節點上，是你以節點管理員的身分透過 SSH 完成的，而不是從 workload 內部。
 
@@ -155,7 +155,7 @@ ls -la /opt/lab106-fixtures/
 <details>
 <summary>💡 任務 4 的提示</summary>
 
-`/proc/1/status` 中的 `Seccomp: 2` 表示「filter mode 已啟用」(SECCOMP_MODE_FILTER)- 這是你應該看到的。`Seccomp: 0` 則表示完全沒有 seccomp filter(`Unconfined`)。這是這組五個任務中最簡單的 - 如果它沒有通過，問題很可能出在 nodeSelector，而不是 seccompProfile 本身。
+`/proc/1/status` 中的 `Seccomp: 2` 表示「filter mode 已啟用」(SECCOMP_MODE_FILTER)- 這是你應該看到的。`Seccomp: 0` 則表示完全沒有 seccomp filter(`Unconfined`)。這是三個 seccomp 任務(4-6)中最簡單的 - 如果它沒有通過，問題很可能出在 nodeSelector，而不是 seccompProfile 本身。
 </details>
 
 ---
@@ -187,7 +187,7 @@ BusyBox 的 `unshare -m` 在成功執行 `unshare(2)` 之後，還會額外執�
 除非明確傳入 `--propagation unchanged`，而即使如此 `mount()` 仍然會
 被呼叫，只是旗標為零)。containerd 預設的 AppArmor profile(`RuntimeDefault`,
 沒有明確 `securityContext.appArmorProfile` 的 Pod 會取得它)包含 `deny mount,`,
-沒有任何針對旗標的條件 - 這項禁止與 capabilities 以及 seccomp 無關，都會生效。
+沒有任何針對旗標的條件 - 這項禁止的生效與 capabilities 以及 seccomp 無關。
 因此 `unshare -m true` 可能因為 AppArmor 而以 `EPERM` 失敗，「即使」
 seccomp 根本沒有限制 `unshare`，這使得這樣的探測不能可靠地證明
 是 seccomp 造成的拒絕。`unshare -n`(`CLONE_NEWNET`)「只」呼叫
@@ -207,7 +207,7 @@ file capabilities)，但不會移除已經加入 bounding/effective set 的 `SYS
 ---
 | **7** | **User namespaces:`hostUsers: false` 與透過 `uid_map` 的 UID 轉換** |
 | :---: | :--- |
-| 要做什麼 | User namespaces 在 Kubernetes v1.36 中為 GA(參見 [第 03 章](../../course/03/tw.md)、[第 18 章](../../course/18/tw.md) 以及 Security Delta v1.36)。理論說明 `hostUsers: false` 會把容器的 root 轉換為非特權的 host UID；這裡需要在執行中的行程上證明這一點。在 `security-106` 中，於準備好的節點上建立 Pod `userns-probe`，帶有 `spec.hostUsers: false`、映像 `busybox:1.36`、指令 `sleep 3600`；不要設定 Pod-level `runAsUser`，讓行程在容器「內部」以 UID 0 啟動。確認容器內的 `id`(`uid=0`)。透過 `crictl inspect`(類比實驗 112)或透過 `kubectl get pod -o jsonpath` + `crictl ps` 找出容器行程的 host PID，然後在節點上讀取 `/proc/<host PID>/uid_map`。把兩個輸出(容器內的 `id` 與 `uid_map` 的內容)儲存到 `/var/work/tests/artifacts/6/userns.txt`。 |
+| 要做什麼 | User namespaces 在 Kubernetes v1.36 中為 GA(參見 [第 03 章](../../course/03/tw.md)、[第 18 章](../../course/18/tw.md) 以及 Security Delta v1.36)。理論說明 `hostUsers: false` 會把容器的 root 轉換為非特權的 host UID；這裡需要在執行中的行程上證明這一點。在 `security-106` 中，於準備好的節點上建立 Pod `userns-probe`，帶有 `spec.hostUsers: false`、映像 `busybox:1.36`、指令 `sleep 3600`；不要設定 Pod-level `runAsUser`，讓行程在容器「內部」以 UID 0 啟動。確認容器內的 `id`(`uid=0`)。透過 `crictl inspect`(比照實驗 112 的做法)或透過 `kubectl get pod -o jsonpath` + `crictl ps` 找出容器行程的 host PID，然後在節點上讀取 `/proc/<host PID>/uid_map`。把兩個輸出(容器內的 `id` 與 `uid_map` 的內容)儲存到 `/var/work/tests/artifacts/6/userns.txt`。 |
 | 驗收標準 | Pod 為 `Running`,`spec.hostUsers == false`，並選擇準備好的節點；容器內的 `id` 顯示 `uid=0(root)`；節點上的 `/proc/<host PID>/uid_map` 包含形如 `0 <host-uid> <length>` 的行，其中 `<host-uid>` **不等於 0**(容器的 root 被轉換為非特權的 host UID)，且 `<length>` 至少等於 `65536`(標準的 per-Pod UID 範圍);artifact 包含 evidence 的兩部分。 |
 
 <details>

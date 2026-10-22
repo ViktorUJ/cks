@@ -4,7 +4,7 @@
 
 ## აღწერა
 
-სტუდენტისთვის გაცემული kubeconfig შეიცავს რამდენიმე contexts-ს: სამუშაო `cluster1-admin@cluster1`-ს
+სტუდენტისთვის გაცემული kubeconfig შეიცავს რამდენიმე context-ს: სამუშაო `cluster1-admin@cluster1`-ს
 და ორ განზრახ არამომუშავეს (`staging-admin@staging`, `legacy-admin@legacy`), რომლებიც არარსებულ
 API server-ებზე მიუთითებს. `current-context` login-ის შემდეგ მაშინვე არამომუშავე `staging-admin@staging`-ზეა დაყენებული - ეს
 განზრახ ასახავს გამოცდაზე რეალურ სიტუაციას, როცა კანდიდატს აძლევენ kubeconfig-ს რამდენიმე
@@ -44,7 +44,7 @@ ssh ubuntu@<IP>
 
 ## მიზანი
 
-ისწავლოთ რამდენიმე კონტექსტის შემცველ kubeconfig-თან უსაფრთხოდ მუშაობა, client certificate-ის ამოღება და შემოწმება
+ისწავლოთ რამდენიმე context-ის შემცველ kubeconfig-თან უსაფრთხოდ მუშაობა, client certificate-ის ამოღება და შემოწმება
 მისი ავტენტიფიკაციისთვის გამოყენების გარეშე, და Service-ის exposure-ის შეგნებული მართვა
 `NodePort` -> `ClusterIP` გადართვით.
 
@@ -86,7 +86,7 @@ ssh ubuntu@<IP>
 
 |           **4**           | **Reduce exposure: NodePort -> ClusterIP** |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|       რას ვაკეთებთ       | • შეცვალეთ `kubernetes-public` ტიპზე `ClusterIP`.<br/>• გახსოვდეთ: API server არ დაუშვებს აშკარად მითითებულ `nodePort`-ს ტიპის `ClusterIP`-ის დროს - უფრო საიმედოა ველის აშკარად წაშლა (`kubectl edit svc kubernetes-public` და წაშალეთ სტრიქონი `nodePort`, ან JSON patch `op: remove`-ით `/spec/ports/0/nodePort`-ისთვის). |
+|       რას ვაკეთებთ       | • შეცვალეთ `kubernetes-public` ტიპზე `ClusterIP`.<br/>• გახსოვდეთ: API server არ დაუშვებს ცხადად მითითებულ `nodePort`-ს `ClusterIP` ტიპის დროს - უფრო საიმედოა ველის ცხადად წაშლა (`kubectl edit svc kubernetes-public` და წაშალეთ სტრიქონი `nodePort`, ან JSON patch `op: remove`-ით `/spec/ports/0/nodePort`-ისთვის). |
 | მიღების კრიტერიუმები | • გარე გზა `<node-internal-ip>:30114` ახლა ტრანსპორტულად დაბლოკილია (connection refused/timeout).<br/>• კლასტერის შიდა გზა ისევ მუშაობს.<br/>• Backend Pod რჩება Ready. |
 |        შემოწმება        | worker-იდან: `curl -m5 http://<node-internal-ip>:30114/` -> კავშირის შეცდომა (და არა HTTP-კოდი).<br/>კლასტერის შიგნიდან: `curl http://kubernetes-public.cks-114.svc.cluster.local/` -> HTTP 200, როგორც ადრე.<br/>`kubectl -n cks-114 get svc kubernetes-public -o yaml` -> `type: ClusterIP`, არც ერთ პორტს `nodePort` არ აქვს. |
 
@@ -96,7 +96,7 @@ ssh ubuntu@<IP>
 check_result
 ```
 
-Checker ამოწმებს `current-context`-სა და მისი მეშვეობით ცოცხალ მოთხოვნას API-ზე, დამოუკიდებლად ამოიღებს და არჩევს
+Checker ამოწმებს `current-context`-სა და მისი მეშვეობით ცოცხალ მოთხოვნას API-ზე, დამოუკიდებლად ამოიღებს და გაარჩევს
 `cluster9-admin`-ის სერტიფიკატს, ამოწმებს მას საწყის bootstrap fingerprint-თან მიმართებით და ადარებს თქვენს artifact-ს, ასევე ასრულებს კლასტერის შიდა HTTP 200 ცდას Service DNS-ით, ამოწმებს Deployment-ს, EndpointSlice-სა და `default/kubernetes`-ის უცვლელობას. ისტორიულ NodePort-ფაზას ადასტურებს root-owned მონიტორი ორი live-ცდით Service-ის გადართვამდე; ClusterIP-ის მდგომარეობაში checker ამოწმებს live DNS-სა და NodePort-ის ტრანსპორტულ უარყოფას.
 
 ეტალონური ამოხსნა: [worker/files/solutions/1_GE.MD](worker/files/solutions/1_GE.MD).
