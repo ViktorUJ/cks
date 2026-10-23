@@ -163,7 +163,7 @@ Wir erstellen die policy nach der Regel aus Kapitel 32: Vollständiges request/r
 nicht sensiblen `configmaps` in `runtime-112`; für `secrets` nehmen wir `Metadata`, damit der Body des Secrets
 (Tokens, Passwörter) nicht in den Log gelangt. `None` und `omitStages` reduzieren tatsächlich das high-volume
 noise; das abschließende catch-all `Metadata` ist fallback logging und keine Rauschunterdrückung. Die Reihenfolge der Regeln ist wichtig:
-spezifische Regeln stehen vor dem catch-all. Die Struktur der Datei stammt aus dem Beispiel in der Dokumentation (Abschnitt Audit
+Spezifische Regeln stehen vor dem catch-all. Die Struktur der Datei stammt aus dem Beispiel in der Dokumentation (Abschnitt Audit
 policy).
 
 ```bash
@@ -239,12 +239,12 @@ Das ist ein static Pod: Das kubelet erstellt den API server automatisch neu (etw
 antwortet `kubectl` mit `connection refused`). Warte, bis er bereit ist:
 
 ```bash
-# Terminal 2: wiederhole, bis der Befehl „ok“ zurückgibt
+# Terminal 2: Wiederhole, bis der Befehl „ok“ zurückgibt
 kubectl get --raw=/readyz
 ```
 
 ```bash
-# Terminal 1: die Flags sind im aktiven manifest gelandet
+# Terminal 1: Die Flags sind im aktiven manifest gelandet
 grep -E -- '--audit-(policy-file|log-path|log-max)' /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
@@ -328,7 +328,7 @@ kubectl exec -n "$NS" immutable-app -- sh -c 'touch /tmp/allowed && test -f /tmp
 
 Das audit backend läuft bereits, daher hinterlässt ein neues `kubectl exec` API evidence. Wir starten
 einen kontrollierten langlebigen Prozess: Der marker bleibt in der command line lange genug für
-die Prüfung von `/proc`. In production startet man einen verdächtigen Prozess nicht erneut; hier ist das
+die Prüfung von `/proc`. In production startet man einen verdächtigen Prozess nicht erneut; hier ist es die
 sichere planted evidence eines einmaligen Labs.
 
 ```bash
@@ -603,7 +603,7 @@ vim /etc/kubernetes/manifests/kube-apiserver.yaml
 Warte auf die Wiederherstellung der API und führe eine auditierte Anfrage aus:
 
 ```bash
-# Terminal 2: wiederhole readyz, bis es "ok" zurückgibt, dann die auditierte Anfrage
+# Terminal 2: Wiederhole readyz, bis es „ok“ zurückgibt, dann die auditierte Anfrage
 kubectl get --raw=/readyz
 kubectl get configmap audit-config -n runtime-112 -o json >/dev/null
 ```
@@ -625,7 +625,7 @@ check_result
 
 ## 9. Integrationsaufgabe: admission über containerd umgehen und über Falco erkennen
 
-Diese Aufgabe verbindet Supply Chain Security (Lab 111, Kapitel 26) mit der Runtime Security dieser
+Diese Aufgabe verbindet Supply Chain Security (Lab 111, Kapitel 26) mit der Runtime Security dieses
 Lab: Die admission-Prüfung (Kyverno) sieht einen Container nicht, wenn er direkt über
 containerd erstellt wurde und kube-apiserver umgeht. Falco arbeitet im Unterschied zum admission controller auf
 der Ebene der kernel syscalls und sieht **alle** Container auf dem Node, unabhängig davon, wie sie

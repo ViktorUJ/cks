@@ -63,7 +63,7 @@ From a completed event, you can usually obtain:
 | **What data was sent?** | `.requestObject` and `.responseObject`, but only at `Request`/`RequestResponse` levels |
 
 Audit is **not** a replacement for an application log, network flow log, or runtime detector
-(Falco from [Chapter 29](../29/README.md)). It sees an access to the Kubernetes API, not, for
+(Falco from [Chapter 29](../29/README.md)). It sees a call to the Kubernetes API, not, for
 example, an SQL request inside a Pod or a shell command that did not call the API. A record saying
 “request authorized” also does not prove that the action was legitimate: audit provides evidence
 for searching, while RBAC, admission policy, and hardening must prevent impermissible actions in
@@ -265,7 +265,7 @@ data.
 | Excluding `/api*` to reduce noise | effectively disables audit for the entire Kubernetes API | exclude only specific health/non-resource endpoints |
 | Trusting the policy without a test | YAML can be valid but the required rule may not match | initiate a known request and check `level`, `verb`, `objectRef` |
 
-> 🎯 With kubeadm, first save the manifest, prepare the policy and host directories, then add the single audit flags and the agreed read-only policy/writable log mounts to the static Pod. After restart, prove `/readyz`, active configuration, and a JSON event from a controlled API request; keep rollback outside the manifests directory.
+> 🎯 With kubeadm, first save the manifest, prepare the policy and host directories, then add exactly one of each audit flag and the agreed read-only policy/writable log mounts to the static Pod. After restart, prove `/readyz`, active configuration, and a JSON event from a controlled API request; keep rollback outside the manifests directory.
 
 ## 32.5. Connecting a policy to the kube-apiserver static Pod
 
@@ -371,7 +371,7 @@ sudo ls -l /var/log/kubernetes/audit/audit.log
 
 If the API server does not return, immediately inspect `journalctl -u kubelet`, the exited
 container through `crictl ps -a`/`crictl logs`, and the manifest YAML. If necessary, restore the
-saved `.bak` file **outside** the manifests directory: kubelet can interpret a backup inside
+timestamped `kube-apiserver.yaml` backup from `/root/k8s-manifest-backup` **outside** the manifests directory: kubelet can interpret a backup inside
 `/etc/kubernetes/manifests/` as another static Pod manifest.
 
 ```bash
@@ -472,7 +472,7 @@ flowchart TB
     style local fill:#0f9d58,color:#fff
 ```
 
-An example of minimal kubeconfig for a collector. In production, use a separate client
+An example of a minimal kubeconfig for a collector. In production, use a separate client
 certificate/key or another supported authentication method, a validated CA, and a secret key with
 minimal privileges on the node.
 

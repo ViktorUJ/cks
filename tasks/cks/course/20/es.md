@@ -8,7 +8,7 @@
 > un cliente de API o un error en el pipeline; sin policy, el objeto llegará a etcd y se ejecutará. El control
 > de admission debe comprobar o completar de forma segura esa solicitud antes de guardarla.
 
-> **Qué sigue.** Pod Security Admission de [capítulo 19](../19/es.md) aplica los
+> **Qué sigue.** Pod Security Admission del [capítulo 19](../19/es.md) aplica los
 > Pod Security Standards preparados, pero no responde a todas las reglas de la organización: si se permite
 > el registry de images, si es obligatoria una label de propietario, si hay que añadir un campo seguro o crear
 > un objeto relacionado. Admission control es la última barrera programable antes de escribir un objeto en
@@ -93,7 +93,7 @@ mensajes y las excepciones diferentes empezarán a divergir.
 
 Gatekeeper y Kyverno normalmente funcionan como admission webhook: `kube-apiserver` les envía un
 `AdmissionReview` por HTTPS, y luego espera una respuesta `allowed: true/false` y posibles JSON
-patches. Un webhook tiene dos parámetros especialmente importantes en `MutatingWebhookConfiguration` o
+patches. Un webhook tiene cinco parámetros especialmente importantes en `MutatingWebhookConfiguration` o
 `ValidatingWebhookConfiguration`:
 
 | Parámetro | Significado para la seguridad | Riesgo |
@@ -291,7 +291,7 @@ spec:
       # Namespace de nombres de la policy Rego.
       package k8srequiredlabels
 
-      # Crear una violation por cada label obligatorio ausente.
+      # Crear una violation por cada label obligatoria ausente.
       violation[{"msg": msg}] {
         # Toma de uno en uno los valores de spec.parameters.labels del Constraint.
         required := input.parameters.labels[_]
@@ -334,7 +334,7 @@ vez entrega `spec.parameters` del constraint en `input.parameters`. Por eso, en 
 En Rego una regla es un conjunto de condiciones unidas por **Y** lógico. Se lee de abajo arriba como
 «crea una violation si se cumplen todas las líneas del cuerpo»:
 
-- `required := input.parameters.labels[_]` recorre cada label obligatorio; `_` significa «el siguiente
+- `required := input.parameters.labels[_]` recorre cada label obligatoria; `_` significa «el siguiente
   elemento del array». Aquí el único valor será `owner`.
 - `not input.review.object.metadata.labels[required]` es verdadero cuando el Pod entrante no tiene esa
   key de label.
@@ -696,7 +696,7 @@ spec:
 ```
 
 Esto es solo ingress default deny. Configure egress, DNS y las conexiones permitidas con
-`NetworkPolicy` separadas: véase el [capítulo 04](../04/es.md).
+`NetworkPolicy` separados: véase el [capítulo 04](../04/es.md).
 
 `GeneratingPolicy` es un mecanismo de provisioning/reconciliation, no una admission barrier atómica: el
 Namespace se crea antes de que el background controller garantice que crea el `NetworkPolicy` downstream.
@@ -1035,9 +1035,9 @@ SUBJECT='system:serviceaccount:team-a:ci'
 kubectl auth can-i get configmap/team-a-replica-limit   -n policy-system --as="$SUBJECT"
 ```
 
-> 🔬 **Deep Dive — Manifest-Based Admission Control.** En el training baseline Kubernetes v1.36, la función es Alpha y está desactivada por default. En upstream Kubernetes v1.37 pasó a Beta y está enabled by default. El workflow principal de este capítulo sigue vinculado a v1.36; consulte el delta actual de producción en [Kubernetes v1.37 Security Delta (solo en ruso)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🔬 **Deep Dive - Manifest-Based Admission Control.** En el training baseline Kubernetes v1.36, la función es Alpha y está desactivada por default. En upstream Kubernetes v1.37 pasó a Beta y está enabled by default. El workflow principal de este capítulo sigue vinculado a v1.36; consulte el delta actual de producción en [Kubernetes v1.37 Security Delta (solo en ruso)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 >
-> En v1.36, active el feature gate `ManifestBasedAdmissionControlConfig`; la función carga manifests de webhook y policy CEL desde el disco de API server. Entregue mediante `--admission-control-config-file` un `AdmissionConfiguration` con un `staticManifestsDir` absoluto separado para el admission plugin necesario. Esas policies están activas al iniciar, son independientes de etcd y pueden proteger la configuración de admission basada en API contra eliminación o modificación. Es una función experimental de control plane: `metadata.name` **de cada** static admission object en v1.36 debe terminar en `.static.k8s.io`; un static manifest inválido en la carga inicial puede impedir que API server esté ready. Los static manifests se limitan a los admission resources admitidos; las policy no pueden usar `paramKind`, y en `ValidatingAdmissionPolicyBinding` y `MutatingAdmissionPolicyBinding` está prohibido `spec.paramRef`. Un static webhook permite `clientConfig.url`, pero no `clientConfig.service`. Cada HA API server debe recibir los mismos archivos; no introduzca esta función sin probar startup/reload y la entrega gestionada de configuración.
+> En v1.36, active el feature gate `ManifestBasedAdmissionControlConfig`; la función carga manifests de webhook y policy CEL desde el disco de API server. Entregue mediante `--admission-control-config-file` un `AdmissionConfiguration` con un `staticManifestsDir` absoluto separado para el admission plugin necesario. Esas policies están activas al iniciar, son independientes de etcd y pueden proteger la configuración de admission basada en API contra eliminación o modificación. Es una función experimental de control plane: `metadata.name` **de cada** static admission object en v1.36 debe terminar en `.static.k8s.io`; un static manifest inválido en la carga inicial puede impedir que API server esté ready. Los static manifests se limitan a los admission resources admitidos; las policies no pueden usar `paramKind`, y en `ValidatingAdmissionPolicyBinding` y `MutatingAdmissionPolicyBinding` está prohibido `spec.paramRef`. Un static webhook permite `clientConfig.url`, pero no `clientConfig.service`. Cada HA API server debe recibir los mismos archivos; no introduzca esta función sin probar startup/reload y la entrega gestionada de configuración.
 
 ### Comparación de CEL native y webhook engine
 
@@ -1115,7 +1115,7 @@ kubectl get k8srequiredlabels pods-must-have-owner -o yaml
 kubectl get validatingadmissionpolicy require-pod-run-as-non-root -o yaml
 ```
 
-Si el Pod permitido no se crea, determine primero la fuente del rechazo, no desactive todas las policy:
+Si el Pod permitido no se crea, determine primero la fuente del rechazo, no desactive todas las policies:
 lea el mensaje de `kubectl`, el event, `kubectl describe` y los logs del controller concreto. Después
 compruebe selector, `match`/`exclude`, labels de namespace y el objeto real después de mutation. Si la
 policy no actuó, compruebe que webhook/engine está healthy, que la regla cubre API version y kind, y que el
@@ -1173,7 +1173,7 @@ GitOps/audit.
 - **Constraint**: instancia de un template Gatekeeper con parámetros, match scope y reacción.
 - **Kyverno**: Kubernetes-native policy engine; en 1.19 la API principal usa
   `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`, `DeletingPolicy` e
-  `ImageValidatingPolicy`, además de sus variants namespaced.
+  `ImageValidatingPolicy`, además de sus variantes namespaced.
 - **ValidatingAdmissionPolicy**: validation integrada de API server con CEL sin webhook externo; se aplica
   mediante un binding.
 - **MutatingAdmissionPolicy**: mutation integrada de API server con CEL mediante
@@ -1250,7 +1250,7 @@ normalmente constraint cambia al ampliar la cobertura.
 
 Mutation se justifica para un default seguro transparente, por ejemplo añadir una audit-label mediante
 `ApplyConfiguration`. Para un security-invariant crítico que no se puede corregir silenciosamente, hace
-falta validation explícita: debe rechazar el objeto inseguro. El capítulo advierte por separado no ocultar
+falta validation explícita: debe rechazar el objeto inseguro. El capítulo advierte por separado de no ocultar
 mediante mutation una image o arquitectura insegura.
 </details>
 
@@ -1289,7 +1289,7 @@ aconseja PSA `restricted`; el Rego personalizado debe cubrir explícitamente las
 </details>
 
 <details>
-<summary>9. **Flashback (capítulo 04).** NetworkPolicy default-deny (capítulo 04) y `failurePolicy: Fail` con `enforce`/`Deny` en admission policy (este capítulo) implementan el mismo principio allow-list en diferentes niveles del stack. Formule explícitamente la analogía: ¿qué corresponde en admission-policy a «default-deny para todo ingress/egress», y qué corresponde a «una regla permitida estrecha»?</summary>
+<summary>9. **Flashback (capítulo 04).** `NetworkPolicy` default-deny (capítulo 04) y `failurePolicy: Fail` con `enforce`/`Deny` en admission policy (este capítulo) implementan el mismo principio allow-list en diferentes niveles del stack. Formule explícitamente la analogía: ¿qué corresponde en admission-policy a «default-deny para todo ingress/egress», y qué corresponde a «una regla permitida estrecha»?</summary>
 
 En admission-policy, el equivalente de default-deny es una enforcing rule por la que se rechaza un objeto
 que no satisface los requisitos, y `failurePolicy: Fail` no permite bypass ante un error de webhook. El

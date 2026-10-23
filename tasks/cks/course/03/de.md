@@ -366,7 +366,7 @@ Für einen gewöhnlichen nicht privilegierten Container setzt `allowPrivilegeEsc
 
 Es gibt eine wichtige Kubernetes-Ausnahme: `allowPrivilegeEscalation` ist faktisch immer `true`, wenn ein Container mit `privileged: true` läuft oder `CAP_SYS_ADMIN` besitzt. Entfernen Sie daher zuerst `privileged` und übermäßige Capabilities; `allowPrivilegeEscalation: false` ist eine zusätzliche Grenze und keine Methode, einen solchen Container abzusichern.
 
-Bei `allowPrivilegeEscalation: true` (Default) setzt Kubernetes `no_new_privs` nicht. `true` selbst gewährt weder Capability noch macht es einen Container privilegiert, lässt aber einen Privilege-Escalation-Pfad: Ein kompromittierter nicht privilegierter Prozess kann ein setuid/setgid-Programm oder eine Datei mit Capabilities aus dem Image ausführen und die von dieser Datei angebotene UID/GID oder Capability erhalten. So kann RCE als Anwendungsbenutzer zu root oder einem Prozess mit zusätzlichen Capabilities **im Container** werden und die Auswirkungen des Angriffs sowie mögliche Escape-Ketten erweitern. Benötigt die Anwendung ein solches exec nicht, ist `false` sicherer.
+Bei `allowPrivilegeEscalation: true` (Default) setzt Kubernetes `no_new_privs` nicht. `true` selbst gewährt weder Capability noch macht es einen Container privilegiert, lässt aber einen Privilege-Escalation-Pfad offen: Ein kompromittierter nicht privilegierter Prozess kann ein setuid/setgid-Programm oder eine Datei mit Capabilities aus dem Image ausführen und die von dieser Datei angebotene UID/GID oder Capability erhalten. So kann RCE als Anwendungsbenutzer zu root oder einem Prozess mit zusätzlichen Capabilities **im Container** werden und die Auswirkungen des Angriffs sowie mögliche Escape-Ketten erweitern. Benötigt die Anwendung ein solches exec nicht, ist `false` sicherer.
 
 Dies ist eine wichtige, aber nicht die einzige Grenze; sie ersetzt weder das Droppen von Capabilities noch seccomp oder MAC. Ein sicherer Kubernetes-Startpunkt ist, alles zu entfernen und nur bei dokumentiertem Bedarf eine Capability hinzuzufügen. Nur wenn sysctl-Einstellung und Anwendungsanforderungen dies bestätigen, kann eine Legacy-Anwendung `NET_BIND_SERVICE` für TCP 80 benötigen:
 
@@ -416,7 +416,7 @@ flowchart TB
     process["Container-Prozess"] --> syscall["syscall<br/>openat · clone<br/>mount · …"]
     syscall --> filter["seccomp-Profil"]
     filter -->|"allow"| kernel["Kernel führt<br/>den Syscall aus"]
-    filter -->|"errno or kill"| blocked["Operation<br/>blockiert"]
+    filter -->|"errno oder kill"| blocked["Operation<br/>blockiert"]
     filter -->|"log"| audit["Ereignis zur<br/>Untersuchung"]
     style process fill:#326ce5,color:#fff
     style filter fill:#673ab7,color:#fff
@@ -589,7 +589,7 @@ Typische Fehler:
 - **PID namespace** - Isolation der Prozessliste und PIDs.
 - **network namespace** - Isolation von Interfaces, Routen und Netzwerk-Stack.
 - **cgroup** - Gruppe von Prozessen mit Ressourcenlimits und Accounting.
-- **capability** - einzelnes Linux-Privileg, das von der traditionellen allmächtigen root-Berechtigungsmenge getrennt ist.
+- **capability** - einzelnes Linux-Privileg, das aus den Befugnissen von root herausgelöst ist.
 - **CAP_SYS_ADMIN** - übermäßig breite Capability, gefährlich für einen gewöhnlichen Workload.
 - **syscall** - Systemaufruf, durch den ein Prozess auf den Kernel zugreift.
 - **seccomp** - vom Kernel auf einen Prozess angewendeter Syscall-Filter.

@@ -512,7 +512,7 @@ spec:
 
 Para `Localhost`, la ruta es relativa al seccomp directory de kubelet, no al filesystem del container. No
 copie el JSON profile a un ConfigMap esperando que kubelet lo vea. El profile debe entregarse a las nodes
-de forma confiable, fijar scheduling a las nodes donde existe y demostrar la aplicación effective. El
+de forma confiable, debe fijarse el scheduling a las nodes donde existe y debe demostrarse la aplicación effective. El
 modelo detallado y la depuración de syscall denials están en el [capítulo 17](../17/es.md).
 
 Comprobación dentro del Linux namespace del proceso:
@@ -563,7 +563,7 @@ kubectl get pod hardened-web -o json | jq '
   | .[] | {name, privileged: (.securityContext.privileged // false)}'
 ```
 
-JSONPath mostrará la configuración declarada. Para un campo boolean ausente, salida vacía no equivale a
+JSONPath mostrará la configuración declarada. Para un campo boolean ausente, una salida vacía no equivale a
 `false`: los requisitos de audit deben ser explícitos y no depender del default. Compruebe también
 `initContainers`, sidecars injected de service-mesh/observability y ephemeral containers: un container débil
 comparte la red y los volumes del mismo Pod.
@@ -615,7 +615,7 @@ workload: los tests no deben llenar accidentalmente `emptyDir`, eliminar cache n
 
 No copie secrets a un `emptyDir` writable si la aplicación puede leerlos como Secret montado. Si el
 programa debe transformar un certificado/configuración, cree un volume writable pequeño separado, minimice
-su lifetime y permissions y no lo mezcle con cache compartido. `readOnlyRootFilesystem` no protege el
+su lifetime y permisos y no lo mezcle con cache compartido. `readOnlyRootFilesystem` no protege el
 contenido de un volume frente a otro container del mismo Pod que también tenga montado ese volume.
 
 > 🏭 Versioned templates, inventory, corrección de image, canary, runtime tests, admission guardrails y excepciones documentadas.
@@ -624,7 +624,7 @@ contenido de un volume frente a otro container del mismo Pod que también tenga 
 
 Implante el baseline en el template de Deployment/StatefulSet/Job y Helm chart, no manualmente en un Pod
 creado. El `securityContext` de la mayoría de los Pods running es immutable: el cambio correcto publica
-una nueva ReplicaSet/Pod y observa el rollout.
+una nueva ReplicaSet/Pod y se observa el rollout.
 
 1. Haga inventario de procesos, writable paths, low ports, volume ownership, requisitos de syscall/profile
    y excepciones `privileged`/`host*` actuales.
@@ -716,7 +716,7 @@ incluidos los escenarios negativos.
 
 `hostPID` abre procesos y datos `/proc` sensibles de la node, mientras `hostNetwork` proporciona network
 namespace, IP, host ports y servicios localhost de la node. Es acceso a recursos host que un UID non-root
-no elimina. Para workload ordinario el capítulo recomienda Service, red Pod normal, NetworkPolicy o una API
+no elimina. Para un workload ordinario el capítulo recomienda Service, red Pod normal, NetworkPolicy o una API
 admitida en vez de host namespace.
 </details>
 

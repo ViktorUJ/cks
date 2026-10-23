@@ -248,7 +248,7 @@ des clients déjà authentifiés :
 k get --raw=/readyz # ok
 ```
 
-Une authentication sans authorization restrictive n'a aucun sens - vérifiez que
+Une authentification sans autorisation restrictive n'a aucun sens - vérifiez que
 `--authorization-mode` sur le static Pod est toujours `Node,RBAC` et ne contient pas `AlwaysAllow`
 (kubeadm le définit par défaut, mais il vaut mieux s'assurer que rien n'a changé le flag) :
 

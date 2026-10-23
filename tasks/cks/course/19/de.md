@@ -6,7 +6,7 @@
 > ein durch RBAC erlaubtes Manifest mit `privileged: true`, `hostPath: /` oder einem Host-Namespace
 > übermitteln. Ein solcher Pod gibt seinem Prozess Zugriff auf Node-Daten und den Kernel, obwohl ein
 > separates Workload einen guten `SecurityContext` haben kann. Es braucht eine gemeinsame
-> Admission-Grenze, die vor dem Start einen sicheren Baseline für alle Pods in einem Namespace erzwingt.
+> Admission-Grenze, die vor dem Start eine sichere Baseline für alle Pods in einem Namespace erzwingt.
 
 > **Was folgt.** `securityContext` beschreibt, mit welchen Rechten ein bestimmter Pod *laufen soll*,
 > verhindert jedoch nicht selbst, dass ein anderes Manifest `privileged: true`, `hostPath` oder Host-Namespaces
@@ -60,7 +60,7 @@ flowchart TB
 
 PSA ist ein validating admission controller mit festen Standards. Er ersetzt RBAC nicht: RBAC
 beantwortet, **wer** das Recht `create pods` hat; PSA beantwortet, **welchen Pod** dieser Benutzer
-erstellen darf. Er ersetzt auch nicht NetworkPolicy, seccomp, AppArmor, Image-Scanning oder einen
+erstellen darf. Er ersetzt auch nicht NetworkPolicy, seccomp, AppArmor, Image-Scanning oder eine
 Policy Engine: Jede Kontrolle schützt eine andere Schicht.
 
 ## 19.2. PSS: drei Sicherheitsstufen
@@ -84,7 +84,7 @@ Ein Cluster-Administrator kann in `defaults` `baseline` oder `restricted` sowie 
 setzen. Prüfen Sie die wirksame Policy deshalb immer anhand des Namespace und der
 Admission-Controller-Konfiguration, nicht anhand eines fehlenden Labels.
 
-Gewähren Sie `privileged` auch für einen System-Namespace keinem Anwendungsteam "zum Reparieren".
+Gewähren Sie `privileged` auch für einen System-Namespace keinem Anwendungsteam „zum Reparieren“.
 Ermitteln Sie zuerst die benötigte Capability, das Volume oder den Syscall; sonst wird temporäres
 Debugging zu einem dauerhaften Bypass der Sicherheitsgrenze.
 
@@ -214,9 +214,9 @@ pod-security.kubernetes.io/<mode>-version=<version>
 
 `<mode>` ist `enforce`, `audit` oder `warn`; `<level>` ist `privileged`, `baseline` oder
 `restricted`. Ein Versionswert ist eine Kubernetes-Minor-Version wie `v1.36` oder `latest`.
-Setzen Sie die Version für jeden Modus getrennt.
+Die Version kann für jeden Modus getrennt gesetzt werden.
 
-PSA-Labels sind Teil der Sicherheitsgrenze. Einer Identity, die Workloads in einem Anwendungs-
+PSA-Labels sind Teil der Sicherheitsgrenze. Einer Identity, die Workloads in einem Anwendungs-Namespace
 Namespace erstellen darf, darf nicht automatisch `create`, `patch` oder `update` auf `Namespace`
 gegeben werden: Das Ändern oder Entfernen von PSA-Labels ändert die angewendete Policy.
 
@@ -255,15 +255,15 @@ Pin, der zu seiner tatsächlichen API-server-Version passt; verwenden Sie keine 
 > Labels und die obige Matrix `v1.36`. Die CKS-Prüfungsumgebung im festgehaltenen Kurs-Snapshot nutzt
 > Kubernetes `v1.35`; prüfen Sie vor einem Versuch die tatsächliche Version in ExamUI. Wählen Sie die
 > Production-PSS-Version stets anhand der API-server-Version dieses Clusters: Der Trainings-Pin `v1.36`
-> verspricht weder Prüfungsanforderungen noch empfiehlt er, künftig "immer v1.36 zu verwenden".
+> verspricht weder Prüfungsanforderungen noch empfiehlt er, künftig „immer v1.36 zu verwenden“.
 
 **PSS-Version Drift.** Die Profile `baseline`/`restricted` werden mit der Zeit strenger: So hat
 Kubernetes `v1.34` Beschränkungen für Host-Felder in Probes und Lifecycle Hooks zu Baseline/Restricted
 hinzugefügt. Ein Pod, der einen älteren Pin (etwa `v1.31`) besteht, kann deshalb unter einer neueren
 Standardversion abgelehnt werden. Ein praktikabler Migrationsweg ist, die aktuell unterstützte Version
 zu pinnen, die Wirkung zunächst in `warn`/`audit` zu bewerten, bei Bedarf mit dem alten Pin (`v1.31`)
-als Migrationsbeispiel zu vergleichen und dann `enforce` bewusst anzuheben. Deshalb bedeutet "läuft
-mit einer alten PSS-Version" nicht "besteht mit einer neuen".
+als Migrationsbeispiel zu vergleichen und dann `enforce` bewusst anzuheben. Deshalb bedeutet „läuft
+mit einer alten PSS-Version“ nicht „besteht mit einer neuen“.
 
 Die Prüfung der wirksamen Konfiguration beginnt mit dem Namespace, nicht mit dem Pod-Manifest:
 
@@ -290,7 +290,7 @@ kann blockiert werden. Eine sichere Migration trennt Beobachtung und Verbot.
    Verfügbarkeit von API Audit Logging und des ausgewählten Sinks; bewahren Sie vorhandene
    Warnungen/Audit-Datensätze als Arbeitsliste auf.
 3. **Verstöße in Templates beseitigen.** Fügen Sie `runAsNonRoot`, seccomp, das Verbot der
-   Privilege Escalation und entfernte Capabilities hinzu; ersetzen Sie `hostPath` durch ein
+   Privilege Escalation und das Entfernen von Capabilities (`drop`) hinzu; ersetzen Sie `hostPath` durch ein
    erlaubtes Volume und eine privileged Funktion durch eine separate Systemkomponente.
 4. **Negative und positive Szenarien testen.** Ein guter Pod muss ohne Warnung erstellt werden;
    ein absichtlich schlechter muss vor Enforce eine Warnung/Audit und danach eine Ablehnung erzeugen.
@@ -377,8 +377,8 @@ und auf einer anderen Schicht.
 ## 19.7. Ausnahmen: eng, mit Owner und zeitlich begrenzt
 
 Einige Systemkomponenten erfüllen restricted objektiv nicht: CNI, ein CSI Node Plugin, ein Device
-Plugin oder ein Diagnose-Agent. Die Wahl lautet nicht "PSA für den Cluster deaktivieren", sondern
-minimale Ausnahme mit Owner, Grund und Review-Frist.
+Plugin oder ein Diagnose-Agent. Die Wahl lautet nicht „PSA für den Cluster deaktivieren“, sondern
+eine minimale Ausnahme mit Owner, Grund und Review-Frist.
 
 **Bevorzugte Option - separater Namespace und die am wenigsten permissive ausreichende Stufe.**
 Ein System-DaemonSet bleibt beispielsweise in `kube-system` oder einem dedizierten
@@ -429,7 +429,7 @@ Eine Username-Ausnahme gilt für die Identity einer bestimmten API-Anfrage. Ein 
 Deployment, DaemonSet oder Job wird normalerweise von einem Controller und nicht vom ursprünglichen
 Benutzer erstellt; dessen Ausnahme wird nicht an den vom Controller erstellten Pod weitergegeben.
 Nehmen Sie Controller-ServiceAccounts für ein Workload nicht aus: Dies kann PSA für jede Ressource
-umgehen, die ein solcher Controller erstellt. Verwechseln Sie auch PSA-Exemption nicht mit RBAC.
+umgehen, die ein solcher Controller erstellt. Verwechseln Sie auch die PSA-Exemption nicht mit RBAC.
 Eine Ausnahme verleiht nicht das Recht, einen Pod zu erstellen; sie überspringt nur die PSS-Prüfung,
 wenn RBAC die Anfrage bereits erlaubt hat.
 
@@ -439,7 +439,7 @@ wenn RBAC die Anfrage bereits erlaubt hat.
 
 **PodSecurityPolicy (PSP)** war der frühere Mechanismus für Pod-Einschränkungen, wurde jedoch in
 Kubernetes Version 1.25 entfernt. PSA ist kein API-Ersatz für `kind: PodSecurityPolicy`: Es
-verwendet drei feste PSS-Profile und Namespace-Labels, keine beliebige PSP Spec und kein RBAC `use`.
+verwendet drei feste PSS-Profile und Namespace-Labels, keine beliebige PSP-Spec und kein RBAC `use`.
 
 Anzeichen einer veralteten Konfiguration:
 
@@ -465,7 +465,7 @@ PSP `use` aktiviert keinen Schutz. Während der Migration:
   und keine alten clusterweiten Bypasses übrig geblieben sind.
 
 PSA kann nicht mit eigenen Feldern erweitert werden. Das ist ein Vorteil für grundlegendes
-Hardening: Das Verhalten ist standardisiert und in Prüfung und Incident Response klar. Verwenden
+Hardening: Das Verhalten ist standardisiert und in der Prüfung und bei Incident Response klar. Verwenden
 Sie für organisatorische Regeln zusätzlich zu PSS eine Policy Engine, **nicht** anstelle davon.
 
 > 🎯 Nachweis: gepinnte Labels, ein erlaubter und ein verletzender **direkter Pod** im Namespace sowie der wirksame `securityContext` des Workloads.
@@ -540,7 +540,7 @@ ein Workload-Template dort zusätzlich über einen echten Rollout.
   ServiceAccounts und RBAC von Business-Workloads isoliert. `privileged` wird nicht auf die gesamte
   Plattform ausgedehnt.
 - **Eine Ausnahme ist temporäre Security Debt.** Sie hat Owner, Test, Ticket, kompensierende
-  Controls und Entfernungsdatum. Eine Exemption ist kein Weg, ein Image zu "reparieren", das
+  Controls und Entfernungsdatum. Eine Exemption ist kein Weg, ein Image zu „reparieren“, das
   Non-root gemacht werden kann.
 - **PSA plus Policy Engine.** PSA liefert die bekannte PSS-Baseline; Kyverno/Gatekeeper oder
   eine integrierte CEL Policy fügt Organisationsanforderungen hinzu: erlaubte Registries, Image

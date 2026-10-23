@@ -11,7 +11,7 @@
 > **この後。** [第29章](../29/jp.md)の Falco は system event を alert に変換します。しかし alert 単独では
 > 「どの Pod か」「どの process か」「その前後に何があったか」「攻撃のどのフェーズで止まったか」に
 > 答えません。ここでは signal から workload とその owner までの証拠の chain を構築します。これは CKS の
-> **Monitoring, Logging & Runtime Security（20%）**domain です。
+> **Monitoring, Logging & Runtime Security（20%）** domain です。
 
 > **CKA から必要な知識。** node、container runtime、CNI の構造は[CKA 第02章](../../../cka/course/02/jp.md)、
 > node 上のコンテナ process と診断は[CKA 第40章](../../../cka/course/40/jp.md)で扱います。攻撃フェーズの
@@ -111,7 +111,7 @@ physical infrastructure と直接やり取りすることは考えにくいで�
   cloud provider/infrastructure team の責任範囲であり、クラスタではありません。
 - **重要な鍵のための HSM（Hardware Security Module）。** kube-apiserver の CA private key、etcd
   encryption key、`EncryptionConfiguration`（第21章）の KMS master key は production では disk 上の
-  file としてではなく、private key を抜き出せない専用デバイスである HSM に保管することが推奨されます。
+  file としてではなく、private key を物理的に抜き出せない専用デバイスである HSM に保管することが推奨されます。
   AWS KMS の標準（default）key store は HSM-backed service です: key material は FIPS 140-3 HSM 内で
   生成・使用され、平文でその外に出ることはありません。しかし AWS KMS は custom key stores もサポートします -
   AWS CloudHSM key store（customer-owned の専用 HSM クラスタ内の鍵）と external key store（XKS、鍵の
@@ -133,7 +133,7 @@ physical infrastructure と直接やり取りすることは考えにくいで�
 admission を管理しますが、その下にある hardware の trust chain は管理しません。API を通して「外から」
 見える最大限のものは、provider が時々 node の hardware 能力に付ける `Node` の labels/taints です（例えば
 confidential computing や TPM presence を Node Feature Discovery から示す
-`feature.node.kubernetes.io/`-style の label）が、整合性の検証自体はクラスタの外で行われます。公式な
+`feature.node.kubernetes.io/` prefix の label）が、整合性の検証自体はクラスタの外で行われます。公式な
 curriculum の competency は physical infrastructure を除外していません - 実際の結論は、データセンターへの
 physical access なしの performance-based exam では直接的な physical interaction を持つ task は期待できない
 ということです。この competency の実践的なカバレッジはむしろ、上に示したような infrastructure/node signal と
@@ -364,7 +364,7 @@ sequenceDiagram
 | API audit: `system:serviceaccount:ns:sa` が Secret を読むか Pod を作成 | lateral movement または persistence                  | `verb`、`objectRef`、response code、source IP、この SA の以前の正常な action | 権限を取り消し/制限し、このidentity のすべての action を見つける |
 | API audit: 新しい `CronJob`、`DaemonSet`、RoleBinding                            | persistence または privilege escalation              | owner、manifest diff、`escalate`/`bind`、誰が API を呼んだか                                        | controller を停止し、manifest と audit evidence を保存                         |
 | Falco: `/dev/mem`、runtime socket、host mount                                          | privilege escalation / defense evasion の試み       | Pod の `privileged`、capabilities、`hostPID`、`hostPath`、操作の結果            | runbook に従って node/Pod を分離し、host integrity を確認                        |
-| Flow/DNS: 外部 destination への大きな egress                         | exfiltration                                         | destination の owner、byte count、それより前にどんな data event があったか                            | egress を遮断し、flow を保存し、credentials の scope を制限                        |
+| Flow/DNS: 外部 destination への大きな egress                         | exfiltration                                         | destination の owner、byte count、それより前にどんな data event があったか                            | egress を遮断し、flow を保存し、credentials の scope を記録                        |
 
 「Falco の shell → audit の `create CronJob` → network egress」という連続は、3つの個別の alert より強力
 です。correlation には clock skew を考慮した時間 window を使い、key には Pod UID、container ID、node、
@@ -448,7 +448,7 @@ evidence として記録する必要があります。
 | Action | 何をするか | いつ適切か | 何を失う/保証しないか |
 | --- | --- | --- | --- |
 | **NetworkPolicy quarantine** | NetworkPolicy を実際に enforce する CNI での、選択した Pod への additive な L3/L4 isolation | 可逆的な最初のステップ: 新しく許可される TCP/UDP/SCTP connections を制限し、Pod と evidence を保持する | priority deny ではない: 選択するすべての policy の allow が合算される。resident node への traffic、non-L4、既存の connection は CNI により制限/依存する |
-| **Node の cordon** | `kubectl cordon <node>` — scheduling freeze: 新しい通常の Pod の scheduling をブロックする。既存の Pod は動作を続ける | node compromise が疑われる場合の追加の preparatory step | compromise された node、kubelet、host process、network、credentials は分離しない。infrastructure isolation runbook が必要 |
+| **Node の cordon** | `kubectl cordon <node>` - scheduling freeze: 新しい通常の Pod の scheduling をブロックする。既存の Pod は動作を続ける | node compromise が疑われる場合の追加の preparatory step | compromise された node、kubelet、host process、network、credentials は分離しない。infrastructure isolation runbook が必要 |
 | **owning workload の停止** | owner/controller を特定し、source の desired state を変更する。例: `kubectl scale deployment --replicas=0` | 確認された active risk、evidence は保存済み | 単純な `kubectl delete pod` は通常 replacement を作成し、live process、`/proc` context、再度の `strace` の可能性を失う |
 
 順序は通常次の通りです: まず CNI の能力と、Pod を選択するすべての policy を確認し、必要に応じて
@@ -461,7 +461,7 @@ node の自動 **evict**（`kubectl drain`）も、controller が停止してい
 再作成します。
 
 ```bash
-# ステップ1: NetworkPolicy quarantine — evidence を破壊しない、新しいL3/L4 connections の制限。
+# ステップ1: NetworkPolicy quarantine - evidence を破壊しない、新しいL3/L4 connections の制限。
 # 適用前に、CNI が NetworkPolicy を enforce することを確認し、この Pod を既に選択している
 # すべての policy を確認してください: それらの allow rules は quarantine と合算されます。
 # compromise された Pod の既存の label を推測せず、専用の marker を割り当ててください。
@@ -485,7 +485,7 @@ kubectl -n "$NAMESPACE" get networkpolicy
 kubectl -n "$NAMESPACE" get networkpolicy incident-quarantine
 # 適用後の新しい接続を確認してください。既に確立された接続の運命は CNI に依存します。
 
-# ステップ2 — scheduling freeze のみ、node isolation ではない:
+# ステップ2 - scheduling freeze のみ、node isolation ではない:
 NODE="${NODE:?set NODE to the node from the Falco alert}"
 kubectl cordon "$NODE"
 kubectl get node "$NODE"
@@ -714,7 +714,7 @@ flowchart TB
 - `%k8s.pod.uid` や `crictl` を確認せずに `container.id` を Kubernetes attribution の証拠とみなす。
 - reschedule 後に別の node で Pod を探し、一致した name だけで結論を出す。
 - Falco の Linux `%user.name` と audit-log の authenticated Kubernetes user を混同する。
-- 状況が許す場合でも、PodSpec、owner、image digest、alert、CRI/PID evidence の保存前に Pod を削除する。
+- 保存が可能な状況なのに、PodSpec、owner、image digest、alert、CRI/PID evidence の保存前に Pod を削除する。
 - `strace` を継続的な監視にする、または node のすべての process に対して実行する。
 - vendor file の `falco_rules.yaml` を編集する、または1つの noisy workload のために rule を全体的に
   無効化する。

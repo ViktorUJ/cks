@@ -17,7 +17,7 @@
 > **რა გჭირდებათ CKA-დან.** საბაზისო `securityContext`, non-root გაშვება, capability-ები
 > და `allowPrivilegeEscalation` განხილულია [CKA-ს მე-20 თავში](../../../cka/course/20/ge.md)
 > და ივარჯიშება [CKA-ს 106-ე ლაბში](../../../cka/labs/106/README_GE.MD). აქ
-> `securityContext` ემსახურება Kubernetes-ის ინტერფეისს AppArmor-ის profile-თან; მთავარი
+> `securityContext` არის Kubernetes-ის ინტერფეისი AppArmor-ის profile-თან; მთავარი
 > ამოცანაა profile-ის მომზადება node-ზე, მისი მინიჭება Pod-ისთვის და იმის დამტკიცება, რომ
 > აკრძალვა მართლაც მუშაობს.
 
@@ -161,11 +161,11 @@ sudo apparmor_parser -R /etc/apparmor.d/k8s-demo
 გადართავენ უკვე ჩატვირთული profile-ის რეჟიმს და თავადვე ასრულებენ მის reload-ს:
 თავად რეჟიმის შესაცვლელად Pod-ის restart არ სჭირდება. წაშლამდე მოძებნეთ Pod-ები და
 პროცესები, რომლებსაც ჯერ კიდევ შეუძლიათ მისი გამოყენება. არ დაარედაქტიროთ policy
-production-node-ზე ცდომილებით: შეცდომამ შეიძლება ხელი შეუშალოს workload-ის სტარტს ან
+production-node-ზე ბრმად: შეცდომამ შეიძლება ხელი შეუშალოს workload-ის სტარტს ან
 დაამტვრიოს აპლიკაცია reload-ის შემდეგ. ჯერ შეამოწმეთ syntax და rollout გამოყოფილ
 node-ზე.
 
-განასხვავეთ `apparmor_parser`-ის flags: `-p` მხოლოდ შლის `#include`-ს და ბეჭდავს
+განასხვავეთ `apparmor_parser`-ის flags: `-p` მხოლოდ ანაცვლებს `#include`-ს მისი შინაარსით და ბეჭდავს
 შედეგს; `-Q` კომპილირებს policy-ს, მაგრამ არ ტვირთავს მას kernel-ში; `-r` ცვლის
 ჩატვირთულ ვერსიას. უსაფრთხო შემოწმებისთვის გამოიყენეთ `-Q -K`, შემდეგ `-r -W`.
 
@@ -178,7 +178,7 @@ sudo aa-status
 ```
 
 `aa-status` გვიჩვენებს მდგომარეობას node-ზე და არა Kubernetes-ის სპეციფიკაციას.
-რამდენიმე node pool-ის მქონე კლასტერისთვის შეამოწმეთ თითოეული pool: scheduler-მა
+რამდენიმე node pool-ის მქონე კლასტერისთვის შეამოწმეთ თითოეული pool: scheduler
 არ იცის `/etc/apparmor.d`-ის შემცველობა და თავისთავად არ იძლევა გარანტიას, რომ
 `Localhost` profile არსებობს არჩეულ node-ზე.
 
@@ -325,9 +325,9 @@ kubectl get pod -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.met
 Pod audit-ის ცარიელი შედეგი არ ადასტურებს container-level override-ის ან
 legacy-კონფიგურაციის არარსებობას controller-ში. დამატებით შეამოწმეთ Deployment-ის,
 StatefulSet-ის, DaemonSet-ის, Job-ისა და CronJob-ის template-ები: პირველი
-ოთხისთვის — `.spec.template.metadata.annotations`,
+ოთხისთვის - `.spec.template.metadata.annotations`,
 `.spec.template.spec.securityContext.appArmorProfile` და container override-ები;
-CronJob-ისთვის — იგივე ველები `.spec.jobTemplate.spec.template`-ის ქვეშ. გადატანისას
+CronJob-ისთვის - იგივე ველები `.spec.jobTemplate.spec.template`-ის ქვეშ. გადატანისას
 შეასწორეთ controller/template manifest, და არა მხოლოდ მის მიერ შექმნილი Pod.
 
 > 🎯 განასხვავეთ კონტეინერის შექმნის შეცდომა runtime denial-ისგან, შემდეგ
@@ -414,7 +414,7 @@ sudo aa-enforce /etc/apparmor.d/k8s-demo
 ```
 
 evidence-ისთვის ჯერ შეამოწმეთ audit subsystem (`ausearch` აქტიური auditd-ის დროს,
-შემდეგ `/var/log/audit/audit.log`); `journalctl -k` და `dmesg` — fallback-ია. თუ
+შემდეგ `/var/log/audit/audit.log`); `journalctl -k` და `dmesg` - fallback-ია. თუ
 წყაროები მიუწვდომელია, ეს არის `REVIEW_REQUIRED`, და არა denial-ის არარსებობის
 მტკიცებულება.
 
@@ -440,7 +440,7 @@ auditd-ის დროს ან `/var/log/audit/audit.log`-ში; `journalctl
 > 🎯 შეძლოთ დიაგნოსტიკა, თუ რატომ არ გამოიყენა AppArmor-ის profile ან რატომ არ
 > იწყებს workload მუშაობას.
 
-### 16.8.1. Troubleshooting: „Profile არ მუშაობს, რადგან…"
+### 16.8.1. Troubleshooting: „Profile არ მუშაობს, რადგან…“
 
 ქვემოთ `NS`, `POD` და `CTR` აღნიშნავს namespace-ს, Pod-სა და კონტეინერს. ჯერ
 ყოველთვის დაადგინეთ ფაქტობრივი node: AppArmor-ის დიაგნოსტიკა სხვა node-ზე
@@ -586,7 +586,7 @@ kubelet-ის დირექტორიას, როგორც policy-ი�
 <details>
 <summary>1. რატომ არ ანაცვლებს AppArmor UID/GID-ს, capability-ებს, seccomp-ს ან RBAC-ს?</summary>
 
-ეს კონტროლები სხვადასხვა კითხვას პასუხობს: DAC ამოწმებს UID/GID-სა და mode bits-ს, capability-ები — ცალკეულ kernel-ის პრივილეგიებს, seccomp — დაშვებულ syscall-ებს, ხოლო RBAC — identity-ის Kubernetes API-წვდომას. AppArmor ამატებს path-based MAC-ს პროცესის ქმედებებისთვის profile-ის მიხედვით. ამიტომ profile ავსებს, მაგრამ არ აუქმებს non-root-ის, dropped capability-ების, seccomp-ისა და მინიმალური RBAC-ის საჭიროებას.
+ეს კონტროლები სხვადასხვა კითხვას პასუხობს: DAC ამოწმებს UID/GID-სა და mode bits-ს, capability-ები - ცალკეულ kernel-ის პრივილეგიებს, seccomp - დაშვებულ syscall-ებს, ხოლო RBAC - identity-ის Kubernetes API-წვდომას. AppArmor ამატებს path-based MAC-ს პროცესის ქმედებებისთვის profile-ის მიხედვით. ამიტომ profile ავსებს, მაგრამ არ აუქმებს non-root-ის, dropped capability-ების, seccomp-ისა და მინიმალური RBAC-ის საჭიროებას.
 </details>
 
 <details>
@@ -611,7 +611,7 @@ kubelet-ის დირექტორიას, როგორც policy-ი�
 <details>
 <summary>5. რომელი მნიშვნელობებია დაშვებული `appArmorProfile.type`-ისთვის და როდის არის `Unconfined` გამართლებული?</summary>
 
-დაშვებულია `RuntimeDefault`, `Localhost` და `Unconfined`. `RuntimeDefault` ემსახურება საერთო baseline-ს ხელმისაწვდომი AppArmor-ის დროს, ხოლო `Localhost` — გადამოწმებული აპლიკაცია-სპეციფიკური profile-ისთვის, წინასწარ ჩატვირთულისთვის node-ზე. `Unconfined` გამართლებულია მხოლოდ როგორც დროებითი დიაგნოსტიკური გამონაკლისი რისკის ცალსახა პასუხისმგებელი პირით და არა როგორც profile-ის ჩავარდნის გამოსწორების საშუალება.
+დაშვებულია `RuntimeDefault`, `Localhost` და `Unconfined`. `RuntimeDefault` ემსახურება საერთო baseline-ს ხელმისაწვდომი AppArmor-ის დროს, ხოლო `Localhost` - გადამოწმებული აპლიკაცია-სპეციფიკური profile-ისთვის, წინასწარ ჩატვირთულისთვის node-ზე. `Unconfined` გამართლებულია მხოლოდ როგორც დროებითი დიაგნოსტიკური გამონაკლისი რისკის ცალსახა პასუხისმგებელი პირით და არა როგორც profile-ის ჩავარდნის გამოსწორების საშუალება.
 </details>
 
 <details>
@@ -642,13 +642,13 @@ PSA ამოწმებს Pod-spec-ის დაშვებადობა�
 
 ## პრაქტიკა
 
-ჯერ ივარჯიშეთ `securityContext`, non-root გაშვება და capability-ები
-[CKA-ს 106-ე ლაბში](../../../cka/labs/106/README_GE.MD) — ეს prerequisite-ია და არა
+ჯერ ივარჯიშეთ `securityContext`-ზე, non-root გაშვებასა და capability-ებზე
+[CKA-ს 106-ე ლაბში](../../../cka/labs/106/README_GE.MD) - ეს prerequisite-ია და არა
 თავის თემის ძირითადი პრაქტიკა. შემდეგ ტესტ-node-ზე შექმენით profile `k8s-demo`,
 ჩატვირთეთ ის `apparmor_parser`-ით, მიანიჭეთ Pod-ს `appArmorProfile.type: Localhost`
 და შეადარეთ ქცევა `complain`-სა და `enforce`-ში. შემდეგ [მე-17
 თავში](../17/ge.md) დაამატეთ seccomp: AppArmor ზღუდავს ობიექტებსა და
-profile-ის ოპერაციებს, ხოლო seccomp — პროცესისთვის ხელმისაწვდომ syscall-ების
+profile-ის ოპერაციებს, ხოლო seccomp - პროცესისთვის ხელმისაწვდომ syscall-ების
 ნაკრებს.
 
 🧪 ძირითადი CKS-პრაქტიკა: [ლაბი 106 - AppArmor და seccomp](../../labs/106/README_GE.MD)

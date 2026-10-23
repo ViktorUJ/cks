@@ -93,7 +93,7 @@ PSA и policy engine не заменяют друг друга. PSA быстро
 
 Gatekeeper и Kyverno обычно работают как admission webhook: `kube-apiserver` по HTTPS
 отправляет им `AdmissionReview`, затем ждёт ответ `allowed: true/false` и возможные JSON
-patches. У webhook есть два особенно важных параметра в `MutatingWebhookConfiguration` или
+patches. У webhook есть пять особенно важных параметров в `MutatingWebhookConfiguration` или
 `ValidatingWebhookConfiguration`:
 
 | Параметр | Значение для безопасности | Риск |

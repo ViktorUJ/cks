@@ -213,7 +213,7 @@ Windows 不適用這些 Linux controls。Windows-container identity 透過 Pod �
 | `hostIPC: true` | node IPC namespace | 存取 host-process shared memory 與 IPC | 具有 auth 的 volume、Service 或 message queue |
 | `hostPath` volume | node filesystem 中選定 path | 讀取 kubelet credentials、container sockets、runtime state 或寫入 host | PVC、ConfigMap、Secret、`emptyDir`；只對 trusted daemon 提供狹窄 read-only path |
 
-`privileged: true` 會強制使 `allowPrivilegeEscalation` effective 為 `true`，與 hardened workload 的目標衝突。此類 container 也會取得 seccomp `Unconfined`、其 AppArmor 會被忽略，SELinux context 則成為 `unconfined_t`。不要嘗試以相鄰的 `allowPrivilegeEscalation: false`「修正」它：container 仍為 privileged。`CAP_SYS_ADMIN` 同樣會讓 `allowPrivilegeEscalation` 生效為此規則。相似地，單一 `NetworkPolicy` 不能使 `hostNetwork: true` 安全，因為 NetworkPolicy 通常針對一般 Pod network 而非 node network namespace 設計。
+`privileged: true` 會強制使 `allowPrivilegeEscalation` effective 為 `true`，與 hardened workload 的目標衝突。此類 container 也會取得 seccomp `Unconfined`、其 AppArmor 會被忽略，SELinux context 則成為 `unconfined_t`。不要嘗試以相鄰的 `allowPrivilegeEscalation: false`「修正」它：container 仍為 privileged。`CAP_SYS_ADMIN` 也適用相同的 `allowPrivilegeEscalation` effective 規則。相似地，單一 `NetworkPolicy` 不能使 `hostNetwork: true` 安全，因為 NetworkPolicy 通常針對一般 Pod network 而非 node network namespace 設計。
 
 ```yaml
 # 對一般應用程式而言的危險警示
@@ -300,7 +300,7 @@ flowchart TB
     style gone fill:#db4437,color:#fff
 ```
 
-`emptyDir` 會為 node 上的 Pod 建立，並由其 containers 共享。它可跨同一 Pod 內的 container restart 存續，但 Pod 刪除/重新建立後就會消失；它並非應能復原 data 的 storage。`sizeLimit` 限制的是預期的 volume，但無法取代 requests/limits 或 node ephemeral storage monitoring。
+`emptyDir` 會為 node 上的 Pod 建立，並由其 containers 共享。它可跨同一 Pod 內的 container restart 存續，但 Pod 刪除/重新建立後就會消失；它不適合作為必須能復原之 data 的 storage。`sizeLimit` 限制的是預期的容量，但無法取代 requests/limits 或 node ephemeral storage monitoring。
 
 以下範例適用於需要 `/tmp`、runtime directory 與 cache 的程式：
 
@@ -507,7 +507,7 @@ kubectl exec hardened-web -c app -- sh -c 'grep -E "^(Cap(Inh|Prm|Eff|Bnd|Amb)|N
 <details>
 <summary>4. 為什麼不能將 `fsGroup` 視為修正 image layer 所有 file permissions 的機制？</summary>
 
-`fsGroup` 是 Pod setting，有助於支援 volumes 的 group access。它不設計用來變更 image layer 中所有 files 的 owner，也無法取代 image 中正確的 ownership 與 UID。對 writable paths，還要明確選擇 volume 並檢查 storage driver support。
+`fsGroup` 是 Pod setting，有助於支援 volumes 的 group access。它並非設計用來變更 image layer 中所有 files 的 owner，也無法取代 image 中正確的 ownership 與 UID。對 writable paths，還要明確選擇 volume 並檢查 storage driver support。
 </details>
 
 <details>

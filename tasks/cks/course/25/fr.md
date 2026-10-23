@@ -48,7 +48,7 @@ flowchart TB
     style pod fill:#0f9d58,color:#fff
 ```
 
-La chaîne de confiance n'est forte que comme son maillon le plus faible. Si le CI reçoit une dependency
+La chaîne de confiance n'est aussi forte que son maillon le plus faible. Si le CI reçoit une dependency
 substituée, signe une image qui ne correspond pas à la bonne revision, ou si le CD déploie un tag mutable,
 une vérification Kubernetes ultérieure ne peut pas restaurer l'artifact d'origine. Il est donc important d'identifier à la fois
 **ce qui** est exécuté (digest et SBOM), **d'où** cela provient (provenance) et **quelles actions sont autorisées**
@@ -65,7 +65,7 @@ Attaques courantes sur la supply chain :
   Kubernetes n'a pas changé ;
 - accès d'un attaquant au registry ou aux CD credentials et deployment direct en contournant la review ;
 - fuite d'un secret dans le CI log, l'environment ou une layer d'image, suivie de l'utilisation de ce
-  credential pour signer, push ou modifier une release.
+  credential pour signer, effectuer un push ou modifier une release.
 
 L'incident de la classe SolarWinds illustre le principe : l'attaquant n'a pas besoin de compromettre chaque
 consommateur s'il parvient à modifier une étape de build ou de livraison de confiance. Dans Kubernetes,
@@ -75,7 +75,7 @@ Le récent [incident Trivy](https://github.com/aquasecurity/trivy/discussions/10
 montre la même concentration de confiance. D'après le rapport final du projet, le 27 février 2026,
 l'attaquant a exploité un workflow vulnérable avec `pull_request_target`, a obtenu des secrets au niveau
 repository et organization, puis, le 19 mars, a utilisé un credential volé pour démarrer le release workflow et
-diffuser Trivy malveillant `v0.69.4`. Le problème racine ne concernait pas le scanner lui-même, mais un CI
+diffuser le Trivy malveillant `v0.69.4`. Le problème racine ne concernait pas le scanner lui-même, mais un CI
 privilégié qui exécutait du code de PR non vérifié et pouvait accéder à des secrets excessifs ; une isolation
 insuffisante des service accounts et une rotation inefficace ont accru l'impact. Cela ne signifie pas la
 compromission de tous les utilisateurs Trivy ou des Kubernetes Pod, mais confirme la leçon de SolarWinds :
@@ -100,13 +100,13 @@ Les deux formats ouverts les plus répandus sont les suivants :
 
 | Format | Finalité et point fort | Où on le rencontre le plus souvent |
 |---|---|---|
-| **SPDX 2.3 JSON** | Standard de la Linux Foundation pour la composition des software, licences, packages et relations ; adapté au compliance et à l'échange d'inventory | OCI artifacts, distributions, CI et Kubernetes ecosystem |
+| **SPDX 2.3 JSON** | Standard de la Linux Foundation pour la composition des software, licences, packages et relations ; adapté à la compliance et à l'échange d'inventory | OCI artifacts, distributions, CI et Kubernetes ecosystem |
 | **CycloneDX** | Format de l'Open Worldwide Application Security Project (OWASP), orienté component analysis et security tooling ; pratique pour vulnerability management | scanners, dependency analysis, security dashboards |
 
 Les deux formats peuvent décrire une même image, mais leurs champs JSON diffèrent. Tous les exemples SPDX ci-dessous
 utilisent **SPDX 2.3 JSON** : dans ce schéma, les packages se trouvent généralement dans `.packages`,
 et la version dans `versionInfo` ; dans CycloneDX, les composants se trouvent dans
-`.components`, et la version dans `.version`. Ne transposez pas ces chemins à SPDX 3.0 : son
+`.components`, et la version dans `version`. Ne transposez pas ces chemins à SPDX 3.0 : son
 modèle de données est différent. N'écrivez pas une requête `jq` universelle sans connaître le format et la version
 du fichier : l'absence de résultat peut signaler un chemin JSON incorrect, et non l'absence du package.
 
@@ -159,7 +159,7 @@ syft "$IMAGE" -o cyclonedx-json > api.cyclonedx.json
 ```
 
 Si la référence pointe vers un OCI index multi-arch, choisissez explicitement la platform. Pour un cluster
-hétérogène, créez et indexez un SBOM séparé pour chaque platform manifest effectivement utilisée ; conservez
+hétérogène, créez et indexez un SBOM séparé pour chaque platform manifest effectivement utilisé ; conservez
 près de lui la platform et le digest de ce manifest, et non seulement le digest de l'index :
 
 ```bash
@@ -264,7 +264,7 @@ flowchart TB
 ## 25.4. Lire un SBOM : trouver un package et une version précise
 
 Un scénario d'examen ou de production commence généralement par un advisory : par exemple, on sait que
-l'un des images contient `ca-certificates-bundle` dans une version donnée. On ne peut pas conclure à partir
+l'une des images contient `ca-certificates-bundle` dans une version donnée. On ne peut pas conclure à partir
 du nom ou du tag de l'image. Il faut trouver le package **et sa version** dans le SBOM du digest précis,
 puis comparer le résultat au workload en cours d'exécution.
 
@@ -489,7 +489,7 @@ Cycle de travail :
    registry/platform-manifest digest portable. Pour le multi-arch, comparez l'architecture du node,
    le platform manifest et le SBOM qui lui est lié ;
 4. séparer les digest affectés entre les running workloads, ceux disponibles seulement dans le registry et ceux
-   déjà retirés ; corriger d'abord le running workload à fort impact business/risk, puis les autres release ;
+   déjà retirés ; corriger d'abord le running workload à fort impact business/risk, puis les autres releases ;
 5. construire ou sélectionner l'artifact corrigé, générer un nouveau SBOM et vérifier que la version
    affectée a disparu ou a été remplacée ;
 6. scanner, signer/vérifier, puis seulement promouvoir le digest par CD ;
@@ -497,7 +497,7 @@ Cycle de travail :
 
 Pour une response rapide, conservez un index `digest → SBOM → scan timestamp → environment/workload`.
 Une nouvelle CVE lance ainsi une requête sur l'inventory au lieu d'un nouveau scan manuel de toutes les images :
-on détermine d'abord les release/platform-manifest digest potentiellement affectés par le SBOM, puis on
+on détermine d'abord les release/platform-manifest digest potentiellement affectés d'après le SBOM, puis on
 confirme le running workload par une spec épinglée par digest, la platform du node et le runtime `imageID`
 comme hint supplémentaire. Un tag seul ne suffit pas : il peut être mutable et ne prouve pas les octets utilisés
 par un Pod déjà en cours d'exécution.
@@ -625,7 +625,7 @@ transmis à un autre ingénieur pour reproduire le résultat.
   protected branches et la review de la build definition réduisent la probabilité de substitution ou de fuite.
 - **Vulnerability management forme une boucle fermée.** Un advisory conduit à une SBOM query, puis à un
   digest corrigé, un nouveau SBOM, un scan, une vérification et un rollout. Les exceptions ont un propriétaire,
-  une échéance et une evidence ; elles ne restent pas indéfiniment dans une ignore list.
+  une échéance et un evidence ; elles ne restent pas indéfiniment dans une ignore list.
 - **La vérification d'origine est obligatoire.** Avant le CD, vérifiez la chaîne release/index → target
   platform manifest → attestation `subject` et signature ; l'admission policy du cluster devient la dernière
   frontière, et non l'unique point de contrôle. La signature et son enforcement sont le sujet du chapitre suivant.
@@ -728,7 +728,7 @@ Il est affiché à partir du statut du Pod : `kubectl get pod <pod> -n <namespac
 <details>
 <summary>8. Pourquoi le CI ne doit-il pas construire une image, puis le CD la reconstruire discrètement dans un autre environment ?</summary>
 
-Le CD doit promouvoir un digest immutable déjà vérifié, et non créer un nouvel artifact avec des inputs, un builder ou des dependencies différents. Sinon, le SBOM, le scan et la provenance du CI se rapportent à certains octets, alors que la production peut en recevoir d'autres. La séparation publication CI et deployment CD rend cette chaîne vérifiable.
+Le CD doit promouvoir un digest immutable déjà vérifié, et non créer un nouvel artifact avec des inputs, un builder ou des dependencies différents. Sinon, le SBOM, le scan et la provenance du CI se rapportent à certains octets, alors que la production peut en recevoir d'autres. La séparation entre la publication par le CI et le deployment par le CD rend cette chaîne vérifiable.
 </details>
 
 <details>

@@ -20,7 +20,7 @@
 > სერტიფიკატები და CSR - [CKA-ს 39-ე თავში](../../../cka/course/39/ge.md). აქ არ
 > ვიმეორებთ ამ მექანიზმებს, არამედ ვიყენებთ მათ API-ს hardening-ისთვის.
 
-> 🧠 ქსელი, TLS, authentication და authorization — დამოუკიდებელი თანმიმდევრული ბარიერებია;
+> 🧠 ქსელი, TLS, authentication და authorization - დამოუკიდებელი თანმიმდევრული ბარიერებია;
 > admission ემატება მოთხოვნებისთვის, რომლებზეც ის გამოიყენება. Timeout/refused, `401` და `403`
 > სხვადასხვა შრეზე მიუთითებს.
 
@@ -65,12 +65,12 @@ flowchart TB
   paths**-ის ცხადი allowlist-ით. ხშირი ვარიანტია `/livez`, `/readyz` და საჭიროების
   შემთხვევაში `/healthz`; kubeadm-ის public token discovery-სთვის ცალკე ცხადად ნებადართულ
   path-ად შეიძლება იყოს `/api/v1/namespaces/kube-public/configmaps/cluster-info`.
-  დანარჩენი paths-ები anonymous identity-ს არ იღებენ.
+  დანარჩენი path-ები anonymous identity-ს არ იღებენ.
 - **Authorization** ამოწმებს დასაშვებ verb-ს, resource-ს და scope-ს. ჩვეულებრივ
   kubeadm-კლასტერში ეს არის `Node,RBAC`.
 - **Admission** მოქმედებს authorization-ის შემდეგ მხოლოდ იმ მოთხოვნებისთვის, რომლებზეც
   გამოიყენება admission control: უპირველესად create/delete/modify და ზოგიერთი custom
-  verb. `get`, `list` და `watch` ობიექტების მიმართ ავლენს admission layer-ს. Admission-ს
+  verb. `get`, `list` და `watch` ობიექტების მიმართ გვერდს უვლიან admission layer-ს. Admission-ს
   შეუძლია შეცვალოს ობიექტი ან უარყოს მოთხოვნა; `NodeRestriction` აქ ზღუდავს დასაშვებ
   **ცვლილებებს** kubelet-identity-ებისგან.
 
@@ -89,7 +89,7 @@ Anonymous access ზოგჯერ ტოვებენ მოძველე�
 anonymous-subject-ი არაფერს არ ანიჭებს, მაგრამ ერთი შეცდომითი `RoleBinding` ან
 `ClusterRoleBinding` `system:anonymous`-ისთვის ან `system:unauthenticated`-ისთვის აქცევს
 API-ს ხელმისაწვდომად გასაღების, სერტიფიკატის ან ტოკენის გარეშე. ჯერ იხურება შესასვლელი,
-შემდეგ - უკვე გაცემული უფლებები: ამჟამად გამორთული anonymous access საშიშ binding-ს
+შემდეგ იშლება უკვე გაცემული უფლებები: ამჟამად გამორთული anonymous access საშიშ binding-ს
 სამუდამოდ უსაფრთხოს არ ხდის.
 
 სტანდარტული kubeadm-ისთვის სრული `--anonymous-auth=false` არ შეიძლება ჩაითვალოს
@@ -97,8 +97,8 @@ API-ს ხელმისაწვდომად გასაღების, 
 credential-ების გარეშე, ამიტომ anonymous-ის გლობალური აკრძალვისას მათ შეიძლება მიიღონ
 `401` და გადატვირთონ API server. ასეთი კლასტერისთვის ძირითადი ვარიანტია სტაბილური
 `AuthenticationConfiguration`, რომელიც უერთდება `--authentication-config`-ის მეშვეობით.
-მასში პირობები არის **ზუსტი** paths-ების allowlist: ნებისმიერი სხვა path anonymous ვერ
-გახდება მაშინაც კი, თუ RBAC binding მას ნებადართავს. ეს ეხება token-based `kubeadm
+მასში პირობები არის **ზუსტი** path-ების allowlist: ნებისმიერი სხვა path anonymous ვერ
+გახდება მაშინაც კი, თუ RBAC binding მას ნებას რთავს. ეს ეხება token-based `kubeadm
 join`-საც: API-სადმი ნდობამდე unauthenticated client კითხულობს
 `/api/v1/namespaces/kube-public/configmaps/cluster-info`-ს. ამიტომ აირჩიეთ ერთ-ერთი ორი
 გამოცდილი ვარიანტიდან: დაამატეთ ეს ზუსტი path public token discovery-ის დროისთვის ან
@@ -140,7 +140,7 @@ sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
 `spec.containers[].command`-ში მიუთითეთ ზუსტად ერთი გზა ფაილამდე და ნუ დააყენებთ
-ერთდროულად `--anonymous-auth`-ს (ეს კონფიგურაციის წესები ურთიერთგამომრიცხავია):
+ერთდროულად `--anonymous-auth`-ს (კონფიგურირების ეს ხერხები ურთიერთგამომრიცხავია):
 
 ```yaml
 - --authentication-config=/etc/kubernetes/authentication/apiserver-authentication.yaml
@@ -148,7 +148,7 @@ sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml
 
 ერთი ფლაგი საკმარისი არ არის: ფაილი მდებარეობს host-ზე და ცხადად უნდა იყოს mount
 გაკეთებული static Pod-ში. დაამატეთ `hostPath` volume და read-only `volumeMount`, არსებული
-kube-apiserver-ის volumes-ების წაშლის გარეშე:
+kube-apiserver-ის volume-ების წაშლის გარეშე:
 
 ```yaml
 # დაამატეთ kube-apiserver-ის არსებულ volumeMounts-ს:
@@ -166,16 +166,16 @@ volumes:
 ```
 
 ცვლილების შემდეგ შეამოწმეთ, რომ container ნამდვილად ხედავს ფაილს, API server აღდგენილია
-და `/readyz` წარმატებულია. `hostPath` — ეს არის node-ის ლოკალური გზა: HA control plane-ში
+და `/readyz` წარმატებულია. `hostPath` - ეს არის node-ის ლოკალური გზა: HA control plane-ში
 შექმენით იგივე ფაილი და mount **ყოველ** control-plane node-ზე, თორემ მის apiserver-ს
-ფაილის mount-ი და ატვირთვა არ შეეძლება.
+ფაილის mount-ი და გაშვება არ შეეძლება.
 
 Static Pod-ის ხელით რედაქტირება ვარგისია კონკრეტული ლაბორატორიული ან საგანგებო
-ამოცანისთვის, მაგრამ არ უნდა დარჩეს kubeadm-კლასტერის ერთადერთი source of truth-ად.
+ამოცანისთვის, მაგრამ არ უნდა დარჩეს kubeadm-კლასტერის ერთადერთ source of truth-ად.
 მუდმივი კონფიგურაციისთვის გადაიტანეთ პარამეტრი და mount `ClusterConfiguration`-ში,
 მაგალითად `apiServer.extraArgs`-ისა და `apiServer.extraVolumes`-ის მეშვეობით, ან
 გამოიყენეთ მართვადი kubeadm patches. თორემ `kubeadm upgrade`-მა შეიძლება ხელახლა
-გამოქმნას manifest ამ პარამეტრის გარეშე:
+შექმნას manifest ამ პარამეტრის გარეშე:
 
 ```yaml
 apiVersion: kubeadm.k8s.io/v1beta4
@@ -195,7 +195,7 @@ apiServer:
 სრული გამორთვა `--anonymous-auth=false`-ით დასაშვებია მხოლოდ kubeadm-ის health
 probe-ების წინასწარ ავთენტიფიცირებულზე ან სხვა გამოცდილ მექანიზმზე შეცვლისა და
 bootstrap-დამოკიდებულებების შემოწმების შემდეგ. შენახვის შემდეგ kubelet ხელახლა ქმნის
-static Pod-ს. Manifest — ეს არის desired წყარო და არა უკვე მომუშავე apiserver-ის argv-ის
+static Pod-ს. Manifest - ეს არის desired წყარო და არა უკვე მომუშავე apiserver-ის argv-ის
 დამტკიცება. ნუ გადატვირთავთ ერთდროულად ყველა control-plane კომპონენტს და ნუ დაასრულებთ
 SSH-სესიას, სანამ API არ აღდგება.
 
@@ -319,15 +319,15 @@ kubectl get rolebinding -A -o json | jq -r '
 ```
 
 ნუ წაშლით binding-ს მხოლოდ subject-ის დამთხვევის გამო. კერძოდ, `system:public-info-viewer`
-— ეს არის რეგულარული default ClusterRoleBinding `system:unauthenticated`-სთვის
-non-sensitive საჯარო ინფორმაციით; ჩართული RBAC-ის შემთხვევაში რეგულარული binding-ების
+- ეს არის სტანდარტული default ClusterRoleBinding `system:unauthenticated`-სთვის
+non-sensitive საჯარო ინფორმაციით; ჩართული RBAC-ის შემთხვევაში სტანდარტული binding-ების
 დაკარგული subjects შეიძლება აღდგეს auto-reconciliation-ით API-ის გაშვების შემდეგ.
 ასევე kubeadm token discovery-ში გამოიყენება RoleBinding
 `kubeadm:bootstrap-signer-clusterinfo` `kube-public/cluster-info`-ს წასაკითხად. ჯერ
 შეამოწმეთ role და სჭირდება თუ არა შესაბამისი discovery workflow; წაშალეთ მხოლოდ custom ან
 მართლაც ზედმეტი binding.
 
-Review-ის შემდეგ წაშლა ასე გამოიყურება:
+Review-ის შემდეგ წაშლა წერტილოვნად ასე გამოიყურება:
 
 ```bash
 REVIEWED_CLUSTERROLEBINDING='reviewed-clusterrolebinding'
@@ -367,7 +367,7 @@ Structured `AuthorizationConfiguration` სტაბილურია Kubernete
 კონფიგურაციის მეორე პარალელური წყაროს დამატება.
 
 შეამოწმეთ desired არგუმენტი static Pod-manifest-ში და დააყენეთ უსაფრთხო საბაზისო ჯაჭვი,
-თუ ის შეესაბამება კლასტერის არქიტექტურას. Reconciliation-ის შემდეგ kubelet-ისგან ცალკე
+თუ ის შეესაბამება კლასტერის არქიტექტურას. kubelet-ის reconciliation-ის შემდეგ ცალკე
 დაადასტურეთ გაშვებული პროცესის argv (როგორც §12.2-ში): manifest-ში სტრიქონი
 თავისთავად არ ადასტურებს აქტიურ კონფიგურაციას:
 
@@ -381,7 +381,7 @@ sudo grep -n -- '--authorization-mode' /etc/kubernetes/manifests/kube-apiserver.
 
 `Node` authorizer არ არის საჭირო „ყველა node-ის ნდობისთვის“, არამედ kubelet-ის სპეციალური
 API ოპერაციებისთვის. ნაჩვენებ kubeadm baseline-ში `Node,RBAC` დანარჩენი identity-ები
-ავტორიზდება RBAC-ის მეშვეობით. სხვა გააზრებულ არქიტექტურაში საერთო authorizer-მა
+ავტორიზდება RBAC-ის მეშვეობით. სხვა გააზრებულ არქიტექტურაში საერთო authorizer-ი
 შეიძლება შეიცავდეს, მაგალითად, Webhook-ს; მნიშვნელოვანია, რომ ყველა დანარჩენი
 მოთხოვნისთვის არსებობდეს fail-closed authorization policy და `AlwaysAllow` არ
 გამოიყენებოდეს fallback-ად. ნუ შეცვლით modes-ების სიას მომუშავე კლასტერზე
@@ -392,7 +392,7 @@ bootstrap-კონტროლერების, identity provider-ისა �
 > RBAC ზღუდავს დანარჩენ identity-ებს, ხოლო `NodeRestriction` ზღუდავს დასაშვებ mutating
 > requests-ს node credentials-ით.
 
-**NodeRestriction** — validating admission plugin-ია, რომელიც ავსებს `Node` authorizer-ს.
+**NodeRestriction** - validating admission plugin-ია, რომელიც ავსებს `Node` authorizer-ს.
 `Node` authorizer განსაზღვრავს kubelet-ის API-უფლებებს და ზღუდავს relation-sensitive
 reads-ს; `NodeRestriction` შემდეგ ზღუდავს დასაშვებ **ცვლილებებს**: kubelet-ს შეუძლია
 შეცვალოს მხოლოდ საკუთარი `Node` და ამ node-ისთვის მინიჭებული `Pod`-ები და ვერ შეცვლის
@@ -422,7 +422,7 @@ sudo crictl ps --name kube-apiserver
 ```
 
 Kubernetes v1.36-ში `--enable-admission-plugins` ამატებს plugins-ს built-in
-default-enabled ნაკრებთან; defaults ამ ფლაგში ჩამოთვლა არ სჭირდება. თუ `NodeRestriction`
+default-enabled ნაკრებთან; defaults-ს ამ ფლაგში ჩამოთვლა არ სჭირდება. თუ `NodeRestriction`
 ჩართული არ არის, დაამატეთ ის ცხად additional სიაში. თუ `--enable-admission-plugins`-ში
 უკვე არის სხვა დამატებითი plugins, შეინარჩუნეთ ისინი. ცალკე დარწმუნდით, რომ საჭირო
 default ან plugin არ არის გამორთული `--disable-admission-plugins`-ით. RBAC მართავს
@@ -442,7 +442,7 @@ default ან plugin არ არის გამორთული `--disable
 
 სწორი TLS-ისა და RBAC-ის შემთხვევაშიც კი საჯარო API endpoint აფართოებს ზედაპირს: მისამართი
 `:6443` შემტევს აძლევს შესაძლებლობას გადაარჩიოს credentials, გამოიყენოს მომავალი
-დაუცველობა ან მიიღოს ინფორმაცია შეცდომების მიხედვით. Private endpoint — ეს ძლიერი და
+დაუცველობა ან მიიღოს ინფორმაცია შეცდომების მიხედვით. Private endpoint - ეს ძლიერი და
 ხშირად სასურველი ვარიანტია, მაგრამ არა უნივერსალური აბსოლუტი: public endpoint შეიძლება
 გამართლებული იყოს, თუ ხელმისაწვდომია მკაცრი ქსელური შეზღუდვები (ვიწრო CIDR allowlist,
 firewall/WAF არქიტექტურის მიხედვით) და ძლიერი ავთენტიფიკაცია. ნებისმიერ შემთხვევაში
@@ -481,20 +481,20 @@ flowchart TB
 - **Host firewall** (`nftables`, `iptables`, `ufw`) self-managed control-plane-ზე: ის
   ორმაგდება ქსელურ პერიმეტრთან და ზღუდავს წყაროებს, თუ cloud firewall შეცდომით
   გაფართოვდება.
-- **NetworkPolicy**: `kubernetes.default.svc` — ეს Service-ის ლოგიკური სახელია, ხოლო
+- **NetworkPolicy**: `kubernetes.default.svc` - ეს Service-ის ლოგიკური სახელია, ხოლო
   სტანდარტული NetworkPolicy destination Service-ს სახელით არ ირჩევს. API-სკენ egress-ის
   შეზღუდვა შენდება `ipBlock`/endpoint CIDR-ით, რეალური datapath-ის შემოწმებით, ან
   CNI-specific entity-ით, FQDN-ით ან Service policy-ით. ნუ გადაიტანთ `ipBlock`-ს CNI-ებს
   შორის ბრმად: Service-ის DNAT შეიძლება მოხდეს policy-მდე ან მის შემდეგ და არ აქვს
   უნივერსალური სემანტიკა. დაუშვით API მხოლოდ იმ namespace-სა და workload-ისთვის,
-  რომელსაც ის მართლაც სჭირდება — ეს ამცირებს lateral movement-ს Pod-ის კომპრომეტაციის
+  რომელსაც ის მართლაც სჭირდება - ეს ამცირებს lateral movement-ს Pod-ის კომპრომეტაციის
   შემდეგ.
 - **მარშრუტიზაცია და DNS**: დარწმუნდით, რომ control-plane endpoint ქვეყნდება და
   გარკვეულდება მხოლოდ ისე, როგორც მოითხოვს არჩეული წვდომის მოდელი; private endpoint
   ხშირად ამარტივებს ამას, მაგრამ public endpoint მოითხოვს განსაკუთრებით მკაცრ წყაროებისა
   და ავთენტიფიკაციის კონტროლს.
 
-**kubeadm discovery — ცალკე შემთხვევაა.** Token-based discovery-ის დროს ConfigMap
+**kubeadm discovery - ცალკე შემთხვევაა.** Token-based discovery-ის დროს ConfigMap
 `kube-public/cluster-info` ნაგულისხმევად შეიცავს საჯაროდ ხელმისაწვდომ discovery-ინფორმაციას
 (API-ის მისამართი და CA-მონაცემები); ეს არ არის Secret და არ უნდა გაიცეს ან დაცულ იქნას
 Secret-ის მსგავსად. Bootstrap token, პირიქით, არის დროებითი credential-ინფორმაცია
@@ -543,7 +543,7 @@ kubectl get --raw='/livez?verbose'
 NetworkPolicy-ის ჩანაცვლებად.
 
 > 🎯 დაადასტურეთ active config, უსაფრთხო flags, readiness reload-ის შემდეგ, `401`
-> anonymous path-ისთვის და targeted `can-i` `no`-თი; static Pod-ს დიაგნოსტირებთ kubelet-ისა
+> anonymous path-ისთვის და targeted `can-i` `no`-თი; static Pod-ის დიაგნოსტიკა ჩაატარეთ kubelet-ისა
 > და runtime-ის მეშვეობით.
 
 ## 12.5. Profiling, ServiceAccount lookup და ფლაგების აუდიტი
@@ -552,7 +552,7 @@ Profiling endpoints საჭიროა წარმადობის დი�
 ზრდის პროცესის შესახებ ინფორმაციის გამჟღავნების ზედაპირს. `kube-apiserver`-ზე გამორთეთ
 profiling; იმავე ოპერაციაში შეამოწმეთ controller-manager და scheduler. სამივე
 კომპონენტის დეტალური CIS-შემოწმება მოცემულია [მე-07 თავში](../07/ge.md), ხოლო
-დაუცველი არგუმენტები და TLS-hardening — [მე-09 თავში](../09/ge.md).
+დაუცველი არგუმენტები და TLS-hardening - [მე-09 თავში](../09/ge.md).
 
 ```yaml
 # kube-apiserver static Pod-ის command-ში
@@ -596,12 +596,12 @@ sudo grep -n -- '--config' /etc/kubernetes/manifests/kube-scheduler.yaml
 | broad anonymous access | credential-ის გარეშე მოთხოვნა იღებს `system:anonymous`-ს; selective config-ის დროს გამორიცხულია მხოლოდ exact allowed paths | `AuthenticationConfiguration` მინიმალური allowlist-ით exact paths-ისთვის ან `--anonymous-auth=false`, თუ ეს თავსებადია probes/bootstrapping-თან; bindings-ის cleanup |
 | `--authorization-mode=AlwaysAllow` | ნებისმიერი ავთენტიფიცირებული ან anonymous subject გადის authz-ს | `Node,RBAC` ან გააზრებული Webhook-ინტეგრაცია |
 | `NodeRestriction` არ არის | კომპრომეტირებული kubelet იღებს API-სკენ უფრო ფართო გზას | ჩართეთ plugin, არსებული defaults-ის შენარჩუნებით |
-| profiling ჩართულია საჭიროების გარეშე | ზედმეტი diagnostic endpoints | apiserver/controller-manager-ისთვის — `--profiling=false`; scheduler-ისთვის `--config`-ით — `enableProfiling: false` აქტიურ `KubeSchedulerConfiguration`-ში |
+| profiling ჩართულია საჭიროების გარეშე | ზედმეტი diagnostic endpoints | apiserver/controller-manager-ისთვის - `--profiling=false`; scheduler-ისთვის `--config`-ით - `enableProfiling: false` აქტიურ `KubeSchedulerConfiguration`-ში |
 | `readOnlyPort` არ უდრის `0`-ს | legacy kubelet API ავთენტიფიკაციის გარეშე | `readOnlyPort: 0` |
 | საჯარო `6443` | გაზრდილი ზედაპირი credentials attacks-ისა და API-დაუცველობებისთვის | private endpoint ან მკაცრი CIDR allowlist, firewall და ძლიერი ავთენტიფიკაცია |
 
 Static Pod-ის რედაქტირების შემდეგ დაადასტურეთ არა მხოლოდ სტრიქონი YAML-ში. Kubelet-მა
-უნდა გაუშვას ახალი container, ხოლო API-მ — გახდეს Ready. YAML-ის შეცდომის ან
+უნდა გაუშვას ახალი container, ხოლო API უნდა გახდეს Ready. YAML-ის შეცდომის ან
 მხარდაუჭერელი ფლაგის დროს გამოიყენეთ ლოკალური კონსოლი, `journalctl -u kubelet`,
 `crictl ps -a` და manifest-ის შენახული ასლი.
 
@@ -609,7 +609,7 @@ Static Pod-ის რედაქტირების შემდეგ და
 
 შემოწმება ტარდება ორ დამოუკიდებელ შრეზე: authentication credential-ის გარეშე და
 authorization ცხადად მითითებული subject-ისთვის. შეამოწმეთ იმ ქსელიდან, რომელსაც უნდა
-ჰქონდეს TCP-წვდომა API-სთან; firewall timeout და API `401` — სხვადასხვა, მაგრამ ორივე
+ჰქონდეს TCP-წვდომა API-სთან; firewall timeout და API `401` - სხვადასხვა, მაგრამ ორივე
 სასარგებლო შედეგია საკუთარ შრეებში.
 
 ```bash
@@ -679,7 +679,7 @@ record-ში: ეს ადასტურებს, რომ კონტრ�
   probes-სა და bootstrap-დამოკიდებულებებთან) ან ვიწრო conditions ზუსტი health/discovery
   paths-ისთვის `AuthenticationConfiguration`-ში, `Node,RBAC`, NodeRestriction
   `ServiceAccountNodeAudienceRestriction`-ის შეფასებით, დახურული kubelet read-only port
-  და private/მკაცრად allowlist-გამოყენებადი API endpoint აღიწერება kubeadm config-ში,
+  და private/მკაცრად allowlist-ით შეზღუდული API endpoint აღიწერება kubeadm config-ში,
   node-ის image-ში ან IaC-ში. Static Pod-ის ხელით რედაქტირება დასაშვებია საგანგებო
   ამოცანისთვის, მაგრამ არ უნდა იყოს ერთადერთი source of truth.
 - **ქსელი დანიშნულების მიხედვით.** ადმინისტრატორები მუშაობენ VPN/bastion-ის მეშვეობით,
@@ -708,10 +708,10 @@ record-ში: ეს ადასტურებს, რომ კონტრ�
   იმავე review-ს, რასაც `system:anonymous`-ზე binding.
 - **authorization mode** - API server-ის authorizer, მაგალითად `Node`, `RBAC` ან
   `Webhook`.
-- **Node authorizer** — სპეციალური authorizer kubelet-identity-ებისთვის; ნებადართავს
+- **Node authorizer** - სპეციალური authorizer kubelet-identity-ებისთვის; უშვებს
   საჭირო node operations-ს და relation-sensitive წვდომას ამ node-ის Pod-თან
   დაკავშირებულ ობიექტებზე.
-- **NodeRestriction** — validating admission plugin, რომელიც ზღუდავს kubelet-ის მიერ
+- **NodeRestriction** - validating admission plugin, რომელიც ზღუდავს kubelet-ის მიერ
   Node/Pod-ის დასაშვებ ცვლილებებს და დაცულ Node labels-ს;
   `ServiceAccountNodeAudienceRestriction`-თან ერთად ასევე ზღუდავს node-ის მიერ
   ინიცირებული `TokenRequest`-ის audiences-ს.
@@ -734,7 +734,7 @@ record-ში: ეს ადასტურებს, რომ კონტრ�
 - kubelet-ისთვის გამორთულია anonymous-წვდომა (`--anonymous-auth=false`).
   kube-apiserver-ზე ან ცხადად იზღუდება მისი health endpoints და, სანამ საჭიროა public
   token discovery, ზუსტი path `kube-public/cluster-info` `AuthenticationConfiguration`-ის
-  მეშვეობით; ორივე შემთხვევაში მოწმდება და შორდება მხოლოდ ზედმეტი
+  მეშვეობით; ორივე შემთხვევაში მოწმდება და იშლება მხოლოდ ზედმეტი
   RoleBinding/ClusterRoleBinding `system:anonymous`-ისა და `system:unauthenticated`-ისთვის.
 - Legacy kubelet read-only port გამორთულია `readOnlyPort: 0`-ით; `10250` რჩება მხოლოდ
   authentication-ით, `Webhook` authorization-ითა და ქსელური შეზღუდვით.
@@ -767,7 +767,7 @@ configuration-ის შემთხვევაში ცალკე გაი
 ფაილში.
 
 **გამოცდის სცენარი: kubeadm-კლასტერი შექმნილია `AlwaysAllow`-ით.** მიმდინარე context-მა
-შეიძლება მიუთითოს ანგარიშზე, რომელსაც RBAC-ის ჩართვის შემდეგ არ ჰქონდება უფლებები, ხოლო
+შეიძლება მიუთითოს ანგარიშზე, რომელსაც RBAC-ის ჩართვის შემდეგ არ ექნება უფლებები, ხოლო
 kubeconfig-ში (ან ცალკე kubeconfig-ში) არის ცნობილი ადმინისტრაციული ანგარიში. ცვლილებამდე
 ცხადად აირჩიეთ ის **ყოველი ბრძანებისთვის**: ნუ შეასრულებთ `kubectl config
 use-context`-ს, რომ არ დაკარგოთ საწყისი context და არ მიიღოთ ცრუ წარმატებული შედეგი.
@@ -809,7 +809,7 @@ kubectl --context="$CURRENT_CONTEXT" auth can-i get nodes
 
 **რეალურ სამუშაოში.** API-ის შეზღუდვა ქსელისა და identity-ის დაპროექტების ნაწილია და
 არა ერთჯერადი CIS-შესწორება. Private endpoint - ძლიერი ვარიანტია; თუ endpoint public-ია,
-ის კომპენსირდება მკაცრი allowlist-ითა და ძლიერი ავთენტიფიკაციით. Short-lived bound
+ის კომპენსირდება მკაცრი allowlist-ითა და ძლიერი ავთენტიფიკაციით. მოკლევადიანი bound
 tokens, მინიმალური bindings და კონფიგურაციის დრიფტის ავტომატური შემოწმება ხდის ერთი
 node-ის ან ერთი Pod-ის კომპრომეტაციას მნიშვნელოვნად ნაკლებად დამანგრეველს.
 
@@ -845,8 +845,8 @@ ClusterRoleBinding-ში და შლიან სწორედ ზედმ
 <summary>3. რით განსხვავდება `10255` `10250`-სგან და რა პარამეტრები სჭირდება kubelet
    API-ს?</summary>
 
-`10255` — ეს ისტორიული read-only, არაავთენტიფიცირებული kubelet API-ია და უნდა გამოირთოს
-`readOnlyPort: 0`-ით ან `--read-only-port=0`-ით. `10250` — ჩვეულებრივი kubelet API-ია,
+`10255` - ეს ისტორიული read-only, არაავთენტიფიცირებული kubelet API-ია და უნდა გამოირთოს
+`readOnlyPort: 0`-ით ან `--read-only-port=0`-ით. `10250` - ჩვეულებრივი kubelet API-ია,
 რომელიც არ იხსნება ყველასთვის: მას სჭირდება authentication, `Webhook` authorization და
 ქსელური წესები/firewall. `10255`-ის გამორთვა მტკიცდება `ss`-ით და არა მხოლოდ
 კონფიგურაციის სტრიქონით.
@@ -859,7 +859,7 @@ ClusterRoleBinding-ში და შლიან სწორედ ზედმ
 Authorizer-ჯაჭვი დაუყოვნებლივ ჩერდება, როცა მოდული აბრუნებს Allow-ს ან Deny-ს; მხოლოდ
 NoOpinion გადასცემს მოთხოვნას შემდგომ. `AlwaysAllow` მასთან მისულ მოთხოვნებზე
 აბრუნებს Allow-ს და ამით ანულებს least privilege-ს ჯაჭვის ამ ნაწილისთვის. kubeadm-ის
-უსაფრთხო baseline არის `Node,RBAC`, და არა fallback, რომელიც ყველაფერს ნებადართავს.
+უსაფრთხო baseline არის `Node,RBAC`, და არა fallback, რომელიც ყველაფერს უშვებს.
 </details>
 
 <details>
@@ -880,8 +880,8 @@ authorizer-ის წესებით.
 <summary>6. რატომ არ ცვლის NetworkPolicy firewall-ს ან Security Group-ს API server-ისთვის
    და რა პირობებში შეიძლება იყოს public endpoint გამართლებული?</summary>
 
-NetworkPolicy გამოიყენება CNI-ის მიერ Pod-ის ტრაფიკზე და არ ვალდებულებს ერთნაირად
-დაფაროს host-ის, გარე და control-plane-ის ტრაფიკი ყოველ ტოპოლოგიაში; ასევე
+NetworkPolicy გამოიყენება CNI-ის მიერ Pod-ის ტრაფიკზე და არ არის ვალდებული ერთნაირად
+დაფაროს host-ის, გარე და control-plane-ის ტრაფიკი; ასევე
 სტანდარტული policy არ ირჩევს დანიშნულების Service-ს DNS-სახელით. Firewall და Security
 Group ზღუდავენ წყაროების წვდომას `:6443`-სთან სხვა დონეზე. Public endpoint დასაშვებია
 მხოლოდ ცხადი დასაბუთების, მკაცრი CIDR allowlist-ის, ძლიერი ავთენტიფიკაციისა და

@@ -355,7 +355,7 @@ spec:
       port: 80
 ```
 
-Если Gateway также открывает порт 80, добавьте отдельный HTTP listener и `HTTPRoute` с
+Если Gateway также открывает порт 80, добавьте отдельный HTTP listener и `HTTPRoute` со
 стандартным фильтром `RequestRedirect` на `https`; не смешивайте его с HTTPS-route к backend.
 
 > 🔬 TLS passthrough завершает TLS и mTLS на backend; проверьте поддержку `TLSRoute`, SNI-маршрутизации и passthrough у controller.

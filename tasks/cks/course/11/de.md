@@ -21,7 +21,7 @@ erteilt sind oder später erteilt werden.
 
 Ein typischer Angriffsweg: Eine Schwachstelle in der Anwendung liefert eine Shell im Pod,
 der Angreifer liest den Token aus dem eingehängten volume und sendet ihn anschließend an die
-API. Hat der `default` SA einen RoleBinding "der Einfachheit halber" erhalten oder ist er an
+API. Hat der `default` SA eine RoleBinding „der Einfachheit halber“ erhalten oder ist er an
 eine breite ClusterRole gebunden, lassen sich Secret lesen, Pod erstellen oder der Angriff
 weiterführen. Auch ein Token ohne aktuelle Rechte wird von einem gewöhnlichen HTTP-Service
 nicht benötigt und sollte nicht in dessen filesystem liegen.
@@ -122,17 +122,17 @@ oder eine Umgebungsvariable. Solche Quellen müssen gesondert ausgeschlossen wer
 
 ## 11.3. Bound ServiceAccount token und projected volume
 
-In modernen Kubernetes erhält ein Pod einen **bound ServiceAccount token**, nicht ein
+In modernen Kubernetes-Versionen erhält ein Pod einen **bound ServiceAccount token**, nicht ein
 unbefristetes Secret mit Token. Kubelet fordert den Token über die TokenRequest API an. Der
 Token ist an einen konkreten ServiceAccount gebunden, hat eine begrenzte Lebensdauer (`exp`)
 und wird vor Ablauf automatisch rotiert. Das JWT enthält Claims zu issuer, subject
 `system:serviceaccount:<ns>:<sa>` und bound object. Nach dem Löschen des gebundenen Pod darf
-eine solche Credential nicht mehr als vertrauenswürdige gültige Credential gelten.
+eine solche Credential nicht mehr als vertrauenswürdige, gültige Credential gelten.
 
 `audience` beschränkt den Empfänger des Token. Ein Token für die Kubernetes API muss eine
 vom apiserver akzeptierte audience haben; ein Token für einen externen Service die audience
 dieses Service. Der externe Service muss Signatur, `iss`, `aud`, Ablaufzeit und subject
-prüfen. Verwenden Sie nicht einen Token "für alles": Das vergrößert den Bereich, in dem eine
+prüfen. Verwenden Sie nicht einen Token „für alles“: Das vergrößert den Bereich, in dem eine
 gestohlene Credential zur Authentifizierung taugt.
 
 ```mermaid
@@ -227,7 +227,7 @@ Prozesse oder eine GID tatsächlich benötigen, nicht als Voraussetzung für non
 `expirationSeconds` ist eine Anfrage nach der gewünschten Lebensdauer, nicht ein Weg zu
 einer unbefristeten Credential: Der Wert muss mindestens `600` betragen, die Obergrenze
 bestimmt jedoch weiterhin die control plane. Kubelet aktualisiert die Token-Datei vor `exp`,
-ein genauer universeller Rotationsintervall ist aber nicht garantiert. Die Anwendung muss
+ein genaues universelles Rotationsintervall ist aber nicht garantiert. Die Anwendung muss
 den Token-Pfad daher bei jeder neuen Verbindung oder Credential-Aktualisierung erneut
 öffnen, statt alte Inhalte oder einen file descriptor im Speicher vorzuhalten. Geben Sie den
 Token nicht im Terminal, in CI-Logs, einer Incident-Beschreibung oder einem Ticket aus. Für
@@ -504,7 +504,7 @@ das Fehlen der Token-Datei mit `kubectl exec`, nicht nur mit YAML. Lab 104 verbi
 Fähigkeit mit RBAC und der Begrenzung des anonymous-Zugangs zur API.
 
 **In der Praxis.** ServiceAccount gehören zur attack surface jedes Pod. Die Richtlinie
-"keine Token, bis die Notwendigkeit nachgewiesen ist" verringert zusammen mit eigenen
+„keine Token, bis die Notwendigkeit nachgewiesen ist“ verringert zusammen mit eigenen
 least-privilege SA den Schaden durch RCE in der Anwendung. Ein projected bound Token mit
 kurzer lifetime und korrekter audience macht eine Credential enger und besser steuerbar,
 ersetzt aber weder RBAC noch audit oder Netzwerkisolation.
@@ -588,8 +588,8 @@ Erstellen Sie den Pod nach einer workload-Änderung neu und wiederholen Sie die 
 weil das bereits erstellte volume nicht automatisch verschwindet.
 
 Dies belegt das Fehlen der **standardmäßigen automatischen Injektion**, nicht das Fehlen
-jeder möglichen ServiceAccount-Credential. Lautet die requirement "Der Pod darf überhaupt
-keinen SA token erhalten", prüfen Sie zusätzlich `volumes`, `projected.serviceAccountToken`,
+jeder möglichen ServiceAccount-Credential. Lautet die requirement „Der Pod darf überhaupt
+keinen SA token erhalten“, prüfen Sie zusätzlich `volumes`, `projected.serviceAccountToken`,
 Secret/env, sidecar/init-container und andere Mechanismen zur Ausgabe von Credentials.
 </details>
 

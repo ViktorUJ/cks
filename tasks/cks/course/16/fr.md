@@ -68,7 +68,7 @@ de l'image de node ; vous ne pouvez pas déplacer un profile AppArmor vers SELin
 ## 16.2. Profile et modes enforce/complain
 
 Un profile est une policy portant un nom unique, chargée dans le kernel. Les fichiers se trouvent généralement dans
-`/etc/apparmor.d/`, mais la présence d'un fichier ne rend pas le profile **actif** : seule une charge réussie
+`/etc/apparmor.d/`, mais la présence d'un fichier ne rend pas le profile **actif** : seul un chargement réussi
 par le parser le fait. Après le redémarrage d'une node, le package AppArmor ou la configuration gérée de la node
 doit le restaurer.
 
@@ -173,7 +173,7 @@ plusieurs node pools, contrôlez chaque pool : scheduler ne connaît pas le cont
 L'API Kubernetes actuelle définit le profile avec
 `securityContext.appArmorProfile`. Le champ peut figurer dans le `securityContext` du Pod comme baseline pour les
 conteneurs ou dans le `securityContext` d'un conteneur spécifique s'il requiert une policy plus étroite. N'assignez
-pas différents profiles à un même Pod sans nécessité : cela complique audit et investigation.
+pas différents profiles à un même Pod sans nécessité : cela complique l'audit et l'investigation.
 
 | `type` | Valeur | Quand l'utiliser |
 |---|---|---|
@@ -281,7 +281,7 @@ spec:
     command: ["sh", "-c", "sleep 3600"]
 ```
 
-Ceci est une interface legacy. Pour les nouveaux manifest, utilisez `securityContext.appArmorProfile` ;
+Ceci est une interface legacy. Pour les nouveaux manifests, utilisez `securityContext.appArmorProfile` ;
 ne créez pas un objet avec le nouveau champ et l'annotation en même temps, en particulier avec des
 valeurs différentes. Lors de la migration, identifiez d'abord la version de Kubernetes et le runtime, remplacez l'annotation
 par le champ API équivalent, appliquez sur une node de test et vérifiez `/proc/1/attr/current`.
@@ -307,7 +307,7 @@ DaemonSet, Job et CronJob : pour les quatre premiers - `.spec.template.metadata.
 les mêmes champs sous `.spec.jobTemplate.spec.template`. Lors de la migration, corrigez le manifest du controller/template,
 et non seulement le Pod qu'il a créé.
 
-> 🎯 Distinguez l'erreur de création du conteneur d'un runtime denial, puis confirmez la node, le nom et le chargement du profile, l'enforcement effectif et la preuve du kernel ; ne remplacez pas la cause par `Unconfined`.
+> 🎯 Distinguez l'erreur de création du conteneur d'un runtime denial, puis confirmez la node, le nom et le chargement du profile, l'enforcement effectif et l'evidence du kernel ; ne remplacez pas la cause par `Unconfined`.
 
 ## 16.6. Échec de démarrage et denial : diagnostiquer à la bonne couche
 
@@ -461,7 +461,7 @@ créez un nouveau Pod ; l'ancien processus ne prouve pas l'assignation de la pol
 
 En général, la policy n'a pas le `allow` nécessaire pour le chemin ou l'opération, par exemple pour un
 répertoire runtime, un certificat, un Unix-socket ou un fichier que l'application ne lit qu'après
-son démarrage. En `complain`, l'absence de allow est généralement seulement journalisée ; en `enforce`, elle
+son démarrage. En `complain`, l'absence d'allow est généralement seulement journalisée ; en `enforce`, elle
 est bloquée. Un `deny` explicite est différent : il bloque également en `complain`, ne le supprimez donc pas
 pour la vérification.
 
@@ -587,7 +587,7 @@ de risque explicite, et non comme moyen de corriger un profile failure.
 
 La clé doit se terminer par le nom exact du conteneur et, pour Localhost, la valeur reçoit le préfixe legacy.
 Dans ce cas, l'entrée est : `container.apparmor.security.beta.kubernetes.io/app: localhost/k8s-demo`. C'est une
-annotation beta pour l'audit et la migration ; les nouveaux manifest utilisent `securityContext.appArmorProfile` et ne mélangent pas les deux interfaces.
+annotation beta pour l'audit et la migration ; les nouveaux manifests utilisent `securityContext.appArmorProfile` et ne mélangent pas les deux interfaces.
 </details>
 
 <details>

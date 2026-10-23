@@ -3,16 +3,16 @@
 # თავი 21. მონაცემთა დაშიფვრა etcd-ში და Secret-ის უსაფრთხო შენახვა
 
 > **პრობლემა.** ვინც მიიღებს control plane-ის დისკს, წვდომას etcd-ზე, snapshot-ს ან მის backup-ს,
-> გვერდზევლის RBAC-ს, authentication-სა და API server-ის audit-ს და კითხულობს `Secret.data`-ს, თუ ის
+> გვერდს უვლის RBAC-ს, authentication-სა და API server-ის audit-ს და კითხულობს `Secret.data`-ს, თუ ის
 > ჩვეულებრივი base64-ის სახით არის ჩაწერილი. პაროლები, token-ები და პრივატული გასაღებები ასეთი
 > კოპიიდან შესაძლებელს ხდის შეტევის გაგრძელებას უკვე კლასტერის ფარგლებს გარეთ. შერჩეული API-რესურსების
-> დაშიფვრა etcd-ში ჩაწერამდე მარაგში ტოვებს ciphertext-ს და მოითხოვს გასაღების მასალაზე ცალკე წვდომას.
+> დაშიფვრა etcd-ში ჩაწერამდე საცავში ტოვებს ciphertext-ს და მოითხოვს გასაღების მასალაზე ცალკე წვდომას.
 
 > **რა არის შემდეგ.** `Secret` - ეს არის ობიექტი მგრძნობიარე მონაცემებისთვის, მაგრამ მისი ველები
 > `data` მხოლოდ base64-ითაა კოდირებული. თუ encryption at rest ჩართული არ არის, ვინც წვდომას მიიღებს
 > etcd-ის მონაცემებზე, snapshot-ზე ან backup-ზე, შესძლებს პაროლის, token-ისა და პრივატული გასაღების
 > წაკითხვას. ამ თავში ვაწყობთ შერჩეული API-რესურსების დაშიფვრას etcd-ში ჩაწერამდე `EncryptionConfiguration`-ის
-> მეშვეობით, ვშლით `aescbc`, `aesgcm`, `secretbox` და `kms`-ს, გასაღების უსაფრთხო ბრუნვას და ვამოწმებთ
+> მეშვეობით, განვიხილავთ `aescbc`, `aesgcm`, `secretbox` და `kms`-ს, გასაღების უსაფრთხო ბრუნვას და ვამოწმებთ
 > შედეგს. ეს არის პრაქტიკული გაგრძელება [CKA-ს 19-ე თავისა Secret-ის შესახებ](../../../cka/course/19/ge.md)
 > და etcd-ისა და კლასტერის მონაცემების კავშირისა [CKA-ს 37-ე თავიდან](../../../cka/course/37/ge.md).
 
@@ -24,13 +24,13 @@
 > მომხმარებლისგან, ვისაც უკვე შესწევს `get secret`-ის ან `exec`-ის შესრულების უნარი Secret-ის
 > მქონე Pod-ში.
 
-> 🧠 წვდომა etcd-ზე ან snapshot-ზე გვერდზევლის API-ის authentication-ს, authorization-ს და audit-ს; base64 არ იცავს `Secret.data`-ს, encryption at rest იცავს storage-ს გასაღებების გარეშე.
+> 🧠 წვდომა etcd-ზე ან snapshot-ზე გვერდს უვლის API-ის authentication-ს, authorization-ს და audit-ს; base64 არ იცავს `Secret.data`-ს, encryption at rest იცავს storage-ს გასაღებების გარეშე.
 
 ## 21.1. საფრთხის მოდელი: რატომ არის etcd განსაკუთრებით ღირებული სამიზნე
 
-API server - Kubernetes-ის მდგომარეობასთან ჩვეული გზაა, ხოლო etcd - მისი მუდმივი მარაგსაცავია. etcd-ში
+API server - Kubernetes-ის მდგომარეობასთან ჩვეული გზაა, ხოლო etcd - მისი მუდმივი საცავია. etcd-ში
 > მდებარეობს API-ობიექტები: Secrets, ConfigMaps, ServiceAccounts, RBAC bindings, Deployments და
-> ბევრი სხვა. აქედან გამომდინარე, ბაზის ან მისი კოპიის წაკითხვა გვერდზევლის ჩვეულ საკონტროლო
+> ბევრი სხვა. აქედან გამომდინარე, ბაზის ან მისი კოპიის წაკითხვა გვერდს უვლის ჩვეულ საკონტროლო
 > წერტილს - API server-ს authentication-ით, authorization-ითა და audit-ით.
 
 ```mermaid
@@ -50,7 +50,7 @@ flowchart TB
 
 - დატყვევებულია control-plane node, მისი დისკი ან etcd-ის მონაცემთა კატალოგი;
 - snapshot გადმოცემულია დაუცველ საცავში, მოხვდა ticket-ში, CI-artifact-ში ან laptop-ზე;
-- ვინმეს გააქვს ქსელური და TLS-წვდომა პირდაპირ etcd-ზე;
+- ვინმეს აქვს ქსელური და TLS-წვდომა პირდაპირ etcd-ზე;
 - backup აღდგენილია ტესტურ გარემოში ფართო წვდომით;
 - Secret შემთხვევით გამოტანილია log-ში, shell history-ში, Git-ში ან environment-ცვლადში.
 
@@ -112,7 +112,7 @@ resources:
 ყველაფერს გაუაზრებლად: ეს ზრდის დატვირთვას, ართულებს აღდგენას და არ ჩაანაცვლებს მონაცემთა
 კლასიფიკაციას.
 
-`resources`-ის ელემენტები დამუშავდება თანმიმდევრობით: უფრო ადრეული matching-კონფიგურაცია გამოცალკევდება
+`resources`-ის ელემენტები დამუშავდება თანმიმდევრობით: უფრო ადრეული matching-კონფიგურაცია სარგებლობს
 პრიორიტეტით. არ დააკოპიროთ ერთი და იმავე explicit resource დამოუკიდებელ ბლოკებში მიზეზის გარეშე და
 არ შექმნათ overlapping wildcard გამონათქვამები. მისაღებია documented pattern: უფრო specific
 გამონაკლისი უფრო **ადრე** დგება ვიდრე ფართო wildcard, მაგალითად `events` plaintext-ად დარჩენა და
@@ -165,7 +165,7 @@ Kubernetes მხარს უჭერს რამდენიმე provider-
 `aescbc` იყენებს base64-ით კოდირებულ AES-გასაღებს; მაგალითში ეს 32-ბაიტიანი გასაღებია (AES-256).
 Kubernetes ღებულობს 16, 24 ან 32-ბაიტიან გასაღებებს. `aescbc`-ს არ აქვს ჩაშენებული authentication/MAC,
 განსხვავებით AEAD-provider `aesgcm`-ისგან; ამიტომ Kubernetes-ის მიმდინარე დოკუმენტაცია CBC-ვარიანტს
-სუსტად მიიჩნევს. ეს მაგალითი საჭიროა გამოცდის მექანიკისა და თანხვედრისთვის, არა როგორც production
+სუსტად მიიჩნევს. ეს მაგალითი საჭიროა გამოცდის მექანიკისა და თავსებადობისთვის, არა როგორც production
 recommendation. ლაბორატორიისთვის 32-ბაიტიანი მნიშვნელობის მისაღებად:
 
 ```bash
@@ -263,7 +263,7 @@ spec:
 flag-ის path ხილულია **API server-ის კონტეინერიდან**, ამიტომ ერთი ფაილი host-ზე არ არის საკმარისი:
 საჭირო არის `hostPath` და `volumeMount`. შეადარეთ YAML-ის indent-ები და არსებული volume-სახელები, არ
 ჩაანაცვლოთ მთელი manifest შაბლონით. HA control plane-ზე ერთი და იმავე დაცული ფაილი და flag უნდა
-იყოს API server-ის ყველა node-ზე, ხოლო ცვლილება ერთი node-ის მიხედვით გადადის health-ისა და
+იყოს API server-ის ყველა node-ზე, ხოლო ცვლილებას ავრცელებენ თითო node-ზე health-ისა და
 quorum-ის კონტროლით.
 
 პრაქტიკული სამუშაო თანმიმდევრობა:
@@ -284,13 +284,13 @@ kubectl get --raw='/readyz?verbose'
 kubectl -n kube-system get pods -l component=kube-apiserver
 ```
 
-> **ფრთხილად.** შეცდომა path-ში, YAML-ში ან გასაღებში შესძლებს API server-ის ამოუშვებლობას. მუშაობა
+> **ფრთხილად.** შეცდომა path-ში, YAML-ში ან გასაღებში შეიძლება ხელი შეუშალოს API server-ის ამოქმედებას. იმუშავეთ
 > control-plane node-ის console-ის მეშვეობით, შეინახეთ manifest-ის backup და არ წაშალოთ წინა
 > კონფიგურაცია, სანამ შემოწმება დასრულებული არ იქნება. managed Kubernetes-ისთვის static Pod არ
-> ედიტირდება: ჩაერთოთ encryption provider-ის სტანდარტული მექანიზმით და მიმართეთ მისი KMS/cluster
+> ედიტირდება: ჩართეთ encryption provider-ის სტანდარტული მექანიზმით და მიმართეთ მისი KMS/cluster
 > update პროცედურას.
 
-> 🏭 KMS გამოაქვს KEK, მაგრამ plugin-ს და key manager-ს საჭიროებთ HA, მინიმალური permissions და შემოწმებული restore.
+> 🏭 KMS გამოაქვს KEK, მაგრამ plugin და key manager საჭიროებენ HA-ს, მინიმალურ permissions-ს და შემოწმებულ restore-ს.
 
 ## 21.5. KMS და envelope encryption
 
@@ -327,14 +327,14 @@ resources:
   - identity: {}
 ```
 
-განსხვავებები საჭიროებს ცალკე ფიქსირებას:
+განსხვავებები უნდა დავაფიქსიროთ ცალსახად:
 
 | თვისება | KMS v1 | KMS v2 |
 |---|---|---|
 | სტატუსი | deprecated Kubernetes 1.28-იდან; 1.29-იდან ნაგულისხმებად გამორთულია და მოითხოვს ცალსახა `--feature-gates=KMSv1=true` | stable Kubernetes 1.29-იდან; რეკომენდებული API ახალი კონფიგურაციებისთვის |
 | DEK | ახალი შემთხვევითი DEK ყოველი დაშიფვრის ოპერაციისთვის; plugin ახვევს ყოველ DEK-ს KEK-ით | API server ინახავს secret seed-ს და KDF-ის მეშვეობით იღებს ერთჯერად DEK-ს ყოველი ოპერაციისთვის; seed ახვევა KEK-ით და იცვლება KEK-ის ბრუნვისას |
 | Config-ველები | `apiVersion: v1` ან ველი არ არსებობს; `name`, `endpoint`, `cachesize`, `timeout` | `apiVersion: v2`, `name`, `endpoint`, `timeout`; `cachesize` არ არის მისაღები |
-| წარმადობა | მეტი gRPC/KMS-გამოძახება; cache ინახავს unwrapped DEK-ს | KMS-გამოძახება ცალკე DEK-ის შესაფუთად ყოველ ჩანაწერზე არ საჭიროებია |
+| წარმადობა | მეტი gRPC/KMS-გამოძახება; cache ინახავს unwrapped DEK-ს | KMS-გამოძახება ცალკე DEK-ის შესაფუთად ყოველ ჩანაწერზე არ არის საჭირო |
 | გასაღების იდენტიფიკაცია | დამოკიდებულია v1 plugin-ზე | `Status` აბრუნებს `version: v2`-ს, `healthz: ok`-ს და მიმდინარე KEK-ის `key_id`-ს |
 
 > **ცხრილის ვერსიული საზღვარი.** შემოწმების თარიღით **2026-09-15** KMS v1 exam snapshot v1.35-ში ჯერ
@@ -351,7 +351,7 @@ re-encryption პროცედურით.
 ზუსტი ველები და ხელმისაწვდომი API-ვერსია დამოკიდებულია Kubernetes-ის ვერსიასა და შერჩეულ plugin-ზე.
 შეამოწმეთ თქვენი ვერსიის ოფიციალური დოკუმენტაცია და plugin-ის deployment; არ დააკოპიროთ production-ზე
 თვითნებური KMS v1/v2 მაგალითი. Socket ხელმისაწვდომი უნდა იყოს API server-ის კონტეინერისთვის ცალსახა
-volume mount-ის მეშვეობით, ხოლო წვდომა მასზე შეზღუდული უნდა იყოს. plugin-ს თავად უნდა გამოიყენოს
+volume mount-ის მეშვეობით, ხოლო წვდომა მასზე შეზღუდული უნდა იყოს. plugin-მა თავად უნდა გამოიყენოს
 TLS/authentication დაშორებულ manager-თან, ჰქონდეს მინიმალური KMS permissions და არ დაბეჭდოს
 plaintext logs-ში.
 
@@ -374,12 +374,12 @@ KMS აუმჯობესებს Secrets-ის გამოცალკე
   `key_id`-ის სტაბილურობას, `EncryptRequest`/`DecryptRequest`-ის latency-ს, შეცდომებს,
   ხელმისაწვდომობას, quota-ს და credentials-ის ვადას;
 - დააპროექტეთ plugin-ისა და KMS-ის HA: ეს კრიტიკული დამოკიდებულებაა, ამიტომ plugin/KEK-ის
-  მიუწვდომლობას შესძლებია გამოწვევა შეცდომები დაშიფრული რესურსების წაკითხვასა და ჩაწერაში;
+  მიუწვდომლობას შეუძლია გამოიწვიოს შეცდომები დაშიფრული რესურსების წაკითხვასა და ჩაწერაში;
   წინასწარ შეამოწმეთ recovery-პროცესი;
-- გააკეთეთ backup metadata-სთვის და დაადოკუმენტირეთ key IDs, მაგრამ **არ** ექსპორტირდეთ master
+- გააკეთეთ backup metadata-სთვის და დაადოკუმენტირეთ key IDs, მაგრამ **არ** გააექსპორტოთ master
   keys etcd-ის backup-ში;
 - შეზღუდეთ IAM/ACL: API server ღებულობს მხოლოდ საჭირო encrypt/decrypt ოპერაციებს, ხოლო
-  კლასტერის ადმინისტრატორი აუცილებლად არ ღებულობს KEK-ის მართვის უფლებებს;
+  არ არის აუცილებელი, რომ კლასტერის ადმინისტრატორმა მიიღოს KEK-ის მართვის უფლებები;
 - ტესტირება გაუკეთეთ snapshot-ის აღდგენას იმავე KMS key-ზე წვდომით ინციდენტამდე.
 
 გარეშე KMS არ ნიშნავს, რომ Secret არ ჩნდება Kubernetes-ში. თუ აპლიკაცია ღებულობს ჩვეულ Kubernetes
@@ -400,12 +400,12 @@ Kubernetes Secret-ს, ისევ ათავსებს კოპიას 
 ### `aescbc`/`aesgcm` გასაღების ბრუნვა
 
 ვიგულისხმოთ, რომ ჯერ გამოიყენებოდა `key-old`. HA control plane-ზე `key-new` ერთბაშად პირველად
-ვერ დაისმის: უკვე განახლებულ API server-ს შესძლებია ობიექტის ახალი გასაღებით ჩაწერა, სანამ სხვა
-API server ჯერ არ შესძლებია მისი decrypt. ჩაატარეთ ბრუნვა ორ ფაზაში.
+ვერ დაისმის: უკვე განახლებულ API server-ს შეუძლია ობიექტის ახალი გასაღებით ჩაწერა, სანამ სხვა
+API server-ს ჯერ არ შეუძლია მისი decrypt. ჩაატარეთ ბრუნვა ორ ფაზაში.
 
 1. დაამატეთ `key-new` **მეორედ** `key-old`-ის შემდეგ კონფიგურაციაში ყოველ control-plane node-ზე.
-2. ხელახლა უსტარტეთ API server ან გაავრცელეთ კონფიგურაციის reload **ყველა** API server-ზე. ახლა
-   თითოეულს შესძლებია ორივე გასაღების decrypt, ხოლო ახალი ჩანაწერები ჯერ იყენებენ `key-old`-ს.
+2. გადატვირთეთ API server ან გაავრცელეთ კონფიგურაციის reload **ყველა** API server-ზე. ახლა
+   თითოეულს შეუძლია ორივე გასაღების decrypt, ხოლო ახალი ჩანაწერები ჯერ იყენებენ `key-old`-ს.
 3. აქციეთ `key-new` **პირველად**, `key-old`-ის მეორედ შენარჩუნებით, და ისევ გაავრცელეთ
    კონფიგურაცია ყველა API server-ზე. მხოლოდ ახლა იქმნება ახალი ჩანაწერები `key-new`-ით.
 
@@ -470,7 +470,7 @@ Version Migration**. Kubernetes 1.36-ში მას აქვს beta სტ�
 replace` რჩება მარტივ გამოცდის გზად, ხოლო Storage Version Migration საჭიროებს ცალკე operational
 rollout-ს, დაკვირვებას და შემოწმებულ rollback/recovery-პროცესს.
 
-> 🏭 **Upstream v1.37.** Kubernetes v1.37-ში ჩაშენებული `StorageVersionMigration` API/controller გახდა GA და enabled by default. ეს ცვლის production-ის მიმდინარე სტატუსს, მაგრამ არ ცვლის ამ თავის CKS Core workflow-ს, რომელი დარჩენილია მიბმული exam/training context-ზე. იხილეთ [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🏭 **Upstream v1.37.** Kubernetes v1.37-ში ჩაშენებული `StorageVersionMigration` API/controller გახდა GA და enabled by default. ეს ცვლის production-ის მიმდინარე სტატუსს, მაგრამ არ ცვლის ამ თავის CKS Core workflow-ს, რომელიც რჩება მიბმული exam/training context-ზე. იხილეთ [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 `kubectl replace` საჭიროებს მიმდინარე `resourceVersion`-ს; მაღალი კონკურენციისას შესაძლებელია
 კონფლიქტები. Production-ში ჩაატარეთ controlled script retry-ით, API latency-ის დაკვირვებით და
@@ -478,7 +478,7 @@ rollout-ს, დაკვირვებას და შემოწმებ�
 დისკზე ან pipeline log-ში.
 
 re-encryption-ისა და გასაღების შემოწმების დასრულების შემდეგ წაშალეთ `key-old` config-იდან, ხელახლა
-უსტარტეთ API server და ისევ შეამოწმეთ წაკითხვა. ძველი key-ის წაშლა ობიექტების ხელახლა ჩაწერამდე
+გადატვირთეთ API server და ისევ შეამოწმეთ წაკითხვა. ძველი key-ის წაშლა ობიექტების ხელახლა ჩაწერამდე
 დაუშვებელია: აღდგენილი snapshot ან ძველი ჩანაწერი წაუკითხავი გახდება.
 
 ### გადასვლა `identity`-იდან დაშიფვრაზე
@@ -496,33 +496,33 @@ providers:
 ```
 
 ძველი ჩანაწერების re-encryption-ის შემდეგ `identity: {}` შესაძლებელია მოვხსნათ. მისი ქვემოთ
-დატოვება მისაღებია მხოლოდ როგორც ცალსახა დროებითი არჩევანი თანხვედრისთვის; `identity`-ის
+დატოვება მისაღებია მხოლოდ როგორც ცალსახა დროებითი არჩევანი თავსებადობისთვის; `identity`-ის
 არსებობა არ ჩავთვალოთ მტკიცებულებად, რომ ყველა მონაცემი დაცულია.
 
 > 🏭 KEK-ის ბრუნვა და provider-ის შეცვლა განსხვავებულია; შეინარჩუნეთ ძველი მონაცემების decrypt restore-ის შემოწმებამდე.
 
 ### KMS v2 KEK-ის ბრუნვა
 
-remote KEK-ის ჩვეული ბრუნვა KMS v2-ში ხდება **გარეშე KMS/plugin-ის შინაგანად**. plugin აცნობებს
+remote KEK-ის ჩვეული ბრუნვა KMS v2-ში ხდება **გარე KMS/plugin-ის შიგნით**. plugin აცნობებს
 მიმდინარე საჯარო `key_id`-ს `Status`-ის მეშვეობით; API server ამ ID-ს authoritative-ად მიიჩნევს.
 როცა `key_id` იცვლება, API server ღებულობს ახალ seed-ს, დაცულს ახალი KEK-ით, და გამოიყენებს მას
 შემდგომი დაშიფვრებისთვის. ამ ჩვეული KEK rotation-ისთვის არ ემატება მეორე `kms` provider, არ
-იცვლება provider order და API server არ ხელახლა უსტარტდება მხოლოდ KEK-ის შეცვლის გამო.
+იცვლება provider order და API server არ გადაიტვირთება მხოლოდ KEK-ის შეცვლის გამო.
 
-healthy მდგომარეობაში API server `Status`-ს ეკითხება დაახლოებით ერთხელ წუთში და შესძლებია
+healthy მდგომარეობაში API server `Status`-ს ეკითხება დაახლოებით ერთხელ წუთში და შეუძლია
 გამოიყენოს ბოლო valid მდგომარეობა დაახლოებით სამ წუთს. ამიტომ არ დაიწყოთ re-encryption ბრუნვის
 შემდეგ პირდაპირ: ჯერ დაადასტურეთ, რომ ახალი სტაბილური `key_id` დანახულია ყველა API server-ის
 მიერ და plugin არ ხტება ID-ებს შორის. შემდეგ ხელახლა ჩაწერეთ საჭირო ობიექტები API-ს მეშვეობით,
-თუ storage-მა ახალ KEK-ზე გადასვლა უნდა. Upstream გირჩევთ KMS v2 KEK-ის ბრუნვას არა უფრო
+თუ storage-მა ახალ KEK-ზე გადასვლა უნდა. Upstream გირჩევთ KMS v2 KEK-ის ბრუნვას არანაკლებ
 ხშირად, ვიდრე 90 დღეში ერთხელ. ზუსტი workflow და observability დამოკიდებულია plugin-სა და
-გარეშე KMS-ზე.
+გარე KMS-ზე.
 
 ### მიგრაცია სხვა KMS provider/plugin-ზე
 
 ეს **არ არის** ჩვეული KEK rotation. თუ კლასტერი ნამდვილად ინაცვლებს სხვა კონფიგურირებულ KMS
 provider-ზე, plugin-ზე ან endpoint-ზე, ახალი `kms` provider დგება პირველად, ძველი decrypt-ისთვის
 ინახება ქვემოთ, შემდეგ API ხელახლა წერს მონაცემებს, და მხოლოდ შემოწმების შემდეგ ძველი
-provider/plugin გამოსცილდება ექსპლუატაციისგან.
+provider/plugin გამოიყვანება ექსპლუატაციიდან.
 
 ```mermaid
 sequenceDiagram
@@ -543,10 +543,10 @@ sequenceDiagram
 
 ## 21.7. შემოწმება: API, კონფიგურაცია და etcd
 
-არ შემოწმდეთ მხოლოდ ფაილის არსებობა. საჭიროა სამი ფაქტის დამტკიცება: API server ნამდვილად
+შეამოწმეთ არა მხოლოდ ფაილის არსებობა. საჭიროა სამი ფაქტის დამტკიცება: API server ნამდვილად
 იყენებს flag-ს, Secret ხელმისაწვდომია API-ს მეშვეობით და etcd-ში plaintext არ ინახება. ბოლო
 შემოწმება უნდა შესრულდეს მხოლოდ იზოლირებულ lab-კლასტერზე ან შეთანხმებული პროცედურით: პირდაპირი
-წვდომა etcd-ზე მოითხოვს privileges-ს და შესძლებია გაამხილოს ნამდვილი მონაცემები.
+წვდომა etcd-ზე მოითხოვს privileges-ს და შეუძლია გაამხილოს ნამდვილი მონაცემები.
 
 ჯერ შექმენით უვნებელი canary Secret უნიკალურ, ადვილად საძებნელ მნიშვნელობით:
 
@@ -558,7 +558,7 @@ kubectl -n default get secret encryption-check \
 ```
 
 მეორე გამომავალი ადასტურებს API-ის ჩვეულ მუშაობას, მაგრამ არ ადასტურებს encryption at rest-ს:
-API server ვალდებულია decrypt-ი ავტორიზებული client-ისთვის. შემდეგ შეამოწმეთ manifest, readiness
+API server ვალდებულია გაშიფროს მონაცემები ავტორიზებული client-ისთვის. შემდეგ შეამოწმეთ manifest, readiness
 და API server-ის journal:
 
 ```bash
@@ -568,9 +568,9 @@ kubectl get --raw='/readyz?verbose'
 kubectl -n kube-system logs kube-apiserver-$(hostname) --tail=100
 ```
 
-static Pod-ის სახელი შესძლებია განსხვავდებოდეს `$(hostname)`-ისგან; ჯერ მიიღეთ ის `kubectl -n
+static Pod-ის სახელი შეიძლება განსხვავდებოდეს `$(hostname)`-ისგან; ჯერ მიიღეთ ის `kubectl -n
 kube-system get pods -l component=kube-apiserver`-ის მეშვეობით. არ გამოტანოთ production-logs
-დაუცველ ადგილში: დიაგნოსტიკური მონაცემები შესძლებია შეიცავდეს ობიექტების სახელებსა და წვდომის
+დაუცველ ადგილში: დიაგნოსტიკური მონაცემები შეიძლება შეიცავდეს ობიექტების სახელებსა და წვდომის
 შეცდომებს.
 
 სასწავლო self-managed კლასტერისთვის შესაძლებელია მნიშვნელობის აღება პირდაპირ `etcdctl`-ის
@@ -623,7 +623,7 @@ kubeadm-მაგალითია: ჯერ შეადარეთ endpoint
 ```
 
 ძველი მონაცემებისთვის ეს ტესტი შესრულდება re-encryption-ის შემდეგ. etcd-ის მონაცემებს ჩვეულებრივ
-აქვს encryption provider-ის ფორმატის prefix; არ დააშენოთ შემოწმება შინაგან ფორმატზე, რომელი
+აქვს encryption provider-ის ფორმატის prefix; არ დააშენოთ შემოწმება შინაგან ფორმატზე, რომელიც
 დამოკიდებულია Kubernetes-ის ვერსიაზე.
 
 ტესტის შემდეგ წაშალეთ canary Secret და შეამოწმეთ, რომ backup/restore runbook შენარჩუნებულია:
@@ -632,7 +632,7 @@ kubeadm-მაგალითია: ჯერ შეადარეთ endpoint
 kubectl -n default delete secret encryption-check
 ```
 
-| რის შემოწმებაც | მოსალოდნელი შედეგი |
+| რა შემოწმდეს | მოსალოდნელი შედეგი |
 |---|---|
 | API server-ის manifest | არსებობს `--encryption-provider-config` და სწორი read-only mount |
 | readiness | `/readyz?verbose` წარმატებულია restart-ის შემდეგ |
@@ -641,7 +641,7 @@ kubectl -n default delete secret encryption-check
 | ბრუნვის შემდეგ | ბრუნვამდე შექმნილი Secret იკითხება და ხელახლა ჩაწერილია ახალი provider-ით |
 | backup/restore | snapshot ხელმისაწვდომია უსაფრთხოდ, ხოლო საჭირო გასაღებები/KMS ხელმისაწვდომია აღდგენისას |
 
-> 🏭 Encryption at rest არ ჩაანაცვლებს RBAC-ს, TLS-ს, Secret hygiene-ს და backup-ს; ცალკე დაეხმარეთ keys-ს, KMS availability-ს და restore-ს.
+> 🏭 Encryption at rest არ ჩაანაცვლებს RBAC-ს, TLS-ს, Secret hygiene-ს და backup-ს; ცალკე მართეთ keys, KMS availability და restore.
 
 ## 21.8. როგორ გამოიყენება ეს production-ში
 
@@ -651,27 +651,27 @@ Encryption at rest - ერთი შრეა. სასარგებლო �
   `watch` ასევე აბრუნებს Secret-ის შინაარსს. ცალკე შეზღუდეთ `pods/exec`, `pods/attach` და
   `pods/ephemeralcontainers`: shell workload-ში ხშირად აძლევს გზას მონტირებულ Secret-ზე.
 - **არ გადაცემდეთ Secret-ს env-ის მეშვეობით საჭიროების გარეშე.** უპირატესობა მიანიჭეთ read-only
-  volume/CSI mount-ს; environment-ცვლადები ადვილად ხდება debug output-ში, crash dump-ში,
-  ბალურ პროცესში ან log-ში.
+  volume/CSI mount-ს; environment-ცვლადები ადვილად ხვდება debug output-ში, crash dump-ში,
+  შვილობილ პროცესში ან log-ში.
 - **არ commit-ავდეთ plaintext.** `stringData` მოსახერხებელია, მაგრამ Git-ში ეს plaintext-ია.
-  გამოიყენეთ SOPS, Sealed Secrets ან GitOps-ინტეგრაცია გარეშე secrets manager-ით; ჩართეთ
+  გამოიყენეთ SOPS, Sealed Secrets ან GitOps-ინტეგრაცია გარე secrets manager-თან; ჩართეთ
   pre-commit და server-side scanning.
 - **მოკლე ვადა და ბრუნვა.** ბრუნეთ database password, API token, certificate და cloud credential.
   Kubernetes Secret-ის განახლება არ ნიშნავს, რომ აპლიკაცია ავტომატურად ხელახლა წაიკითხავს მას:
   env არ განახლდება, ხოლო file mount განახლდება დაყოვნებით; აპლიკაციამ უნდა შესძლოს
   reload/restart.
 - **შეზღუდეთ API-ის ზედაპირი.** არ დაბეჭდოთ `kubectl get secret -o yaml`, decoded values ან
-  KMS credentials CI log-ში. გააუქმეთ შემთხვევით გამოქვეყნებული secret წყაროში, არ მხოლოდ
+  KMS credentials CI log-ში. გააუქმეთ შემთხვევით გამოქვეყნებული secret წყაროში, და არა მხოლოდ
   წაშალოთ ხაზი Git history-დან.
 - **დაიცავთ backups.** დაშიფრული etcd-ის snapshot ისევ მგრძნობიარეა: შეინახეთ ცალკე, დაშიფრეთ
   storage, დაწესეთ retention, MFA/ACL და შემოწმებული restore. საიდუმლო გასაღები ან KMS-წვდომა
   შეინახეთ ცალკე snapshot-ისგან.
 
 External Secrets Operator, Vault, cloud Secrets Manager და Secrets Store CSI Driver წყვეტენ
-სხვადასხვა ამოცანებს. პირველი ხშირად synchronize-ავს გარეშე მნიშვნელობას Kubernetes Secret-ში -
-მოსახერხებელია, მაგრამ კოპია რჩება etcd-ში და უნდა იყოს encrypted. CSI/Vault Agent შესძლებია
+სხვადასხვა ამოცანებს. პირველი ხშირად synchronize-ავს გარე მნიშვნელობას Kubernetes Secret-ში -
+მოსახერხებელია, მაგრამ კოპია რჩება etcd-ში და უნდა იყოს encrypted. CSI/Vault Agent-ს შეუძლია
 secret-ის Pod-ში ფაილად გამოტანა მუდმივი Kubernetes Secret-ის გარეშე - etcd-ში ნაკლები კოპია,
-მაგრამ ჩნდება trust boundary node plugin-ის, Pod identity-ისა და გარეშე backend-ის. აირჩიეთ
+მაგრამ ჩნდება trust boundary node plugin-ის, Pod identity-ისა და გარე backend-ის. აირჩიეთ
 pattern threat model-ის შემდეგ, არა მხოლოდ იმის გამო, რომ tool «შიფრავს secrets-ს».
 
 ## 21.9. ტიპური შეცდომები და დიაგნოსტიკა
@@ -682,13 +682,13 @@ pattern threat model-ის შემდეგ, არა მხოლოდ ი
 | Secret იკითხება `kubectl`-ის მეშვეობით | ეს ჩვეულებრივია | API decrypt-ავს ავტორიზებული client-ისთვის; raw etcd შემოწმეთ მხოლოდ lab-ში |
 | ძველი Secret არ იკითხება ბრუნვის შემდეგ | ძველი key/provider ზედმეტად ადრე მოხსნილია | დააბრუნეთ old provider/key დაცული backup-იდან, შემდეგ re-encrypt |
 | ახალი ჩანაწერი რჩება plaintext | `identity` დგას პირველად ან flag არ ვრცელდება | შეამოწმეთ providers-ის თანმიმდევრობა, manifest, restart და ახალი canary-ის შექმნა |
-| API-ის ჩანაწერი ჩერდება/ვარდება | KMS plugin ან გარეშე KMS მიუწვდომელია/ნელია | შეამოწმეთ socket, TLS, KMS health, timeout და HA; არ დაასუსტოთ security გაუაზრებლად |
+| API-ის ჩანაწერი ჩერდება/ვარდება | KMS plugin ან გარე KMS მიუწვდომელია/ნელია | შეამოწმეთ socket, TLS, KMS health, timeout და HA; არ დაასუსტოთ security გაუაზრებლად |
 | Secret ნაპოვნია Git/log-ში | encryption at rest არ დაეხმარება | დაუყოვნებლივ rotate-ი გაუკეთეთ საწყის credential-ს, შეზღუდეთ წვდომა და წაშალეთ artifact IR-პროცედურის მიხედვით |
 
 > 🏭 **Kubernetes v1.37 recovery edge case.** წაუკითხავი/დაზიანებული API-ობიექტისთვის არსებობს Beta unsafe force-delete path (`AllowUnsafeMalformedObjectDeletion`). ეს ოპერაცია cluster-breaking პოტენციალით ხასიათდება და წარმოადგენს ბოლო recovery mechanism-ს, არა ჩვეულ გზას encryption rotation-ის გამოსასწორებლად. დეტალები და შეზღუდვები: [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 გამოცდაზე ჯერ განსაზღვრეთ კლასტერის ტიპი. kubeadm-ისთვის მოძებნეთ API server-ის manifest და etcd
-TLS paths. managed control plane-ისთვის პარამეტრები შესძლებია დახურული იყოს: არ ცადოთ არარსებული
+TLS paths. managed control plane-ისთვის პარამეტრები შეიძლება დახურული იყოს: არ ცადოთ არარსებული
 `/etc/kubernetes/manifests`-ის ედიტირება; გამოიყენეთ provider-supported KMS encryption და
 დაადასტურეთ მისი status.
 
@@ -696,15 +696,15 @@ TLS paths. managed control plane-ისთვის პარამეტრე�
 
 - **Encryption at rest** - შერჩეული API-მონაცემების დაშიფვრა etcd-ში ჩაწერამდე; არ არის დისკის,
   snapshot-ის ან backup-ის მთლიანი დაშიფვრა.
-- **EncryptionConfiguration** - providers-ის კონფიგურაცია, რომელს კითხულობს kube-apiserver
+- **EncryptionConfiguration** - providers-ის კონფიგურაცია, რომელსაც კითხულობს kube-apiserver
   შერჩეული API-რესურსებისთვის.
 - **provider** - დაშიფვრის/decrypt-ის მექანიზმი კონკრეტული API-რესურსებისთვის.
 - **`aescbc`** - ლოკალური AES-CBC provider PKCS#7 padding-ითა და გასაღებით კონფიგურაციისგან;
   ჩაშენებული authentication/MAC-ის გარეშე, ამიტომ სუსტი.
-- **`aesgcm`** - AEAD provider AES-GCM; გასაღებები ბრუნდება ჩანაწერების ლიმიტის გათვალისწინებით.
+- **`aesgcm`** - AEAD provider AES-GCM; გასაღებები უნდა ბრუნავდეს ჩანაწერების ლიმიტის გათვალისწინებით.
 - **`secretbox`** - AEAD provider XSalsa20 + Poly1305 32-ბაიტიანი გასაღებით.
-- **`kms`** - provider, რომელი გადასცემს კრიპტოგრაფიულ ოპერაციებს გარეშე KMS plugin-ს.
-- **envelope encryption** - ობიექტი დაშიფრულია DEK-ით, ხოლო DEK დაცულია გარეშე KEK-ით.
+- **`kms`** - provider, რომელიც გადასცემს კრიპტოგრაფიულ ოპერაციებს გარე KMS plugin-ს.
+- **envelope encryption** - ობიექტი დაშიფრულია DEK-ით, ხოლო DEK დაცულია გარე KEK-ით.
 - **KEK/DEK** - key encryption key / data encryption key.
 - **re-encryption** - ძველი API-ობიექტების ხელახლა ჩაწერა ახალი provider-ის/გასაღების მეშვეობით.
 - **`identity`** - provider დაშიფვრის გარეშე; მისაღებია მხოლოდ როგორც შეგნებული დროებითი fallback.
@@ -714,22 +714,22 @@ TLS paths. managed control plane-ისთვის პარამეტრე�
 - etcd ინახავს Secret-ს და Kubernetes-ის მდგომარეობის მნიშვნელოვან ნაწილს; base64 არ იცავს ამ
   შინაარსს.
 - `EncryptionConfiguration` ვრცელდება kube-apiserver-ის flag-ით `--encryption-provider-config`;
-  ახალი ჩანაწერებისთვის გამოიყენება პირველი provider, წაკითხვისთვის providers ცდილობს
+  ახალი ჩანაწერებისთვის გამოიყენება პირველი provider, წაკითხვისთვის providers-ს ცდიან
   თანმიმდევრობით.
 - `aescbc`, `aesgcm` და `secretbox` - ლოკალური ვარიანტები გასაღებით დაცულ ფაილში; `kms`
-  საშუალებას აძლევს KEK გავიტანოთ გარეშე manager-ში და გამოვიყენოთ envelope encryption.
+  საშუალებას აძლევს KEK გავიტანოთ გარე manager-ში და გამოვიყენოთ envelope encryption.
 - HA-ში ლოკალური key ბრუნავს ასეთი თანმიმდევრობით: backup -> ახალი key მეორედ ყველა API
   server-ზე -> კონფიგურაციის ყველგან გავრცელება -> ახალი key პირველად ყველგან -> ისევ
   კონფიგურაციის გავრცელება -> ძველი ობიექტების re-encryption -> შემოწმებები -> ძველი
   გასაღების წაშლა.
 - შემოწმეთ configuration, API health, API-ის წაკითხვა და canary plaintext-ის არარსებობა raw
   etcd lab-მნიშვნელობაში.
-- Encryption at rest-ს ავსებს RBAC, TLS, secrets hygiene, უსაფრთხო backups და გარეშე secret
+- Encryption at rest-ს ავსებს RBAC, TLS, secrets hygiene, უსაფრთხო backups და გარე secret
   manager.
 
 ## 21.12. როგორ დაგვეხმარება ეს: გამოცდაზე და ნამდვილ სამუშაოში
 
-**CKS-ზე.** დავალებამ შესძლებია მოითხოვოს დაუშიფრავი Secrets-ის მოძებნა, encryption at rest-ის
+**CKS-ზე.** დავალებამ შეიძლება მოითხოვოს დაუშიფრავი Secrets-ის მოძებნა, encryption at rest-ის
 ჩართვა, სწორი `--encryption-provider-config`-ის განსაზღვრა, provider order-ის ახსნა ან Secret-ის
 დაუზიანებლად ბრუნვა. სწრაფი ალგორითმი: მოძებნეთ API server-ის manifest, შექმენით უსაფრთხო config
 და mount, დაამატეთ flag, დაელოდეთ health-ს, ხელახლა ჩაწერეთ ობიექტები და შეამოწმეთ etcd. არ
@@ -738,7 +738,7 @@ TLS paths. managed control plane-ისთვის პარამეტრე�
 **Production-ში.** მოეპყრობით encryption at rest-ს, როგორც სტანდარტულ control-plane baseline-ს,
 არა როგორც საბოლოო ღონისძიებას. მართეთ გასაღებები ცალკე etcd backups-ისგან, ავტომატიზირეთ
 ბრუნვა, დააკვირდით KMS-ს, ტესტირება გაუკეთეთ restore-ს და მინიმუმზე დაუყვანეთ ადამიანების,
-identities-ისა და Pods-ის რაოდენობა, ვისაც შესძლებია plaintext-ის ხილვა. API server-ის
+identities-ისა და Pods-ის რაოდენობა, ვისაც შეუძლია plaintext-ის ხილვა. API server-ის
 კონფიგურაციის ცვლილება შეასრულეთ change procedure-ის მიხედვით rollback-ითა და backup-ით.
 
 ## 21.13. თვითშემოწმების კითხვები
@@ -746,7 +746,7 @@ identities-ისა და Pods-ის რაოდენობა, ვის�
 <details>
 <summary>1. რატომ არ იცავს base64 ველში `Secret.data` საიდუმლოს etcd snapshot-ის მფლობელისგან?</summary>
 
-Base64 - კოდირებაა, არა დაშიფვრა: `kubectl get secret -o yaml` შესძლებია decode-ირდეს გასაღების გარეშე. etcd snapshot-ის მფლობელი ღებულობს დამახსოვრებულ API-მდგომარეობას API server-ის authentication-ის, authorization-ისა და audit-ის გვერდზევლის. Encryption at rest ცვლის ამას, ინახავს შერჩეული რესურსების ciphertext-ს.
+Base64 - კოდირებაა, არა დაშიფვრა: `kubectl get secret -o yaml` შეიძლება decode-ირდეს გასაღების გარეშე. etcd snapshot-ის მფლობელი ღებულობს დამახსოვრებულ API-მდგომარეობას API server-ის authentication-ის, authorization-ისა და audit-ის გვერდის ავლით. Encryption at rest ცვლის ამას, ინახავს შერჩეული რესურსების ciphertext-ს.
 </details>
 
 <details>
@@ -764,43 +764,43 @@ Base64 - კოდირებაა, არა დაშიფვრა: `kubec
 <details>
 <summary>4. რატომ არის `identity` მისაღები მიგრაციული ჯერადობის ბოლოში, მაგრამ არა როგორც პირველი provider?</summary>
 
-`identity` არაფერს არ შიფრავს, მაგრამ ჯერადობის ბოლოში საშუალებას აძლევს მიგრაციისას წაკითხვას ძველი plaintext-ჩანაწერების. პირველად ის საშიშია, რადგან პირველი provider განსაზღვრავს ახალი ჩანაწერების ფორმატს, და ისინი plaintext-ად დარჩება. re-encryption-ის შემდეგ `identity` შესძლებია მოვხსნათ, თუ fallback უკვე საჭირო არ არის.
+`identity` არაფერს არ შიფრავს, მაგრამ ჯერადობის ბოლოში საშუალებას აძლევს მიგრაციისას წაკითხვას ძველი plaintext-ჩანაწერების. პირველად ის საშიშია, რადგან პირველი provider განსაზღვრავს ახალი ჩანაწერების ფორმატს, და ისინი plaintext-ად დარჩება. re-encryption-ის შემდეგ `identity` შეიძლება მოვხსნათ, თუ fallback უკვე საჭირო არ არის.
 </details>
 
 <details>
 <summary>5. რაშია ექსპლუატაციური განსხვავება ლოკალურ `aescbc`/`aesgcm`-სა და `kms`-ს შორის?</summary>
 
-ლოკალურ providers-ში გასაღები მდებარეობს control plane-ის დაცულ config-ფაილში: ეს იცავს snapshot-ს node-ის filesystem-ის გარეშე, მაგრამ არ ცალკევებს ამ secrets-ს. `kms` იყენებს envelope encryption-ს Unix-socket plugin-ისა და გარეშე KEK/HSM-ის მეშვეობით, აუმჯობესებს separation of duties-ს. სანაცვლოდ plugin და გარეშე manager ხდება კრიტიკული დამოკიდებულება წაკითხვის, ჩაწერის, ბრუნვისა და restore-ისთვის.
+ლოკალურ providers-ში გასაღები მდებარეობს control plane-ის დაცულ config-ფაილში: ეს იცავს snapshot-ს node-ის filesystem-ის გარეშე, მაგრამ არ ცალკევებს ამ secrets-ს. `kms` იყენებს envelope encryption-ს Unix-socket plugin-ისა და გარე KEK/HSM-ის მეშვეობით, აუმჯობესებს separation of duties-ს. სანაცვლოდ plugin და გარე manager ხდება კრიტიკული დამოკიდებულება წაკითხვის, ჩაწერის, ბრუნვისა და restore-ისთვის.
 </details>
 
 <details>
-<summary>6. რატომ არ შესძლება ძველი key-ის წაშლა ახალის დამატებისთანავე?</summary>
+<summary>6. რატომ არ შეიძლება ძველი key-ის წაშლა ახალის დამატებისთანავე?</summary>
 
-ძველი ობიექტები ისევ შესძლებია იყოს plaintext ან დაშიფრული ძველი key-ით, ხოლო ახალი provider ვრცელდება მხოლოდ ახალ/განახლებულ ჩანაწერებზე. HA-ში ჯერ ყველა API server-ს უნდა შესძლოს ორივე key-ის წაკითხვა, შემდეგ ახალი ხდება პირველი და ობიექტები ხელახლა ჩაწერდება. old key-ის წაშლა re-encryption-მდე ნაწილს ჩანაწერებისა ან აღდგენილ snapshot-ს წაუკითხავად აქცევს.
+ძველი ობიექტები ისევ შეიძლება იყოს plaintext ან დაშიფრული ძველი key-ით, ხოლო ახალი provider ვრცელდება მხოლოდ ახალ/განახლებულ ჩანაწერებზე. HA-ში ჯერ ყველა API server-ს უნდა შესძლოს ორივე key-ის წაკითხვა, შემდეგ ახალი ხდება პირველი და ობიექტები ხელახლა ჩაიწერება. old key-ის წაშლა re-encryption-მდე ნაწილს ჩანაწერებისა ან აღდგენილ snapshot-ს წაუკითხავად აქცევს.
 </details>
 
 <details>
 <summary>7. როგორ დაამტკიცოთ, რომ ძველ Secret-ს ნამდვილად ჩაუტარდა re-encryption?</summary>
 
-ახალი provider-ის პირველად აქცევის შემდეგ ძველი Secret ხელახლა იწერება API-ს მეშვეობით, მაგალითად `kubectl get secrets --all-namespaces -o json | kubectl replace -f -`, ტესტური namespace-ით დაწყებული. შემდეგ მოწმდება API-ის წაკითხვა და იზოლირებულ lab-ში raw etcd-ის canary-ის მნიშვნელობა: უნიკალური plaintext marker არ უნდა მოიძებნოს `strings | grep`-ის მეშვეობით. მხოლოდ ასეთი შემოწმების შემდეგ წაშლება ძველი key/provider.
+ახალი provider-ის პირველად აქცევის შემდეგ ძველი Secret ხელახლა იწერება API-ს მეშვეობით, მაგალითად `kubectl get secrets --all-namespaces -o json | kubectl replace -f -`, ტესტური namespace-ით დაწყებული. შემდეგ მოწმდება API-ის წაკითხვა და იზოლირებულ lab-ში raw etcd-ის canary-ის მნიშვნელობა: უნიკალური plaintext marker არ უნდა მოიძებნოს `strings | grep`-ის მეშვეობით. მხოლოდ ასეთი შემოწმების შემდეგ წაიშლება ძველი key/provider.
 </details>
 
 <details>
-<summary>8. რომელ Pod-ის ქმედებებს შესძლება გვერდზევლის `get secrets`-ის აკრძალვა და რატომ?</summary>
+<summary>8. რომელ Pod-ის ქმედებებს შეუძლია გვერდი აუაროს `get secrets`-ის აკრძალვას და რატომ?</summary>
 
-ფართო უფლებები `pods/exec`, `pods/attach` ან `pods/ephemeralcontainers`-ზე შესძლება მისცემენ shell-ს workload-ში, სადაც Secret მონტირებულია ან ხელმისაწვდომია აპლიკაციისთვის. Identity-ს მაშინ არ უნდა წაკითხოს Secret პირდაპირ Kubernetes API-ის მეშვეობით, plaintext-ის დასანახად. ამიტომ ეს subresources ასევე ზღუდავს least-privilege RBAC-ს.
+ფართო უფლებებმა `pods/exec`, `pods/attach` ან `pods/ephemeralcontainers`-ზე შეიძლება მოგვცეს shell workload-ში, სადაც Secret მონტირებულია ან ხელმისაწვდომია აპლიკაციისთვის. Identity-ს მაშინ არ მოუწევს Secret-ის პირდაპირ წაკითხვა Kubernetes API-ის მეშვეობით plaintext-ის სანახავად. ამიტომ ეს subresources ასევე ზღუდავს least-privilege RBAC-ს.
 </details>
 
 <details>
 <summary>9. რის შემოწმება უნდა მოხდეს დაშიფრული etcd snapshot-ის აღდგენისთვის?</summary>
 
-Snapshot ინახება და აღდგება უსაფრთხო პროცედურით, ასევე მოწმდება საჭირო ლოკალური keys-ის ან იმავე KMS KEK/plugin-ის ხელმისაწვდომობა. საჭიროა წინასწარ ტესტირება restore-ისთვის, key IDs-ის დოკუმენტირება და snapshot-ის ცალკე დაცვა ACL-ით, storage encryption-ითა და retention-ით. master keys არ შესძლება etcd-ის backup-ში ექსპორტირდეს.
+Snapshot ინახება და აღდგება უსაფრთხო პროცედურით, ასევე მოწმდება საჭირო ლოკალური keys-ის ან იმავე KMS KEK/plugin-ის ხელმისაწვდომობა. საჭიროა წინასწარ ტესტირება restore-ისთვის, key IDs-ის დოკუმენტირება და snapshot-ის ცალკე დაცვა ACL-ით, storage encryption-ითა და retention-ით. master keys არ შეიძლება etcd-ის backup-ში ექსპორტირდეს.
 </details>
 
 <details>
-<summary>10. **Flashback (14-ე თავი).** Encryption at rest იცავს Secret-ს ზუსტად etcd-ში. Secret-ის მონტირების შემდეგ kubelet მას Pod-ს აწვდის **tmpfs-backed volume**-ის მეშვეობით: ეს გამორიცხავს ჩვეულ durable-disk კოპიას, მაგრამ არ იძლევა უპირობო გარანტიას «არასდროს არ მოხდება დისკზე». swap-ის ჩართვისას Kubernetes v1.36 მონტირავს memory-backed volumes-ს `noswap`-ით, თუ kernel მხარს უჭერს ამ ოპციას (ოფიციალურად Linux 6.3-იდან ან backport-ით); სხვა შემთხვევაში kubelet აფრთხილებს, რომ ასეთი volume, Secret-ის ჩათვლით, შესძლება გახდეს swap-ში გადატანილი. ასეთ node-ებზე გამორთვენ swap-ს ან უზრუნველვყოფენ მის დაშიფვრას და ამოწმებენ kubelet-ის warning-ს. რომელი ღონისძიებები 14-ე თავიდან (host footprint, least-privilege host) ზღუდავს რისკს secret-ისთვის ამ ეტაპზე - როცა ის უკვე decrypt-ული და ხელმისაწვდომია ავტორიზებული პროცესისთვის node-ზე tmpfs-ის მეშვეობით, - და რატომ რჩება host compromise ან privileged workload იმავე node-ზე სერიოზულ საფრთხედ, თუნდაც persistent-disk კოპია არ არსებობდეს?</summary>
+<summary>10. **Flashback (14-ე თავი).** Encryption at rest იცავს Secret-ს ზუსტად etcd-ში. Secret-ის მონტირების შემდეგ kubelet მას Pod-ს აწვდის **tmpfs-backed volume**-ის მეშვეობით: ეს გამორიცხავს ჩვეულ durable-disk კოპიას, მაგრამ არ იძლევა უპირობო გარანტიას «არასდროს არ მოხდება დისკზე». swap-ის ჩართვისას Kubernetes v1.36 მონტირავს memory-backed volumes-ს `noswap`-ით, თუ kernel მხარს უჭერს ამ ოპციას (ოფიციალურად Linux 6.3-იდან ან backport-ით); სხვა შემთხვევაში kubelet აფრთხილებს, რომ ასეთი volume, Secret-ის ჩათვლით, შეიძლება გახდეს swap-ში გადატანილი. ასეთ node-ებზე გამორთავენ swap-ს ან უზრუნველვყოფენ მის დაშიფვრას და ამოწმებენ kubelet-ის warning-ს. რომელი ღონისძიებები 14-ე თავიდან (host footprint, least-privilege host) ზღუდავს რისკს secret-ისთვის ამ ეტაპზე - როცა ის უკვე decrypt-ული და ხელმისაწვდომია ავტორიზებული პროცესისთვის node-ზე tmpfs-ის მეშვეობით, - და რატომ რჩება host compromise ან privileged workload იმავე node-ზე სერიოზულ საფრთხედ, თუნდაც persistent-disk კოპია არ არსებობდეს?</summary>
 
-საჭიროა host footprint-ის შემცირება: გამორთეთ ზედმეტი services და packages, დახუროთ საჭირო არარსებული listening ports და დროულად განაახლოთ node, host compromise-ის გზების შესამცირებლად. Least-privilege host ზღუდავს, ვისაც ჰყავს SSH/sudo და წვდომა kubelet/runtime-ზე, ხოლო workload-ს არ უნდა მიეცეს `privileged`, host namespaces ან hostPath. tmpfs და `noswap` ამცირებს durable-disk-რისკს, მაგრამ root node-ზე ან privileged მეზობელი workload ისევ შესძლებია მიაწვდინოს წვდომა მეხსიერებაზე, runtime-ზე ან მონტირებულ secret-ზე.
+საჭიროა host footprint-ის შემცირება: გამორთეთ ზედმეტი services და packages, დახუროთ არასაჭირო listening ports და დროულად განაახლოთ node, host compromise-ის გზების შესამცირებლად. Least-privilege host ზღუდავს, ვისაც აქვს SSH/sudo და წვდომა kubelet/runtime-ზე, ხოლო workload-ს არ უნდა მიეცეს `privileged`, host namespaces ან hostPath. tmpfs და `noswap` ამცირებს durable-disk-რისკს, მაგრამ root-ს node-ზე ან privileged მეზობელ workload-ს ისევ შეუძლია მიიღოს წვდომა მეხსიერებაზე, runtime-ზე ან მონტირებულ secret-ზე.
 </details>
 
 ## პრაქტიკა
@@ -808,12 +808,12 @@ Snapshot ინახება და აღდგება უსაფრთ�
 Production-ზე მუშაობის შესრულებამდე გაიარეთ ლაბორატორია ცალკე კლასტერზე: შექმენით
 `EncryptionConfiguration`, დაამატეთ flag და mount API server-ისთვის, დაშიფრეთ Secret, ჩაატარეთ
 ბრუნვა და დაადასტურეთ შედეგი etcd-ის მეშვეობით. შეინარჩუნეთ წვდომა control-plane console-ზე და
-ახალი snapshot: შეცდომა static-Pod manifest-ში შესძლება დროებით ჩამოაცილოს კლასტერს API.
+ახალი snapshot: შეცდომამ static-Pod manifest-ში შეიძლება დროებით ჩამოაცილოს კლასტერს API.
 
 🧪 ლაბორატორია 109 (EncryptionConfiguration, Secret-ის დაშიფვრა etcd-ში და შემოწმება):
 [tasks/cks/labs/109](../../labs/109/README_GE.MD)
 
-🌐 დამატებითი ინტერაქტიული პრაქტიკა (killer.sh/killercoda, გარეშე რესურსი): [secret-pod-access](https://killercoda.com/killer-shell-cks/scenario/secret-pod-access) · [secret-read-secrets](https://killercoda.com/killer-shell-cks/scenario/secret-read-secrets) · [secret-serviceaccount-pod](https://killercoda.com/killer-shell-cks/scenario/secret-serviceaccount-pod) · [secret-etcd-encryption](https://killercoda.com/killer-shell-cks/scenario/secret-etcd-encryption)
+🌐 დამატებითი ინტერაქტიული პრაქტიკა (killer.sh/killercoda, გარე რესურსი): [secret-pod-access](https://killercoda.com/killer-shell-cks/scenario/secret-pod-access) · [secret-read-secrets](https://killercoda.com/killer-shell-cks/scenario/secret-read-secrets) · [secret-serviceaccount-pod](https://killercoda.com/killer-shell-cks/scenario/secret-serviceaccount-pod) · [secret-etcd-encryption](https://killercoda.com/killer-shell-cks/scenario/secret-etcd-encryption)
 
 📘 დაკავშირებული მასალები: [CKA-ს 19-ე თავი - Secret](../../../cka/course/19/ge.md) ·
 [CKA-ს 37-ე თავი - etcd-ის backup და აღდგენა](../../../cka/course/37/ge.md)

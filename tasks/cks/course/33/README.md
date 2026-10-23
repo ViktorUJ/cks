@@ -226,7 +226,7 @@ k get pod -n "$NAMESPACE" "$POD" -o wide
 
 ### Static Pod: edit and verify on the assigned host
 
-`kube-apiserver`, scheduler, and controller-manager in a kubeadm cluster are usually static Pod. Kubelet watches their manifest on the control plane. For such a task, the infobox must assign a control-plane host: from `base`, connect specifically to it, save a copy, then change one logical setting. Do not SSH from one host to another and do not try to run `k` on `base`.
+`kube-apiserver`, scheduler, and controller-manager in a kubeadm cluster are usually static Pods. Kubelet watches their manifest on the control plane. For such a task, the infobox must assign a control-plane host: from `base`, connect specifically to it, save a copy, then change one logical setting. Do not SSH from one host to another and do not try to run `k` on `base`.
 
 ```bash
 # On base.
@@ -411,7 +411,7 @@ Final procedure in the last 10-15 minutes:
 
 Exam discipline is useful during an incident: first determine scope and identity, then make the minimal reversible change, collect evidence, and verify the service from the user's perspective. The CKS context differs from production in that a real environment requires a change record, peer review, backup, maintenance window, and rollback plan before a change.
 
-Apply the same habits to platform work: do not grant wildcard RBAC for a quick fix, do not run a scanner without triaging findings, do not change static Pod on all control-plane nodes at once, and do not enable detailed audit without a retention policy and data protection. Successful defense is an available service with a reduced attack surface and observable evidence of actions.
+Apply the same habits to platform work: do not grant wildcard RBAC for a quick fix, do not run a scanner without triaging findings, do not change static Pods on all control-plane nodes at once, and do not enable detailed audit without a retention policy and data protection. Successful defense is an available service with a reduced attack surface and observable evidence of actions.
 
 ## 33.8. Mini-glossary
 

@@ -6,7 +6,7 @@
 
 ამ CKS-ლაბში თქვენ შეზღუდავთ Kubernetes API-ზე წვდომას უმცირესი
 პრივილეგიების პრინციპით. პრაქტიკა მოიცავს მინიმალურ namespaced RBAC-ს, თანამედროვე
-ხანმოკლე ServiceAccount-ტოკენებს, Pod-ს API-ტოკენის გარეშე, მოძველებული
+ხანმოკლე ServiceAccount-token-ებს, Pod-ს API-token-ის გარეშე, მოძველებული
 ჭარბი უფლებების წაშლას და API server-ზე ანონიმური წვდომის გამორთვას.
 
 იმუშავეთ მხოლოდ იმ ობიექტებთან, რომლებიც დავალებებშია მითითებული. Namespace `security-104` და
@@ -105,7 +105,7 @@ check_result
 ---
 | **2** | **ხანმოკლე projected ServiceAccount token** |
 | :---: | :--- |
-| რას ვაკეთებთ | შექმენით ServiceAccount `api-client` და Pod `token-client` `security-104`-ში. ნუ გამოიყენებთ legacy Secret-ტოკენს. გამორთეთ token-ის ჩვეულებრივი ავტომონტაჟი, ხოლო საჭირო token მიამაგრეთ **ზუსტად ერთი** projected `serviceAccountToken` source-ით `/var/run/secrets/tokens/api-token`-ზე `path: api-token`-ით და `expirationSeconds`-ით `600`-დან `3600`-მდე ჩათვლით - ნუ დაამატებთ რაიმე დამატებით `serviceAccountToken` source-ს იმავე (ან სხვა) projected volume-ში. **ნუ მიუთითებთ `audience`-ს**, რათა kubelet-მა API server-ის identifier ნაგულისხმევად მოითხოვოს. თუ აპლიკაციას ცალკე audience სჭირდება, ჯერ შეადარეთ ის API server-ზე `--api-audiences`-ს (ან default-ს `--service-account-issuer`-იდან) და მხოლოდ შემდეგ მიუთითეთ აშკარად. |
+| რას ვაკეთებთ | შექმენით ServiceAccount `api-client` და Pod `token-client` `security-104`-ში. ნუ გამოიყენებთ legacy Secret-token-ს. გამორთეთ token-ის ჩვეულებრივი ავტომონტაჟი, ხოლო საჭირო token მიამაგრეთ **ზუსტად ერთი** projected `serviceAccountToken` source-ით `/var/run/secrets/tokens/api-token`-ზე `path: api-token`-ით და `expirationSeconds`-ით `600`-დან `3600`-მდე ჩათვლით - ნუ დაამატებთ რაიმე დამატებით `serviceAccountToken` source-ს იმავე (ან სხვა) projected volume-ში. **ნუ მიუთითებთ `audience`-ს**, რათა kubelet-მა API server-ის identifier ნაგულისხმევად მოითხოვოს. თუ აპლიკაციას ცალკე audience სჭირდება, ჯერ შეადარეთ ის API server-ზე `--api-audiences`-ს (ან default-ს `--service-account-issuer`-იდან) და მხოლოდ შემდეგ მიუთითეთ აშკარად. |
 | მიღების კრიტერიუმები | Pod იყენებს `api-client`-ს, აქვს `automountServiceAccountToken: false` და შეიცავს **ზუსტად ერთ** projected `serviceAccountToken` source-ს Pod-ის მთელ სპეციფიკაციაში - მკაცრად დაფიქსირებული audience-ის გარეშე, მითითებული path-ით და `expirationSeconds`-ით დიაპაზონში `600`-`3600` (ორივე საზღვარი ჩათვლით). TokenReview, შესრულებული admin-კონტექსტიდან მიმაგრებული token-ისთვის, აბრუნებს `authenticated: true`-ს და სახელს `system:serviceaccount:security-104:api-client`; ცალკე RBAC-შემოწმება ადასტურებს, რომ ამ ServiceAccount-ს `secrets`-ის წაშლა არ შეუძლია. |
 
 <details>

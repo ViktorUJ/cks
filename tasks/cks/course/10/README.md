@@ -86,7 +86,7 @@ kubectl auth can-i create clusterrolebindings --as="$SA"
 kubectl auth can-i create pods/exec -n cks-104 --as="$SA"
 ```
 
-`--as` uses Kubernetes impersonation. In Kubernetes 1.36, a request can be allowed either by broad legacy verb `impersonate` or by Constrained Impersonation: a separate permission on the identity and separate `impersonate-on:<mode>:<verb>` permission on the actual API request performed. If required impersonation permissions are absent, the API returns `forbidden` before checking the permissions of the impersonated identity.
+`--as` uses Kubernetes impersonation. In Kubernetes 1.36, a request can be allowed either by the broad legacy verb `impersonate` or by Constrained Impersonation: a separate permission on the identity and a separate `impersonate-on:<mode>:<verb>` permission on the actual API request performed. If required impersonation permissions are absent, the API returns `forbidden` before checking the permissions of the impersonated identity.
 
 For a security audit, do not grant legacy `impersonate` automatically: choose the model that fits the required workflow and document its scope.
 
@@ -96,7 +96,7 @@ For a security audit, do not grant legacy `impersonate` automatically: choose th
 
 > **Kubernetes 1.36+ / advanced.** This is production material beyond the mandatory CKS core. The exam priority is precise ordinary Role/Binding and minimal `impersonate`.
 
-**Constrained Impersonation** is Beta in Kubernetes v1.36+ and enabled by default. Unlike ordinary `impersonate`, it does not allow performing every action that the target can perform. For an ordinary user (an `Impersonate-User` value that does not start with `system:serviceaccount:` or `system:node:`), API server performs **two separate checks**:
+**Constrained Impersonation** is Beta in Kubernetes v1.36+ and enabled by default. Unlike ordinary `impersonate`, it does not allow performing every action that the target can perform. For an ordinary user (an `Impersonate-User` value that does not start with `system:serviceaccount:` or `system:node:`), the API server performs **two separate checks**:
 
 1. **Identity permission** - whether this specific identity can be impersonated. For a generic user, this is a rule in `apiGroups: ["authentication.k8s.io"]`, resource `users`, with `resourceNames` for the required name and verb `impersonate:user-info`. Because a user has no namespace scope, grant it through `ClusterRole` and `ClusterRoleBinding`.
 2. **Action-at-scope permission** - whether a particular operation can be performed in its scope *while impersonating this identity*. For Pod `list`, it is `impersonate-on:user-info:list` on `pods`; for `watch`, `impersonate-on:user-info:watch`. These can be granted with `Role`/`RoleBinding` only in the required namespace. Identity permission alone is insufficient.
@@ -177,7 +177,7 @@ kubectl get clusterrole "$ROLE_NAME" -o yaml
 
 ## 10.3. Dangerous verbs and resources: escalation paths
 
-Not all rules are equal. Read-only access to `pods` and `get` on `secrets` have entirely different impact, and some verbs implicitly obtain existing permissions. During review, look for the following combinations before ordinary `get`/`list`.
+Not all rules are equal. Read-only access to `pods` and `get` on `secrets` have entirely different impact, and some verbs allow existing permissions to be obtained implicitly. During review, look for the following combinations before ordinary `get`/`list`.
 
 | Verb or resource | Why it is dangerous | Safe approach |
 |---|---|---|
@@ -316,7 +316,7 @@ Built-in `cluster-admin` holds the broadest wildcard permissions. Through `Clust
 | `admin` | Broad namespace administration, including roles/bindings inside its boundary | High risk of namespace escalation and takeover of team applications. |
 | `cluster-admin` | Through `ClusterRoleBinding` - full access to the entire cluster; through `RoleBinding` - complete control of resources in that binding's namespace, including the Namespace object itself | Even a local binding is extremely risky; ClusterRoleBinding means cluster compromise. |
 
-Aggregation can extend a built-in ClusterRole with rules from other ClusterRole objects. The RBAC controller combines rules from roles labeled `rbac.authorization.k8s.io/aggregate-to-<role>: "true"`. This is useful for CRD: for example, a plugin can add read-only rules for its API to `view`. But this label is a supply-chain and RBAC boundary: a created or modified role can silently grant every `view`, `edit`, or `admin` user additional permissions.
+Aggregation can extend a built-in ClusterRole with rules from other ClusterRole objects. The RBAC controller combines rules from roles labeled `rbac.authorization.k8s.io/aggregate-to-<role>: "true"`. This is useful for CRDs: for example, a plugin can add read-only rules for its API to `view`. But this label is a supply-chain and RBAC boundary: a created or modified role can silently grant every `view`, `edit`, or `admin` user additional permissions.
 
 > 🧠 `aggregate-to-*` changes the effective permissions of the whole built-in-role audience; a wildcard in the source role expands permissions massively.
 
@@ -335,7 +335,7 @@ rules:
   verbs: ["get", "list", "watch"]
 ```
 
-Check aggregated rules in the final built-in role and also aggregation sources themselves. Do not edit system ClusterRole objects with `system:` prefix: API server can restore them on start or upgrade. Manage your ClusterRole objects and labels through Git, code review, and a limited set of identities allowed to change RBAC.
+Check the aggregated rules in the final built-in role, as well as the aggregation sources themselves. Do not edit system ClusterRole objects with the `system:` prefix: the API server can restore them on startup or upgrade. Manage your ClusterRole objects and labels through Git, code review, and a limited set of identities allowed to change RBAC.
 
 ```bash
 # Final effective rules of the built-in role
@@ -431,7 +431,7 @@ In production, include this `can-i` set in a smoke test after an RBAC change, an
 - **least privilege** - granting only the minimum permission set an identity needs for a particular task.
 - **verb** - a Kubernetes API operation, for example `get`, `list`, `create`, `bind`, or `escalate`.
 - **resource / subresource** - an API object and its subresource, for example `pods` and `pods/exec`.
-- **`resourceNames`** - restriction of a rule to particular object names where API server supports it.
+- **`resourceNames`** - restriction of a rule to particular object names where the API server supports it.
 - **impersonation** - executing a request as another identity through API headers.
 - **aggregation** - automatic addition of one ClusterRole's rules to a built-in ClusterRole by label.
 - **wildcard** - `*` in `apiGroups`, `resources`, or `verbs`; it includes unknown future objects and is therefore dangerous in a security role.
@@ -443,7 +443,7 @@ In production, include this `can-i` set in a smoke test after an RBAC change, an
 - Least privilege begins with `Role` and `RoleBinding` in a particular namespace; cluster-level access and `ClusterRoleBinding` need separate justification.
 - `kubectl auth can-i --list` gives a useful rule overview when the result is complete, but not a guaranteed exhaustive inventory. Prove security-critical boundaries with targeted `can-i` checks: expected access must return `yes`, forbidden access `no`.
 - Especially dangerous are `escalate`, `bind`, `impersonate`, changing a binding, `secrets`, `serviceaccounts/token`, `pods/exec`, `pods/portforward`, and `get nodes/proxy`.
-- Do not use `*` without exceptional, documented reason: a wildcard includes current and future APIs, resources, subresources, and verbs.
+- Do not use `*` without an exceptional, documented reason: a wildcard includes current and future APIs, resources, subresources, and verbs.
 - Aggregated ClusterRole objects can silently expand `view`, `edit`, and `admin`; review `aggregate-to-*` labels and the sources of those roles.
 
 ## 10.10. How this helps on the exam and at work
@@ -498,13 +498,13 @@ Both verbs bypass RBAC's built-in protection, but neither replaces ordinary CRUD
 <details>
 <summary>5. Why must `create pods/exec` and `create pods/portforward` be reviewed separately from ordinary access to `pods`?</summary>
 
-These are separate API subresources, written as `pods/exec` and `pods/portforward`, not ordinary resource `pods`. `create pods/exec` gives command execution in an existing Pod with its network, filesystem, and mounted Secret objects; `create pods/portforward` creates a tunnel to Pod ports. Do not implicitly include them in an ordinary read role; normally grant them only for controlled diagnostics.
+These are separate API subresources, written as `pods/exec` and `pods/portforward`, not the ordinary resource `pods`. `create pods/exec` gives command execution in an existing Pod with its network, filesystem, and mounted Secret objects; `create pods/portforward` creates a tunnel to Pod ports. Do not implicitly include them in an ordinary read role; normally grant them only for controlled diagnostics.
 </details>
 
 <details>
 <summary>6. Why does `resourceNames` not restrict `create` and `deletecollection` of a top-level resource, but can apply to a named subresource such as `pods/exec`?</summary>
 
-For `create` and `deletecollection` on a top-level resource, object name is not part of the request URL, so API server cannot restrict it with `resourceNames`. This is not a universal restriction for all subresources. A named subresource such as `pods/exec` can be restricted because the request addresses a specific Pod.
+For `create` and `deletecollection` on a top-level resource, object name is not part of the request URL, so the API server cannot restrict it with `resourceNames`. This is not a universal restriction for all subresources. A named subresource such as `pods/exec` can be restricted because the request addresses a specific Pod.
 </details>
 
 <details>
@@ -514,20 +514,20 @@ For `create` and `deletecollection` on a top-level resource, object name is not 
 </details>
 
 <details>
-<summary>8. How does label `rbac.authorization.k8s.io/aggregate-to-view=true` change effective access, and why is a wildcard in an aggregated role especially risky?</summary>
+<summary>8. How does the label `rbac.authorization.k8s.io/aggregate-to-view=true` change effective access, and why is a wildcard in an aggregated role especially risky?</summary>
 
-The RBAC controller adds rules from a ClusterRole with this label to final built-in role `view`, so every user of `view` receives new access. A wildcard in this source role covers current and future API groups, resources, subresources, and verbs for the broad `view` audience. Therefore review both the final role and every aggregation source role.
+The RBAC controller adds rules from a ClusterRole with this label to the final built-in role `view`, so every user of `view` receives new access. A wildcard in this source role covers current and future API groups, resources, subresources, and verbs for the broad `view` audience. Therefore review both the final role and every aggregation source role.
 </details>
 
 <details>
 <summary>9. **Flashback (Chapter 04).** `NetworkPolicy` from Chapter 04 is an allow-list: default-deny first, then narrow allowances. Where does the same “deny everything, then explicitly allow” logic work in RBAC design, and when does a request actually receive default-deny?</summary>
 
-In RBAC, start with the absence of required permissions and add only exact `apiGroups`, `resources`, and `verbs` at minimal scope. A request is denied when no applicable `RoleBinding` or `ClusterRoleBinding` grants Allow. Check not only the binding where the subject appears directly, but also permissions received through its groups, such as `system:serviceaccounts` for a ServiceAccount. Therefore the absence of a direct `RoleBinding` for a user or ServiceAccount does not itself prove lack of access; confirm the final boundary with `kubectl auth can-i` for a specific identity. Unlike NetworkPolicy, the RBAC authorizer in API server makes the decision, but the result is likewise an explicit allow-list.
+In RBAC, start with the absence of required permissions and add only exact `apiGroups`, `resources`, and `verbs` at minimal scope. A request is denied when no applicable `RoleBinding` or `ClusterRoleBinding` grants Allow. Check not only the binding where the subject appears directly, but also permissions received through its groups, such as `system:serviceaccounts` for a ServiceAccount. Therefore the absence of a direct `RoleBinding` for a user or ServiceAccount does not itself prove lack of access; confirm the final boundary with `kubectl auth can-i` for a specific identity. Unlike NetworkPolicy, the RBAC authorizer in the API server makes the decision, but the result is likewise an explicit allow-list.
 </details>
 
 ## Practice
 
-In [Lab 104](../../labs/104/README.MD), create `app-sa` with a minimal Role for reading Pod objects, prove with `auth can-i` that `delete pods` is denied, and remove an excessive binding. In the same lab, you disable automatic ServiceAccount token mounting and restrict anonymous access to API server - the next chapters develop this RBAC boundary.
+In [Lab 104](../../labs/104/README.MD), create `app-sa` with a minimal Role for reading Pod objects, prove with `auth can-i` that `delete pods` is denied, and remove an excessive binding. In the same lab, you will disable automatic ServiceAccount token mounting and restrict anonymous access to the API server - the next chapters develop this RBAC boundary.
 
 🌐 Additional interactive practice (killer.sh/killercoda, external resource): [rbac-serviceaccount-permissions](https://killercoda.com/killer-shell-cks/scenario/rbac-serviceaccount-permissions) · [rbac-user-permissions](https://killercoda.com/killer-shell-cks/scenario/rbac-user-permissions) · [certificate-signing-requests-sign-manually](https://killercoda.com/killer-shell-cks/scenario/certificate-signing-requests-sign-manually) · [certificate-signing-requests-sign-k8s](https://killercoda.com/killer-shell-cks/scenario/certificate-signing-requests-sign-k8s)
 

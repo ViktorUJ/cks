@@ -120,7 +120,7 @@ exija a un Pod de Windows `allowPrivilegeEscalation: false`, `seccompProfile` o 
 igual que a un Pod de Linux; Windows HostProcess y los demás controles aplicables de Windows se
 comprueban por separado.
 
-`readOnlyRootFilesystem: true` es una práctica de protección sólida, pero no un requisito independiente de PSS restricted. No lo sustituya por los campos obligatorios. Si la aplicación necesita un puerto inferior a 1024, después de `drop: ["ALL"]` se puede devolver puntualmente `NET_BIND_SERVICE`, si la versión de PSS elegida lo permite y la tarea lo justifica.
+`readOnlyRootFilesystem: true` es una práctica de protección sólida, pero no un requisito independiente de PSS restricted. No sustituya con ello los campos obligatorios. Si la aplicación necesita un puerto inferior a 1024, después de `drop: ["ALL"]` se puede devolver puntualmente `NET_BIND_SERVICE`, si la versión de PSS elegida lo permite y la tarea lo justifica.
 
 **User namespaces en v1.36.** Para un Pod Linux con `spec.hostUsers: false`, PSA relaja precisamente las comprobaciones de `runAsNonRoot` y `runAsUser`, incluso en `baseline`/`restricted`: root dentro de un user namespace separado se asigna a un UID no privilegiado del host. Esto no anula las demás reglas de la matriz ni permite host namespaces. No transfiera esta excepción a un Pod normal con `hostUsers` sin definir o en `true`.
 
@@ -375,7 +375,7 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 | Observación | Causa probable | Acción |
 |---|---|---|
 | El Pod `privileged` pasó en un namespace presuntamente restricted | falta/error del label `enforce`, Pod exempt, o se comprueba otro namespace | muestre los labels del namespace, el creador y la admission configuration |
-| CI ve un warning, pero el Deployment aun se creó | funciona `warn` o `audit`, no `enforce` | es la fase esperada de migración; no la llame protección |
+| CI ve un warning, pero el Deployment se creó de todos modos | funciona `warn` o `audit`, no `enforce` | es la fase esperada de migración; no la llame protección |
 | Se rechaza un rollout nuevo; los Pods antiguos funcionan | PSA no elimina los Pods existentes, pero comprueba los nuevos | corrija el template del controller y repita el rollout |
 | `kubectl apply` responde Forbidden; el Pod no se creó | PSA o RBAC rechazó antes de persistence | compare el texto de error con `auth can-i` y los labels del namespace |
 | Un componente del sistema falla tras restricted | el componente necesita un namespace separado permitido o una exemption limitada | no debilite el namespace de aplicaciones; fije la excepción |
@@ -388,7 +388,7 @@ Para observabilidad, recopile API audit logs y las métricas PSA `pod_security_e
 
 ## 19.10. Cómo se aplica en production
 
-- **restricted por defecto para aplicaciones.** Cree namespaces mediante plantilla/IaC ya con `enforce=restricted` fijado; no deje la seguridad al criterio de cada chart. Deje el permiso para modificar las labels de PSA a un rol de platform/security de confianza.
+- **restricted por defecto para aplicaciones.** Cree namespaces mediante plantilla/IaC ya con `enforce=restricted` fijado; no deje la seguridad al criterio de cada chart. Deje el permiso para modificar los labels de PSA a un rol de platform/security de confianza.
 - **Advertencia antes de la prohibición.** Un nivel PSS nuevo comienza con `warn` y `audit`, y luego pasa a ser `enforce`; así la policy no convierte un rollout planificado en un incidente.
 - **Límites de componentes del sistema.** CNI/CSI y node agents se aíslan de los workloads de negocio mediante namespaces, ServiceAccounts y RBAC separados. `privileged` no se extiende a toda la plataforma.
 - **La excepción es una deuda de seguridad temporal.** Tiene propietario, test, ticket, controles compensatorios y fecha de eliminación. Una exemption no es una forma de «arreglar» una imagen que se puede hacer non-root.
@@ -415,7 +415,7 @@ En el trabajo real, estos mismos pasos permiten migrar un namespace a `restricte
 
 - PSA comprueba el Pod antes de escribirlo en etcd; complementa RBAC y `securityContext`, pero no sustituye otros security controls.
 - PSS ofrece tres perfiles: `privileged` sin restricciones, `baseline` contra vías explícitas de node-breakout y `restricted` para aplicaciones non-root con least privilege; la ausencia de namespace labels significa `privileged` solo con los PSA defaults estándar.
-- `enforce`, `audit` y `warn` son independientes y se definen mediante namespace labels `pod-security.kubernetes.io/<mode>`; se puede añadir `<mode>-version` a cada uno. El permiso para cambiar estas labels cambia el security boundary y no debe seguir automáticamente del permiso para crear workloads.
+- `enforce`, `audit` y `warn` son independientes y se definen mediante namespace labels `pod-security.kubernetes.io/<mode>`; se puede añadir `<mode>-version` a cada uno. El permiso para cambiar estos labels cambia el security boundary y no debe derivarse automáticamente del permiso para crear workloads.
 - Una migración fiable va de `warn`/`audit` a `enforce=baseline`, después a `enforce=restricted`, corrigiendo templates, no Pod en ejecución.
 - El rechazo de PSA ocurre antes de crear el Pod. Compruebe los labels del namespace, los effective defaults, un Pod directo mediante server-side dry run, RBAC y el texto del admission error; un dry-run exitoso de Deployment no confirma enforce para el Pod que posteriormente creará un controller.
 - PSP se eliminó en 1.25. No se puede recuperar con un manifiesto: las reglas estándar se trasladan a PSA y las organizativas, a un policy engine.

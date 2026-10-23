@@ -63,7 +63,7 @@ PSA と policy engine は互いの代替ではありません。PSA は標準 Po
 
 ## 20.2. Webhook: availability も security decision
 
-Gatekeeper と Kyverno は通常 admission webhook として動作します。`kube-apiserver` は HTTPS で `AdmissionReview` を送信し、`allowed: true/false` と必要に応じた JSON patch を待ちます。`MutatingWebhookConfiguration` または `ValidatingWebhookConfiguration` の webhook には、特に重要な parameter が二つあります。
+Gatekeeper と Kyverno は通常 admission webhook として動作します。`kube-apiserver` は HTTPS で `AdmissionReview` を送信し、`allowed: true/false` と必要に応じた JSON patch を待ちます。`MutatingWebhookConfiguration` または `ValidatingWebhookConfiguration` の webhook には、特に重要な parameter が五つあります。
 
 | parameter | security 上の意味 | risk |
 |---|---|---|
@@ -169,8 +169,8 @@ admission は API request だけを確認します。image scanning、runtime de
 
 そのため Gatekeeper は policy を二つの resource に分けます。これは重複でなく、rule を一度書いて異なる形で適用するためのものです。
 
-1. `ConstraintTemplate` — **rule の template/blueprint**。Rego または CEL の checking code、target admission handler、許可する parameter の OpenAPI schema を保持します。schema は Pod を直接でなく `Constraint` 自体の parameter を確認します。たとえば `labels` が string list であることです。template を apply すると Gatekeeper は CRD（Custom Resource Definition）を作成します。つまり、この rule 用の新しい resource type を Kubernetes API に register します。
-2. `Constraint` — **有効化した rule instance**。`match` scope（どの object と namespace を check するか）を選び、`parameters` に value を渡し、`enforcementAction` で violation 時の action を指定します。一つの template は team、namespace、required label set ごとに再利用でき、各 case で別の constraint を作れます。
+1. `ConstraintTemplate` - **rule の template/blueprint**。Rego または CEL の checking code、target admission handler、許可する parameter の OpenAPI schema を保持します。schema は Pod を直接でなく `Constraint` 自体の parameter を確認します。たとえば `labels` が string list であることです。template を apply すると Gatekeeper は CRD（Custom Resource Definition）を作成します。つまり、この rule 用の新しい resource type を Kubernetes API に register します。
+2. `Constraint` - **有効化した rule instance**。`match` scope（どの object と namespace を check するか）を選び、`parameters` に value を渡し、`enforcementAction` で violation 時の action を指定します。一つの template は team、namespace、required label set ごとに再利用でき、各 case で別の constraint を作れます。
 
 flow を覚えてください。**template が rule を定義 → constraint が設定・有効化 → object create/change が `match` に入る → Gatekeeper が `parameters` で check を実行 → `enforcementAction` が result を定める**。これは class と instance に似ています。template は review と test が必要な code を含み、policy coverage を広げるときは通常 constraint の方を頻繁に変更します。一つの target では一つの engine を選びます。legacy `rego` は高い priority を持ち、`code[]` の CEL（`K8sNativeValidation`）は Rego より priority を持ちます。
 
@@ -272,7 +272,7 @@ Rego rule は logical **AND** で結ばれた condition set です。「body 内
 
 まず task を四つの field に翻訳します。**何を** check するか（Pod と image）、**どこで**（`match.namespaces`）、**violation condition**（image が `latest` を使う）、**reaction**（`dryrun`、次に `deny`）です。一つの namespace の owner には新しい template は不要です。`K8sRequiredLabels` で `excludedNamespaces` を `namespaces: ["team-a"]` に置き換え、`parameters.labels: ["owner"]` を残します。
 
-別の `latest` prohibition には、下の template を一つの file として書いて apply できます。これは通常、init、ephemeral container を check します。`spec.containers` だけを check すると bypass が残ります。この function は explicit `:latest` と tag のない image（Kubernetes が `latest` を仮定する `nginx` など）を violation とみなします。digest `@sha256:...` は latest とみなしません。
+別の `latest` prohibition には、下の template を一つの file として書いて apply できます。これは通常の container、init container、ephemeral container を check します。`spec.containers` だけを check すると bypass が残ります。この function は explicit `:latest` と tag のない image（Kubernetes が `latest` を仮定する `nginx` など）を violation とみなします。digest `@sha256:...` は latest とみなしません。
 
 ```yaml
 # latest image tag prohibition template 用の Gatekeeper API。
@@ -699,7 +699,7 @@ kubectl -n native-map-on create --dry-run=server -o yaml -f /tmp/native-map-pod.
 # negative binding test: selector label のない namespace では mutation はありません。
 if kubectl -n native-map-off create --dry-run=server -o yaml \
   -f /tmp/native-map-pod.yaml | grep -q 'admission.example.com/mutated: "true"'; then
-  echo "MAP applied outside scope"
+  echo "MAP が scope 外で適用されました"
   exit 1
 fi
 ```
@@ -833,9 +833,9 @@ SUBJECT='system:serviceaccount:team-a:ci'
 kubectl auth can-i get configmap/team-a-replica-limit   -n policy-system --as="$SUBJECT"
 ```
 
-> 🔬 **Deep Dive — Manifest-Based Admission Control。** training baseline の Kubernetes v1.36 ではこの feature は Alpha で default disabled です。upstream Kubernetes v1.37 では Beta になり default enabled です。この chapter の main workflow は v1.36 に固定されたままです。production-current delta は[Kubernetes v1.37 Security Delta (ロシア語版のみ)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)を参照してください。
+> 🔬 **Deep Dive - Manifest-Based Admission Control。** training baseline の Kubernetes v1.36 ではこの feature は Alpha で default disabled です。upstream Kubernetes v1.37 では Beta になり default enabled です。この chapter の main workflow は v1.36 に固定されたままです。production-current delta は[Kubernetes v1.37 Security Delta (ロシア語版のみ)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)を参照してください。
 >
-> v1.36 では feature gate `ManifestBasedAdmissionControlConfig` を enable します。この feature は API server disk から webhook と CEL policy manifest を load します。`--admission-control-config-file` で、対象 admission plugin 用の distinct absolute `staticManifestsDir` を持つ `AdmissionConfiguration` を渡します。この policy は start 時に active になり、etcd から独立し、API-based admission configuration の delete/change を保護できます。これは experimental control-plane feature です。v1.36 の各 static admission object の `metadata.name` は**必ず** `.static.k8s.io` で終わる必要があります。initial load の invalid static manifest は API server が ready にならない原因になります。static manifest は support される admission resource に限られます。policy は `paramKind` を使えず、`ValidatingAdmissionPolicyBinding` と `MutatingAdmissionPolicyBinding` では `spec.paramRef` が forbidden です。static webhook は `clientConfig.url` を許可しますが、`clientConfig.service` は許可しません。各 HA API server は同一 file を受け取る必要があります。startup/reload test と managed configuration delivery なしにこの feature を導入しないでください。
+> v1.36 では feature gate `ManifestBasedAdmissionControlConfig` を enable します。この feature は API server disk から webhook と CEL policy manifest を load します。`--admission-control-config-file` で、対象 admission plugin 用の distinct absolute `staticManifestsDir` を持つ `AdmissionConfiguration` を渡します。この policy は start 時に active になり、etcd から独立し、API-based admission configuration の delete/change を保護できます。これは experimental control-plane feature です。v1.36 の各 static admission object の `metadata.name` は**必ず** `.static.k8s.io` で終わる必要があります。initial load の invalid static manifest は API server が ready にならない原因になり得ます。static manifest は support される admission resource に限られます。policy は `paramKind` を使えず、`ValidatingAdmissionPolicyBinding` と `MutatingAdmissionPolicyBinding` では `spec.paramRef` が forbidden です。static webhook は `clientConfig.url` を許可しますが、`clientConfig.service` は許可しません。各 HA API server は同一 file を受け取る必要があります。startup/reload test と managed configuration delivery なしにこの feature を導入しないでください。
 
 ### native CEL と webhook engine の比較
 
@@ -931,7 +931,7 @@ Gatekeeper/Kyvernoをupdateする前に、CRD migration、Kubernetes v1.36との
 
 - **単一のdenyではなく複数の層。** PSA `restricted` はmass baselineを設定し、custom policyはbusiness ruleを追加します。approved registry、owner/costのlabel、`resources.requests`、signature verificationです。RBACは依然として誰がobjectを作成できるかを制限します。
 - **Policy as code。** template、constraint、policy、test fixture、exceptionをrepositoryに保存します。code reviewはpositiveとnegativeの両方の例を見る必要があり、CIはcluster rollout前にpolicyを検証する必要があります。
-- **段階的な有効化。** 一つのnamespace、`Audit`/`dryrun`/`Warn` から始め、real violationを収集し、チームがmanifestを修正するのを支援し、それからだけ `Enforce`/`Deny` を有効にします。
+- **段階的な有効化。** 一つのnamespace、`Audit`/`dryrun`/`Warn` から始め、real violationを収集し、チームがmanifestを修正するのを支援し、その後にのみ `Enforce`/`Deny` を有効にします。
 - **admissionのobservability。** webhookのlatency/error metric、violation数、API serverのaudit event、ready replicaがないことへのalertを収集します。Kubernetesとengineをupdateしたあとにもpolicyを確認します。
 - **最小限のexception。** exceptionは特定のnamespace、service account、RuntimeClass、approved imageに対して、ownerと期限付きで設定します。一つのdeploymentを「修正する」ためにbroadなbypassを使わないでください。
 
@@ -961,7 +961,7 @@ Gatekeeper/Kyvernoをupdateする前に、CRD migration、Kubernetes v1.36との
 
 ## 20.12. 試験と実務での役立ち方
 
-**試験で。** 関連するpublicなcurriculum fileは現在 `CKS_Curriculum v1.34` という名前ですが、CKSのexam環境は現在Kubernetes v1.35を使用しています。これは異なるversionです。curriculumはtopicを記述し、runtimeはavailableなAPIとcluster behaviorを決定します。controlがどこにあるかを素早く特定し、`ConstraintTemplate` と `Constraint` を読み、policyを作成・検証し、`Audit` と `Deny` を区別し、`denied the request` の原因を見つけてください。courseのextensionをexamに帰属させないでください。Kubernetes 1.36のnative MAPとKyverno 1.19は、この章のproduction指向の追加事項であり、linked curriculumの保証されたtask ではありません。exam前にLinux Foundation/CNCFの最新publicationを確認してください。
+**試験で。** 関連するpublicなcurriculum fileは現在 `CKS_Curriculum v1.34` という名前ですが、CKSのexam環境は現在Kubernetes v1.35を使用しています。これは異なるversionです。curriculumはtopicを記述し、runtimeはavailableなAPIとcluster behaviorを決定します。controlがどこにあるかを素早く特定し、`ConstraintTemplate` と `Constraint` を読み、policyを作成・検証し、`Audit` と `Deny` を区別し、`denied the request` の原因を見つけてください。courseのextensionをexamに帰属させないでください。Kubernetes 1.36のnative MAPとKyverno 1.19は、この章のproduction指向の追加事項であり、linked curriculumの保証されたtaskではありません。exam前にLinux Foundation/CNCFの最新publicationを確認してください。
 
 **実務で。** admission policyはunsafeなconfigurationを、incidentの後に探すのではなく、workloadの実行前に防ぎます。Kubernetes 1.36のnative MAP/VAPとKyverno 1.19は、specific clusterとengineのcompatibility確認後のproduction extensionとして有用です。最も価値のある結果はpolicyの数ではなく、narrow exception、observability、responsibilityの分担を備えた、理解可能でtestableなbaselineです。これはsupply-chain controlへの入口でもあります。courseの次の部分では、policyをregistry、signature、artifactに適用します。
 

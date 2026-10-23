@@ -392,7 +392,7 @@ Después de editar un static Pod, no confirme solo la línea en YAML. Kubelet de
 
 ## 12.6. Verificación: demostrar que el acceso no autorizado a la API está bloqueado
 
-La verificación se ejecuta en dos capas independientes: authentication sin credential y authorization para un sujeto indicado explícitamente. Compruebe desde la red que debe tener TCP access a API; el firewall timeout y el `401` de API son resultados distintos pero ambos útiles en sus respectivas capas.
+La verificación se ejecuta en dos capas independientes: authentication sin credential y authorization para un sujeto indicado explícitamente. Compruebe desde la red que debe tener TCP access a API; el firewall timeout y el `401` de API son resultados distintos, pero ambos útiles en sus respectivas capas.
 
 ```bash
 # Tomamos la server URL del kubeconfig actual, sin pasar certificado, clave ni token a curl.
@@ -411,7 +411,7 @@ curl -k -sS -o /dev/null -w '%{http_code}\n' "$APISERVER/readyz"
 
 Un `401` en `/version` prueba únicamente que este protected path no acepta anonymous request; no prueba la deshabilitación global del anonymous authenticator. En una `AuthenticationConfiguration` selectiva, exact allowed paths, por ejemplo `/readyz` o discovery path, pueden funcionar intencionadamente sin credential. Si la conexión hace timeout/refused, primero diagnostique firewall, Security Group, DNS y ruta; esto no prueba una configuración de Authentication.
 
-Con permisos cluster-admin, compruebe por separado authorizer mediante impersonation:
+Con permisos cluster-admin, compruebe por separado el authorizer mediante impersonation:
 
 ```bash
 # No debe haber permiso. El administrador que realiza la llamada necesita el permiso `impersonate`.
@@ -428,7 +428,7 @@ kubectl auth can-i delete pods -n cks-104 \
   --as=system:serviceaccount:cks-104:app-sa
 ```
 
-Espere `no` para las comprobaciones anonymous y para el `delete` prohibido; `list pods` para el `app-sa` dedicado debe devolver `yes` solo en el namespace indicado. `kubectl auth can-i` comprueba authorizer para la impersonated identity, pero no establece una conexión real sin credential ni prueba el estado del anonymous authenticator. Guarde los comandos, el HTTP status y los config sources modificados en el change record: es evidencia de que el control funciona, no solo de que se declara.
+Espere `no` para las comprobaciones anonymous y para el `delete` prohibido; `list pods` para el `app-sa` dedicado debe devolver `yes` solo en el namespace indicado. `kubectl auth can-i` comprueba el authorizer para la impersonated identity, pero no establece una conexión real sin credential ni prueba el estado del anonymous authenticator. Guarde los comandos, el HTTP status y los config sources modificados en el change record: es evidencia de que el control funciona, no solo de que se declara.
 
 ## 12.7. Errores habituales y diagnóstico
 
@@ -471,11 +471,11 @@ Espere `no` para las comprobaciones anonymous y para el `delete` prohibido; `lis
 - La cadena base segura de authorizer en kubeadm es `Node,RBAC`; `AlwaysAllow` es incompatible con least privilege. El authorizer `Node` establece los permisos API de kubelet y NodeRestriction añade restricciones a sus mutating requests.
 - Para API `:6443` se prefiere private endpoint; con public endpoint son obligatorios un firewall/Security Group allowlist estricto y authentication fuerte. En cualquier caso, NetworkPolicy específica para Pod egress reduce lateral movement.
 - `--profiling=false`, ServiceAccount lookup habilitado para API revocation de legacy tokens y auditoría de flags reducen la superficie; los bound projected tokens, no `--service-account-lookup=false`, proporcionan TTL corto.
-- El resultado se demuestra con comprobaciones separadas: anonymous `curl` a un protected path, por ejemplo `/version`, debe dar API `401`; un health/discovery path intentionally allowed se prueba por separado. `kubectl auth can-i --as=system:anonymous --as-group=system:unauthenticated` comprueba authorizer para la impersonated identity y debe devolver `no` para la acción prohibida.
+- El resultado se demuestra con comprobaciones separadas: anonymous `curl` a un protected path, por ejemplo `/version`, debe dar API `401`; un health/discovery path intentionally allowed se prueba por separado. `kubectl auth can-i --as=system:anonymous --as-group=system:unauthenticated` comprueba el authorizer para la impersonated identity y debe devolver `no` para la acción prohibida.
 
 ## 12.11. Cómo será útil: en el examen y en el trabajo real
 
-**En el examen.** La tarea suele dar acceso a control-plane y pedir cerrar anonymous API o eliminar un binding peligroso. Encuentre el manifest de static Pod activo, guarde una copia fuera de `/etc/kubernetes/manifests/`, corrija el único flag necesario, espere la recreación de API y compruebe `/readyz`. Después use `curl` sin credential a un protected path, por ejemplo `/version`; con una selective configuration, considere por separado los exact paths intencionadamente allowed. `kubectl auth can-i --as=system:anonymous --as-group=system:unauthenticated` comprueba únicamente authorizer para la impersonated identity; no se limite a buscar texto en un archivo.
+**En el examen.** La tarea suele dar acceso a control-plane y pedir cerrar anonymous API o eliminar un binding peligroso. Encuentre el manifest de static Pod activo, guarde una copia fuera de `/etc/kubernetes/manifests/`, corrija el único flag necesario, espere la recreación de API y compruebe `/readyz`. Después use `curl` sin credential a un protected path, por ejemplo `/version`; con una selective configuration, considere por separado los exact paths intencionadamente allowed. `kubectl auth can-i --as=system:anonymous --as-group=system:unauthenticated` comprueba únicamente el authorizer para la impersonated identity; no se limite a buscar texto en un archivo.
 
 **Escenario de examen: el clúster kubeadm se creó con `AlwaysAllow`.** El context actual puede apuntar a una cuenta que, después de habilitar RBAC, no deba tener permisos, mientras que en kubeconfig (o en un kubeconfig separado) hay una cuenta administrativa conocida. Antes del cambio, selecciónela explícitamente **para cada comando**: no ejecute `kubectl config use-context`, para no perder el context original ni obtener un resultado falsamente satisfactorio.
 
@@ -505,7 +505,7 @@ kubectl --context="$ADMIN_CONTEXT" auth can-i get nodes
 kubectl --context="$CURRENT_CONTEXT" auth can-i get nodes
 ```
 
-En un clúster real, después de una recuperación urgente refleje también authorizer en la fuente de configuración kubeadm (`kubeadm-config`/IaC); de lo contrario, un posterior `kubeadm upgrade` puede volver a generar un manifest con la configuración obsoleta.
+En un clúster real, después de una recuperación urgente refleje también el authorizer en la fuente de configuración kubeadm (`kubeadm-config`/IaC); de lo contrario, un posterior `kubeadm upgrade` puede volver a generar un manifest con la configuración obsoleta.
 
 **En el trabajo real.** La restricción de API forma parte del diseño de red e identity, no de una corrección CIS puntual. Un private endpoint es una opción sólida; si el endpoint es public, se compensa con una allowlist estricta y authentication fuerte. Los bound tokens de corta vida, los bindings mínimos y la comprobación automática de configuration drift hacen que comprometer un Node o un Pod sea sustancialmente menos destructivo.
 
@@ -551,13 +551,13 @@ NetworkPolicy es aplicada por CNI al tráfico de Pod y no tiene por qué cubrir 
 <summary>7. ¿Qué dos comprobaciones demostrarán por separado la accesibilidad de red a API y la ausencia de authorization anonymous?</summary>
 
 Desde una máquina administrativa u otra permitida, la accesibilidad de red y health se comprueban con `kubectl cluster-info` o `kubectl get --raw='/livez?verbose'`. Authentication se comprueba con `curl` sin credential a un protected path, por ejemplo `/version`, esperando API `401`. En una selective configuration, un exact allowed health/discovery path se prueba por separado: puede no devolver `401` intencionadamente. `kubectl auth can-i ... --as=system:anonymous
---as-group=system:unauthenticated`, esperando `no`, comprueba únicamente authorizer para la impersonated identity. Timeout o refused se diagnostican como red, no como prueba de Authentication.
+--as-group=system:unauthenticated`, esperando `no`, comprueba únicamente el authorizer para la impersonated identity. Timeout o refused se diagnostican como red, no como prueba de Authentication.
 </details>
 
 <details>
-<summary>8. **Flashback (capítulo 32).** Un `curl`/`401` puntual de la pregunta 7 de este capítulo demuestra la ausencia de anonymous access solo **en el momento de la comprobación**. Kubernetes audit log registra **API requests** (quién, cuándo, qué resource, qué verb, qué result); no es un monitor continuo del estado del archivo `/etc/kubernetes/manifests/kube-apiserver.yaml` ni del flag `--anonymous-auth`. ¿Qué puede mostrar retrospectivamente audit log del capítulo 32 sobre anonymous requests, y por qué la ausencia de un evento anonymous en el log **no demuestra** que configuration no cambiase durante todo el intervalo entre dos comprobaciones (por ejemplo, si el flag se habilitó brevemente pero nadie hizo una anonymous request en ese momento)? ¿Qué mecanismos adicionales (periodic checks, file integrity monitoring, GitOps drift detection) se necesitan para continuous assurance que audit log por sí solo no proporciona?</summary>
+<summary>8. **Flashback (capítulo 32).** Un `curl`/`401` puntual de la pregunta 7 de este capítulo demuestra la ausencia de anonymous access solo **en el momento de la comprobación**. Kubernetes audit log registra **API requests** (quién, cuándo, qué resource, qué verb, qué result); no es un monitor continuo del estado del archivo `/etc/kubernetes/manifests/kube-apiserver.yaml` ni del flag `--anonymous-auth`. ¿Qué puede mostrar retrospectivamente el audit log del capítulo 32 sobre anonymous requests, y por qué la ausencia de un evento anonymous en el log **no demuestra** que la configuration no cambiase durante todo el intervalo entre dos comprobaciones (por ejemplo, si el flag se habilitó brevemente, pero nadie hizo una anonymous request en ese momento)? ¿Qué mecanismos adicionales (periodic checks, file integrity monitoring, GitOps drift detection) se necesitan para continuous assurance que audit log por sí solo no proporciona?</summary>
 
-Audit log mostrará retrospectivamente las API requests realizadas por una anonymous identity: cuándo ocurrieron, a qué resource y verb accedieron y cuál fue el result. La ausencia de dichos eventos no prueba que `--anonymous-auth` no cambiase: el flag pudo habilitarse temporalmente, pero no hubo anonymous requests entonces. Para continuous assurance se necesitan periodic configuration checks, file integrity monitoring del manifest y GitOps/drift detection, que complementan la auditoría de API calls.
+El audit log mostrará retrospectivamente las API requests realizadas por una anonymous identity: cuándo ocurrieron, a qué resource y verb accedieron y cuál fue el result. La ausencia de dichos eventos no prueba que `--anonymous-auth` no cambiase: el flag pudo habilitarse temporalmente, pero no hubo anonymous requests entonces. Para continuous assurance se necesitan periodic configuration checks, file integrity monitoring del manifest y GitOps/drift detection, que complementan la auditoría de API calls.
 </details>
 
 ## Práctica

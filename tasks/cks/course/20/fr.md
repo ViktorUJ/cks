@@ -92,7 +92,7 @@ différents messages et exceptions finiront par diverger.
 
 Gatekeeper et Kyverno s'exécutent généralement comme webhooks d'admission : `kube-apiserver` leur envoie un
 `AdmissionReview` via HTTPS, puis attend `allowed: true/false` et d'éventuels patches JSON. Un
-webhook possède deux paramètres particulièrement importants dans `MutatingWebhookConfiguration` ou
+webhook possède cinq paramètres particulièrement importants dans `MutatingWebhookConfiguration` ou
 `ValidatingWebhookConfiguration` :
 
 | Paramètre | Signification de sécurité | Risque |
@@ -105,9 +105,9 @@ webhook possède deux paramètres particulièrement importants dans `MutatingWeb
 
 Ne modifiez pas aveuglément `failurePolicy` sur un webhook installé par un Helm chart : le chart peut écraser
 la modification. Assurez-vous d'abord que le moteur possède plusieurs replicas, un PodDisruptionBudget, TLS et une alerte
-sur les erreurs/la latence. Une nouvelle interdiction est plus sûre lorsqu'elle est introduite en audit/warn, après que les
-violations existantes ont été corrigées, puis seulement appliquée. Une règle critique et mature utilise normalement `Fail` ;
-pour un déploiement initial, empêcher une panne du cluster importe davantage que de la prendre à tort pour la preuve que
+sur les erreurs/la latence. Une nouvelle interdiction est plus sûre à introduire d'abord en audit/warn : il faut corriger les
+violations existantes, puis seulement activer l'enforcement. Une règle critique et mature utilise normalement `Fail` ;
+pour un premier déploiement, il importe de ne pas arrêter le cluster et de ne pas y voir à tort la preuve que
 la protection fonctionne.
 
 La configuration minimale d'un webhook doit définir explicitement un endpoint, la confiance TLS et le
@@ -152,7 +152,7 @@ webhooks:
 Le label personnalisé de namespace dans `namespaceSelector` fait partie de la frontière de sécurité : une identité
 soumise à la règle ne doit pas pouvoir le supprimer ni le modifier. Pour un périmètre fixe, la correspondance avec
 le `kubernetes.io/metadata.name` immuable est plus sûre ; seul un rôle de plateforme/sécurité modifie les
-labels d'application personnalisés. Il en va de même pour `objectSelector` : un label qu'un utilisateur peut modifier
+labels d'enforcement personnalisés. Il en va de même pour `objectSelector` : un label qu'un utilisateur peut modifier
 sur son objet pour sortir du périmètre ne convient pas comme frontière de refus.
 
 ```bash
@@ -227,7 +227,7 @@ règle une fois et de l'appliquer différemment :
    Definition), qui enregistre un nouveau type de ressource dans l'API Kubernetes pour cette règle.
 2. `Constraint` - l'**instance de règle activée**. Elle sélectionne un périmètre `match` (quels objets et
    namespaces vérifier), transmet des valeurs par `parameters` et définit `enforcementAction` - ce qu'il faut
-   faire lors d'une violation. Réutilisez un template pour différentes équipes, namespaces ou ensembles de
+   faire lors d'une violation. Un même template peut être réutilisé pour différentes équipes, namespaces ou ensembles de
    labels requis en créant une contrainte distincte pour chaque cas.
 
 Retenez le flux : **le template définit la règle -> la contrainte la configure et l'active -> la
@@ -500,7 +500,7 @@ Rego personnalisé seulement lorsque vous avez besoin d'un périmètre, d'exempt
 > (`kyverno.io/docs/installation/releases/`, publiée en août 2026). Le lab principal de ce chapitre
 > (Lab108) s'exécute sur Kubernetes v1.36 - une combinaison délibérément tournée vers l'avenir qui
 > **ne fait pas partie** de la matrice de prise en charge de Kyverno v1.19 testée et garantie.
-> L'installation et les scénarios de base fonctionnent normalement, mais cette paire de versions
+> L'installation et les scénarios de base fonctionnent en général, mais cette paire de versions
 > n'est pas couverte par une compatibilité officiellement testée ; ne considérez donc pas une
 > installation réussie comme la preuve d'une prise en charge complète de v1.36. Pour préparer
 > l'examen actuel (orienté vers v1.35), vérifiez séparément le comportement sur v1.35, où Kyverno
@@ -518,8 +518,8 @@ script shell : une expression reçoit des données d'entrée, telles que `object
 requête d'admission actuelle - et évalue une valeur.
 
 Lors de la première lecture, parcourez chaque exemple selon un même flux : **quelle opération et
-quelle ressource correspondent à `matchConstraints` -> quelles conditions supplémentaires sont
-satisfaites -> ce que fait la politique**. Une `ValidatingPolicy` évalue une expression booléenne :
+quelle ressource correspondent à `matchConstraints` → quelles conditions supplémentaires sont
+satisfaites → ce que fait la politique**. Une `ValidatingPolicy` évalue une expression booléenne :
 `true` admet un objet et `false` produit une violation ; `Audit` ne fait que l'enregistrer, tandis
 que `Deny` rejette la requête. Une `MutatingPolicy` renvoie une modification de l'objet avant sa
 persistance. Une `GeneratingPolicy` demande à un contrôleur d'arrière-plan de créer ou de
@@ -606,7 +606,7 @@ kubectl patch validatingpolicy require-pod-run-as-non-root --type merge \
 
 Une `MutatingPolicy` ne répond pas à « admettre ou rejeter », mais à « quelle valeur par défaut
 sécurisée ajouter à un objet déjà admis ? ». Après correspondance, elle construit un fragment
-d'objet modifié et le serveur API persiste le résultat. Une mutation ne doit pas masquer une image
+d'objet modifié et l'API server persiste le résultat. Une mutation ne doit pas masquer une image
 non sécurisée : une validation explicite est généralement préférable pour les champs critiques
 pour la sécurité. Cet exemple pédagogique sûr ajoute seulement un label d'audit.
 `ApplyConfiguration` signifie que CEL construit le fragment souhaité sous la forme `Object{...}`
@@ -819,7 +819,7 @@ distincte de la CI d'intégration.
 
 `ValidatingAdmissionPolicy` (VAP) et `ValidatingAdmissionPolicyBinding` définissent une
 validation intégrée en CEL. Dans Kubernetes 1.36, `MutatingAdmissionPolicy` (MAP) et
-`MutatingAdmissionPolicyBinding` sont devenus stable et activés par défaut. MAP est une mutation
+`MutatingAdmissionPolicyBinding` sont devenus stables et activés par défaut. MAP est une mutation
 in-process à l'intérieur de l'API server : CEL renvoie soit un `ApplyConfiguration`, qui est
 fusionné selon les règles de server-side apply, soit un `JSONPatch`. Pour les deux API natives,
 un binding est obligatoire : c'est lui qui lie la politique à son scope, et sans binding la
@@ -1045,7 +1045,7 @@ associé à `failurePolicy: Fail` ne transforme pas une configuration absente en
 VAP effectue un contrôle d'autorisation sur la ressource de paramètre : le demandeur correspondant
 doit avoir l'accès `read` à `paramKind`/`paramRef`, sinon une requête correcte peut être refusée.
 Avant `Deny`, vérifiez l'identité réelle ; accordez-lui seulement `get`, et non le droit de
-modifier le paramètre, et ne stockez pas de données sensibles à la sécurité dans un ConfigMap que
+modifier le paramètre, et ne stockez pas de données sensibles pour la sécurité dans un ConfigMap que
 les identités de workload doivent lire.
 
 ```bash
@@ -1053,7 +1053,7 @@ SUBJECT='system:serviceaccount:team-a:ci'
 kubectl auth can-i get configmap/team-a-replica-limit   -n policy-system --as="$SUBJECT"
 ```
 
-> 🔬 **Approfondissement — Contrôle d'admission basé sur les manifestes.** Dans la baseline de formation Kubernetes v1.36, la fonctionnalité est Alpha et désactivée par défaut. Dans Kubernetes upstream v1.37, elle est passée en Beta et est activée par défaut. Le workflow principal de ce chapitre reste lié à v1.36 ; consultez la différence pour la production actuelle dans [Kubernetes v1.37 Security Delta (uniquement en russe)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🔬 **Approfondissement - Contrôle d'admission basé sur les manifestes.** Dans la baseline de formation Kubernetes v1.36, la fonctionnalité est Alpha et désactivée par défaut. Dans Kubernetes upstream v1.37, elle est passée en Beta et est activée par défaut. Le workflow principal de ce chapitre reste lié à v1.36 ; consultez la différence pour la production actuelle dans [Kubernetes v1.37 Security Delta (uniquement en russe)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 >
 > Dans v1.36, activez le feature gate `ManifestBasedAdmissionControlConfig` ; cette fonctionnalité charge les manifests de webhook et de politique CEL depuis le disque de l'API server. Passez, via `--admission-control-config-file`, une `AdmissionConfiguration` avec un `staticManifestsDir` absolu distinct pour le plugin d'admission concerné. Ces politiques sont actives au démarrage, indépendantes d'etcd, et peuvent protéger la configuration d'admission basée sur l'API contre la suppression ou la modification. Il s'agit d'une fonctionnalité expérimentale du control plane : `metadata.name` de **chaque** objet d'admission statique dans v1.36 doit se terminer par `.static.k8s.io` ; un manifest statique non valide au chargement initial peut empêcher l'API server de devenir ready. Les manifests statiques sont limités aux ressources d'admission prises en charge ; les politiques ne peuvent pas utiliser `paramKind`, et `spec.paramRef` est interdit dans `ValidatingAdmissionPolicyBinding` et `MutatingAdmissionPolicyBinding`. Un webhook statique accepte `clientConfig.url`, mais pas `clientConfig.service`. Chaque API server HA doit recevoir les mêmes fichiers ; n'introduisez pas cette fonctionnalité sans tester le démarrage/rechargement et une livraison de configuration maîtrisée.
 
@@ -1340,7 +1340,7 @@ La pratique principale de ce thème est le [lab 108 CKS : policies d'admission K
 Vous y appliquerez une policy pour un registre approuvé et un workload restricted, vérifierez audit
 et deny, et trouverez la raison du rejet dans la réponse d'admission. L'étape optionnelle du lab
 vérifie la mutation Kyverno ; exercez séparément la mutation native in-process avec la
-[policy MAP et le binding de la section 20.6](#206-cel-natif-validation-et-mutation-sans-webhook-externe).
+[policy MAP et le binding de la section 20.6](#206-cel-natif--validation-et-mutation-sans-webhook-externe).
 La vérification automatisée du lab se lance avec la commande `check_result`.
 
 Pour un sandbox autonome, préparez un cluster ou un Namespace distinct : une policy d'admission

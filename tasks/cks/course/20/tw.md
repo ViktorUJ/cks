@@ -53,17 +53,17 @@ Admission order 很重要：mutating controllers 先於 validating controllers �
 
 PSA 與 policy engine 不能彼此取代。PSA 快速且一致地套用標準 Pod restrictions。Gatekeeper、Kyverno 或 CEL 用於特定 requirements。不要無故在三個地方重複同一個 strict check：denial 將更難診斷，不同 messages 與 exceptions 也會逐漸不一致。
 
-> 🏭 `failurePolicy` 決定 admission webhook path 上的**技術或 evaluation error**反應，而非明確的 policy decision。例如 timeout、TLS/DNS/Service/Pod error、無效 HTTP/AdmissionReview response，以及 `matchConditions` evaluation error。
+> 🏭 `failurePolicy` 決定 admission webhook path 上的**技術或 evaluation error**的反應，而非明確的 policy decision。例如 timeout、TLS/DNS/Service/Pod error、無效 HTTP/AdmissionReview response，以及 `matchConditions` evaluation error。
 >
 > API server 在呼叫 webhook **之前**計算 `matchConditions`。若任一 condition 回傳 `false`，webhook 會正常略過。若沒有 condition 為 `false`，但至少一個完成時有 error，webhook 不會被呼叫：使用 `Fail` 時 API server 拒絕 request；使用 `Ignore` 時則繼續而不經該 webhook。若 webhook 成功被呼叫且明確回傳 `allowed: false`，無論 `Fail` 或 `Ignore` 都會拒絕 request。
 >
 > 使用 `Fail` 時，這類技術/evaluation error 也會拒絕 create/update：policy 無法被靜默繞過，但 webhook failure **或其 `matchConditions` error** 可能停止 deploy 和部分 control plane operations。因此 security-critical webhook 必須比單一 Pod 更可靠：多個 replicas 降低 failure risk，PDB 防止 voluntary disruption 同時移除所有 replicas，正確 TLS 提供 trusted HTTPS connection，而 error/latency metrics 和 alerts 可在 outage 前察覺 degradation。
 >
-> 使用 `Ignore` 時 API 仍可用，但在該 error 期間 object 會**不經此 webhook 檢查**而通過——這是刻意的 policy bypass window，而不是「較寬鬆的 deny」。對 critical 且成熟的 denial，通常選擇 `Fail`；`Ignore` 可作為 rollout 或 noncritical control 的暫時 trade-off，但必須明確接受 bypass risk。
+> 使用 `Ignore` 時 API 仍可用，但在該 error 期間 object 會**不經此 webhook 檢查**而通過-這是刻意的 policy bypass window，而不是「較寬鬆的 deny」。對 critical 且成熟的 denial，通常選擇 `Fail`；`Ignore` 可作為 rollout 或 noncritical control 的暫時 trade-off，但必須明確接受 bypass risk。
 
 ## 20.2. Webhook：availability 也是 security decision
 
-Gatekeeper 和 Kyverno 通常作為 admission webhook 運作：`kube-apiserver` 透過 HTTPS 傳送 `AdmissionReview`，接著等待 `allowed: true/false` response 與可能的 JSON patches。`MutatingWebhookConfiguration` 或 `ValidatingWebhookConfiguration` 有兩項特別重要的 parameters：
+Gatekeeper 和 Kyverno 通常作為 admission webhook 運作：`kube-apiserver` 透過 HTTPS 傳送 `AdmissionReview`，接著等待 `allowed: true/false` response 與可能的 JSON patches。`MutatingWebhookConfiguration` 或 `ValidatingWebhookConfiguration` 有五項特別重要的 parameters：
 
 | Parameter | 對 security 的意義 | 風險 |
 |---|---|---|
@@ -165,12 +165,12 @@ Admission 僅檢查 API request。它無法取代 image scanning、runtime detec
 
 ## 20.3. OPA/Gatekeeper：`ConstraintTemplate` 與 `Constraint`
 
-**OPA**（Open Policy Agent）是能做 policy decisions 的 engine。**Gatekeeper** 將它連接至 Kubernetes admission：當有人嘗試建立或變更 object，API server 把 object 傳給 Gatekeeper 檢查。若 rule 發現 violation，Gatekeeper 回報結果——將其記錄為 observation、warning，或拒絕 request。初次閱讀不需要會寫 Rego 或 CEL：先理解**檢查什麼 rule、它在哪裡生效，以及 violation 時會發生什麼**。
+**OPA**（Open Policy Agent）是能做 policy decisions 的 engine。**Gatekeeper** 將它連接至 Kubernetes admission：當有人嘗試建立或變更 object，API server 把 object 傳給 Gatekeeper 檢查。若 rule 發現 violation，Gatekeeper 回報結果-將其記錄為 observation、warning，或拒絕 request。初次閱讀不需要會寫 Rego 或 CEL：先理解**檢查什麼 rule、它在哪裡生效，以及 violation 時會發生什麼**。
 
-為此 Gatekeeper 將 policy 分成兩種 resources——這不是重複，而是能寫一次 rule 並以不同方式套用：
+為此 Gatekeeper 將 policy 分成兩種 resources-這不是重複，而是能寫一次 rule 並以不同方式套用：
 
-1. `ConstraintTemplate` — **rule template/blueprint**。它包含 Rego 或 CEL checking code、target admission handler，以及允許 parameters 的 OpenAPI schema。Schema 驗證 `Constraint` 本身的 parameters，而不是直接驗證 Pod：例如 `labels` 是 string list。套用 template 後，Gatekeeper 建立 CRD（Custom Resource Definition）——也就是在 Kubernetes API 註冊此 rule 的新 resource type。
-2. `Constraint` — **已啟用的 rule instance**。它選擇 `match` scope（哪些 objects 與 namespaces 要檢查）、在 `parameters` 中傳遞 values，並設定 `enforcementAction`——violation 時採取何種動作。可重複使用一個 template 來應對不同 teams、namespaces 或 required labels sets，為每種情況建立單獨 constraint。
+1. `ConstraintTemplate` - **rule template/blueprint**。它包含 Rego 或 CEL checking code、target admission handler，以及允許 parameters 的 OpenAPI schema。Schema 驗證 `Constraint` 本身的 parameters，而不是直接驗證 Pod：例如 `labels` 是 string list。套用 template 後，Gatekeeper 建立 CRD（Custom Resource Definition）-也就是在 Kubernetes API 註冊此 rule 的新 resource type。
+2. `Constraint` - **已啟用的 rule instance**。它選擇 `match` scope（哪些 objects 與 namespaces 要檢查）、在 `parameters` 中傳遞 values，並設定 `enforcementAction`-violation 時採取何種動作。可重複使用一個 template 來應對不同 teams、namespaces 或 required labels sets，為每種情況建立單獨 constraint。
 
 請記住 flow：**template 定義 rule → constraint 設定並啟用它 → object create/update 落入 `match` → Gatekeeper 使用 `parameters` 執行 check → `enforcementAction` 決定結果**。這類似 class 與 instance：template 包含須 review 和 test 的 code；當 policy scope 擴大時，constraint 通常變更得更頻繁。在單一 target 中選擇一種 engine：legacy `rego` 優先，而 `code[]` 中的 CEL（`K8sNativeValidation`）優先於 Rego。
 
@@ -349,7 +349,7 @@ spec:
       kinds: ["Pod"]
 ```
 
-考試中，別先嘗試建立通用 framework：採用最小 `ConstraintTemplate`、指定精確 `kind`/`match` 與一個 `violation` condition。接著驗證 negative 和 positive cases：`team-a` 中含 `nginx:latest` 的 Pod 先應出現在 violations 中，改為 `deny` 後應被拒絕，而含 `nginx:1.27` 的 Pod 應通過。另行檢查 scope：`team-a` 以外的相同嘗試不應符合此 constraint。
+考試中，別先嘗試建立通用 framework：採用最小 `ConstraintTemplate`、指定精確 `kind`/`match` 與一個 `violation` condition。接著驗證 negative 和 positive cases：`team-a` 中含 `nginx:latest` 的 Pod 應先出現在 violations 中，改為 `deny` 後應被拒絕，而含 `nginx:1.27` 的 Pod 應通過。另行檢查 scope：`team-a` 以外的相同嘗試不應符合此 constraint。
 
 ```bash
 kubectl apply -f gatekeeper-owner.yaml
@@ -395,7 +395,7 @@ violation[{"msg": msg}] {
 }
 ```
 
-Condition `container.securityContext.privileged == true` 不會在 field 缺少時觸發，因此允許 default `false`。PSA `restricted` 已涵蓋此類 requirements——僅在需要自訂 scope、exceptions 或 extended logic 時才使用 custom Rego。
+Condition `container.securityContext.privileged == true` 不會在 field 缺少時觸發，因此允許 default `false`。PSA `restricted` 已涵蓋此類 requirements-僅在需要自訂 scope、exceptions 或 extended logic 時才使用 custom Rego。
 
 > 🔬 Kyverno CEL API 可用於 validation、mutation、generation 及其他 admission scenarios。
 
@@ -553,7 +553,7 @@ spec:
           policyTypes: [Ingress]
 ```
 
-這只是 ingress default deny。Egress、DNS 與 allowed connections 應透過獨立 `NetworkPolicy` 設定——請見 [第 04 章](../04/tw.md)。
+這只是 ingress default deny。Egress、DNS 與 allowed connections 應透過獨立 `NetworkPolicy` 設定-請見 [第 04 章](../04/tw.md)。
 
 `GeneratingPolicy` 是 provisioning/reconciliation mechanism，而非 atomic admission barrier：Namespace 會在 background controller 可保證建立 downstream `NetworkPolicy` 前先被建立。將 namespace 交給 workload identity 前，請確認實際 baseline，例如 `kubectl -n <new-namespace> get networkpolicy default-deny-ingress`；只存在 `GeneratingPolicy` 無法證明此點。
 
@@ -569,7 +569,7 @@ done
 
 ### 遷移 legacy policy
 
-以 `kubectl get policies.kyverno.io,clusterpolicies.kyverno.io`（或 `kubectl get pol,cpol`）與 `CleanupPolicy` 盤點 legacy resources，並用 positive 和 negative tests 記錄 behavior。將 validate/mutate/generate/delete/image rules 移至對應的新 type，僅在驗證 admission 與 background reports 後才移除 legacy object。Production 應根據已安裝 minor version 比對 [Kyverno migration guide](https://kyverno.io/docs/guides/migration-to-cel/)。
+以 `kubectl get policies.kyverno.io,clusterpolicies.kyverno.io`（或 `kubectl get pol,cpol`）與 `CleanupPolicy` 盤點 legacy resources，並用 positive 和 negative tests 記錄 behavior。將 validate/mutate/generate/delete/image rules 移至對應的新 type，僅在驗證 admission 與 background reports 後才移除 legacy object。Production 應根據已安裝 minor version 比對 [Kyverno 遷移指南](https://kyverno.io/docs/guides/migration-to-cel/)。
 
 > 🏭 Engine 選擇取決於 policy ownership、language、CI 與 webhook；不要無故重複 deny control。
 
@@ -861,7 +861,7 @@ spec:
         team: a
 ```
 
-一個 policy 可為不同 teams 配置多個 bindings 和 parameter resources；全部符合的 combinations
+一個 policy 可為不同 teams 設定多個 bindings 和 parameter resources；全部符合的 combinations
 都必須通過。`parameterNotFoundAction: Deny` 與 `failurePolicy: Fail` 的組合不會將缺少 configuration
 變成 bypass。
 
@@ -875,7 +875,7 @@ SUBJECT='system:serviceaccount:team-a:ci'
 kubectl auth can-i get configmap/team-a-replica-limit   -n policy-system --as="$SUBJECT"
 ```
 
-> 🔬 **Deep Dive — Manifest-Based Admission Control。** 在 training baseline Kubernetes v1.36 中，這項功能為 Alpha 且預設關閉。在 upstream Kubernetes v1.37 中，它已進入 Beta 且預設啟用。本章主要 workflow 仍以 v1.36 為準；production-current delta 請見 [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
+> 🔬 **Deep Dive - Manifest-Based Admission Control。** 在 training baseline Kubernetes v1.36 中，這項功能為 Alpha 且預設關閉。在 upstream Kubernetes v1.37 中，它已進入 Beta 且預設啟用。本章主要 workflow 仍以 v1.36 為準；production-current delta 請見 [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
 >
 > 在 v1.36 中啟用 feature gate `ManifestBasedAdmissionControlConfig`；此功能從 API server 磁碟載入 webhook 與 CEL policy manifests。透過 `--admission-control-config-file` 傳遞含有所需 admission plugin 專屬絕對 `staticManifestsDir` 的 `AdmissionConfiguration`。這類 policies 在啟動時生效，獨立於 etcd，並可保護 API-based admission configuration 免於被刪除或變更。這是 experimental control-plane 功能：v1.36 的每一個 static admission object 之 `metadata.name` 都必須以 `.static.k8s.io` 結尾；首次載入時 invalid static manifest 可使 API server 無法 ready。Static manifests 僅限支援的 admission resources；policies 不能使用 `paramKind`，且 `ValidatingAdmissionPolicyBinding` 與 `MutatingAdmissionPolicyBinding` 禁止 `spec.paramRef`。Static webhook 可使用 `clientConfig.url`，但不可使用 `clientConfig.service`。每個 HA API server 都必須取得相同 files；未測試 startup/reload 並建立受控 configuration delivery 前，請勿導入此功能。
 
@@ -1025,7 +1025,7 @@ rotation、resource requests/limits 及 PDB。Admission outage 是 incident：�
   與 image verification。Mutation 適合安全 defaults，但不能取代 validation。
 - Gatekeeper 與 Kyverno 都是 webhook engines，因此其 availability、TLS、replicas、
   `timeoutSeconds` 與 `failurePolicy` 均為 security design 的一部分。
-- 使用 CEL 的 VAP 在 API server 中、無外部 webhook 地運作，且僅適用 validation。Kubernetes 1.36 中
+- 使用 CEL 的 VAP 在 API server 中運作，無需外部 webhook，且僅適用 validation。Kubernetes 1.36 中
   stable MAP 透過 `ApplyConfiguration` 或 `JSONPatch` 補足 native stack 的 mutation，但不支援 generation。
 - Reliable rollout：小 scope -> audit/warn -> 修正 violations ->
   `Enforce`/`Deny`，並測試 accepted 與 rejected manifest。

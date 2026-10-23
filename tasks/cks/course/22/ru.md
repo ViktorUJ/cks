@@ -231,7 +231,7 @@ scheduling:
     effect: NoSchedule
 ```
 
-Под с `runtimeClassName: gvisor` получает оба scheduling constraints автоматически:
+Pod с `runtimeClassName: gvisor` получает оба scheduling constraints автоматически:
 
 ```yaml
 apiVersion: v1

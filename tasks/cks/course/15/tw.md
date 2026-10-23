@@ -142,7 +142,7 @@ sudo journalctl _COMM=sudo --since '1 day ago'
 
 ## 15.3. File permissions 與 ownership：保護 credentials 與 configuration
 
-POSIX permissions 決定誰可以讀取（`r`）、變更（`w`）與 traverses directory（`x`）。ownership 與 mode 應符合 file 的用途：secret private key 不得供一般使用者讀取，control plane configuration 也不應讓他們變更。不要只檢查 file 本身，還要檢查 path 上的所有 directories：parent directory 的 write permission 能夠替換內容。
+POSIX permissions 決定誰可以讀取（`r`）、變更（`w`）與進入 directory（`x`）。ownership 與 mode 應符合 file 的用途：secret private key 不得供一般使用者讀取，control plane configuration 也不應讓他們變更。不要只檢查 file 本身，還要檢查 path 上的所有 directories：parent directory 的 write permission 能夠替換內容。
 
 ```bash
 # 檔案的 mode、擁有者與完整路徑。
@@ -174,7 +174,7 @@ sudo stat -c '%U %G %a %n' /etc/kubernetes/admin.conf
 
 不要對整個 `/etc/kubernetes` 遞迴執行 `chmod -R 600`：directories 需要 `x` bit，個別 public certificates 與 configurations 也可能有其他預期 mode。這種「修正」可能破壞 kubelet 或 static Pod。確認 owner、用途及實際 consumer 後，才變更特定 object。
 
-也要單獨檢查 SUID/SGID binaries：它們以 owner 或 group 的權限執行，會擴大錯誤的後果。不要依網路上的 list 刪除 system SUID files——先確認其屬於哪個 package，以及 node 是否需要該 package。
+也要單獨檢查 SUID/SGID binaries：它們以 owner 或 group 的權限執行，會擴大錯誤的後果。不要依網路上的 list 刪除 system SUID files-先確認其屬於哪個 package，以及 node 是否需要該 package。
 
 ```bash
 set -euo pipefail
@@ -413,7 +413,7 @@ ssh -o PreferredAuthentications=publickey,keyboard-interactive \
 
 還要確認最終 `allowusers` 僅包含已核准 accounts，包括必要的 break-glass/automation identities，而非來自另一個 `Include` 的額外值。使用 `Match` 時，請為每個重要 user/source 透過 `sshd -T -C` 檢查 effective configuration。
 
-在確認 target user 的 key 確實已安裝、permissions 正確，並可經由 bastion/VPN 運作前，請勿關閉 password authentication。emergency access 應使用 provider console 或有 control 的 break-glass account，而不是永久的 root password。
+在確認 target user 的 key 確實已安裝、permissions 正確，並可經由 bastion/VPN 運作前，請勿關閉 password authentication。emergency access 應使用 provider console 或受控的 break-glass account，而不是永久的 root password。
 
 ## 15.6. 驗證與診斷：證明防護生效
 
@@ -488,7 +488,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
 - **Privileges as code。** 在 Ansible、image pipeline 或其他 IaC tool 中描述 `sudoers` files、groups 與 sensitive paths 的 owners。這可防止 drift 並允許 code review。
 - **依 node roles 設定 firewall。** Control-plane、worker、bastion 及 monitoring 使用不同 allowlists。依真實 traffic matrix（包括 CNI 與 health checks）建立 rules，並在 rollout 前於 staging 驗證。
 - **無繞過的 SSH。** 使用 short-lived SSH certificates 或透過 bastion/VPN、MFA 與 audit 的 centralized access。Password login 與 root login 維持關閉，而 break-glass access 有 owner 與 review procedure。
-- **持續驗證。** 定期執行 [第 07 章](../07/tw.md) 的 CIS scanning、file-integrity monitoring、搜尋 world-writable paths 與開放 ports 的 control，而非僅在 audit 前執行。
+- **持續驗證。** 定期執行 [第 07 章](../07/tw.md) 的 CIS scanning、file-integrity monitoring、搜尋 world-writable paths 與檢查開放 ports，而非僅在 audit 前執行。
 - Kubernetes v1.37 請另行評估 rootless node architecture（`KubeletInUserNamespace`）作為額外 least-privilege boundary；這與 Pod user namespaces 不同。請見 [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
 
 ## 15.8. 迷你詞彙表
@@ -560,7 +560,7 @@ Host firewall 管理 node 本身的 traffic；Security Group 或 cloud firewall 
 </details>
 
 <details>
-<summary>8. **回顧（第 10 章）。** 本章處理的是**主機**層級的 least privilege（Linux users、groups、socket access）；第 10 章處理的是 **Kubernetes API** 層級的 least privilege（RBAC）。請舉出具體例子，說明狹窄 RBAC 無法保護經由過多 host access 實現的 attack（反之亦然），亦即為何這兩個 least-privilege levels 都無法單獨足夠。</summary>
+<summary>8. **回顧（第 10 章）。** 本章處理的是**主機**層級的 least privilege（Linux users、groups、socket access）；第 10 章處理的是 **Kubernetes API** 層級的 least privilege（RBAC）。請舉出具體例子，說明狹窄 RBAC 無法保護經由過多 host access 實現的 attack（反之亦然），亦即為何單靠其中任何一個 least-privilege level 都不足夠。</summary>
 
 ServiceAccount 可能只有 `get pods` 的狹窄 Role，但能存取 containerd/Docker socket 或寬廣 `sudo` 的使用者，仍可取得 node root 並繞過該 API boundary。反之，嚴格的 host firewall 與 file modes 也無法阻止遭竊的 ServiceAccount token：若其 RBAC 允許讀取 Secret 或建立 `pods/exec`，攻擊仍會成功。Host 與 Kubernetes API 限制不同 attack paths，因此兩個 layers 都需要。
 </details>

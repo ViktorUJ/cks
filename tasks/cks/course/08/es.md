@@ -2,7 +2,7 @@
 
 # Capítulo 08. Ingress seguro con TLS
 
-> **El problema.** Si un Ingress acepta tráfico por HTTP normal, el inicio de sesión, las cookie, el bearer
+> **El problema.** Si un Ingress acepta tráfico por HTTP normal, el inicio de sesión, las cookies, el bearer
 > token y el contenido de los formularios recorren la red en texto claro. Un usuario en la misma
 > red no confiable, un punto de acceso Wi-Fi malicioso o un proxy intermedio pueden leer la
 > solicitud o alterar silenciosamente la respuesta - el punto de entrada público de la aplicación permanece
@@ -24,7 +24,7 @@
 ## 08.1. Modelo de amenazas: por qué HTTP en Ingress no es suficiente
 
 Un ingress controller normalmente acepta tráfico desde una red externa y lo dirige a un Service,
-y después a un Pod. Si el cliente se conecta por HTTP, el inicio de sesión, las cookie, el bearer token y el contenido
+y después a un Pod. Si el cliente se conecta por HTTP, el inicio de sesión, las cookies, el bearer token y el contenido
 del formulario viajan por la red en texto claro. Un usuario de la misma red no confiable, un
 punto de acceso Wi-Fi malicioso o un proxy intermedio pueden leer la solicitud o alterar la respuesta.
 
@@ -149,7 +149,7 @@ kubectl -n web get secret app-example-tls \
 ```
 
 El mismo objeto como manifiesto tiene este aspecto. Aquí `data` se deja vacío intencionadamente, sobre todo
-porque la private key `tls.key` no se puede hacer commit en Git en texto claro.
+porque no se puede hacer commit de la private key `tls.key` en Git en texto claro.
 
 Un X.509 certificate `tls.crt` contiene la clave pública y no es un secreto por sí mismo;
 guardar o no el public certificate en el repositorio es una decisión separada de repository policy. La private
@@ -179,7 +179,7 @@ se limita mediante un rol independiente. Base64 en `data` es codificación, no e
 
 Los campos portables de Ingress API aquí son `spec.tls` (`hosts`, `secretName`) y `spec.rules`
 (`host`, `path`, `pathType`, `backend`). Describen el TLS certificate y el enrutamiento, pero
-**no** establecen el HTTP -> HTTPS redirect. `spec.ingressClassName` también es un campo API, sin embargo
+**no** establecen el HTTP -> HTTPS redirect. `spec.ingressClassName` también es un campo API, sin embargo,
 el propio valor de clase, por ejemplo `nginx`, elige una implementación concreta. Las annotations, incluidas
 `nginx.ingress.kubernetes.io/*`, no forman parte en absoluto de Ingress API: su significado lo define solo
 el controller correspondiente.
@@ -237,13 +237,13 @@ Un error al leer el Secret o la ausencia de backend endpoints sí requieren corr
 una comprobación end-to-end completa.
 
 Considere por separado el campo `ADDRESS`: refleja el status publicado de Ingress y en
-NodePort, bare-metal, `hostNetwork`, port-forward o algunos fixture locales puede
+NodePort, bare-metal, `hostNetwork`, port-forward o algunos fixtures locales puede
 permanecer vacío incluso con un Ingress funcional. Compruebe la disponibilidad de TLS por el
 entrypoint efectivo del controller elegido, no solo por la presencia de un valor en `ADDRESS`.
 
 ## 08.5. ingress-nginx: retired-controller y límites de las annotations
 
-> **NGINX Ingress Controller retired.** Desde marzo de 2026 el proyecto `ingress-nginx` está retired y ya no recibe releases ni security fixes ([anuncio](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/)). CKS exige un Ingress con TLS correctamente configurado, pero la competencia pública no garantiza un controller concreto ni nginx-specific annotations. En el examen, compruebe primero el controller proporcionado por la lab; la sintaxis `ingressClassName: nginx` y sus annotations son solo un fixture posible. Para production no despliegue un retired-controller en clústeres nuevos: elija una implementación compatible o Gateway API. La parte portable - TLS Secret, `spec.tls`, host/SNI, SAN, Service endpoints y comprobación HTTPS - no depende del controller.
+> **NGINX Ingress Controller retired.** Desde marzo de 2026 el proyecto `ingress-nginx` está retired y ya no recibe releases ni security fixes ([anuncio](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/)). CKS exige un Ingress con TLS correctamente configurado, pero la competencia pública no garantiza un controller concreto ni nginx-specific annotations. En el examen, compruebe primero el controller proporcionado por la lab; la sintaxis `ingressClassName: nginx` y sus annotations son solo un fixture posible. Para production no despliegue un retired-controller en clústeres nuevos: elija una implementación con soporte o Gateway API. La parte portable - TLS Secret, `spec.tls`, host/SNI, SAN, Service endpoints y comprobación HTTPS - no depende del controller.
 
 > 🎯 Para ingress-nginx, `spec.tls` normalmente incluye redirect; `ssl-redirect` y `force-ssl-redirect` dependen de la implementación y topology.
 
@@ -297,7 +297,7 @@ debe repetir la misma configuración, y un Service añadido accidentalmente podr
 accesible por HTTP. HSTS complementa el redirect después de la primera conexión HTTPS satisfactoria, pero no
 sustituye TLS y requiere una policy cautelosa e independiente para dominios y subdominios.
 
-> 🏭 Gateway API controller compatible y su status/compatibility; una implementación concreta determina las capacidades de `GatewayClass`.
+> 🏭 Gateway API controller con soporte y su status/compatibility; una implementación concreta determina las capacidades de `GatewayClass`.
 
 > 🔬 **Estado actual de Gateway API v1.6.** En Gateway API v1.6, `TCPRoute` y `UDPRoute` pasaron a Standard `v1`; los nuevos experimental resources se trasladaron a un grupo independiente, `gateway.networking.x-k8s.io`, con el prefijo `X`. `XBackend` continúa siendo experimental y el soporte de `ExternalHostname` requiere un opt-in consciente debido al security trade-off, incluido el confused-deputy risk. Este es un contexto production-current, no CKS Core. [Blog oficial de la release](https://kubernetes.io/blog/2026/08/03/gateway-api-v1-6-release/).
 
@@ -309,7 +309,7 @@ termination) y TLS al backend después de termination (re-encryption). Para el �
 `BackendTLSPolicy` de Gateway API v1.4.0 - GA en Standard Channel - establece SNI y la verificación del
 certificate del backend. El soporte de cada modelo depende del Gateway controller.
 
-Para un clúster de production nuevo, use una implementación compatible de Gateway API. En el ejemplo
+Para un clúster de production nuevo, use una implementación con soporte de Gateway API. En el ejemplo
 siguiente, `platform-gateway` es un nombre **implementation-specific** de `GatewayClass`: lo proporciona el
 Gateway controller elegido, no es un valor estándar de Kubernetes. `certificateRefs`
 referencia el mismo TLS Secret en el namespace `web`; el HTTPS listener realiza TLS termination,
@@ -481,7 +481,7 @@ spec:
 ```
 
 - `auth-tls-secret` referencia un `Secret` con el formato `namespace/name`, donde `ca.crt` contiene
-  la cadena de CA confiable para los client certificate - es un `Secret` distinto del
+  la cadena de CA confiable para los client certificates - es un `Secret` distinto del
   `web-tls` server-side de 08.3, aunque ambos correspondan al mismo host.
 - `auth-tls-verify-client: "on"` exige un certificate de cliente verificado correctamente por la CA de
   `auth-tls-secret`; failed certificate verification termina con HTTP `400`.
@@ -655,7 +655,7 @@ curl -vI --resolve "${HOST}:80:${ENTRYPOINT_IP}" "http://${HOST}/"
 ```
 
 Compruebe no solo el estado `200`, sino también el certificate que recibió el cliente. `-servername`
-activa SNI: sin él, un controller en un clúster con varios host puede entregar el default
+activa SNI: sin él, un controller en un clúster con varios hosts puede entregar el default
 certificate.
 
 ```bash
@@ -812,7 +812,7 @@ La llamada HTTPS con SNI y Host correctos, por ejemplo mediante `curl --resolve`
 </details>
 
 <details>
-<summary>7. ¿Cómo confirmar antes de crear el Secret que la public key de certificate/key coincide y la cadena leaf -> intermediate -> root?</summary>
+<summary>7. ¿Cómo confirmar antes de crear el Secret la coincidencia de la public key de certificate/key y la cadena leaf -> intermediate -> root?</summary>
 
 El hash de la public key del certificate se obtiene mediante `openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | sha256sum` y se compara con el hash de `openssl pkey -in tls.key -pubout -outform DER | sha256sum`. La cadena se comprueba con `openssl verify -show_chain -CAfile root-ca.crt -untrusted intermediate-ca.crt leaf.crt`: el leaf debe verificarse mediante el intermediate hasta el trusted root.
 
@@ -826,7 +826,7 @@ El hash de la public key del certificate se obtiene mediante `openssl x509 -pubk
 </details>
 
 <details>
-<summary>9. ¿Por qué `GatewayClass` no puede considerarse un nombre portable y cómo vincula el HTTPS listener Gateway con el certificate mediante `certificateRefs`?</summary>
+<summary>9. ¿Por qué `GatewayClass` no puede considerarse un nombre portable y cómo el HTTPS listener vincula Gateway con el certificate mediante `certificateRefs`?</summary>
 
 El Gateway controller elegido proporciona `GatewayClass`, por lo que un nombre como `platform-gateway` es implementation-specific, no estándar de Kubernetes. El HTTPS listener establece `tls.mode: Terminate` y `certificateRefs` hacia TLS Secret; en el ejemplo el Secret está en el mismo namespace, y una referencia cross-namespace requeriría `ReferenceGrant` en el namespace del Secret.
 

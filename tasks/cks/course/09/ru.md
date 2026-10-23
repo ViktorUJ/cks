@@ -683,7 +683,7 @@ metadata; (3) найдите authorized change - change record, rollout, package
 хорошим baseline и scope на других нодах. Не «исправляйте» mismatch изменением эталонного
 хеша.
 
-Если evidence не подтверждает authorised change, provenance/baseline не сходятся или есть
+Если evidence не подтверждает authorized change, provenance/baseline не сходятся или есть
 иные признаки подмены, эскалируйте по incident runbook: остановите дальнейшее
 распространение, примените соразмерное containment (вплоть до cordon/drain или изоляции
 ноды), сохраните логи и замените ноду либо binary контролируемым способом. Один хеш

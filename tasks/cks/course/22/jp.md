@@ -215,7 +215,7 @@ kubectl -n tenant-a describe pod untrusted-web
 
 ### Kata RuntimeClass
 
-Kubernetes での Kata の推奨インストール方法は Helm chart `kata-deploy` です。それは runtime を node に展開し、実際の shim 用の RuntimeClass を作成します。現代の runtime-rs リリースでは、そのような class/handler の名前は `kata-qemu-runtime-rs` のように見える場合があります。chart が作成した名前を使用してください。別の配布からの古い例ではありません。rollout の前に、対象 node で `kubectl get runtimeclass` と `crictl info` を確認してください。
+Kubernetes での Kata の推奨インストール方法は Helm chart `kata-deploy` です。それは runtime を node に展開し、実際の shim 用の RuntimeClass を作成します。現代の runtime-rs リリースでは、そのような class/handler の名前は `kata-qemu-runtime-rs` のように見える場合があります。chart が作成した名前を使用してください。別の配布からの古い例の名前は使わないでください。rollout の前に、対象 node で `kubectl get runtimeclass` と `crictl info` を確認してください。
 
 以下の manual configuration は、既に準備された専用 pool 用の簡略化されたバリアントです。ここでの Kata class は同様に構成されていますが、handler は containerd と一致する必要があります。node の handler が `kata-qemu` と呼ばれている場合、class を `kata` と呼ばないでください。そうでなければ configuration が不明確になります。分かりやすいバリアントの一つは、同じ短い名前を使うことです。
 
@@ -245,9 +245,9 @@ Kata pool については、事前に hardware virtualization が利用可能で
 
 ### 1. `runsc` と shim をインストールする
 
-gVisor の binary、shim、sidecar binaries の catalog は、一つの検証済み version と node の architecture に一致している必要があります。好ましいインストール方法は、公式（または承認された内部）apt repository からの `runsc` package です。それは完全なファイル一式を一貫してインストールします。この package を手動でダウンロードした shim と混在させないでください。
+gVisor の binary、shim、sidecar binaries のディレクトリ は、一つの検証済み version と node の architecture に一致している必要があります。好ましいインストール方法は、公式（または承認された内部）apt repository からの `runsc` package です。それは完全なファイル一式を一貫してインストールします。この package を手動でダウンロードした shim と混在させないでください。
 
-pinned manual installation には、二つの別々の binary という古い方式ではなく、最新の archive `gvisor.tar.zstd` を使用してください。archive には `runsc`、shim、そして catalog `gvisor-bin/` が含まれています。後者は `runsc` の隣に残す必要があります。runtime は sandbox 起動時にそれを使用するためです。承認された release の checksum/signature を確認し、すべてのファイルを root-only 権限で展開してください。以下のコマンドはインストールの形式を示しています。`<VERSION>` と `<ARCH>` は承認された値に置き換えます。
+pinned manual installation には、二つの別々の binary という古い方式ではなく、最新の archive `gvisor.tar.zstd` を使用してください。archive には `runsc`、shim、そして `gvisor-bin/` ディレクトリが含まれています。後者は `runsc` の隣に残す必要があります。runtime は sandbox 起動時にそれを使用するためです。承認された release の checksum/signature を確認し、すべてのファイルを root-only 権限で展開してください。以下のコマンドはインストールの形式を示しています。`<VERSION>` と `<ARCH>` は承認された値に置き換えます。
 
 ```bash
 VERSION="${VERSION:?set an approved gVisor version}"
@@ -313,7 +313,7 @@ sudo journalctl -u containerd -b --no-pager | tail -n 80
 sudo crictl info | jq '.config.containerd.runtimes.runsc'
 ```
 
-`crictl info` は `runtimeType` `io.containerd.runsc.v1` を持つ `runsc` を示す必要があります。handler が現れない、または service が active でない場合は停止してください。RuntimeClass はまだ作成せず、このノードに workload を移行しないでください。
+`crictl info` は `runtimeType` `io.containerd.runsc.v1` を持つ `runsc` を示す必要があります。handler が現れない、または service が active でない場合は停止してください。RuntimeClass はまだ作成せず、この node に workload を移行しないでください。
 
 > 🔬 Kata は互換性のある shim、hypervisor、guest components、host virtualization、そして KVM/runtime の確認を必要とします。
 
@@ -321,16 +321,16 @@ sudo crictl info | jq '.config.containerd.runtimes.runsc'
 
 Kata は `containerd-shim-kata-v2` だけでなく、選択した hypervisor、kernel/rootfs、そして互換性のある host virtualization も必要とします。vendor-supported package、または configuration management によって専用 pool にデプロイされた検証済みの Kata release が好まれます。laptop から production worker に binary をコピーしないでください。
 
-### まず — 何が設定されるのか
+### まず - 何が設定されるのか
 
 これは **Pod** ではなく **node** の設定です。Kubernetes が Pod を Kata で実行できるようになる前に、各対象 node には次の一連の chain が存在する必要があります。
 
 `RuntimeClass.spec.handler` → `containerd` 内の CRI handler → Kata shim → 選択した virtualization backend → guest kernel を持つ lightweight VM。
 
-- **Kata runtime / shim** — node 上のコンポーネントで、それを通じて `containerd` が sandbox VM を作成します。`containerd-shim-kata-v2` は `containerd` service から利用可能である必要があります。
-- **Backend（hypervisor）** — VM の mechanism。通常は QEMU/KVM で、一部の Azure/Microsoft Hypervisor configuration では `mshv` を持つ Cloud Hypervisor です。
-- **CRI handler** — `config.toml` 内の名前付きエントリ、例えば `kata` または `kata-qemu` です。それは `containerd` に、どの Kata runtime を呼び出すかを伝えます。これは Pod の名前でも binary の名前でもありません。
-- **RuntimeClass** — Kubernetes object で、後で kubelet にこの handler の正確な名前を渡します。Kata をインストールしたり node configuration を修正したりするものではありません。
+- **Kata runtime / shim** - node 上のコンポーネントで、それを通じて `containerd` が sandbox VM を作成します。`containerd-shim-kata-v2` は `containerd` service から利用可能である必要があります。
+- **Backend（hypervisor）** - VM の mechanism。通常は QEMU/KVM で、一部の Azure/Microsoft Hypervisor configuration では `mshv` を持つ Cloud Hypervisor です。
+- **CRI handler** - `config.toml` 内の名前付きエントリ、例えば `kata` または `kata-qemu` です。それは `containerd` に、どの Kata runtime を呼び出すかを伝えます。これは Pod の名前でも binary の名前でもありません。
+- **RuntimeClass** - Kubernetes object で、後で kubelet にこの handler の正確な名前を渡します。Kata をインストールしたり node configuration を修正したりするものではありません。
 
 そのため Pod の作成から始めないでください。安全な順序は次のとおりです。
 
@@ -349,7 +349,7 @@ kata-runtime --version
 sudo kata-runtime check
 
 # 実際に選択した RuntimeClass/hypervisor の backend を指定してください:
-# qemu-kvm — QEMU/KVM; clh-azure または clh-azure-runtime-rs — Microsoft Hypervisor。
+# qemu-kvm - QEMU/KVM; clh-azure または clh-azure-runtime-rs - Microsoft Hypervisor。
 KATA_BACKEND="${KATA_BACKEND:?set qemu-kvm, clh-azure, or clh-azure-runtime-rs}"
 case "$KATA_BACKEND" in
   qemu-kvm)
@@ -550,7 +550,7 @@ Starting gVisor
 
 ## 22.9. 典型的な failure と安全な診断
 
-| Symptom | 考えられる原因 | 確認と対応 |
+| 症状 | 考えられる原因 | 確認と対応 |
 |---|---|---|
 | Pod `Pending`、`didn't match Pod's node affinity/selector` | RuntimeClass の label を持つ node がない、または Pod の selector が矛盾している | `kubectl describe pod`。`spec.nodeSelector` と nodes の labels を比較する |
 | Pod `Pending`、taint が tolerate されない | Pod が RuntimeClass の toleration を得ていない、または一致しない | `kubectl get runtimeclass -o yaml`、`kubectl describe node` を確認する |
@@ -642,7 +642,7 @@ system DaemonSet、CNI、CSI、普段の workload は、sandbox が異なる方�
 <details>
 <summary>7. gVisor と containerd のために、どのファイル/binaries が一致している必要がありますか？</summary>
 
-検証済みの `runsc`、`containerd-shim-runsc-v1`、catalog `gvisor-bin/` の versions が一致している必要があります。archive install の場合、これらの `runsc` との隣接関係を保ちます。shim は containerd の systemd service の `PATH` にある必要があります。`config.toml` では、handler `runsc` は、containerd の世代に対する正しい plugin path で `runtime_type = "io.containerd.runsc.v1"` を指定する必要があります。
+検証済みの `runsc`、`containerd-shim-runsc-v1`、`gvisor-bin/` ディレクトリの versions が一致している必要があります。archive install の場合、これらの `runsc` との隣接関係を保ちます。shim は containerd の systemd service の `PATH` にある必要があります。`config.toml` では、handler `runsc` は、containerd の世代に対する正しい plugin path で `runtime_type = "io.containerd.runsc.v1"` を指定する必要があります。
 </details>
 
 <details>

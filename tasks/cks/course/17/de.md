@@ -62,7 +62,7 @@ containers:
 
 Der Kernel unterstützt den strikten legacy-Modus und den Filtermodus. In Containern wird fast immer der Filtermodus verwendet: Die runtime lädt vor dem Start des Prozesses ein BPF-Programm aus einem OCI/Kubernetes Profile. Das Feld `/proc/<pid>/status` enthält `Seccomp: 2`, wenn für den Prozess der Filtermodus aktiviert ist; `0` bedeutet kein seccomp, `1` den legacy strict mode. Der Wert `2` belegt selbst nicht, *welches* Profile geladen ist, ist aber bei der Diagnose hilfreich.
 
-In einem JSON-Profile werden Aktionen durch Werte von libseccomp/OCI angegeben. Ihre Bedeutung ist wichtiger als sich jeden Namen zu merken:
+In einem JSON-Profile werden Aktionen durch Werte von libseccomp/OCI angegeben. Ihre Bedeutung ist wichtiger, als sich jeden Namen zu merken:
 
 | Aktion | Ergebnis | Typische Verwendung |
 |---|---|---|
@@ -516,7 +516,7 @@ Versuchen Sie nicht, seccomp durch eine fehlende Capability zu belegen: Das bewe
 Ein `Localhost` Profile ist Teil des platform contract. Der Scheduler liest den Inhalt von `/var/lib/kubelet/seccomp` nicht und überträgt JSON nicht auf einen Node. Zuverlässiger Betrieb erfordert einen vollständigen verwalteten Lifecycle.
 
 1. **Definieren Sie Bedrohung und Owner.** Geben Sie an, welcher syscall das Risiko verringert und welchen Workload/welche Version das Profile abdeckt. „Wir verbieten vorsichtshalber alles“ ist keine Spezifikation.
-2. **Beobachten Sie kontrolliert.** Verwenden Sie auf einem Test-Node kurzes Audit/Profile tracing für den representative Workload, einschließlich Startup und failure paths. Bewahren Sie Image-Digest, Node-OS, Kernel und runtime-Version auf.
+2. **Beobachten Sie kontrolliert.** Verwenden Sie auf einem Test-Node kurzes Audit/Profile tracing für den repräsentativen Workload, einschließlich Startup und failure paths. Bewahren Sie Image-Digest, Node-OS, Kernel und runtime-Version auf.
 3. **Erstellen Sie minimales JSON und prüfen Sie die Kompatibilität.** Validieren Sie JSON, ABI und Start auf jeder unterstützten Architektur/runtime. Ein neues Image oder eine dependency kann den Satz der syscalls verändern.
 4. **Liefern Sie das Profile als versioned artifact aus.** Node Image, cloud-init oder configuration management müssen die Datei vor dem Scheduling des Workload installieren. Geben Sie einem nicht privilegierten Pod keinen Schreibzugriff auf das kubelet-Verzeichnis.
 5. **Verbinden Sie delivery und placement.** Ein identisches Profile im Pool ist einfacher und sicherer; andernfalls verwenden Sie ein vertrauenswürdiges Node label/affinity und prüfen Sie das inventory.
@@ -525,7 +525,7 @@ Ein `Localhost` Profile ist Teil des platform contract. Der Scheduler liest den 
 
 Für einen gewöhnlichen Production-Workload genügt oft die Kombination aus `RuntimeDefault`, Non-Root, `allowPrivilegeEscalation: false`, Drop Capabilities und MAC policy. Ein Custom Profile ist dort gerechtfertigt, wo Risiko und Vertrag gut bekannt sind; die Komplexität eines Profile ist selbst ein operational risk.
 
-Wenn Custom seccomp/AppArmor/SELinux Profiles im Cluster verteilt und aufgezeichnet werden müssen, ziehen Sie **Security Profiles Operator (SPO)** als Production-Weg in Betracht: Er verwaltet Lifecycle und recording workflow der Profiles statt JSON manuell in das kubelet-Verzeichnis jedes Node zu kopieren. Dies hebt Tests, versioning und die Kontrolle des placement nicht auf, macht die Profile-Delivery aber durch die Plattform verwaltbar.
+Wenn Custom seccomp/AppArmor/SELinux Profiles im Cluster verteilt und aufgezeichnet werden müssen, ziehen Sie **Security Profiles Operator (SPO)** als Production-Weg in Betracht: Er verwaltet Lifecycle und recording workflow der Profiles, statt JSON manuell in das kubelet-Verzeichnis jedes Node zu kopieren. Dies hebt Tests, versioning und die Kontrolle des placement nicht auf, macht die Profile-Delivery aber durch die Plattform verwaltbar.
 
 Pod Security Standards der Stufe `restricted` verlangen seccomp `RuntimeDefault` oder `Localhost`; `Unconfined` entspricht dieser Baseline nicht. Eine admission policy ist nützlich, damit kein Workload ohne seccomp aufgrund einer Auslassung im chart entsteht. Admission prüft jedoch nicht das Vorhandensein von Custom JSON auf dem Node - das bleibt Aufgabe von Node Lifecycle und Rollout.
 

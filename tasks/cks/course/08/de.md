@@ -224,7 +224,7 @@ Ersetzen Sie eine Weiterleitung am Edge nicht durch Anwendungslogik, wenn sie am
 
 Gateway API beschreibt drei TLS-Modelle: **Edge-Terminierung** (ein HTTPS-Listener entschlüsselt Datenverkehr am Gateway), **TLS Passthrough** (das Gateway leitet den TLS-Handshake ohne Terminierung an das Backend weiter) und TLS zum Backend nach der Terminierung (Re-Encryption). Beim letzten Modell konfiguriert `BackendTLSPolicy` aus Gateway API v1.4.0 - GA im Standard Channel - SNI und die Prüfung des Backend-Zertifikats. Die Unterstützung eines bestimmten Modells hängt vom Gateway controller ab.
 
-Verwenden Sie für einen neuen Produktionscluster eine unterstützte Gateway API-Implementierung. Im folgenden Beispiel ist `platform-gateway` ein **implementierungsspezifischer** `GatewayClass`-Name: Er wird vom ausgewählten Gateway controller bereitgestellt und ist kein Kubernetes-Standardwert. `certificateRefs` verweist auf dasselbe TLS Secret im Namespace `web`; der HTTPS-Listener führt die TLS-Terminierung durch und `HTTPRoute` leitet die Anfrage zu einem Service weiter.
+Verwenden Sie für einen neuen Produktionscluster eine unterstützte Gateway-API-Implementierung. Im folgenden Beispiel ist `platform-gateway` ein **implementierungsspezifischer** `GatewayClass`-Name: Er wird vom ausgewählten Gateway controller bereitgestellt und ist kein Kubernetes-Standardwert. `certificateRefs` verweist auf dasselbe TLS Secret im Namespace `web`; der HTTPS-Listener führt die TLS-Terminierung durch und `HTTPRoute` leitet die Anfrage zu einem Service weiter.
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -334,7 +334,7 @@ flowchart TB
     style backend fill:#0f9d58,color:#fff
 ```
 
-Machen Sie einen HTTP-Statuscode nicht zum Bestandteil des allgemeinen mTLS-Modells. Bei ingress-nginx liefert der Modus `on` bei fehlgeschlagener Zertifikatsprüfung `400`, während `auth-tls-match-cn` `403` liefern kann. In Gateway API validiert `AllowValidOnly` das Zertifikat während des TLS-Handshake, daher kann eine Implementierung die TLS-Verbindung selbst ohne HTTP-Antwort ablehnen - ein controller-neutrales Modell mit "immer 400/403" gibt es hier nicht.
+Machen Sie einen HTTP-Statuscode nicht zum Bestandteil des allgemeinen mTLS-Modells. Bei ingress-nginx liefert der Modus `on` bei fehlgeschlagener Zertifikatsprüfung `400`, während `auth-tls-match-cn` `403` liefern kann. In Gateway API validiert `AllowValidOnly` das Zertifikat während des TLS-Handshake, daher kann eine Implementierung die TLS-Verbindung selbst ohne HTTP-Antwort ablehnen - ein controller-neutrales Modell mit „immer 400/403“ gibt es hier nicht.
 
 > 🔬 `auth-tls-*` ist eine eingestellte ingress-nginx-API; das portable Modell ist ein gültiges Client-Zertifikat am Edge.
 
@@ -372,8 +372,8 @@ spec:
 
 - `auth-tls-secret` verweist auf ein Secret im Format `namespace/name`, dessen `ca.crt` die vertrauenswürdige CA-Kette für Client-Zertifikate enthält - es ist ein separates Secret gegenüber dem serverseitigen `web-tls` aus 08.3, obwohl beide für denselben Host gelten.
 - `auth-tls-verify-client: "on"` verlangt ein Client-Zertifikat, das erfolgreich anhand der CA aus `auth-tls-secret` geprüft wurde; eine fehlgeschlagene Zertifikatsprüfung endet mit HTTP `400`.
-- `optional` verlangt nicht von jedem Client ein Zertifikat, ist aber **kein** Modus "nie ablehnen": Legt ein Client ein Zertifikat vor, das nicht von der konfigurierten CA signiert ist, gibt ingress-nginx weiterhin HTTP `400` zurück. Wenn die Anfrage zugelassen wird, kann ihr Prüfergebnis Upstream übergeben werden.
-- `optional_no_ca` lehnt eine Anfrage nicht allein deshalb ab, weil das Client-Zertifikat nicht von der CA aus `auth-tls-secret` signiert ist; das Prüfergebnis wird Upstream übergeben. Verwenden Sie diesen Modus nur, wenn die Anwendung oder eine separate Autorisierungsschicht tatsächlich anhand dieses Ergebnisses entscheidet.
+- `optional` verlangt nicht von jedem Client ein Zertifikat, ist aber **kein** Modus „nie ablehnen“: Legt ein Client ein Zertifikat vor, das nicht von der konfigurierten CA signiert ist, gibt ingress-nginx weiterhin HTTP `400` zurück. Wenn die Anfrage zugelassen wird, kann ihr Prüfergebnis an den Upstream übergeben werden.
+- `optional_no_ca` lehnt eine Anfrage nicht allein deshalb ab, weil das Client-Zertifikat nicht von der CA aus `auth-tls-secret` signiert ist; das Prüfergebnis wird an den Upstream übergeben. Verwenden Sie diesen Modus nur, wenn die Anwendung oder eine separate Autorisierungsschicht tatsächlich anhand dieses Ergebnisses entscheidet.
 - Bei einer weitergeleiteten Upstream-Anfrage sendet ingress-nginx `ssl-client-verify`, `ssl-client-subject-dn` und `ssl-client-issuer-dn`; das vollständige PEM-Zertifikat in `ssl-client-cert` wird nur mit `auth-tls-pass-certificate-to-upstream: "true"` gesendet.
 - Client Certificate Authentication gilt für den gesamten Host, nicht für einen einzelnen Path.
 
@@ -420,7 +420,7 @@ Das `ConfigMap` `client-ca` enthält das vertrauenswürdige CA-Zertifikat (Trust
 - `mode: AllowValidOnly` (Standard) lehnt eine Verbindung ohne gültiges Zertifikat ab. `AllowInsecureFallback` akzeptiert eine Verbindung auch ohne Zertifikat oder bei fehlgeschlagener Prüfung und delegiert die Entscheidung zur Client-Autorisierung an das Backend. Dieser Zustand wird durch die Bedingung `InsecureFrontendValidationMode` auf dem `Gateway` ausdrücklich markiert und schafft ein erhebliches Sicherheitsrisiko. Gateway API empfiehlt diesen Modus in Testumgebungen oder nur vorübergehend in Nicht-Testumgebungen; für gewöhnliches Produktions-mTLS sollten Sie `AllowValidOnly` bevorzugen.
 - Die Unterstützung der Frontend-Validierung von Client-Zertifikaten hängt vom jeweiligen Gateway API controller ab; prüfen Sie sie vor der Verwendung in der Liste unterstützter Implementierungen für Ihre Version.
 
-Beide Mechanismen lösen dieselbe Aufgabe über verschiedene APIs: Sowohl NGINX Ingress über `auth-tls-*` als auch Gateway API über `spec.tls.frontend...validation` können ein Client-Zertifikat an der Cluster-Grenze prüfen. Welcher verfügbar ist, hängt nicht vom mTLS-Konzept selbst ab, sondern davon, welcher ingress controller oder welche Gateway API-Implementierung im Cluster bereitgestellt ist - wählen Sie die Syntax für den tatsächlich installierten controller, nicht umgekehrt.
+Beide Mechanismen lösen dieselbe Aufgabe über verschiedene APIs: Sowohl NGINX Ingress über `auth-tls-*` als auch Gateway API über `spec.tls.frontend...validation` können ein Client-Zertifikat an der Cluster-Grenze prüfen. Welcher verfügbar ist, hängt nicht vom mTLS-Konzept selbst ab, sondern davon, welcher ingress controller oder welche Gateway-API-Implementierung im Cluster bereitgestellt ist - wählen Sie die Syntax für den tatsächlich installierten controller, nicht umgekehrt.
 
 ### Fallstrick: Der Geltungsbereich der Client-Zertifikatsvalidierung hängt von der API ab
 
@@ -429,7 +429,7 @@ Ein Client-Zertifikat wird während des TLS-Handshake vor dem HTTP-Path-Routing 
 - **ingress-nginx:** Client Certificate Authentication gilt **pro Host** und kann für einzelne Paths eines Hosts keine unterschiedlichen Regeln haben. Wenn `/admin` ein striktes Client-Zertifikat verlangt, während `/public` auf TLS-Ebene keines verlangen darf, lassen sich solche Handshake-Anforderungen nicht durch zwei Paths eines ingress-nginx-Hosts ausdrücken.
 - **Gateway API:** Die Frontend-Validierung von Client-Zertifikaten wird auf `Gateway`-Ebene konfiguriert: `default` gilt für alle HTTPS-Listener ohne Override und `perPort` für alle HTTPS-Listener am angegebenen Port. Unterschiedliche `hostname`/Listener eines Gateway auf einem Port erhalten **keine** unabhängigen Client-Zertifikats-Policys - GEP-91 erklärt ausdrücklich, dass eine engere Bindung ein Umgehungsrisiko durch HTTP/2/TLS Connection Coalescing erzeugen würde: Eine bereits bestehende TLS-Verbindung kann einen Listener mit anderem Hostname am selben Port bedienen.
 
-Die praktische Folge: Verwenden Sie die Regel "unterschiedlicher Hostname bedeutet immer eine separate mTLS-Policy" nicht als portables Modell. Bei Gateway API müssen unterschiedliche Anforderungen auf Handshake-Ebene über verschiedene Ports oder wirklich isolierte TCP/TLS-Einstiegspunkte getrennt werden, die die ausgewählte Implementierung nachweislich nicht zusammenfasst; prüfen Sie die konkrete Topologie anhand der Dokumentation des controller.
+Die praktische Folge: Verwenden Sie die Regel „unterschiedlicher Hostname bedeutet immer eine separate mTLS-Policy“ nicht als portables Modell. Bei Gateway API müssen unterschiedliche Anforderungen auf Handshake-Ebene über verschiedene Ports oder wirklich isolierte TCP/TLS-Einstiegspunkte getrennt werden, die die ausgewählte Implementierung nachweislich nicht zusammenfasst; prüfen Sie die konkrete Topologie anhand der Dokumentation des controller.
 
 Die Autorisierung nach HTTP-Path/Method erfolgt erst nach dem TLS-Handshake in einer HTTP-fähigen Autorisierungsschicht oder in der Anwendung. `auth-tls-match-cn` von ingress-nginx ist keine Path/Method-Autorisierung: Die Annotation gleicht nur zusätzlich den CN des Client-Zertifikats mit einer Zeichenfolge oder Regex ab.
 
@@ -513,7 +513,7 @@ Verwenden Sie für ein Zertifikat, dem der System-Trust-Store vertraut, gewöhnl
 - **TLS-Terminierung** - Abschluss des TLS-Handshake und Entschlüsselung des Datenverkehrs am ingress controller.
 - **Ingress** - API-Objekt mit Regeln für externes HTTP/HTTPS-Routing zu einem Service.
 - **IngressClass** - Auswahl der Ingress-Implementierung, zum Beispiel NGINX Ingress Controller; der Klassenname hängt vom installierten controller ab.
-- **GatewayClass** - Auswahl der Gateway API-Implementierung; ihr Name ist ebenfalls implementierungsspezifisch.
+- **GatewayClass** - Auswahl der Gateway-API-Implementierung; ihr Name ist ebenfalls implementierungsspezifisch.
 - **TLS Secret** - Secret vom Typ `kubernetes.io/tls` mit den Schlüsseln `tls.crt` und `tls.key`.
 - **SAN** - Subject Alternative Name, die Liste der DNS-Namen/IP-Adressen, für die ein Zertifikat gültig ist.
 - **SNI** - Server Name Indication, der Hostname im TLS-Handshake zur Auswahl des Zertifikats.
@@ -592,7 +592,7 @@ Den Hash des öffentlichen Zertifikatschlüssels erhalten Sie über `openssl x50
 <details>
 <summary>8. Warum darf `curl -k` selbst mit einem Self-Signed-Zertifikat nicht als Nachweis einer korrekten TLS-Konfiguration verwendet werden?</summary>
 
-`-k` deaktiviert die Zertifikatsprüfung und eignet sich daher nur zur Diagnose. Wenn das Self-Signed-Zertifikat des Labs lokal verfügbar ist, ist `--cacert tls.crt` besser: curl vertraut dann genau diesem Zertifikat, prüft jedoch weiterhin TLS und den Hostnamen. In der Produktion verbirgt `-k` Fehler beim Vertrauen, SAN, der Kette und eine mögliche Manipulation; das Problem muss behoben, nicht umgangen werden.
+`-k` deaktiviert die Zertifikatsprüfung und eignet sich daher nur zur Diagnose. Wenn das Self-Signed-Zertifikat des Labs lokal verfügbar ist, ist `--cacert tls.crt` besser: curl vertraut dann genau diesem Zertifikat, prüft jedoch weiterhin TLS und den Hostnamen. In der Produktion verbirgt `-k` Vertrauensfehler, SAN-Fehler, Kettenfehler und eine mögliche Manipulation; das Problem muss behoben, nicht umgangen werden.
 
 </details>
 

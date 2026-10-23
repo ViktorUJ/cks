@@ -257,7 +257,7 @@ spec:
 The flag path is visible **from inside the API server container**, so a file on the host alone is
 insufficient: use `hostPath` and `volumeMount`. Check YAML indentation and existing volume names; do
 not replace the entire manifest with a template. On an HA control plane, the same protected file and
-flag must be present on every API server node, and roll out the change one node at a time while
+flag must be present on every API server node, and you roll out the change one node at a time while
 monitoring health and quorum.
 
 Practical work order:
@@ -777,7 +777,7 @@ Reduce the host footprint: disable unnecessary services and packages, close unne
 ## Practice
 
 Before working in production, complete the lab in a separate cluster: create an
-`EncryptionConfiguration`, add the API server flag and mount, encrypt a Secret, rotate it, and
+`EncryptionConfiguration`, add the API server flag and mount, encrypt a Secret, perform a key rotation, and
 confirm the result through etcd. Keep access to the control-plane console and a fresh snapshot: an error
 in a static-Pod manifest can temporarily deprive the cluster of its API.
 

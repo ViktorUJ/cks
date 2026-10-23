@@ -5,7 +5,7 @@
 > **問題。** 在具有 writable root filesystem 的 container 中取得 code execution 後，attacker
 > 可以下載 tool、替換 `/app` 中的 script 或 `/etc` 中的 configuration，並在 current container
 > instance 存活期間保留結果。Kubelet-managed container restart/recreation 會建立新的 writable
-> layer，因此要在 container restarts 間 persistence，必須使用 volume 或 external storage。這類變更
+> layer，因此要在 container restarts 間保有 persistence，必須使用 volume 或 external storage。這類變更
 > 在 source image 中不可見，會使一次性的 compromise 成為方便的 persistence 與 lateral movement
 > 平台。明確的 read-only boundaries 與 narrow writable volumes 可縮小此 surface。
 
@@ -356,7 +356,7 @@ Dockerfile 中的 `USER` 是有用的 baseline，但 Kubernetes 仍應設定 `ru
 
 ## 31.6. 在 read-only root 使用 ConfigMap 與 Secret
 
-ConfigMap 和 Secret 解決相反的工作：無須 rebuild image 就能將 data 傳入 container。它們的 volume mounts 對 container 預設為 **read-only**，因此自然適合 immutable root。不要將 Secret 複製至 writable `/tmp`、無必要地從中產生長期 file，或將 ConfigMap 當 mutable database 使用。
+ConfigMap 和 Secret 解決相反的問題：無須 rebuild image 就能將 data 傳入 container。它們的 volume mounts 對 container 預設為 **read-only**，因此自然適合 immutable root。不要將 Secret 複製至 writable `/tmp`、無必要地從中產生長期 file，或將 ConfigMap 當 mutable database 使用。
 
 ```yaml
 apiVersion: v1
@@ -468,7 +468,7 @@ fi
 kubectl exec -n "$namespace" "$pod" -c api -- sh -c 'touch /tmp/write-test && rm /tmp/write-test'
 ```
 
-最後的 commands 假設 image 中有 shell。對 distroless workload，請採用下列其中一種：由授權 operator 在 node 檢查 mount options、預先準備的 test endpoint、具有相同 securityContext 的獨立 compatibility Pod，或 controlled ephemeral container。不要將沒有 shell 視為 hardening failure——那正是 distroless design 的預期結果。
+最後的 commands 假設 image 中有 shell。對 distroless workload，請採用下列其中一種：由授權 operator 在 node 檢查 mount options、預先準備的 test endpoint、具有相同 securityContext 的獨立 compatibility Pod，或 controlled ephemeral container。不要將沒有 shell 視為 hardening failure-那正是 distroless design 的預期結果。
 
 有用的 cluster-wide audit，涵蓋所有 container types：
 
@@ -810,7 +810,7 @@ PSA version 應透過 labels pin，因為 standard 可隨 Kubernetes version 變
 </details>
 
 <details>
-<summary>9. **Flashback（第 24 章）。** Distroless image（第 24 章）從 image 移除 shell/package manager——這是 immutable **build-time**。`readOnlyRootFilesystem`（本章）禁止 runtime writes——這是 immutable **runtime**。若 application image 既沒有 shell，又無法寫入 root filesystem，對具有 RCE 的 attacker，哪個實務 post-exploitation step 仍可能，哪個已被此組合確實關閉？</summary>
+<summary>9. **Flashback（第 24 章）。** Distroless image（第 24 章）從 image 移除 shell/package manager-這是 immutable **build-time**。`readOnlyRootFilesystem`（本章）禁止 runtime writes-這是 immutable **runtime**。若 application image 既沒有 shell，又無法寫入 root filesystem，對具有 RCE 的 attacker，哪個實務 post-exploitation step 仍可能，哪個已被此組合確實關閉？</summary>
 
 具 RCE 的 attacker 仍可執行可用 application binary、讀取可存取 data 並透過 network 傳送，因此仍需 NetworkPolicy、minimal ServiceAccount 與其他 controls。此組合關閉透過 shell download/install package，以及寫入 tools 或替換 image layer files（包含 `/app` 與 `/etc`）。若存在明確 writable mounted volume，其中的動作仍可能，應另外限制。
 </details>
@@ -821,7 +821,7 @@ PSA version 應透過 labels pin，因為 standard 可隨 Kubernetes version 變
 
 🌐 額外互動練習（killer.sh/killercoda，external resource）：[immutability-readonly-fs](https://killercoda.com/killer-shell-cks/scenario/immutability-readonly-fs)
 
-複習基礎：[SecurityContext — CKA 第 20 章](../../../cka/course/20/tw.md)、[`emptyDir` 與 volumes — CKA 第 24 章](../../../cka/course/24/tw.md)、[ConfigMap — 第 18 章](../../../cka/course/18/tw.md)與[Secret — 第 19 章](../../../cka/course/19/tw.md)。接著學習 [第 32 章](../32/tw.md)的 Kubernetes audit logs。
+複習基礎：[SecurityContext - CKA 第 20 章](../../../cka/course/20/tw.md)、[`emptyDir` 與 volumes - CKA 第 24 章](../../../cka/course/24/tw.md)、[ConfigMap - 第 18 章](../../../cka/course/18/tw.md)與[Secret - 第 19 章](../../../cka/course/19/tw.md)。接著學習 [第 32 章](../32/tw.md)的 Kubernetes audit logs。
 
 ---
 [目錄](../README_TW.md) · [第 30 章](../30/tw.md) · [第 32 章](../32/tw.md)

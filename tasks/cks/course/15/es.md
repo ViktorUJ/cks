@@ -55,7 +55,7 @@ consola del proveedor o mediante una segunda sesión SSH. Un error en `sudoers`,
 
 > 🧠 La toma del nodo es una cadena de entrada externa, identity local, `sudo`, permisos de archivos y runtime sockets; least privilege en el host no sustituye Kubernetes RBAC.
 
-> 🎯 Usa usuarios separados, los mínimos grupos, `sudo` estrecho y auditado, y owner/mode precisos; comprueba los effective permissions del usuario objetivo y los directorios padre writable.
+> 🎯 Usa usuarios separados, el mínimo de grupos, `sudo` estrecho y auditado, y owner/mode precisos; comprueba los effective permissions del usuario objetivo y los directorios padre writable.
 
 ## 15.2. Usuarios, grupos y `sudo`: conceder solo el acceso necesario, no acceso root completo
 
@@ -201,9 +201,9 @@ comprobada de comandos no interactivos cuando la automatización lo requiera.
 
 Los permisos POSIX determinan quién puede leer (`r`), modificar (`w`) y recorrer un
 directorio (`x`). La propiedad y el modo deben corresponder al propósito del archivo: una
-private key secreta no puede ser legible por usuarios normales, y no deben poder modificar
+private key secreta no puede ser legible por usuarios normales, y estos no deben poder modificar
 la configuración de control plane. Comprueba no solo el archivo, sino todos los directorios
-de su ruta: permiso de escritura en un directorio padre permite sustituir el contenido.
+de su ruta: el permiso de escritura en un directorio padre permite sustituir el contenido.
 
 ```bash
 # Modo, propietario y ruta completa al archivo.
@@ -310,7 +310,7 @@ nivel, y los `iptables` modernos a menudo funcionan sobre `nf_tables`; modificar
 Elige una herramienta admitida por la imagen del nodo y el sistema de gestión de
 configuración, y hazla la única fuente de verdad.
 
-> 🔬 No hace falta memorizar todas las implementaciones; es importante entender y saber aplicar un host firewall control en el entorno disponible. A continuación, `ufw`, `iptables` y `nftables` como backend alternativos.
+> 🔬 No hace falta memorizar todas las implementaciones; es importante entender y saber aplicar un host firewall control en el entorno disponible. A continuación, `ufw`, `iptables` y `nftables` como backends alternativos.
 
 ### Opción A: `ufw`
 

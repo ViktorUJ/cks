@@ -632,7 +632,7 @@ Documentación útil: [Trivy image](https://trivy.dev/latest/docs/target/contain
 
 ## Checkpoint mixto: Supply Chain Security completado
 
-Antes de continuar a Monitoring, Logging & Runtime Security, compruebe durante 15-20 minutos sin
+Antes de pasar a Monitoring, Logging & Runtime Security, compruebe durante 15-20 minutos sin
 pistas que el dominio Supply Chain Security (capítulos 24-28) se ha consolidado:
 
 1. Construya una image sobre `distroless` en vez de una base completa y explique qué técnica concreta

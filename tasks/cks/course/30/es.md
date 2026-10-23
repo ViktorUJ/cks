@@ -94,7 +94,7 @@ esa es una observación sobre el formato del examen, no una exclusión documenta
   proporciona una raíz criptográfica de confianza que puede anclar la verificación de integridad de la
   cadena de boot de un node: BIOS/UEFI → bootloader → kernel → container runtime. Si esa cadena se vulnera
   (bootloader modificado o kernel sin firma), ningún control a nivel Kubernetes (RBAC, admission,
-  NetworkPolicy) protege contra una compromisión que ocurra ANTES de iniciar kubelet. Los cloud provider
+  NetworkPolicy) protege contra un compromiso que ocurra ANTES de iniciar kubelet. Los cloud providers
   gestionados normalmente ofrecen esto como opción separada (por ejemplo, Shielded VM/Confidential VM en
   GCP y attestation basada en AWS Nitro) - no es un objeto Kubernetes sino una propiedad de la VM/host.
 - **Confidential computing / TEE (Trusted Execution Environment).** Las garantías dependen de la
@@ -108,7 +108,7 @@ esa es una observación sobre el formato del examen, no una exclusión documenta
 - **Confianza en el bootstrapping de node.** Cuando un node nuevo se une a un clúster, la cuestión es
   si se ejecuta en el lugar físico/lógico esperado y puede confirmar criptográficamente su identidad ANTES
   de recibir acceso a los secrets del clúster. En despliegues autogestionados (`kubeadm`), el proceso
-  TLS bootstrap token/CSR automatiza parcialmente esto al unirse un node; los cloud provider gestionados
+  TLS bootstrap token/CSR automatiza parcialmente esto al unirse un node; los cloud providers gestionados
   también pueden usar un documento de identidad de instancia cloud o attestation específica del provider.
   Pero la attestation física completa («esta VM realmente se ejecuta en hardware con TPM X en el centro de
   datos Y») pertenece al cloud provider o al equipo de infraestructura, no al clúster.
@@ -308,7 +308,7 @@ de Falco, la retención y el procedimiento de transferencia de evidencia. Al mis
 container ID, Pod UID, node, hora UTC ni, cuando runtime lo proporciona, image digest: sin ellos es
 casi imposible vincular de manera fiable una alerta a otras fuentes. Si un digest o
 `container_full_id` está vacío, conserve la alerta original y complétela con resultados de
-`kubectl get pod` y `crictl inspect`; no sustituya una suposición. Para attribution, primero haga
+`kubectl get pod` y `crictl inspect`; no coloque una suposición en su lugar. Para attribution, primero haga
 coincidir Pod UID, container ID exacto, node y timestamp. `status.containerStatuses[].imageID` es un
 identificador/pista específico del runtime, no prueba portable de que sea igual a
 `%container.image.digest`; una `spec.containers[].image` fijada por digest es evidencia más fuerte.
@@ -463,7 +463,7 @@ después aplicar una NetworkPolicy como restricción reversible a conexiones nue
 containment real mediante el runbook de infraestructura: quite el node de rutas LB/service, aplique
 cloud firewall/security group/NAC/EDR host isolation, restrinja credentials de node y workload, y luego
 reemplace/reconstruya el node de manera controlada. Tras conservar la evidencia, detenga el workload
-propietario, no solo un Pod. **Evicting** automáticamente un node (`kubectl drain`) también recrea un
+propietario, no solo un Pod. El **evict** automático de un node (`kubectl drain`) también recrea un
 workload en otro node si no se detiene el controller.
 
 ```bash
@@ -522,7 +522,7 @@ kubectl scale deployment -n "$NAMESPACE" "$DEPLOYMENT" --replicas=0
 ```
 
 La policy anterior crea deny-by-default para un Pod seleccionado solo cuando el CNI aplica la
-NetworkPolicy estándar y ninguna otra policy que lo selecciona agrega un allow: las rules son aditivas,
+NetworkPolicy estándar y ninguna otra policy que lo seleccione agrega un allow: las rules son aditivas,
 no priority explicit-deny. No bloquea tráfico desde el resident node, garantiza denegación solo para
 TCP/UDP/SCTP y el comportamiento con otros protocolos y conexiones ya establecidas depende del plugin.
 Para priority deny garantizado, use policy/tier específico de CNI, infrastructure firewall u host
@@ -841,7 +841,7 @@ vacíos, investigue por separado la integración CRI y aun así haga coincidir e
 > una persona y el runbook de incidente conservan la decisión de aislar un Pod o node de alto riesgo.
 
 - **Escriba casos de uso de detección, en vez de recopilar rules aleatorias.** Para cada rule, registre
-  asset, hipótesis de amenaza, fase kill-chain, señal esperada, owner, severidad, política de suppressión
+  asset, hipótesis de amenaza, fase kill-chain, señal esperada, owner, severidad, política de supresión
   y acción de respuesta. Una rule sin owner y runbook pronto se convierte en ruido ignorado.
 - **Haga del output un schema de evento.** El SIEM recibe `event.time` UTC normalizado, rule, priority,
   node, host PID, container ID, Pod UID, namespace, workload owner, image digest, proceso y objetivo
@@ -893,7 +893,7 @@ vacíos, investigue por separado la integración CRI y aun así haga coincidir e
 - Coloque las rules Falco locales en `falco_rules.local.yaml` o archivo incluido equivalente; valídelas
   y pruébelas sin editar el ruleset del proveedor.
 - El output listo para attribution incluye hora UTC, rule/event, host PID, proceso, objetivo
-  archivo/red, container ID, Pod UID, namespace, Pod, image digest y contexto node; verifique runtime
+  de archivo/red, container ID, Pod UID, namespace, Pod, image digest y contexto node; verifique runtime
   enrichment e image digest con la alerta real.
 - Una kill chain convierte eventos Falco, audit y red desconectados en hipótesis verificable de fase y
   alcance del ataque.

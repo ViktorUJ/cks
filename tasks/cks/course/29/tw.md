@@ -10,7 +10,7 @@
 > **接下來。** Image scan、signatures 和 admission policy 降低 unsafe workload 被交付的機率，卻不能證明已執行的
 > process 行為正常。本章進入 **runtime detection**：Falco 觀察 node system events，並報告類似 container 中 shell、
 > sensitive file read、package manager execution 或 privilege-escalation attempt 的行為。這是 CKS **Monitoring, Logging &
-> Runtime Security（20%）** domain 的開始。第 30–32 章會將 signal 發展為 investigation、immutability 與 Kubernetes
+> Runtime Security（20%）** domain 的開始。第 30-32 章會將 signal 發展為 investigation、immutability 與 Kubernetes
 > audit logs。
 
 > **需要的 CKA 知識。** Containers、namespaces、processes 與 container runtime 請見
@@ -177,7 +177,7 @@ startup log 必須顯示 Falco 載入什麼，並警告 schema validation 或 pr
 ### 透過 Helm 安裝 DaemonSet
 
 Official chart 以 DaemonSet deploy Falco。Chart values 和 driver backend 必須與 chart version 對照：keys 名稱可能改變。範例
-選用 modern driver **modern eBPF**（`modern_ebpf`、CO-RE——不需 kernel headers 或 module build）與 `falco` namespace；
+選用 modern driver **modern eBPF**（`modern_ebpf`、CO-RE-不需 kernel headers 或 module build）與 `falco` namespace；
 production installation 前，使用與 Kubernetes 和 kernel compatible 的 pinned chart version。
 
 ```bash
@@ -211,7 +211,7 @@ kubectl -n falco describe daemonset falco
 
 對 package-install，custom rule 位於 node 本身。對 DaemonSet，rule 通常經 chart values/ConfigMap 傳遞，或以獨立 file mount。
 不要編輯 live Falco Pod 中的 file：它在 restart/rollout 後消失，也不會通過 review。將 rule 存在 Git 並 declarative 地套用。
-啟用 `watch_config_files` 時，Falco hot-reload changed config/rule files；若 watching disabled、reload 未發生，或變更要求時，
+啟用 `watch_config_files` 時，Falco hot-reload changed config/rule files；若 watching disabled、reload 未發生，或變更需要 restart 時，
 restart 或 rollout restart 才是 fallback。
 
 > 🎯 能找到實際載入的 `rules_files`、加入 local rule、驗證完整 config、產生 controlled event，並在同一 node 的 Falco Pod 找到 alert。Ready/active agent 沒有成功的 rule → event → contextual alert chain，並不證明 readiness。
@@ -320,7 +320,7 @@ node 的 `/etc/shadow`。`%container.image.digest` 取決於 runtime metadata，
 
 Example 的 `open_read` 是 standard Falco rules 中的 macro。因此 rules-file order 很重要：帶有此 macro 的 upstream rules
 必須在 local file 前載入。若 configuration 使用不同 macro name，或未載入 standard rules，請 local 定義需要的 condition
-或修正 `rules_files` order——不要只移除 condition 來迴避 error。
+或修正 `rules_files` order-不要只移除 condition 來迴避 error。
 
 Modern Falco 不使用 `evt.dir`：該 field 自 0.42 deprecated。這個 detector 只需透過 `evt.type` 和 container context 限制
 syscall。
@@ -421,7 +421,7 @@ kubectl delete namespace runtime-demo
 validation 和 startup log 是否成功；field name 是否與 version compatible；test 是否真的在 container 執行 `execve`；output 是否
 從正確 journal/Pod 讀取。然後以 `output` 中 unique string 重複 test，避免將 new alert 與 old alert 混淆。
 
-## 29.7. Falco readiness verification
+## 29.7. Falco readiness 驗證
 
 Installation 或 rule change 後的最低 operational check：
 
@@ -429,7 +429,7 @@ Installation 或 rule change 後的最低 operational check：
    且 Falco Pod list 必須明確在每個 intended node 含有恰好一個 ready Pod；另行檢查 selector、taint 或 toleration 排除的 nodes。
 2. **Backend。** Startup log 確認載入 `kmod` 或 `modern_ebpf` 及 `syscall` event source，且沒有 driver/schema errors。
 3. **Rules。** `falco_rules.local.yaml` valid、在 standard rules 後 included，且變更 declaratively 保存。
-4. **Event。** Controlled action——test Pod 中的 shell——以 rule name 產生 alert。
+4. **Event。** Controlled action-test Pod 中的 shell-以 rule name 產生 alert。
 5. **Context。** Alert 至少含 namespace、Pod、container/image、available image digest、host/node、process/command 和 time；
    engineer 可找到 workload owner。
 6. **Response。** 已定義誰接收 alert 及下一步：triage、escalation、isolation、evidence preservation 和 closure。
@@ -488,7 +488,7 @@ local alert verification。
   在 Git 和 configuration management pin Falco package/chart、`falcoctl` 與每個 rules artifact version。先在 test cluster
   驗證 update，再 pin new compatible version，不使用 floating `latest`。若組織有意使用 auto-follow，ruleset 不是 immutable：
   定義 permitted version range、compatibility gate、staged validation，並納入未有 new Helm release 的 rules update。
-- **用 standard output delivery alerts。** Direct integration 使用 Falco native HTTP(S) output；要 fan-out 到 SIEM、chat 或
+- **使用內建 output 傳送 alerts。** Direct integration 使用 Falco native HTTP(S) output；要 fan-out 到 SIEM、chat 或
   incident system，使用 Falcosidekick 作為 Falco events downstream consumer。Falco plugins 是 event source 及 related
   fields/processing 的獨立 mechanism，並非 universal output channel；僅依 compatible documentation 加入並獨立驗證。
 - **將 signal 與 response 一起設計。** 每個 high-priority rule 應有 owner、delivery channel、runbook，以及區分 expected
@@ -511,7 +511,7 @@ syscall event，也會破壞 process、file 與 container metadata 的 internal 
 drops alert；Falco metrics 預設 disabled。Prometheus 需要 enabled metrics、web server 和其 endpoint：
 
 ```yaml
-# falco.yaml — 請依 pinned Falco version 確認具體可用 options。
+# falco.yaml - 請依 pinned Falco version 確認具體可用 options。
 metrics:
   enabled: true
   kernel_event_counters_enabled: true
@@ -545,7 +545,9 @@ defined rule：
 ```
 
 Rollout 前確認這確為 approved maintenance container 和 shell，而不是 mask general behavior。重複 malicious path：它仍必須
-產生 alert。修改 upstream rule 時，不要 copy whole rule：以相同 name 在 upstream file 後建 local definition，並使用
+產生 alert。
+
+修改 upstream rule 時，不要 copy whole rule：以相同 name 在 upstream file 後建 local definition，並使用
 `override`。可用 `condition: append` 加入 narrow condition、`output: replace` 更換 output，`exceptions` 可 `append` 或
 `replace`。Old `append: true` 已 deprecated。對 disabled upstream rule，不要單獨使用 `enabled: true`；同時使用
 `enabled: true` 和 `override: { enabled: replace }`。每個 override 都依賴 `rules_files` order。
@@ -570,7 +572,7 @@ context 來自 driver 和 CRI/Kubernetes metadata。
 Modern Falco 同時處理多個 configured sources；每個 source isolated，rules 依 `source` 分開。Default 啟用所有 known sources，
 包括 `syscall` 與 correctly loaded plugins 的 sources。要 pin production set，使用 repeatable `--enable-source`，例如
 `--enable-source=syscall --enable-source=k8s_audit`，這會 disable all unlisted sources。`--disable-source` 只 disable named
-sources。One rule 不能依賴 cross-source correlation：它僅在自身 source context 中 evaluation。Rollout 前檢查 plugin loading、
+sources。單一 rule 不能依賴 cross-source correlation：它僅在自身 source context 中進行 evaluation。Rollout 前檢查 plugin loading、
 available fields、enabled sources 與 plugin API compatibility，不要盲目加入 existing DaemonSet。
 
 Machine-readable delivery 啟用 actual configuration 的 `json_output: true`，並檢查 JSON：
@@ -591,11 +593,11 @@ Rules artifact 必須與 engine compatible：rollout 前使用並檢查 rules fi
 
 1. Pin Falco、`falco-rules` 和（若有）plugin versions；關閉 uncontrolled auto-follow。
 2. 定義 threat → observable event → source → condition → mandatory context fields。
-3. Validate full ruleset and compatibility，先 deploy 至 staging。
+3. 驗證完整 ruleset 與 compatibility，先 deploy 至 staging。
 4. 產生 controlled suspicious event，確認 alert、Pod/namespace metadata 與 delivery 至指定 output/SIEM。
 5. 測量 false positives、rule matches 和 event/output drops。以 exception/override 縮小 legitimate pattern，再重複 positive
    與 negative tests。
-6. 以 owner、runbook 與 drop monitoring progressive rollout；沒有 coverage/delivery evidence 的 production deployment 不算完成。
+6. 以 owner、runbook 與 drop monitoring 執行 progressive rollout；沒有 coverage/delivery evidence 的 production deployment 不算完成。
 
 > **Production note，非考試材料。** Falco 是 detector：它在 action 發生**後**才看見 syscall 並 alert。**Cilium Tetragon**
 > 是根本不同 model：透過 eBPF LSM hooks，它能在 attempt moment **inline block** action，而非事後 reporting，例如拒絕
@@ -605,25 +607,27 @@ Rules artifact 必須與 engine compatible：rollout 前使用並檢查 rules fi
 > eBPF runtime-tools ecosystem 不只有 Tetragon：**Aqua Tracee** 和 **Inspektor Gadget** 也使用 eBPF，但如 Falco 仍屬
 > observability/detection model；沒有一者提供可比 Tetragon 的 inline blocking。完整 runtime hardening 通常結合 detection
 > layer（Falco 或相似 tool，以 community rules 廣泛涵蓋 known patterns）與 enforcement layer（Tetragon LSM policy，用於必須
-> 不只是看見、而是禁止的 narrow critical operations）。Tetragon 不在 CKS curriculum，不能替換本章的 Falco；此處僅作為
-> production threat-detection extension：若任務是確保 suspicious action 不會發生，Falco 在 architecture 上並非適合工具，
+> 不只是看見、而是禁止的 narrow critical operations）。
+>
+> Tetragon 不在 CKS curriculum，不能替換本章的 Falco；此處僅作為
+> production threat-detection extension：若任務是確保 suspicious action 不會發生，Falco 在 architecture 上並非適合的工具，
 > 而不是 rules 不夠。
 
 ## 29.9. 迷你詞彙表
 
-- **runtime detection** — 偵測已執行 process 的 suspicious behavior。
-- **Falco** — 使用 kernel events 與 container/Kubernetes metadata 的 runtime security-event rule engine。
-- **syscall** — process 對 kernel 的 system call，例如 `execve` 或 `openat`。
-- **kernel module** — loadable kernel module；Falco capture events 的一種方式。
-- **eBPF** — kernel 中受安全限制 programs 的 mechanism，用作 event-observation backend。
-- **DaemonSet** — Kubernetes workload，確保每個 selected node 都有 agent Pod。
-- **rule** — 具 condition、output 和 priority 的 named Falco detector。
-- **condition** — 決定 rule match 的 event-field Boolean expression。
-- **macro** — reusable named condition fragment。
-- **list** — condition 使用的 named value list。
-- **output** — alert format；應含 investigation context。
-- **priority** — alert severity，例如 `NOTICE`、`WARNING`、`ERROR` 或 `CRITICAL`。
-- **`falco_rules.local.yaml`** — local overrides 與 custom rules 的 preferred file。
+- **runtime detection** - 偵測已執行 process 的 suspicious behavior。
+- **Falco** - 使用 kernel events 與 container/Kubernetes metadata 的 runtime security-event rule engine。
+- **syscall** - process 對 kernel 的 system call，例如 `execve` 或 `openat`。
+- **kernel module** - loadable kernel module；Falco capture events 的一種方式。
+- **eBPF** - kernel 中受安全限制 programs 的 mechanism，用作 event-observation backend。
+- **DaemonSet** - Kubernetes workload，確保每個 selected node 都有 agent Pod。
+- **rule** - 具 condition、output 和 priority 的 named Falco detector。
+- **condition** - 決定 rule match 的 event-field Boolean expression。
+- **macro** - reusable named condition fragment。
+- **list** - condition 使用的 named value list。
+- **output** - alert format；應含 investigation context。
+- **priority** - alert severity，例如 `NOTICE`、`WARNING`、`ERROR` 或 `CRITICAL`。
+- **`falco_rules.local.yaml`** - local overrides 與 custom rules 的 preferred file。
 
 ## 29.10. 本章摘要
 
@@ -642,14 +646,14 @@ Rules artifact 必須與 engine compatible：rollout 前使用並檢查 rules fi
 required fields 的 alert 輸出到指定 file。典型 scenario：找到 process 開啟 `/dev/mem` 的 Pod，加入帶 container context、
 `fd.name=/dev/mem` 及 suitable `open*` syscall 的 local rule。Output 至少包括 command、container ID、`%k8s.ns.name` 和
 `%k8s.pod.name`，再以 controlled event 確認 alert。Pod 和 namespace 仰賴 functioning Falco driver 與 CRI/Kubernetes
-metadata；不要只為這些 fields 啟用 arbitrary plugins——先用 `falco --list` 檢查 available fields 和 correct runtime socket。
+metadata；不要只為這些 fields 啟用 arbitrary plugins-先用 `falco --list` 檢查 available fields 和 correct runtime socket。
 不要無故 edit upstream rules，也不要只執行 start command：criteria 通常檢查 specific event/output。
 
 **在實際工作中。** Falco 會發現 compromise 後 manifest 看不到的 actions：shell、socket access、sensitive path write 或
 unexpected process。價值不在 agent 本身，而是 full node coverage、versioned rules、quality context、managed noise level 和
 alert 與 incident-response process 的連結。
 
-> ### 🔴 Attacker viewpoint
+> ### 🔴 Attacker 的觀點
 > **Asset：** security team 對 runtime anomalies 的 visibility。
 > **Starting foothold：** container 中能選擇 action 的 RCE。
 > **Attacker goal：** 在 container 執行 dangerous action 而不被 Falco 發現或建立 alert，例如變更 `/etc` file，或建立能控制
@@ -704,7 +708,7 @@ image digest；穩健 Kubernetes correlation 可使用 `k8s.pod.uid` 和 contain
 
 <details><summary>7. 如何 reproducibly test container-shell rule，以及 package-install 和 DaemonSet 到哪裡讀 alert？</summary>
 
-建立含 `sleep 600` 的 `busybox:1.36` Pod，等待 Ready，執行 `kubectl exec -it ... -- sh -c 'id; echo falco-rule-test'`；
+建立獨立的 namespace，以及含 `sleep 600` 的 `busybox:1.36` Pod，等待 Ready，執行 `kubectl exec -it ... -- sh -c 'id; echo falco-rule-test'`；
 `-it` 為 `proc.tty != 0` 提供 TTY。Package-install 以 `journalctl -u "$falco_unit"` 找 rule name，僅在設定 output 時讀 syslog。
 DaemonSet 先找 test Pod node，再讀同一 node 的 Falco Pod `kubectl logs`。
 </details>
@@ -719,7 +723,7 @@ false positives。將 reason、owner 和 review expiry 存在 Git，而非永久
 
 Falco 仍是有用的 detection layer，但不要保證它會 alert 同一個已被 seccomp 拒絕的 syscall。Normal Linux syscall path 中
 seccomp filter 在 syscall tracepoint 前執行，因此 denied attempt 可能不產生一般 Falco syscall event。Seccomp denial evidence
-應來自 seccomp/audit-specific telemetry。Falco 可觀察 adjacent allowed actions 和其他 runtime context；denied syscall 的
+應來自 seccomp/audit-specific telemetry。Falco 可觀察 adjacent allowed actions 和其他 runtime context（process/command、container、Pod、namespace、node）；denied syscall 的
 alert 需在實際 kernel/driver 以獨立 test 證明，不能假定保證存在。
 </details>
 

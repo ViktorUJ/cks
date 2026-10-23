@@ -27,7 +27,7 @@ flowchart TB
     style verify fill:#0f9d58,color:#fff
 ```
 
-**Threat model.** Do not assume a CVE is dangerous only with a public endpoint. For example, a `kubelet` bug can be reachable from an already compromised Pod or neighboring node, and an `runc` flaw from a container already running in the cluster. Thus the response depends not only on CVSS: prerequisites, vulnerable-function availability, a public exploit, compensating controls, and affected-node value matter.
+**Threat model.** Do not assume a CVE is dangerous only with a public endpoint. For example, a `kubelet` bug can be reachable from an already compromised Pod or neighboring node, and a `runc` flaw from a container already running in the cluster. Thus the response depends not only on CVSS: prerequisites, vulnerable-function availability, a public exploit, compensating controls, and affected-node value matter.
 
 **EOL (End of Life)** is a separate risk. For a branch no longer supported by upstream or a distribution, new CVE fixes may not appear at all. A compensating control does not turn an EOL version into a supported one: plan a move to a supported minor branch or vendor support with an explicit term.
 
@@ -128,7 +128,7 @@ If target minor differs from current upstream, switch the version selector in do
 2. Open the main guide. On the first control plane, follow it: upgrade `kubeadm`, run `kubeadm upgrade plan`, then `kubeadm upgrade apply <target-version>`. Then follow the same guide for this node: `drain`, upgrade `kubelet`/`kubectl`, restart kubelet, verify node and control-plane components, and `uncordon`.
 3. In HA, upgrade remaining control-plane nodes one at a time through `kubeadm upgrade node`, then repeat lifecycle `drain` → kubelet/kubectl → restart → verification → `uncordon` for **each**. Ensure API remains available and do not move to workers until control plane is healthy.
 4. For every worker, open the Linux-node guide and follow it: upgrade `kubeadm` → `kubeadm upgrade node` → `drain` → upgrade `kubelet`/`kubectl` → restart kubelet → check `Ready` and version → `uncordon`.
-5. Finally, confirm every node is `Ready` and expected versions. If `drain`, preflight, or health check fails, stop and investigate; do not randomly add `--force`, `--disable-eviction`, or `--ignore-preflight-errors`.
+5. Finally, confirm every node is `Ready` and has the expected version. If `drain`, preflight, or health check fails, stop and investigate; do not randomly add `--force`, `--disable-eviction`, or `--ignore-preflight-errors`.
 
 > 🎯 **CKS Core.** On the exam, documentation is part of the workflow: open the guide, map current step to task, and follow it literally. You do not need custom automation or a production change runbook.
 
@@ -152,7 +152,7 @@ A `kube-apiserver` patch does not upgrade `containerd`, `runc`, kernel, OpenSSL,
 
 ### cgroup v2 baseline for Kubernetes v1.35+
 
-Before planning a transition to Kubernetes v1.35+, run preflight **on every node**: kubelet and runtime must work with cgroup v2 and a consistent `systemd` cgroup driver. `failCgroupV1` is a `KubeletConfiguration` field, not a feature gate; its default is `true` since v1.35. Do not disable it through `failCgroupV1: false` to extend cgroup v1 life: a temporary override is only a short, documented migration measure. If the check fails, migrate OS/runtime in stage and verify node image first, rather than bypass preflight in production.
+Before planning a transition to Kubernetes v1.35+, run preflight **on every node**: kubelet and runtime must work with cgroup v2 and a consistent `systemd` cgroup driver. `failCgroupV1` is a `KubeletConfiguration` field, not a feature gate; its default has been `true` since v1.35. Do not disable it through `failCgroupV1: false` to extend cgroup v1 life: a temporary override is only a short, documented migration measure. If the check fails, migrate OS/runtime in stage and verify node image first, rather than bypass preflight in production.
 
 In Kubernetes v1.36, `KubeletCgroupDriverFromCRI` is GA. If a CRI runtime supports the `RuntimeConfig` call, kubelet obtains the driver from runtime and ignores its own `cgroupDriver`; if runtime does not support it, kubelet uses `cgroupDriver` from its configuration. Therefore, do not hard-code `/var/lib/kubelet/config.yaml` and `/etc/containerd/config.toml`: first determine active kubelet `--config`/`--config-dir`, unit, process, and documented configuration source of the installed CRI runtime.
 
@@ -298,7 +298,7 @@ sudo sha256sum /var/backups/etcd-pre-upgrade.db \
 
 ### Gate 3: deprecated API and security configuration
 
-Check not only manifests in Git, but actual use of deprecated APIs through the API-server metric. The direct `kubectl get --raw /metrics` below obtains metrics from only one selected API-server backend and is therefore only local evidence, not complete inventory, in HA. For production HA, aggregate scraping from **all** API servers in monitoring (for example, PromQL `max by (group, version, resource, subresource, removed_release) (apiserver_requested_deprecated_apis) > 0`) or compare audit events from each API server. Any line with a value above zero receives an owner and remediation before upgrade. Preserve admission and critical RBAC permissions; detailed Pod Security Admission configuration is covered in chapter 19, not this upgrade practice.
+Check not only manifests in Git, but actual use of deprecated APIs through the API-server metric. The direct `kubectl get --raw /metrics` below obtains metrics from only one selected API-server backend and is therefore only local evidence, not complete inventory, in HA. For production HA, aggregate scraping from **all** API servers in monitoring (for example, PromQL `max by (group, version, resource, subresource, removed_release) (apiserver_requested_deprecated_apis) > 0`) or compare audit events from each API server. Any line with a value above zero receives an owner and remediation before upgrade. Record admission and critical RBAC permissions; detailed Pod Security Admission configuration is covered in chapter 19, not this upgrade practice.
 
 ```bash
 set -euo pipefail
@@ -328,7 +328,7 @@ For a real rollout, additionally preserve exact before/after versions, verified 
 <details>
 <summary>1. Why can a CVE in kubelet or `runc` be critical even if API server is not accessible from the Internet?</summary>
 
-Kubelet can be reachable by an attacker from a compromised Pod or neighboring node, and an `runc` vulnerability can be exploited from an already running container. Therefore, absence of a public API does not remove internal attack prerequisites. Priority is determined by vulnerable-function reachability, required privileges, exploit, and node value, not external exposure alone.
+Kubelet can be reachable by an attacker from a compromised Pod or neighboring node, and a `runc` vulnerability can be exploited from an already running container. Therefore, absence of a public API does not remove internal attack prerequisites. Priority is determined by vulnerable-function reachability, required privileges, exploit, and node value, not external exposure alone.
 </details>
 
 <details>
@@ -364,7 +364,7 @@ After healthy control plane, upgrade `kubeadm` on worker, run `kubeadm upgrade n
 <details>
 <summary>7. Which checks are needed after successful `kubeadm upgrade` to prove both security patch and cluster operation?</summary>
 
-Check actual control-plane and kubelet versions through `kubectl version --output=yaml` and `kubectl get nodes -o wide`, not only kubeadm exit code. Confirm health with `/readyz?verbose`, every Node `Ready`, `kube-system`, critical DaemonSet/Deployment, events, and workload smoke test. Also check alerts and absence of runtime, CNI, DNS, and storage problems.
+Check actual control-plane and kubelet versions through `kubectl version --output=yaml` and `kubectl get nodes -o wide`, not only `kubeadm` exit code. Confirm health with `/readyz?verbose`, every Node `Ready`, `kube-system`, critical DaemonSet/Deployment, events, and workload smoke test. Also check alerts and absence of runtime, CNI, DNS, and storage problems.
 </details>
 
 <details>

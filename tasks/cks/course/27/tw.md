@@ -369,8 +369,8 @@ containers := object.get(pod_spec, "containers", [])
 init_containers := object.get(pod_spec, "initContainers", [])
 all_containers := array.concat(containers, init_containers)
 
-# Kubernetes v1.36 image volumes deliver an OCI artifact not through containers[].image,
-# but through spec.volumes[].image.reference; apply the same registry/digest intent to it.
+# Kubernetes v1.36 的 image volume 不經由 containers[].image，
+# 而是經由 spec.volumes[].image.reference 交付 OCI artifact；對它套用相同的 registry/digest intent。
 image_volumes := [volume |
   volume := object.get(pod_spec, "volumes", [])[_]
   object.get(volume, "image", null) != null
@@ -385,8 +385,8 @@ violation contains msg if {
   msg := sprintf("container %q uses an unapproved registry: %s", [name, image])
 }
 
-# Require an actually immutable OCI reference. Kubernetes treats an image without a tag as
-# :latest, and a short or invalid digest is not a SHA-256 pin.
+# 要求實際上 immutable 的 OCI reference。Kubernetes 會將沒有 tag 的 image 視為
+# :latest，而過短或無效的 digest 不算 SHA-256 pin。
 violation contains msg if {
   workload
   container := all_containers[_]
@@ -414,7 +414,7 @@ violation contains msg if {
   msg := sprintf("image volume %q must use an image pinned by a valid SHA-256 digest", [name])
 }
 
-# A container-level securityContext takes precedence over an overlapping Pod-level field.
+# Container-level securityContext 的優先順序高於重疊的 Pod-level field。
 violation contains msg if {
   workload
   container := all_containers[_]
@@ -456,10 +456,10 @@ deny contains msg if {
 directory；明確指定 `--policy` 可讓 CI invocation 更清楚。
 
 ```bash
-# It must print deny and return a non-zero exit code for the old manifest.
+# 對舊 manifest 應輸出 deny 並回傳 non-zero exit code。
 conftest test --policy policy manifests/api.yaml
 
-# After fixing the policy and manifest, the command must return 0.
+# 修正 policy 與 manifest 後，此 command 應回傳 0。
 conftest test --policy policy manifests/
 ```
 
@@ -788,7 +788,7 @@ kubectl apply --dry-run=server -f manifests/
 - **Static analysis 是 chain 的一環。** 後續還有 SBOM、vulnerability scanning、signing 與 registry promotion；admission 在 runtime 前生效。Runtime controls 發現 source inspection 看不到的事物。
 - **Reports 適合 audit。** CI 保存 scanner version、results 與指向 commit 的 link。Reports 不得包含 credentials、private keys 或 production Secret data。
 
-## 27.8. Mini-glossary
+## 27.8. 迷你詞彙表
 
 - **Static analysis** - 不執行 workload 而檢查 source Dockerfiles、manifests 與 policy。
 - **`kubesec`** - 為 Kubernetes manifests 產生 security score 與 controls 的 scanner。
@@ -801,7 +801,7 @@ kubectl apply --dry-run=server -f manifests/
 - **Rendered manifest** - `helm template` 或 `kustomize build` 後的 final YAML。
 - **False positive** - 不適用於特定 resource 的 finding；需要 narrow、documented exception，而非 globally disabling control。
 
-## 27.9. Chapter summary
+## 27.9. 本章摘要
 
 - Kubernetes manifest 可能對 API valid 卻不安全；static analysis 在 deployment 前發現此類錯誤，並將 security practice 變成可重複的 CI gate。
 - 在課程實作中，`kubesec` 顯示 score 與 security controls，而 `kube-linter` 檢查 Kubernetes best practices，包括 non-root、read-only root filesystem 與 mutable tags。`kubesec` gate 解析 JSON array，並檢查每個 result 的 validity、沒有 `scoring.critical` 及 versioned score threshold。
@@ -825,7 +825,7 @@ rendered-manifest checks 與 mandatory CI gate 的組合，降低 root workloads
 unapproved registries 的機率。Pipeline 接著繼續驗證 artifact bytes：SBOM、CVE scanning、signatures
 與 admission 可防護 lint 看不到的 risks。
 
-## 27.11. Self-check questions
+## 27.11. 自我檢查問題
 
 <details>
 <summary>1. 為何成功套用的 Kubernetes YAML 仍可能不安全？</summary>
@@ -917,7 +917,7 @@ SBOM、image scanning 與 signing。
 
 📘 CKA 基礎：[SecurityContext 與 capabilities](../../../cka/course/20/tw.md)
 
-## Reference materials
+## 參考資料
 
 - [kubesec：Kubernetes resource security analysis](https://kubesec.io/)
 - [kube-linter documentation](https://docs.kubelinter.io/)

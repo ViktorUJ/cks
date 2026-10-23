@@ -336,7 +336,7 @@ resources:
   - identity: {}
 ```
 
-phase 2 をすべての API server に適用した後、すべての Secret を書き換えます。以下の command は各 object を取得して API に送り返します。まさに new provider が first として record を暗号化します。massive operation の前に snapshot を作成し、test namespace から始めてください。
+phase 2 をすべての API server に適用した後、すべての Secret を書き換えます。以下の command は各 object を取得して API に送り返します。まさに new provider が first として record を暗号化します。一括操作の前に snapshot を作成し、test namespace から始めてください。
 
 ```bash
 # すべての Secret を API server 経由で書き換える。
@@ -350,7 +350,7 @@ kubectl get secrets --all-namespaces -o json | kubectl replace -f -
 
 ### Production extension: Storage Version Migration
 
-production での massive な書き換えには、Kubernetes-native な代替である **Storage Version Migration** があります。Kubernetes 1.36 では beta status で default disabled です。使用中の version の documentation に従って明示的に有効化・設定した後、migration は API storage path 経由で object を書き換えます。これは特に `EncryptionConfiguration` や key の変更後の re-encryption に適しています。CKS では provider の順序と object の強制的な書き換えを理解すれば十分です。上の `kubectl replace` は簡単な exam 向けの道であり続けますが、Storage Version Migration は独立した operational rollout、observation、検証済みの rollback/recovery 手順を必要とします。
+production での一括書き換えには、Kubernetes-native な代替である **Storage Version Migration** があります。Kubernetes 1.36 では beta status で default disabled です。使用中の version の documentation に従って明示的に有効化・設定した後、migration は API storage path 経由で object を書き換えます。これは特に `EncryptionConfiguration` や key の変更後の re-encryption に適しています。CKS では provider の順序と object の強制的な書き換えを理解すれば十分です。上の `kubectl replace` は簡単な exam 向けの道であり続けますが、Storage Version Migration は独立した operational rollout、observation、検証済みの rollback/recovery 手順を必要とします。
 
 > 🏭 **Upstream v1.37。** Kubernetes v1.37 では built-in の `StorageVersionMigration` API/controller が GA になり default enabled になりました。これは production-current status を変えますが、この章の CKS Core workflow は変わらず、exam/training context に固定されています。[Kubernetes v1.37 Security Delta (ロシア語版のみ)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)を参照してください。
 
@@ -604,9 +604,9 @@ snapshot は安全な手順で保存・restore されますが、必要な local
 </details>
 
 <details>
-<summary>10. **Flashback（第14章）。** Encryption at rest は etcd 内の Secret を正確に保護します。Secret を mount した後、kubelet は **tmpfs-backed volume** を通じて Pod にそれを提供します。これは通常の durable-disk コピーを排除しますが、「disk に絶対に出ない」という無条件の保証にはなりません。swap が有効な場合、Kubernetes v1.36 は kernel がこの option をサポートしていれば（Linux 6.3 以降、または backport で公式に）`noswap` で memory-backed volume を mount します。そうでなければ、kubelet は Secret を含むそのような volume が swap に追い出される可能性があると warning します。そのような node では swap を無効にするか、その暗号化を確保し、kubelet の warning を確認します。第14章の対策（host footprint、least-privilege host）のうち、この段階、すなわち secret がすでに decrypt されて node 上の authorized process に tmpfs 経由で access 可能な段階でのリスクを制限するものは何ですか。また、persistent-disk のコピーがなくても host compromise や同じ node 上の privileged workload が深刻な脅威のままであるのはなぜですか?</summary>
+<summary>10. **Flashback（第14章）。** Encryption at rest は etcd 内の Secret を正確に保護します。Secret を mount した後、kubelet は **tmpfs-backed volume** を通じて Pod にそれを提供します。これは通常の durable-disk コピーを排除しますが、「disk に絶対に出ない」という無条件の保証にはなりません。swap が有効な場合、Kubernetes v1.36 は kernel がこの option をサポートしていれば（公式には Linux 6.3 以降、または backport 済みの kernel から）`noswap` で memory-backed volume を mount します。そうでなければ、kubelet は Secret を含むそのような volume が swap に追い出される可能性があると warning します。そのような node では swap を無効にするか、その暗号化を確保し、kubelet の warning を確認します。第14章の対策（host footprint、least-privilege host）のうち、この段階、すなわち secret がすでに decrypt されて node 上の authorized process に tmpfs 経由で access 可能な段階でのリスクを制限するものは何ですか。また、persistent-disk のコピーがなくても host compromise や同じ node 上の privileged workload が深刻な脅威のままであるのはなぜですか?</summary>
 
-host footprint を減らす必要があります。不要な service や package を無効化し、不要な listening port を閉じ、host compromise への path を減らすために node を timely に更新します。least-privilege host は SSH/sudo と kubelet/runtime への access を持つ人を制限し、workload は `privileged`、host namespace、hostPath を得るべきではありません。tmpfs と `noswap` は durable-disk のリスクを減らしますが、node の root または隣接する privileged workload は依然として memory、runtime、mount された secret に access できる可能性があります。
+host footprint を減らす必要があります。不要な service や package を無効化し、不要な listening port を閉じ、host compromise への path を減らすために node を適時に更新します。least-privilege host は SSH/sudo と kubelet/runtime への access を持つ人を制限し、workload は `privileged`、host namespace、hostPath を得るべきではありません。tmpfs と `noswap` は durable-disk のリスクを減らしますが、node の root または隣接する privileged workload は依然として memory、runtime、mount された secret に access できる可能性があります。
 </details>
 
 ## Practice

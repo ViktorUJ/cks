@@ -95,7 +95,7 @@ Namespace 讓程序對核心資源擁有各自獨立的視角。程序並不會�
 
 User namespace 不會自動啟用。在 Kubernetes 中這是 opt-in：`spec.hostUsers: false` 會為 Pod 請求 user namespace；此功能在 v1.36 已成為 Stable/GA。在考試快照版本 v1.35 中它仍是 Beta，儘管 `UserNamespacesSupport` 預設已啟用，因此這屬於 🔬 Deep Dive / Production，而不是 🎯 CKS Core。
 
-**問題。** 沒有 user namespace 時，一般容器內的 UID 0 就是與節點上 root 相同的數值 UID 0。Namespaces 隱藏了部分 host 資源，但本身並不會改變這種身分對映關係。如果程序取得了超出容器預期邊界的存取權，host 會將其視為 root——應用程式、設定或隔離出現錯誤時，其後果將明顯更嚴重。
+**問題。** 沒有 user namespace 時，一般容器內的 UID 0 就是與節點上 root 相同的數值 UID 0。Namespaces 隱藏了部分 host 資源，但本身並不會改變這種身分對映關係。如果程序取得了超出容器預期邊界的存取權，host 會將其視為 root-應用程式、設定或隔離出現錯誤時，其後果將明顯更嚴重。
 
 **保護效果。** 在 kubelet、container runtime 與節點的共同支援下，容器內的 UID 0 會對映為 host 上的非特權 UID。應用程式仍可以認為自己在 Pod **內部**是 root，但對核心與 host 上的檔案而言，它已經不是 host 的 root。這樣 user namespace 就能縮小遭入侵時的 blast radius，並在容器程序與節點之間再增加一道邊界。
 
@@ -324,7 +324,7 @@ stat -fc %T /sys/fs/cgroup
 
 - **workload 內部：`requests` 與 `limits`。** `requests` 影響 scheduler 與 QoS，但本身並不會阻止一個貪婪的程序。真正的硬性邊界由 `limits` 設定：對 CPU 而言，這是透過可能的 throttling 形成的 ceiling，因此 CPU limit 不應隨意設得過低。
 - **namespace 層級：`ResourceQuota` 與 `LimitRange`。** 單一 Pod 的資源設定並不能保護 namespace 免於總體消耗過高。`ResourceQuota` 限制該 namespace 的總體預算，而 `LimitRange` 則為每個 workload 設定 defaults 與允許的邊界範圍。兩者合在一起，可避免某個團隊用不完整的 manifest 擠占其他人的資源。
-- **PID：limit 由節點管理員設定。** 在一般 Pod 的 YAML 中，無法指定「這個 workload 只允許 N 個程序」。管理員需改為設定 kubelet 的 `podPidsLimit` 參數——即這個節點上**每個 Pod**允許的最大 PID 數量。Kubelet 透過 PID cgroup 套用這項限制。因此驗證分兩步：先在 kubelet 設定中查找 `podPidsLimit`，再檢查已執行 Pod 的 cgroup 中的 `pids.max`。
+- **PID：limit 由節點管理員設定。** 在一般 Pod 的 YAML 中，無法指定「這個 workload 只允許 N 個程序」。管理員需改為設定 kubelet 的 `podPidsLimit` 參數-即這個節點上**每個 Pod**允許的最大 PID 數量。Kubelet 透過 PID cgroup 套用這項限制。因此驗證分兩步：先在 kubelet 設定中查找 `podPidsLimit`，再檢查已執行 Pod 的 cgroup 中的 `pids.max`。
 - **在 memory pressure 時：cgroup 中的 OOM。** 核心可能在對應的 cgroup 範圍內終止容器程序。如果被終止的是主程序，kubelet 會依 `restartPolicy` 重新啟動容器。
 - **安全地驗證。** 不要在 production 節點上，透過刻意觸發 OOM 來證明 memory limit 有效。
 
@@ -427,7 +427,7 @@ flowchart TB
 
 seccomp 不決定誰能存取 Kubernetes API，也不會修復不安全的映像檔。它是遭入侵程序與核心 API 之間的最後一道過濾器。搭配 `capabilities.drop: [ALL]`、`allowPrivilegeEscalation: false` 與 MAC 設定檔一起使用時特別有效。
 
-如果沒有設定 `seccompProfile`，Pod 可能維持 `Unconfined`。例外是節點上的 kubelet 已啟用 `seccompDefault: true`：此時缺少設定檔會得到 `RuntimeDefault`。不要把這視為叢集通用的屬性——應確認節點設定，並明確為 workload 指定設定檔。
+如果沒有設定 `seccompProfile`，Pod 可能維持 `Unconfined`。例外是節點上的 kubelet 已啟用 `seccompDefault: true`：此時缺少設定檔會得到 `RuntimeDefault`。不要把這視為叢集通用的屬性-應確認節點設定，並明確為 workload 指定設定檔。
 
 對大多數 workload 而言，請以 runtime 設定檔作為起點，而不是使用 `Unconfined`：
 
@@ -491,7 +491,7 @@ securityContext:
     type: RuntimeDefault
 ```
 
-`RuntimeDefault` 要求節點上的 container runtime 提供相容的 default profile；請在實際的 node pool 上確認這一點，而不是只看 YAML。若使用 `Localhost`，設定檔必須事先載入目標節點，並透過 `localhostProfile` 指定。這是 node-local 的相依性：scheduler 不會在節點之間搬移設定檔。因此在 production 中，設定檔要透過配置管理工具部署，在每個 node pool 上確認，並限制 Pod 的排程範圍。設定檔的實作方式與 `DENIED` 的分析將在第 16 章說明。
+`RuntimeDefault` 要求節點上的 container runtime 提供相容的 default profile；請在實際的 node pool 上確認這一點，而不是只看 YAML。若使用 `Localhost`，設定檔必須事先載入目標節點，並透過 `localhostProfile` 指定。這是 node-local 的相依性：scheduler 不會在節點之間搬移設定檔。因此在 production 中，設定檔要透過設定管理工具部署，在每個 node pool 上確認，並限制 Pod 的排程範圍。設定檔的實作方式與 `DENIED` 的分析將在第 16 章說明。
 
 對於 SELinux，label 相關參數只能依照節點映像檔的 policy，透過 `securityContext.seLinuxOptions` 設定。發生拒絕時，應先分析 AVC denial，而不是直接停用 SELinux。Volumes 與 filesystem 上的檔案必須有正確的 SELinux labels；請特別仔細檢查 hostPath、persistent volumes 與共用的可寫入 volumes。
 
@@ -516,7 +516,7 @@ flowchart TB
 
 Sandbox 並不會取消其他措施。即使在 gVisor 或 Kata 中，workload 也不應取得 `privileged`、host namespaces、Docker socket 或過於寬鬆的 RBAC 權限。應先套用 least privilege，再依威脅模型選擇 RuntimeClass。`runsc` 的安裝、`RuntimeClass` 與在相容節點上的排程，將在第 22 章說明。
 
-> 🔬 以 forensic 方式，將宣告式的 Pod 與節點上的 PID、namespaces 及 cgroup 對應起來。
+> 🔬 以 forensic-style 方式，將宣告式的 Pod 與節點上的 PID、namespaces 及 cgroup 對應起來。
 
 可疑 Pod 的實務調查清單：
 

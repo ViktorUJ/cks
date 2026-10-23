@@ -5,7 +5,7 @@
 > **問題。** 如果 Ingress 以一般 HTTP 接受流量,登入資訊、cookie、bearer
 > token 與表單內容就會以明文在網路上傳輸。同一個不受信任網路中的使用者、
 > 惡意的 Wi-Fi access point 或中間的 proxy 都可能讀取請求或在不被察覺的
-> 情況下竄改回應 — 應用程式對外的公開入口在流量抵達 Pod 之前,就已經對
+> 情況下竄改回應 - 應用程式對外的公開入口在流量抵達 Pod 之前,就已經對
 > 竊聽開放。
 
 > **接下來。** 在第 07 章中,我們檢查並強化了叢集元件的設定。現在要保護
@@ -50,9 +50,9 @@ flowchart TB
 
 需要同時具備三種特性:
 
-- 機密性 — client 與 controller 之間的流量不可被讀取;
-- 完整性 — 請求或回應不能被在不被察覺的情況下修改;
-- 真實性 — client 驗證憑證確實是為所請求的 host 而發出的。
+- 機密性 - client 與 controller 之間的流量不可被讀取;
+- 完整性 - 請求或回應不能被在不被察覺的情況下修改;
+- 真實性 - client 驗證憑證確實是為所請求的 host 而發出的。
 
 加密無法修正不安全的 backend、過度寬鬆的 RBAC 或暴露的 endpoint。它只是
 defense in depth 中的一層。同時也不要把 TLS 憑證與 Kubernetes Secret 混為
@@ -107,7 +107,7 @@ openssl verify -show_chain -CAfile root-ca.crt \
 
 參數 `-nodes` 會讓私鑰不帶 passphrase。這是必要的,因為 controller 必須能
 在沒有互動輸入的情況下讀取這個金鑰。這種情況下的防護建立在對 Secret 嚴格的
-RBAC、限制 etcd 存取以及 encryption at rest 之上 — 而不是靠金鑰檔案裡的
+RBAC、限制 etcd 存取以及 encryption at rest 之上 - 而不是靠金鑰檔案裡的
 passphrase。
 
 > 🏭 受信任的 CA、自動展期、擁有者、到期前的 alert,以及經過驗證的 Secret 輪替。
@@ -249,8 +249,8 @@ NodePort、bare-metal、`hostNetwork`、port-forward 或某些本地 fixture 中
 > controller 或 nginx 專屬的 annotation。在考試中,務必先確認實驗環境提供的
 > controller;`ingressClassName: nginx` 的語法及其 annotation,只是其中一種
 > 可能的 fixture。在生產環境中,不要在新叢集上部署已 retire 的 controller:
-> 請選擇仍受支援的實作或 Gateway API。可移植的部分 — TLS Secret、
-> `spec.tls`、host/SNI、SAN、Service endpoints 與 HTTPS 驗證 — 不依賴
+> 請選擇仍受支援的實作或 Gateway API。可移植的部分 - TLS Secret、
+> `spec.tls`、host/SNI、SAN、Service endpoints 與 HTTPS 驗證 - 不依賴
 > controller。
 
 > 🎯 對 ingress-nginx 而言,`spec.tls` 通常會啟用 redirect;`ssl-redirect` 與 `force-ssl-redirect` 取決於實作與拓樸。
@@ -316,7 +316,7 @@ Gateway API 描述了三種 TLS 模型:**edge termination**(HTTPS listener 在
 Gateway 上解密流量)、**TLS passthrough**(Gateway 不做 termination,直接
 把 TLS handshake 傳給 backend)以及 termination 之後再到 backend 的 TLS
 (re-encryption)。針對最後這種模型,Gateway API v1.4.0 中的
-`BackendTLSPolicy` — 已在 Standard Channel 中 GA — 用來設定 backend 的
+`BackendTLSPolicy` - 已在 Standard Channel 中 GA - 用來設定 backend 的
 SNI 與憑證驗證。具體模型是否受支援,取決於 Gateway controller。
 
 對於新的生產叢集,請使用受支援的 Gateway API 實作。下面範例中,
@@ -456,7 +456,7 @@ flowchart TB
 不要把某個 HTTP 狀態碼當成整個 mTLS 模型的一部分。在 ingress-nginx 中,
 模式 `on` 在憑證驗證失敗時會回傳 `400`,而 `auth-tls-match-cn` 可能回傳
 `403`。在 Gateway API 中,`AllowValidOnly` 是在 TLS handshake 期間驗證
-憑證,因此某個實作可能直接拒絕 TLS 連線本身,而沒有任何 HTTP 回應 — 「一定
+憑證,因此某個實作可能直接拒絕 TLS 連線本身,而沒有任何 HTTP 回應 - 「一定
 是 400/403」這種 controller-neutral 的模型並不存在。
 
 > 🔬 `auth-tls-*` 是已 retire 的 ingress-nginx API;可移植的模型是「edge 上有效的 client 憑證」這件事本身。
@@ -495,7 +495,7 @@ spec:
 ```
 
 - `auth-tls-secret` 引用格式為 `namespace/name` 的 `Secret`,其中 `ca.crt`
-  存放供 client 憑證使用的受信任 CA 鏈 — 這與 08.3 中 server-side 的
+  存放供 client 憑證使用的受信任 CA 鏈 - 這與 08.3 中 server-side 的
   `web-tls` 是不同的 `Secret`,雖然兩者都對應同一個 host。
 - `auth-tls-verify-client: "on"` 要求 client 提供能透過 `auth-tls-secret`
   中的 CA 成功驗證的憑證;憑證驗證失敗會以 HTTP `400` 結束。
@@ -562,7 +562,7 @@ controller 的文件來檢查。
 
 - `spec.tls.frontend.default.validation` 是在連線**到 Gateway** 時驗證
   client,並套用到所有沒有 per-port override 的 HTTPS listener;這與
-  管理 Gateway **到 backend** 的 TLS 的 `BackendTLSPolicy` 不同 — 這兩種
+  管理 Gateway **到 backend** 的 TLS 的 `BackendTLSPolicy` 不同 - 這兩種
   policy 是獨立的,可以同時套用。
 - `spec.tls.frontend.perPort[].tls.validation` 會針對指定埠上的所有
   HTTPS listener,覆寫這個設定。
@@ -579,7 +579,7 @@ controller 的文件來檢查。
 `auth-tls-*`,以及 Gateway API 透過 `spec.tls.frontend...validation`,都
 能在叢集邊界驗證 client 憑證。哪一種可用,取決的不是 mTLS 概念本身的能力,
 而是叢集中實際部署的是哪個 ingress controller 或 Gateway API
-implementation — 應依照實際安裝的 controller 來選擇語法,而不是反過來。
+implementation - 應依照實際安裝的 controller 來選擇語法,而不是反過來。
 
 ### 陷阱:client-certificate 驗證的作用範圍因 API 而異
 
@@ -595,7 +595,7 @@ Client 憑證是在 TLS handshake 期間、也就是在依 path 進行 HTTP 路�
   設定的:`default` 套用到所有沒有 override 的 HTTPS listener,`perPort`
   則套用到指定埠上所有的 HTTPS listener。同一個 Gateway、同一個埠上不同
   的 `hostname`/listener,**不會**取得各自獨立的 client-certificate
-  policy — GEP-91 明確說明,更細緻的綁定會因為 HTTP/2/TLS connection
+  policy - GEP-91 明確說明,更細緻的綁定會因為 HTTP/2/TLS connection
   coalescing 而帶來繞過風險:已經建立的 TLS 連線,可能會服務同一個埠上、
   hostname 不同的另一個 listener。
 
@@ -724,26 +724,26 @@ SAN、CA 鏈、`secretName`、namespace,以及 controller 是否確實重新讀�
 
 ## 08.9. 小詞彙表
 
-- **TLS termination** — 在 ingress controller 上完成 TLS handshake 並解密
+- **TLS termination** - 在 ingress controller 上完成 TLS handshake 並解密
   流量。
-- **Ingress** — 帶有外部 HTTP/HTTPS 路由規則、對應到 Service 的 API
+- **Ingress** - 帶有外部 HTTP/HTTPS 路由規則、對應到 Service 的 API
   物件。
-- **IngressClass** — 選擇 Ingress 的實作,例如 NGINX Ingress Controller;
+- **IngressClass** - 選擇 Ingress 的實作,例如 NGINX Ingress Controller;
   class 的名稱取決於安裝的 controller。
-- **GatewayClass** — 選擇 Gateway API 的實作;它的名稱同樣是
+- **GatewayClass** - 選擇 Gateway API 的實作;它的名稱同樣是
   implementation-specific 的。
-- **TLS Secret** — 類型為 `kubernetes.io/tls`、包含 `tls.crt` 與
+- **TLS Secret** - 類型為 `kubernetes.io/tls`、包含 `tls.crt` 與
   `tls.key` 金鑰的 Secret。
-- **SAN** — Subject Alternative Name,憑證有效的 DNS 名稱/IP 位址清單。
-- **SNI** — Server Name Indication,TLS handshake 中用來選擇憑證的
+- **SAN** - Subject Alternative Name,憑證有效的 DNS 名稱/IP 位址清單。
+- **SNI** - Server Name Indication,TLS handshake 中用來選擇憑證的
   host 名稱。
-- **self-signed 憑證** — 用自己的金鑰而不是受信任的 CA 簽署的憑證;適合
+- **self-signed 憑證** - 用自己的金鑰而不是受信任的 CA 簽署的憑證;適合
   測試,但 client 預設不會信任它。
-- **HTTP -> HTTPS redirect** — 把未加密的請求永久重新導向到 HTTPS。
-- **入口處的 mTLS** — controller 在 TLS handshake 時額外要求並驗證 client
+- **HTTP -> HTTPS redirect** - 把未加密的請求永久重新導向到 HTTPS。
+- **入口處的 mTLS** - controller 在 TLS handshake 時額外要求並驗證 client
   的憑證,且發生在請求抵達 backend 之前;不要與 mesh mTLS(第 23 章)混
   淆。
-- **Gateway frontend client-certificate 驗證** — 透過
+- **Gateway frontend client-certificate 驗證** - 透過
   `spec.tls.frontend.default.validation` 或 per-port 的
   `spec.tls.frontend.perPort[].tls.validation` 進行的 client 憑證驗證;
   與管理 TLS 到 backend 的 `BackendTLSPolicy` 是分開的。

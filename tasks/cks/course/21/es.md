@@ -221,7 +221,7 @@ sudo stat -c '%U:%G %a %n' \
   /etc/kubernetes/enc/encryption-config.yaml
 ```
 
-Los proveedores locales `aescbc`/`aesgcm` protegen un snapshot de quien tenga solo el snapshot, pero no el
+Los providers locales `aescbc`/`aesgcm` protegen un snapshot de quien tenga solo el snapshot, pero no el
 filesystem del control plane. Esta es una base útil, pero la clave reside en la misma máquina de confianza.
 Use `kms` para separar responsabilidades y proporcionar un lifecycle de claves duradero.
 
@@ -230,7 +230,7 @@ Use `kms` para separar responsabilidades y proporcionar un lifecycle de claves d
 ## 21.4. Conectar `EncryptionConfiguration` a kube-apiserver
 
 El archivo por sí mismo no cambia nada. El API server debe recibir el flag
-`--encryption-provider-config=<path>`. En un clúster kubeadm, `kube-apiserver` es un static Pod; su
+`--encryption-provider-config=<ruta>`. En un clúster kubeadm, `kube-apiserver` es un static Pod; su
 manifest suele estar en `/etc/kubernetes/manifests/kube-apiserver.yaml`. kubelet detecta el cambio del manifest
 y reinicia el API server.
 
@@ -772,7 +772,7 @@ Reduzca el host footprint: deshabilite servicios y paquetes innecesarios, cierre
 ## Práctica
 
 Antes de trabajar en production, complete el lab en un clúster separado: cree una
-`EncryptionConfiguration`, agregue el flag y el mount del API server, cifre un Secret, rótelo y
+`EncryptionConfiguration`, agregue el flag y el mount del API server, cifre un Secret, realice la rotación y
 confirme el resultado mediante etcd. Mantenga acceso a la consola del control plane y un snapshot reciente: un error
 en un manifest de static Pod puede privar temporalmente al clúster de su API.
 

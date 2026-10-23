@@ -76,7 +76,7 @@ groups "$USER_TO_REVIEW"
 # Désactiver password authentication pour un compte interactif inutilisé.
 sudo usermod --lock "$USER_TO_REVIEW"
 
-# Désactiver séparément le compte pour les nouvelles login (usermod --lock bloque seulement
+# Désactiver séparément le compte pour les nouveaux login (usermod --lock bloque seulement
 # password hash, pas l'intégralité du Linux-account).
 sudo usermod --expiredate 1 "$USER_TO_REVIEW"
 
@@ -161,7 +161,7 @@ policy=$(sudo -l -U k8s-operator) || {
   echo 'ERROR: cannot retrieve sudo policy for k8s-operator' >&2; exit 2;
 }
 printf '%s\n' "$policy" | tee /tmp/k8s-operator-sudo-policy.txt
-# Review: seul /usr/local/sbin/k8s-kubelet-status sans arguments est autorisé ;
+# Review : seul /usr/local/sbin/k8s-kubelet-status sans arguments est autorisé ;
 # /bin/bash, shell/interpreter et systemctl arbitraire sont absents.
 ```
 
@@ -246,7 +246,7 @@ réel.
 
 Vérifiez aussi les binaires SUID/SGID : ils s'exécutent avec les droits de leur propriétaire ou
 groupe et augmentent les conséquences d'une erreur. Ne supprimez pas des fichiers SUID système à
-partir d'une liste trouvée sur Internet : déterminez d'abord quel package les possède et s'ils
+partir d'une liste trouvée sur Internet : déterminez d'abord quel package les possède et si ce package
 sont nécessaires sur le nœud.
 
 ```bash
@@ -263,7 +263,7 @@ while IFS=' ' read -r target fstype; do
   sudo find "$target" -xdev -type f -perm /6000 -printf '%m %u:%g %p\n' 2>/dev/null
 done | LC_ALL=C sort -u
 
-# Le propriétaire du package dépend de la distribution ; un fichier sans propriétaire exige une revue de provenance.
+# L'appartenance d'un fichier à un package dépend de la distribution ; un fichier sans propriétaire exige une revue de provenance.
 if command -v dpkg-query >/dev/null 2>&1; then
   sudo dpkg-query -S "$BINARY_PATH" || {
     echo 'REVIEW_REQUIRED: no Debian package owns this binary; review its provenance' >&2
@@ -427,11 +427,11 @@ le routage ou Kubernetes NetworkPolicy. NetworkPolicy gère principalement le tr
 que le firewall du nœud gère le trafic de l'hôte ; vérifiez la frontière de responsabilité de votre
 CNI et du réseau cloud.
 
-> 🏭 Une node role ne reçoit que les permissions bootstrap, réseau, storage et telemetry qui lui sont nécessaires ; un workload utilise une workload identity minimale distincte.
+> 🏭 Un node role ne reçoit que les permissions bootstrap, réseau, storage et telemetry qui lui sont nécessaires ; un workload utilise une workload identity minimale distincte.
 
 ## 15.4.1. Cloud/node IAM : un rôle minimal distinct pour un workload
 
-Le least privilege s'applique aussi au cloud IAM. Une node/instance role ne doit pas recevoir de
+Le least privilege s'applique aussi au cloud IAM. Un node/instance role ne doit pas recevoir de
 larges permissions cloud-admin simplement parce que Kubernetes s'exécute sur le nœud ; accordez-lui
 seulement les permissions bootstrap, réseau, storage et telemetry nécessaires à ce rôle. Un workload
 ne doit pas hériter automatiquement des credentials de node role : utilisez workload identity, IRSA
@@ -626,7 +626,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
 | Symptôme | Cause probable | À vérifier |
 |---|---|---|
 | SSH est inaccessible après le firewall | source/port non autorisé ou ordre des règles incorrect | accès console, `ufw status numbered`, `iptables -S`, `nft list ruleset` |
-| Kubelet ne communique plus avec l'API | firewall a fermé `6443` ou la route entre nœuds | `journalctl -u kubelet`, allowlist, Security Group, DNS/route |
+| Kubelet ne communique plus avec l'API | le firewall a fermé `6443` ou la route entre nœuds | `journalctl -u kubelet`, allowlist, Security Group, DNS/route |
 | `sudo` autorise plus que prévu | règle large, appartenance à un autre groupe, commande autorisée dangereuse | `sudo -l -U <user>`, `id <user>`, tous les `/etc/sudoers.d/*` |
 | Login échoue après SSH hardening | clé indisponible, drop-in non inclus, `AllowUsers` trop étroit | `sshd -t`, `sshd -T`, permissions de `~/.ssh`, accès console |
 | Un composant Kubernetes ne démarre pas après `chmod` | permissions du répertoire/fichier modifiées et permissions runtime requises disparues | `journalctl -u kubelet`, `crictl ps -a`, `namei -l` |

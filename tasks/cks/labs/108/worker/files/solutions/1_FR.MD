@@ -382,8 +382,8 @@ mutation policy n'affecte pas la réussite des tâches 1–4, 6 et 7.
 
 Contrairement aux tâches 1-5, la décision sur l'image est ici prise par un backend HTTPS externe via
 l'API `ImageReview`, et non par une expression CEL à l'intérieur de Kyverno. La documentation upstream
-d'ImagePolicyWebhook exige explicitement que la backend connection utilise TLS ("It is
-required that the backend communicate over TLS"), c'est pourquoi nous utilisons un certificat
+d'ImagePolicyWebhook exige explicitement que la backend connection utilise TLS (« It is
+required that the backend communicate over TLS »), c'est pourquoi nous utilisons un certificat
 auto-signé, et non HTTP.
 
 Le backend est déjà préparé sur la machine de travail :

@@ -488,7 +488,7 @@ gewöhnliche als auch für SUID-Prozesse verboten werden. `fs.suid_dumpable` fü
 `/etc/sysctl.d/99-kubernetes.conf` ein, die bereits in Aufgabe 8 erstellt wurde - wir erstellen keine separate,
 konfligierende Konfiguration.
 
-Unter Ubuntu **garantieren** `ulimit -c 0` und `fs.suid_dumpable=0` nicht das Fehlen eines core dump:
+Unter Ubuntu **garantieren** `ulimit -c 0` und `fs.suid_dumpable=0` **nicht** das Fehlen eines core dump:
 `man 5 core` dokumentiert ausdrücklich, dass `RLIMIT_CORE` vom Kernel ignoriert wird, wenn
 `kernel.core_pattern` den dump über eine pipe (`|program`) an einen userspace-Handler leitet.
 Ubuntu ist standardmäßig genau so konfiguriert - den crash fängt Apport ab und speichert ihn in

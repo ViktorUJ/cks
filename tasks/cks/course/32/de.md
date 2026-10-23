@@ -25,7 +25,7 @@
 > Daten geschrieben wurden): `Metadata` liefert gewöhnlich die benötigten identity/action/outcome-Informationen ohne
 > body und ohne Risiko einer Secret-Leckage.
 
-## 32.1. Wozu Audit dient: „wer, was, wann und mit welchem Ergebnis" beantworten
+## 32.1. Wozu Audit dient: „wer, was, wann und mit welchem Ergebnis“ beantworten
 
 **Audit event** - ein Eintrag von `kube-apiserver` über einen Request an die Kubernetes API. Jeder Request von
 `kubectl`, einem controller, einem ServiceAccount oder einem externen Client durchläuft den API server, daher
@@ -65,7 +65,7 @@ Aus einem abgeschlossenen event lässt sich gewöhnlich Folgendes gewinnen:
 
 Audit ist **kein** Ersatz für Application Logs, Netzwerk-Flow-Logs oder einen Runtime-Detector (Falco aus
 [Kapitel 29](../29/de.md)). Es sieht den Zugriff auf die Kubernetes API, nicht etwa eine SQL-Query innerhalb eines
-Pod oder einen shell-Befehl, der keine API aufgerufen hat. Auch der Eintrag „Request autorisiert" beweist nicht,
+Pod oder einen shell-Befehl, der keine API aufgerufen hat. Auch der Eintrag „Request autorisiert“ beweist nicht,
 dass die Aktion legitim war: Audit liefert evidence für die Suche, während RBAC, admission policy und hardening
 unzulässige Aktionen vorab verhindern sollen.
 
@@ -80,7 +80,7 @@ Besonders wertvoll sind audit-Logs für:
 - die Weitergabe von events an ein SIEM, wo sie mit cloud-, node- und application-Telemetrie korreliert werden.
 
 > **Vertraulichkeitsgrenze.** Audit kann den request/response body erfassen. Darin befinden sich oft Secret,
-> Token, kubeconfig und personenbezogene Daten. Daher ist „alles auf `RequestResponse` loggen" fast immer
+> Token, kubeconfig und personenbezogene Daten. Daher ist „alles auf `RequestResponse` loggen“ fast immer
 > schlechter als eine enge Policy mit `Metadata` und kontrolliertem Zugriff auf das audit log.
 
 `sourceIPs` enthält IPs aus `X-Forwarded-For`/`X-Real-IP` sowie die Adresse der Verbindung: alle Werte außer dem
@@ -121,7 +121,7 @@ Request zu verlieren. Die Einstellung ist global zulässig (`omitStages` an der 
 einzelnen rule; ein rule kann dem globalen Satz zusätzliche Stages hinzufügen, die speziell für dieses rule
 übersprungen werden sollen.
 
-Verwechseln Sie stage nicht mit level: `stage` beantwortet die Frage **wann** ein event erzeugt wird, während
+Verwechseln Sie stage nicht mit level: `stage` beantwortet die Frage, **wann** ein event erzeugt wird, während
 `level` beantwortet, **wie viele** Daten in das event geschrieben werden.
 
 ## 32.3. Levels von audit: Preis der Genauigkeit und Leck-Risiko
@@ -140,7 +140,7 @@ und non-resource Requests haben kein `.objectRef`. Stützen Sie sich daher für 
 `.verb`, identity, timestamps, status und annotations, statt einen Objektnamen zu erwarten.
 
 `Metadata` bedeutet nicht, dass das event frei von sensiblen Daten ist: `.requestURI` bleibt darin enthalten. Bei
-`pods/exec` werden command und arguments über die query string übertragen, daher kann ein password, token oder
+`pods/exec` werden command und arguments über den query string übertragen, daher kann ein password, token oder
 anderes secret aus CLI arguments selbst ohne request/response body in das audit log gelangen. Übergeben Sie keine
 secrets über `kubectl exec ... -- command secret`; verwenden Sie ein Secret volume/stdin-Verfahren, beschränken Sie
 den Zugriff auf das audit log und sanitisieren Sie bei Bedarf die downstream pipeline.
@@ -169,7 +169,7 @@ Praktische Baseline:
 Die Policy-Datei hat die API `audit.k8s.io/v1`, kind `Policy`. Ihre `rules` werden **von oben nach unten** geprüft,
 und es gilt das **erste zutreffende** rule. Deshalb werden konkrete Ausnahmen und sensitive resources vor der
 breiten catch-all-Regel platziert. Verlassen Sie sich nicht darauf, dass ein nachfolgendes rule Daten zu einem
-vorherigen „hinzufügt".
+vorherigen „hinzufügt“.
 
 Ein rule kann nach `users`, `userGroups`, `verbs`, `namespaces`, `resources` (API Group/Resource/Subresource),
 `nonResourceURLs` und `omitStages` eingegrenzt werden. Werden mehrere Filterarten gleichzeitig angegeben, muss der
@@ -194,7 +194,7 @@ omitStages:
 omitManagedFields: true
 
 rules:
-  # 1. Die health-Check-endpoints der API nicht ins Log verstopfen.
+  # 1. Das Log nicht mit den health-check-endpoints der API verstopfen.
   - level: None
     nonResourceURLs:
       - /healthz*
@@ -304,7 +304,7 @@ spec:
         - --audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml
         - --audit-log-path=/var/log/kubernetes/audit/audit.log
         - --audit-log-format=json
-        # --audit-log-mode nicht setzen: für das file backend ist der default blocking.
+        # --audit-log-mode nicht setzen: Für das file backend ist der default blocking.
         - --audit-log-maxage=30
         - --audit-log-maxbackup=10
         - --audit-log-maxsize=100
@@ -343,7 +343,7 @@ Schlüssel-Flags:
 | Flag | Zweck |
 |---|---|
 | `--audit-policy-file` | Pfad zur Policy, die der API server beim Start lädt |
-| `--audit-log-path` | lokale Datei des audit backend; ohne diesen Flag wird kein lokales audit log geschrieben |
+| `--audit-log-path` | lokale Datei des audit backend; ohne dieses Flag wird kein lokales audit log geschrieben |
 | `--audit-log-format=json` | JSON Lines, praktisch für `jq` und einen shipper; das ist ein normales Production-Format |
 | `--audit-log-mode` | für das file backend ist der default `blocking`: Die Verarbeitung jedes event blockiert die response des API server. `batch` puffert und schreibt asynchron, wird für das log backend jedoch nicht empfohlen; `blocking-strict` lehnt zusätzlich den gesamten Request ab, wenn audit in der Stage `RequestReceived` mit einem Fehler endet |
 | `--audit-log-maxage` | rotierte Dateien nicht länger als die angegebene Zahl von Tagen aufbewahren; `0` deaktiviert das altersbasierte Limit |
@@ -360,7 +360,7 @@ Nach dem Speichern startet der static Pod vorübergehend neu. Die Prüfung muss 
 die health API bestätigen:
 
 ```bash
-# Auf dem control-plane-Node: der kubelet erstellt den static Pod neu.
+# Auf dem control-plane-Node: Der kubelet erstellt den static Pod neu.
 watch -n 2 'sudo crictl ps -a --name kube-apiserver'
 
 # Nach dem Start, mit konfiguriertem kubectl.
@@ -374,7 +374,7 @@ sudo ls -l /var/log/kubernetes/audit/audit.log
 ```
 
 Kehrt der API server nicht zurück, prüfen Sie sofort `journalctl -u kubelet`, einen exited Container über
-`crictl ps -a`/`crictl logs` und das YAML des manifests. Stellen Sie bei Bedarf die gesicherte `.bak`-Datei
+`crictl ps -a`/`crictl logs` und das YAML des manifests. Stellen Sie bei Bedarf die zeitgestempelte Sicherung von `kube-apiserver.yaml` aus `/root/k8s-manifest-backup`
 **außerhalb** des manifests-Verzeichnisses wieder her: Ein backup innerhalb von `/etc/kubernetes/manifests/` kann
 vom kubelet als weiteres static-Pod-manifest wahrgenommen werden.
 
@@ -399,7 +399,7 @@ der auf einen noch nicht aktualisierten API server trifft, eine andere oder fehl
 Sie nicht alle static-Pod-manifests gleichzeitig; bewahren Sie einen separaten rollback auf und dokumentieren Sie
 die Policy-Version auf jedem Node.
 
-Führen Sie vor dem Production-rollout einen Lasttest mit der erwarteten API rate und Spitzen-body durch: das
+Führen Sie vor dem Production-rollout einen Lasttest mit der erwarteten API rate und Spitzen-body durch: Das
 gewählte level, die Größe von request/response, file I/O und die webhook queue können latency/memory erhöhen oder
 bei overflow batch events verwerfen. Messen Sie audit metrics, backend latency und loss/retry-Szenarien, statt
 tuning numbers blind aus einem anderen Cluster zu übernehmen.
@@ -430,7 +430,7 @@ flowchart TB
 
 Planen Sie storage getrennt von den flags:
 
-- **Das lokale audit log ist ein Puffer, keine Quelle der Wahrheit.** Der Node kann kompromittiert, gelöscht oder
+- **Das lokale audit log ist ein Puffer, keine Quelle der Wahrheit.** Der Node kann kompromittiert oder gelöscht werden oder
   volllaufen. Senden Sie JSON an einen zentralisierten, kontrollierten Speicher.
 - **Führen Sie kein unabhängiges `logrotate` für dieselbe aktive Datei aus**, solange die Integration mit dem API
   server nicht abgestimmt ist. Die eingebauten audit rotation flags verwalten die Datei bereits; zwei
@@ -438,7 +438,7 @@ Planen Sie storage getrennt von den flags:
 - **Beschränken Sie den Zugriff.** Verzeichnis und Dateien sind nur für platform/security roles zugänglich; der
   collector verwendet TLS und eine separate identity. Geben Sie keinem workload `hostPath` auf das
   audit-Verzeichnis.
-- **Überwachen Sie audit selbst.** Alerts werden benötigt für das Fehlen aktueller events, wachsenden disk,
+- **Überwachen Sie audit selbst.** Alerts werden benötigt für das Fehlen aktueller events, das Wachstum der disk,
   backend-Fehler, den Ausfall des collector und Änderungen an policy/static-Pod-manifest. Vergleichen Sie
   `apiserver_audit_event_total` (exportierte events) und `apiserver_audit_error_total` (bei Export-Fehlern
   verworfene events).
@@ -455,7 +455,7 @@ Wird `batch` dennoch nach einem Lasttest aktiviert, befinden sich events bis zum
 storage/webhook die latency erhöht und die Verfügbarkeit der API beeinträchtigen kann. `blocking-strict` geht
 weiter: Bei einem Fehler des audit in der Stage `RequestReceived` lehnt kube-apiserver den Request selbst ab. Das
 verstärkt fail-closed evidence, verwandelt jedoch einen Ausfall des audit backend in einen API-Ausfall für Clients;
-wählen Sie es nur mit geprüfter capacity, HA und recovery, nicht als universellen „sicheren" Modus.
+wählen Sie es nur mit geprüfter capacity, HA und recovery, nicht als universellen „sicheren“ Modus.
 
 > 🏭 Zentralisierte Sammlung von audit events, webhook backends, SIEM und die operative pipeline: TLS, Queue,
 > Kapazität und der trade-off zwischen loss risk und API-Verfügbarkeit.
@@ -570,12 +570,12 @@ sudo test -s /var/log/kubernetes/audit/audit.log && echo 'audit log is non-empty
 
 ### 2. Eine kontrollierte Aktion ausführen
 
-Das Beispiel entspricht dem `Request`-rule aus der Policy: Ein erstellter ConfigMap in `payments` enthält den
+Das Beispiel entspricht dem `Request`-rule aus der Policy: Eine erstellte ConfigMap in `payments` enthält den
 request body im audit event. Verwenden Sie im Test keine sensiblen Werte.
 
 ```bash
 kubectl get namespace payments >/dev/null || kubectl create namespace payments
-# Führen Sie die folgenden Blöcke in derselben shell aus: eindeutige Namen verknüpfen das event mit diesem run.
+# Führen Sie die folgenden Blöcke in derselben shell aus: Eindeutige Namen verknüpfen das event mit diesem run.
 RUN_ID="$(date -u +%Y%m%d%H%M%S)-$$"
 CM="audit-check-$RUN_ID"
 SECRET="audit-secret-check-$RUN_ID"
@@ -587,7 +587,7 @@ kubectl -n payments delete configmap "$CM"
 ### 3. JSON Lines per `jq` abfragen
 
 Die audit-Datei enthält einzelne JSON events. Der folgende Filter behält nur die finalen events des
-Erstellens/Löschens des Test-ConfigMap und gibt die Felder der Untersuchung aus:
+Erstellens/Löschens der Test-ConfigMap und gibt die Felder der Untersuchung aus:
 
 ```bash
 sudo jq -r --arg name "$CM" '
@@ -607,7 +607,7 @@ Erwartet werden Zeilen des level `Request`, mit Ihrem username, `create`/`delete
 und einem erfolgreichen response code der Klasse `2xx`. Der konkrete Code hängt von Operation und API ab. Verwendet
 die Policy einen anderen namespace/resource, müssen Test und Filter genau dazu passen.
 
-Um zu prüfen, dass der Secret body nicht ins lokale audit log durchgesickert ist, kann man einen Test-Secret
+Um zu prüfen, dass der Secret body nicht ins lokale audit log durchgesickert ist, kann man ein Test-Secret
 erstellen oder lesen und das event betrachten: Bei `Metadata` sollten weder `.requestObject` noch
 `.responseObject` vorhanden sein.
 
@@ -719,7 +719,7 @@ die Rotation von Dateien und die Verzögerung der batch/webhook delivery.
    restart und `/readyz` abwarten.
 3. **8-12 Min:** sicheres create/delete ConfigMap in `payments` ausführen; per `jq` `ResponseComplete`, identity,
    objectRef und erfolgreiches `2xx` prüfen.
-4. **12-15 Min:** einen Test-Secret erstellen und `Metadata` ohne request/response body nachweisen.
+4. **12-15 Min:** ein Test-Secret erstellen und `Metadata` ohne request/response body nachweisen.
 5. **15-18 Min:** ein high-signal RBAC- oder `pods/exec`/`ephemeralcontainers`-event finden; bei `exec`
    `get`/`create`, streaming `ResponseStarted` und WebSocket `101` berücksichtigen, dann `auditID`, status,
    annotations und erst danach den Netzwerkkontext abgleichen.
@@ -743,7 +743,7 @@ die Rotation von Dateien und die Verzögerung der batch/webhook delivery.
 - **Schützen Sie evidence.** Leserollen, encryption, retention, Unveränderlichkeit und ein alert bei Änderungen an
   policy/static Pod sind ebenso wichtig wie das Erstellen der log-Datei selbst.
 - **Prüfen Sie den stream regelmäßig.** Ein synthetischer Request mit einem sicheren marker und ein Dashboard
-  „zuletzt empfangenes event" entdecken einen defekten collector schneller, als auf einen Incident zu warten.
+  „zuletzt empfangenes event“ entdecken einen defekten collector schneller, als auf einen Incident zu warten.
 - **Managed Kubernetes unterscheidet sich.** In EKS/GKE/AKS bearbeitet der Kunde gewöhnlich nicht den
   `kube-apiserver` static Pod. Aktivieren Sie die audit logs der control plane des Providers und wenden Sie deren
   Levels/Retention an; versuchen Sie nicht, eine Policy in eine control plane zu mounten, die dem Provider gehört.
@@ -764,7 +764,7 @@ die Rotation von Dateien und die Verzögerung der batch/webhook delivery.
 
 ## 32.11. Zusammenfassung des Kapitels
 
-- Audit Logging beantwortet „wer, was, wann, woher und mit welchem Ergebnis" für Requests an die Kubernetes API;
+- Audit Logging beantwortet „wer, was, wann, woher und mit welchem Ergebnis“ für Requests an die Kubernetes API;
   dies ist evidence, kein Ersatz für runtime-/application-/network-Telemetrie.
 - `ResponseComplete` ist gewöhnlich die wichtigste Stage der Untersuchung; `omitStages: RequestReceived` reduziert
   Duplizierung, ohne den outcome zu entfernen. Bei streaming `exec`/`attach`/`port-forward` kann `ResponseStarted`
@@ -811,10 +811,10 @@ outcome zu erklären, ohne das audit log in eine neue Quelle von Lecks zu verwan
 ## 32.13. Fragen zur Selbstkontrolle
 
 <details>
-<summary>1. Welche Felder des audit event beantworten „wer", „was", „woher" und „erfolgreich"?</summary>
+<summary>1. Welche Felder des audit event beantworten „wer“, „was“, „woher“ und „erfolgreich“?</summary>
 
-„Wer" liefern `.user.username`, `.user.groups`, `.user.uid` und, falls vorhanden, `.impersonatedUser`; „was" liefern
-`.verb`, `.requestURI` und `.objectRef`. Für „woher" werden `.sourceIPs` und `.userAgent` verwendet, aber mit einem
+„Wer“ liefern `.user.username`, `.user.groups`, `.user.uid` und, falls vorhanden, `.impersonatedUser`; „was“ liefern
+`.verb`, `.requestURI` und `.objectRef`. Für „woher“ werden `.sourceIPs` und `.userAgent` verwendet, aber mit einem
 vertrauenswürdigen Proxy und anderen Quellen abgeglichen. Den Erfolg zeigen `.responseStatus.code` und
 `.responseStatus.reason`.
 </details>
@@ -921,7 +921,7 @@ Nützliche Dokumentation: [Auditing](https://kubernetes.io/docs/tasks/debug/debu
 Dies ist die letzte von 6 Domains - prüfen Sie 15-20 Minuten ohne Hilfestellung, ob sich der gesamte Kurs zu einem
 einzigen Bild zusammenfügt und nicht zu sechs isolierten Blöcken:
 
-1. Starten Sie Falco (oder lesen Sie einen vorhandenen alert) und verknüpfen Sie ein alert mit einem konkreten
+1. Starten Sie Falco (oder lesen Sie einen vorhandenen alert) und verknüpfen Sie einen alert mit einem konkreten
    Kubernetes-workload über die output-Felder (Kapitel 29).
 2. Beschreiben Sie die Signalfolge execution → persistence → exfiltration und geben Sie an, welches Signal in
    dieser Kette Sie zuerst bemerken würden (Kapitel 30).

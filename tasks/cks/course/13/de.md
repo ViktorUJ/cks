@@ -44,7 +44,7 @@ Praktische Reaktion auf ein Advisory:
 
 Kubernetes veröffentlicht Minor-Versionen regelmäßig, üblicherweise dreimal im Jahr, und Patch-Releases erscheinen, sobald Behebungen bereitstehen. Das genaue Datum und die Liste der Behebungen müssen aus den Release Notes des jeweiligen Branch stammen, nicht aus einem alten Runbook. Upstream unterstützt üblicherweise die drei neuesten Minor-Branches: das aktuelle `N`, `N-1` und `N-2`. Folglich ist `N-3` in der Regel bereits EOL; bei einem managed Service oder einer Enterprise-Distribution kann das Fenster abweichen und muss separat geprüft werden.
 
-In diesem Lab bezeichnet Kubernetes `v1.36` die **Zielversion (Target)** des Beispiels, nicht die "aktuelle stabile" Kubernetes-Version und keine Zusage zu ihrem aktuellen Support Window. Gleichen Sie vor einem tatsächlichen Change Window den wirklich unterstützten Ziel-Branch und den behobenen Patch aus dem Advisory ab. Der Wechsel erfolgt schrittweise, jeweils um eine Minor-Version, zum Beispiel `v1.34` -> `v1.35` -> `v1.36`; innerhalb eines Branch kann direkt auf die behobene Version aktualisiert werden. Dieser Rhythmus lässt Zeit für Tests und verwandelt ein dringendes CVE nicht in ein Migration-Projekt über mehrere Versionen.
+In diesem Lab bezeichnet Kubernetes `v1.36` die **Zielversion (Target)** des Beispiels, nicht die „aktuelle stabile“ Kubernetes-Version und keine Zusage zu ihrem aktuellen Support Window. Gleichen Sie vor einem tatsächlichen Change Window den wirklich unterstützten Ziel-Branch und den behobenen Patch aus dem Advisory ab. Der Wechsel erfolgt schrittweise, jeweils um eine Minor-Version, zum Beispiel `v1.34` -> `v1.35` -> `v1.36`; innerhalb eines Branch kann direkt auf die behobene Version aktualisiert werden. Dieser Rhythmus lässt Zeit für Tests und verwandelt ein dringendes CVE nicht in ein Migrationsprojekt über mehrere Versionen.
 
 ```mermaid
 flowchart TB
@@ -147,7 +147,7 @@ Ein Patch für `kube-apiserver` aktualisiert nicht `containerd`, `runc`, Kernel,
 | `containerd` und CRI | CVE, inkompatibles CRI, Änderung von Konfiguration/Socket | Unterstützung der Kubernetes-Zielversion, `SystemdCgroup`, Service Health und Node-Image |
 | `runc` | Container Escape bei einer Runtime-Schwachstelle | Behobene Version aus dem Advisory und Package-Abhängigkeit von containerd |
 | Kernel und Betriebssystempakete | Privilege Escalation, Network/Filesystem-CVE | Betriebssystem-Support, Vendor Security Update, Reboot-Anforderung und Node-Image |
-| cgroups/systemd | kubelet/runtime startet nicht oder erhält unterschiedliche cgroups | Einheitlicher cgroup Driver und cgroup-v2-Unterstützung in Betriebssystem und runtime |
+| cgroups/systemd | kubelet/runtime starten nicht oder erhalten unterschiedliche cgroups | Einheitlicher cgroup Driver und cgroup-v2-Unterstützung in Betriebssystem und runtime |
 | CNI, CSI, CoreDNS | Netzwerk, Storage oder DNS werden nach Change nicht wiederhergestellt | Compatibility Matrix und Smoke Test in Stage |
 
 ### Cgroup-v2-Baseline für Kubernetes v1.35+
@@ -186,7 +186,7 @@ Prüfen Sie beim Aktualisieren des Package-Repository Quelle und Signatur des Re
 
 ## 13.6. Häufige Fehler bei Security-Aktualisierungen
 
-- **"Wir haben keine öffentliche API, das CVE betrifft uns nicht."** Ein verwundbarer kubelet oder eine runtime kann einem internen Angreifer nach der Kompromittierung eines Pod oder Node zugänglich sein.
+- **„Wir haben keine öffentliche API, das CVE betrifft uns nicht.“** Ein verwundbarer kubelet oder eine runtime kann einem internen Angreifer nach der Kompromittierung eines Pod oder Node zugänglich sein.
 - **Nur die Control Plane wird gepatcht.** Worker kubelet, `containerd`, `runc` und das Betriebssystem bleiben verwundbar, obwohl `kubectl version` bereits gut aussieht.
 - **EOL wird für niedriges Risiko gehalten.** Das Ausbleiben eines neuen Advisory bedeutet, dass kein Patch kommt, nicht dass keine Schwachstellen existieren.
 - **Minor-Versionen werden übersprungen oder kubelet vor dem API server aktualisiert.** Dies verletzt Version Skew und schafft einen schwer zu diagnostizierenden Zustand.
@@ -197,12 +197,12 @@ Prüfen Sie beim Aktualisieren des Package-Repository Quelle und Signatur des Re
 
 ## 13.7. Anwendung in der Produktion
 
-- **Patch Management als Prozess.** Das Team abonniert Upstream- und Vendor-Advisories, verknüpft CVE mit dem Inventar, bestimmt ein Severity-basiertes SLA, Verantwortliche, ein Rollout-Fenster und die Bestätigung der Schließung. Das ist besser als einzelne "Aktualisierungstage" einmal jährlich.
+- **Patch Management als Prozess.** Das Team abonniert Upstream- und Vendor-Advisories, verknüpft CVE mit dem Inventar, bestimmt ein Severity-basiertes SLA, Verantwortliche, ein Rollout-Fenster und die Bestätigung der Schließung. Das ist besser als einzelne „Aktualisierungstage“ einmal jährlich.
 - **Nach der Veröffentlichung eines Patch steigt das Risiko.** Der Diff zwischen verwundbarer und behobener Version grenzt häufig den Suchbereich nach der Ursache eines CVE ein und erleichtert Reverse Engineering. Daher erhält ein bekanntes, für einen Angreifer erreichbares und noch nicht behobenes CVE nach Veröffentlichung eines Fixed Patch üblicherweise eine höhere Priorität: Die Wahrscheinlichkeit, dass ein Exploit erscheint oder angepasst wird, steigt. AI-assisted Analyse verringert zusätzlich Kosten und Zeit einer solchen Untersuchung, beweist aber selbst keine Exploitability; Erreichbarkeit, Voraussetzungen und Wert des Assets werden weiterhin bewertet.
 - **Kurzer Lag nach dem Release.** Regelmäßiger Wechsel innerhalb des unterstützten Fensters N/N-1/N-2 verringert den Umfang jeder Änderung und lässt Zeit, kritische CVE ruhig zu testen, statt nachts ein Multi-Hop-Upgrade durchzuführen.
 - **Stage und progressives Rollout.** Zuerst werden Node-Image und Add-ons getestet, dann ein kleiner Pool/Node aktualisiert, Metriken geprüft und erst danach fortgesetzt. Bei managed Kubernetes werden Fristen für Control Plane und Node Pool separat kontrolliert.
 - **Automatisierter, aber beobachtbarer Node-Austausch.** Infrastructure as Code, Golden Image, Maintenance Windows, PDB und Autoscaling machen Aktualisierungen reproduzierbar. Automatisierung muss bei Health Failure anhalten, statt den gesamten Bestand weiter zu ersetzen.
-- **Einheitliches SBOM/Asset-Inventar.** Es verknüpft Advisory nicht nur mit Kubernetes, sondern auch mit `containerd`, `runc`, CNI, Betriebssystem und Kernel, damit das Team die zweite Hälfte eines Angriffs auf den Node nicht übersieht.
+- **Einheitliches SBOM/Asset-Inventar.** Es verknüpft Advisories nicht nur mit Kubernetes, sondern auch mit `containerd`, `runc`, CNI, Betriebssystem und Kernel, damit das Team die zweite Hälfte eines Angriffs auf den Node nicht übersieht.
 
 ## 13.8. Mini-Glossar
 
@@ -265,7 +265,7 @@ sudo kubeadm upgrade plan | tee "$UPGRADE_EVIDENCE/before/kubeadm-upgrade-plan.t
 
 ### Gate 2: Backup und überprüfbare Wiederherstellung
 
-Leiten Sie das Vorhandensein von `etcdctl`/`etcdutl` nicht allein aus der Tatsache ab, dass kubeadm installiert ist. Prüfen Sie vor dem Gate die Binaries und ihre Kompatibilität mit der etcd-Version. Wenn die Tools fehlen, installieren Sie vorher eine geprüfte und festgelegte kompatible Version aus einer vertrauenswürdigen Quelle oder verwenden eine genehmigte Operational Image/Toolbox. Laden Sie während eines Change Window nicht direkt `latest` herunter.
+Leiten Sie das Vorhandensein von `etcdctl`/`etcdutl` nicht allein aus der Tatsache ab, dass kubeadm installiert ist. Prüfen Sie vor dem Gate die Binaries und ihre Kompatibilität mit der etcd-Version. Wenn die Tools fehlen, installieren Sie vorher eine geprüfte und festgelegte kompatible Version aus einer vertrauenswürdigen Quelle oder verwenden ein genehmigtes Operational Image oder eine genehmigte Toolbox. Laden Sie während eines Change Window nicht direkt `latest` herunter.
 
 ```bash
 set -euo pipefail
@@ -311,7 +311,7 @@ kubectl get --raw /metrics \
 
 ### Produktionshinweis: Erhalt benutzerdefinierter Security Flags
 
-Bei einem self-hosted kubeadm Production Upgrade kann das Team die Static Pod Manifests aus `ClusterConfiguration` überschreiben. Custom Audit-, Encryption- und Profiling-Einstellungen müssen daher in Infrastructure as Code dokumentiert und in der Change-/Rollback-Prozedur separat geprüft werden.
+Bei einem self-hosted kubeadm Production Upgrade kann der Befehl die Static Pod Manifests aus `ClusterConfiguration` überschreiben. Custom Audit-, Encryption- und Profiling-Einstellungen müssen daher in Infrastructure as Code dokumentiert und in der Change-/Rollback-Prozedur separat geprüft werden.
 
 > 🏭 **Production.** Dies ist ein Operational Control für eine bestimmte Platform Implementation, nicht 🎯 CKS Core und kein verpflichtendes Before/After Static-Pod Runbook dieses Kapitels.
 
@@ -364,7 +364,7 @@ Nach einer healthy Control Plane wird auf dem Worker `kubeadm` aktualisiert und 
 <details>
 <summary>7. Welche Prüfungen sind nach einem erfolgreichen `kubeadm upgrade` notwendig, um sowohl den Security Patch als auch die Funktion des Clusters zu belegen?</summary>
 
-Prüfen Sie die tatsächlichen Versionen von Control Plane und kubelet mit `kubectl version --output=yaml` und `kubectl get nodes -o wide`, nicht nur den Exit Code von `kubeadm`. Bestätigen Sie Health über `/readyz?verbose`, den Zustand aller Node `Ready`, `kube-system`, kritische DaemonSet/Deployment, Events und Workload Smoke Tests. Prüfen Sie zusätzlich Alerts und das Fehlen von Problemen bei runtime, CNI, DNS und Storage.
+Prüfen Sie die tatsächlichen Versionen von Control Plane und kubelet mit `kubectl version --output=yaml` und `kubectl get nodes -o wide`, nicht nur den Exit Code von `kubeadm`. Bestätigen Sie Health über `/readyz?verbose`, den Zustand aller Nodes `Ready`, `kube-system`, kritische DaemonSet/Deployment, Events und Workload Smoke Tests. Prüfen Sie zusätzlich Alerts und das Fehlen von Problemen bei runtime, CNI, DNS und Storage.
 </details>
 
 <details>
@@ -374,7 +374,7 @@ Kubernetes-Packages aktualisieren unabhängige runtime, Kernel und Betriebssyste
 </details>
 
 <details>
-<summary>9. **Rückblick (Kapitel 26).** Version Skew (dieses Kapitel) und Image Digest Pinning (Kapitel 26) behandeln beide die Anforderung, dass "welche genaue Version gerade läuft" eine überprüfbare Tatsache und keine Annahme sein muss. Worin liegt der Unterschied zwischen "Version compatible" (Version Skew) und "Version identical" (Digest), und warum reicht für kubelet/API server das Erste, während bei einem Container Image in der Produktion das Zweite zwingend ist?</summary>
+<summary>9. **Rückblick (Kapitel 26).** Version Skew (dieses Kapitel) und Image Digest Pinning (Kapitel 26) behandeln beide die Anforderung, dass „welche genaue Version gerade läuft“ eine überprüfbare Tatsache und keine Annahme sein muss. Worin liegt der Unterschied zwischen „Version compatible“ (Version Skew) und „Version identical“ (Digest), und warum reicht für kubelet/API server das Erste, während bei einem Container Image in der Produktion das Zweite zwingend ist?</summary>
 
 Version Skew legt die zulässige Beziehung zwischen Minor-Versionen zusammenwirkender Komponenten fest: kubelet und API server dürfen unterschiedlich, aber im angegebenen Bereich kompatibel sein. Ein Digest identifiziert dagegen die konkreten unveränderlichen Bytes eines Image; ein Tag bietet diese Garantie nicht. Für den Rolling Lifecycle von Kubernetes ist eingeschränkte Versionskompatibilität nötig, ein Production Image muss jedoch reproduzierbar auf exakten Inhalt festgelegt sein.
 </details>

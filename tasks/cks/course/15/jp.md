@@ -18,7 +18,7 @@ flowchart TB
     ssh --> user["Ordinary user"]
     user --> weak["Weak sudo, group<br/>またはfile permissions"]
     weak --> root["root / node compromise"]
-    root --> k8s["credentials, runtime<br/>and Kubernetes"]
+    root --> k8s["credentials, runtime<br/>とKubernetes"]
     fw["Firewall + SSH<br/>allowlist"] -. "早期にblock" .-> ssh
     least["Hostのleast privilege"] -. "制限する" .-> weak
     style net fill:#db4437,color:#fff
@@ -64,11 +64,11 @@ sudo chage -l "$USER_TO_REVIEW"
 sudo usermod --shell /usr/sbin/nologin "$SERVICE_USER"
 ```
 
-account expirationとpassword lockは既存processes/sessionsを終わらせません。immediate revocationではactive sessions、SSH keys、privileged groups、central IAM/SSO sourceも確認し、approved incident/offboarding procedureでaccessを終了します。service accountではserviceが起動を続ける必要があるならexpirationを機械的に適用せず、通常は`nologin`でinteractive shellを禁じgroups/permissionsを最小化します。`sudo`、`wheel`、`docker`、`lxd`、runtime socket ownersのgroupsはbroad escalationを意味するため便利さで付与しません。
+account expirationとpassword lockは既存processes/sessionsを終わらせません。immediate revocationではactive sessions、SSH keys、privileged groups、central IAM/SSO sourceも確認し、approved incident/offboarding procedureでaccessを終了します。service accountではserviceが起動を続ける必要があるならexpirationを機械的に適用せず、通常は`nologin`でinteractive shellを禁じgroups/permissionsを最小化します。service accountsにはinteractive shellもadministrative groupsのmembershipも不要です。home directoryまたはstate directoryは、serviceが必要とする場合にのみ、最小限のowner/modeで作成します。実質的にbroad escalationを意味するgroupsも確認します。`sudo`、`wheel`、`docker`、`lxd`、そして特定のsystemではcontainer runtime socketのownersのgroupsです。このようなgroupのmembershipは「便利だから」という理由で付与しません。
 
 ### `sudo`: minimal command set
 
-`user ALL=(ALL) ALL`は便利ですがfull rootを与えます。一操作だけなら、specific commandとfixed argumentsを`/etc/sudoers.d/`のseparate fileで許可します。`visudo`で編集しますが、`visudo -f <alternative-path>`がexplicitな`-O`と`-P`なしにowner/permissionsを自動verifyするわけではありません。作成後に`root:root`と`0440`を設定し、`visudo -cf /etc/sudoers`でfull policyをvalidateします。
+`user ALL=(ALL) ALL`は便利ですがfull rootを与えます。一操作だけなら、specific commandとfixed argumentsを`/etc/sudoers.d/`のseparate fileで許可します。`visudo`で編集しますが、`visudo -f <alternative-path>`がexplicitな`-O`と`-P`なしにowner/permissionsを自動verifyするわけではありません。作成後に`root:root`と`0440`を設定し、`visudo -cf /etc/sudoers`でfull policyをvalidateします（一つのinclude fileだけの確認では不十分です）。
 
 ```bash
 # systemctl の固定 path を仮定せず、予測可能な system PATH から path を解決する。
@@ -78,7 +78,7 @@ sudo test -x "$SYSTEMCTL_PATH"
 sudo stat -c '%U:%G %a %n' "$SYSTEMCTL_PATH"  # root:root かつ others に書き込み権限がないことを期待する
 ```
 
-`systemctl`を直接許可するより、argumentsなしのroot-owned wrapperが安全です。wrapperは許可されたpathだけを呼び、常にpagerを無効にします。作成前に`/usr/local/sbin`がroot-ownedでunprivileged usersにwritableでないことを確認します。
+`systemctl`を直接許可するより、argumentsなしのroot-owned wrapperが安全です。narrowなargument matchingでも、誤った編集で容易に広げられてしまうためです。wrapperは上で許可されたpathだけを**ちょうど**呼び、常にpagerを無効にします。作成前に`/usr/local/sbin`がroot-ownedでunprivileged usersにwritableでないことを確認します。
 
 ```bash
 sudo tee /usr/local/sbin/k8s-kubelet-status >/dev/null <<'EOF'
@@ -104,7 +104,7 @@ Cmnd_Alias KUBELET_STATUS = /usr/local/sbin/k8s-kubelet-status ""
 k8s-operator ALL=(root) KUBELET_STATUS
 ```
 
-target userに対するeffective policyを確認します。`sudo`/authentication errorを`|| echo`でexpected denialに変えず、complete policy listingが成功してから、そのsaved outputで`/bin/bash`、shell/interpreter、arbitrary `systemctl`がないことをreviewします。editor、interpreter、`systemctl edit`、arbitrary pathを受けるcommands、administrative kubeconfigを持つ`kubectl`はnarrow-looking ruleをbypassできます。safe argumentsを記述できないなら、false securityよりlogging付きcontrolled break-glass procedureを使います。
+target userに対するeffective policyを確認します。`sudo`/authentication errorを`|| echo`でexpected denialに変えず、complete policy listingが成功してから、そのsaved outputで`/bin/bash`、shell/interpreter、arbitrary `systemctl`がないことをreviewします。dangerousなprogramをsuperficialなargument listで制限しようとしないでください。editor、interpreter、`systemctl edit`、arbitrary pathを受けるcommands、administrative kubeconfigを持つ`kubectl`は、narrow-looking ruleを回避してrootまたはclusterへのaccessを得るために悪用されることが多くあります。safe argumentsを記述できないなら、false securityよりlogging付きcontrolled break-glass procedureを使います。
 
 ```bash
 policy=$(sudo -l -U k8s-operator) || {
@@ -115,7 +115,7 @@ printf '%s\n' "$policy" | tee /tmp/k8s-operator-sudo-policy.txt
 # /bin/bash、shell/interpreter、任意の systemctl は存在しない。
 ```
 
-sudoersのevent/command loggingとI/O loggingは別mechanismsです。`logfile`はevent logのfile destination、`log_input`/`log_output`または`LOG_INPUT`/`LOG_OUTPUT`は`iolog_*`または`log_servers`のlocationへinput/outputを記録します。
+すべてのadministrative actionsについて、traceを残しておくと有用です。sudoersのevent/command loggingとI/O loggingは別mechanismsです。`logfile`はevent logのfile destination、`log_input`/`log_output`または`LOG_INPUT`/`LOG_OUTPUT`は`iolog_*`または`log_servers`のlocationへinput/outputを記録します。
 
 ```bash
 # command/I/O logging に関する sudoers 設定を inventory する。
@@ -128,7 +128,7 @@ sudo grep -REns \
 sudo journalctl _COMM=sudo --since '1 day ago'
 ```
 
-`logfile`、`iolog_dir`、`sudoreplay`もpolicyに応じて確認します。空の`journalctl`はloggingがない証明ではありません。`NOPASSWD`はcompromiseの証拠そのものではありませんが、開かれたsessionのunauthorized useに対するprotectionを下げます。automationが必要とするshortでreviewedなnoninteractive commandsだけに使います。
+`logfile`、`iolog_dir`、`sudoreplay`もpolicyに応じて確認します。空の`journalctl`はloggingがない証明ではありません。destinationはsudoers/syslogとOS configurationに依存します。`NOPASSWD`はcompromiseの証拠そのものではありませんが、開かれたsessionのunauthorized useに対するprotectionを下げます。automationが必要とするshortでreviewedなnoninteractive commandsだけに使います。
 
 ## 15.3. File permissionsとownership: credentialsとconfigurationを守る
 
@@ -144,6 +144,8 @@ sudo find /etc/kubernetes -xdev -type f -perm -0002 -ls
 sudo find /etc/kubernetes -xdev -type d -perm -0002 -ls
 ```
 
+self-managed kubeadm nodeでは少なくとも次を確認します。正確なownersはdistributionとinstallation methodに依存するため、まずinitial stateを記録し、使用しているKubernetes version/CISのdocumentationと照合してください。一つのtemplateをそのまま機械的に適用しないでください。
+
 | Object | weak permissionsのrisk | 安全な方向 |
 |---|---|---|
 | `/etc/kubernetes/pki/*.key` | CAまたはclient private keyのtheft | `root:root`、rootだけread、通常`600` |
@@ -152,13 +154,15 @@ sudo find /etc/kubernetes -xdev -type d -perm -0002 -ls
 | `/var/lib/kubelet/config.yaml`とkubelet credentials | kubelet behaviorの変更またはnode identityのtheft | root owner、unprivileged userはwrite不可 |
 | `~/.ssh/authorized_keys` | foreign SSH keyの追加 | `.ssh`は`700`、`authorized_keys`は`600`、user owner |
 
+他のusersから閉じておくべきfileをpinpointで修正する例:
+
 ```bash
 sudo chown root:root /etc/kubernetes/admin.conf
 sudo chmod 600 /etc/kubernetes/admin.conf
 sudo stat -c '%U %G %a %n' /etc/kubernetes/admin.conf
 ```
 
-`/etc/kubernetes`全体へrecursiveな`chmod -R 600`をしないでください。directoriesには`x`が必要で、public certificates/configurationsには別modeが必要なことがあります。owner、purpose、actual consumerを確認後にspecific objectだけ変更します。SUID/SGID binariesもinventoryし、internet listでsystem SUID filesを削除せず、package ownershipとnodeでの必要性を確認します。
+`/etc/kubernetes`全体へrecursiveな`chmod -R 600`をしないでください。directoriesには`x`が必要で、public certificates/configurationsには別modeが必要なことがあります。このような「修正」はkubeletやstatic Podを壊す可能性があります。owner、purpose、actual consumerを確認後にspecific objectだけ変更します。SUID/SGID binariesはownerまたはgroupの権限で実行され、誤りの影響を大きくするため、別途inventoryします。internet上のlistに従ってsystem SUID filesを削除せず、package ownershipとnodeでの必要性を確認します。
 
 ```bash
 set -euo pipefail
@@ -211,16 +215,16 @@ sudo ss -lntup | grep -E ':(22|6443|10250|10256|10257|10259|2379|2380)\b' || tru
 | `10257/tcp` | kube-controller-manager | 必要なcontrol-plane/monitoringだけ、internet以外 |
 | `10259/tcp` | kube-scheduler | 必要なcontrol-plane/monitoringだけ、internet以外 |
 | `2379-2380/tcp` | etcd client/peer | control-plane/etcd peersだけ |
-| `30000-32767/tcp`、`30000-32767/udp`（default） | NodePort | published Serviceを必要とするclient/LB CIDRだけ；実際のrangeは API server の `--service-node-port-range` で確認する |
+| `30000-32767/tcp`、`30000-32767/udp`（default） | NodePort | published Serviceを必要とするclient/LB CIDRだけ。実際のrangeは API server の `--service-node-port-range` で確認する |
 | variable CNI ports | overlay、node-to-node、Pod traffic | chosen CNI documentationのexact CIDRs/protocols |
 
-backendを理解せず`ufw`、`iptables`、`nftables`のthree managersを混在させません。`ufw`はhigh-level wrapperであり、現代の`iptables`は多くの場合`nf_tables`の上で動作します；`ufw`、`iptables`、`nftables`を並行してmanualに変更すると、auditが難しくなり、想定していたrulesを上書きする可能性があります。node imageとconfiguration managementがsupportするtool一つをsource of truthにします。
+backendを理解せず`ufw`、`iptables`、`nftables`の3つのmanagersを混在させません。`ufw`はhigh-level wrapperであり、現代の`iptables`は多くの場合`nf_tables`の上で動作します。`ufw`、`iptables`、`nftables`を並行してmanualに変更すると、auditが難しくなり、想定していたrulesを上書きする可能性があります。node imageとconfiguration managementがsupportするtool一つをsource of truthにします。
 
-> 🔬 全てのfirewall実装を覚える必要はありません；重要なのはhost firewall controlを理解し、利用可能なbackend（`ufw`、`iptables`、`nftables`）を適用できることです。
+> 🔬 全てのfirewall実装を覚える必要はありません。重要なのはhost firewall controlを理解し、利用可能なbackend（`ufw`、`iptables`、`nftables`）を適用できることです。
 
 ### Variant A: `ufw`
 
-`default deny`の前に、bastion/VPN、control plane、worker、etcd、load balancer、monitoring、Pod/Service CIDR、chosen CNIのactual topologyに基づくallowlistを作ります。forwarded/routed traffic、`DEFAULT_FORWARD_POLICY`、IPv4/IPv6 forwarding、`ufw route`とCNI-specific flowsも確認します。CNIとPod trafficはIPv4/IPv6 forwardingと`ufw route`ルールを必要とすることが多く、`ufw allow ... to any port ...`の1ペアだけではforwarded/routedなCNI/Pod trafficには不十分です。`DEFAULT_FORWARD_POLICY`、`net.ipv4.ip_forward`、IPv6 forwarding、CNI-specific flowsを必ず確認してください。そうしないとSSH/APIは生き残っても、Pod networkingが壊れる可能性があります。second SSH sessionとout-of-band consoleを保持し、新SSH loginとallowed networksからkubelet/APIを確認するまでcurrent sessionを閉じません。
+`default deny`の前に、bastion/VPN、control plane、worker、etcd、load balancer、monitoring、Pod/Service CIDR、chosen CNIのactual topologyに基づくallowlistを作ります。matrixにある必要なroles、NodePort、CNI portsをすべて追加します。これらはuniversal ruleでは推測できません。forwarded/routed trafficも別途確認します。CNIとPod trafficはIPv4/IPv6 forwardingと`ufw route`ルールを必要とすることが多く、`ufw allow ... to any port ...`の1ペアだけではforwarded/routedなCNI/Pod trafficには不十分です。`DEFAULT_FORWARD_POLICY`、`net.ipv4.ip_forward`、IPv6 forwarding、CNI-specific flowsを必ず確認してください。そうしないとSSH/APIは生き残っても、Pod networkingが壊れる可能性があります。current SSH sessionを保持したままsecond independent sessionを開き、enforcementを有効にする前にsource address、今後のrules（`ufw status numbered`）、out-of-band consoleを確認します。有効化後は、新SSH loginとallowed networksからのkubelet/APIの動作を確認するまで保存したsessionを閉じません。
 
 ```bash
 # 例: SSH は administrative network からのみ許可する。
@@ -245,7 +249,7 @@ sudo ufw delete "$RULE_NUMBER"
 
 ### Variant B: `iptables`
 
-lab exampleではestablished traffic、loopback、allowlistからのSSHを許可し、残りのinbound trafficをdenyします。real clusterでは`DROP`前にdocumented Kubernetes/CNI flowsを追加します。`FORWARD` chains、IPv4、IPv6も確認します。CNIはPod trafficを`INPUT`以外にrouteすることがあり、final `INPUT` DROPはforwarding policyやCNI rulesの代わりになりません。
+lab exampleではestablished traffic、loopback、allowlistからのSSHを許可し、残りのinbound trafficをdenyします。real clusterでは`DROP`を設定する前にdocumentedなKubernetes/CNI flowsをすべて追加します。そうしないと、node間のconnectivityまたはPod networkingが切断される可能性があります。`FORWARD` chains、IPv4、IPv6も確認します。CNIはPod trafficを`INPUT`以外にrouteすることがあり、final `INPUT` DROPはforwarding policyやCNI rulesの代わりになりません。
 
 ```bash
 sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
@@ -256,7 +260,7 @@ sudo iptables -A INPUT -j DROP
 sudo iptables -S INPUT
 ```
 
-`-A`はchain末尾へaddします。上にexisting ACCEPTがあればfinal DROPはdeny-by-defaultを保証せず、IPv4 rulesはIPv6をcoverしません。full ruleset orderをreviewし、permanent policyにはexplicit jump付きdedicated chainまたはexplicit policyの`nftables`を使います。manual append rulesをCNI/firewall manager rulesと混ぜません。commandでaddしたrulesはreboot後に残らない場合があるため、distribution-nativeまたはdeclarative persistenceを使います。
+`-A`はchain末尾へaddします。上にexisting ACCEPTがあればfinal DROPはdeny-by-defaultを保証せず、IPv4 rulesはIPv6をcoverしません。full ruleset orderをreviewし、permanent policyにはexplicit jump付きdedicated chainまたはexplicit policyの`nftables`を使います。manual append rulesをCNI/firewall manager rulesと混ぜません。commandでaddしたrulesはreboot後に残らない場合があるため、distribution-nativeまたはdeclarative persistenceを使います。`iptables -S`の出力それ自体がpersistence layerになると期待しないでください。
 
 ### Variant C: `nftables`
 
@@ -275,6 +279,8 @@ sudo iptables -S INPUT
  }
 ```
 
+構文はloadする前に確認し、その後で実際にactiveなrulesを確認します。
+
 ```bash
 sudo nft -c -f /etc/nftables.conf
 sudo systemctl reload nftables
@@ -285,7 +291,7 @@ sudo nft list ruleset
 flowchart TB
     admin["admin VPN<br/>203.0.113.0/24"] --> ssh["22/tcp: allow"]
     nodes["cluster CIDR<br/>10.0.0.0/16"] --> api["6443/tcp: allow"]
-    internet["other sources"] -. "deny" .-> node["Kubernetes node"]
+    internet["その他のsource"] -. "deny" .-> node["Kubernetes node"]
     ssh --> node
     api --> node
     style admin fill:#0f9d58,color:#fff
@@ -310,7 +316,7 @@ SSHは多くの場合nodeへの唯一のremote entryです。passwordよりsepar
 
 > 🎯 keyとalternative accessを確認し、root/password loginを禁止して、`sshd -t`、`sshd -T`、allowed userでのloginを確認します。
 
-modern OpenSSHではlarge vendor fileを編集せずsmall drop-inを作ると便利です。最初に`Include`でdirectoryが読み込まれることを確認します。wildcard `Include` filesはlexical orderで処理され、通常のscalar keywordsはfirst valueが使われるため、`99-hardening.conf`はpriorityを保証しません。一方`AllowUsers`、`AllowGroups`、`DenyUsers`、`DenyGroups`はmultiple occurrencesがlistへaddされます。early `00-hardening.conf`は別の`AllowUsers`を打ち消しません。すべてをinventoryし、conflictsをmanaged allowlistへremove/mergeして、`sshd -T`、`Match`があれば`sshd -T -C user=...,host=...,addr=...`でeffective resultを確認します。以下の**一つ**のprofileを選びます。両方password loginを禁止しますが、MFA profileはkeyとPAM keyboard-interactiveもrequireします。両方を同時に有効にしません。
+modern OpenSSHではlarge vendor fileを編集せずsmall drop-inを作ると便利です。最初に`Include`でdirectoryが読み込まれることを確認します。wildcard `Include` filesはlexical orderで処理され、通常のscalar keywordsではOpenSSHがfirst valueを使うため、`99-hardening.conf`という名前はpriorityを保証せず、そのようなparametersには意図的にearlyなfileが必要になることが多くあります。一方`AllowUsers`、`AllowGroups`、`DenyUsers`、`DenyGroups`はmultiple occurrencesがlistへaddされます。early `00-hardening.conf`は別の`AllowUsers`を打ち消しません。`AllowUsers`を使う前に、main `sshd_config`とincluded filesにあるそのすべてのoccurrencesをinventoryし、conflicting listsをremoveまたはmergeしてmanaged allowlistにして、`sshd -T`、`Match`があれば`sshd -T -C user=...,host=...,addr=...`でeffective resultを確認します。以下の**一つ**のprofileを選びます。両方password loginを禁止しますが、MFA profileはkeyとPAM keyboard-interactiveもrequireします。両方を同時に有効にしません。
 
 ```bash
 sudo grep -RnsE \
@@ -318,7 +324,7 @@ sudo grep -RnsE \
   /etc/ssh/sshd_config /etc/ssh/sshd_config.d 2>/dev/null || true
 ```
 
-**Profile A — key only.**
+**Profile A - key only.**
 
 ```bash
 sudo install -d -o root -g root -m 0755 /etc/ssh/sshd_config.d
@@ -347,7 +353,7 @@ sudo sshd -t
 sudo systemctl reload "$SSHD_UNIT"
 ```
 
-**Profile B — key + MFA via PAM keyboard-interactive.** MFA PAM moduleをconfigure・testした後だけ使います。`AuthenticationMethods`はone-time codeでkeyをreplaceせず、両factorsをrequireします。
+**Profile B - key + MFA via PAM keyboard-interactive.** MFA PAM moduleをconfigure・testした後だけ使います。`AuthenticationMethods`はone-time codeでkeyをreplaceせず、両factorsをrequireします。
 
 ```text
 PermitRootLogin no
@@ -498,7 +504,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
 
 <details><summary>2. ordinary userにread/write可能にすると特に危険なKubernetes filesは何ですか?</summary>
 
-`/etc/kubernetes/pki/*.key`と`/etc/kubernetes/admin.conf`はCA、client key、cluster-admin credentialを与え得ます。`/etc/kubernetes/manifests/`へのwriteはcontrol-plane static Podをsubstituteできます。`/var/lib/kubelet/config.yaml`とkubelet credentialsもunprivileged usersにwriteさせません。
+`/etc/kubernetes/pki/*.key`と`/etc/kubernetes/admin.conf`はCA、client key、cluster-admin credentialを与え得ます。`/etc/kubernetes/manifests/`へのwriteはcontrol-plane static Podをsubstituteできます。`/var/lib/kubelet/config.yaml`へのwriteとkubelet credentialsへのaccessもunprivileged usersに与えません。
 </details>
 
 <details><summary>3. `/etc/kubernetes`全体にrecursiveな`chmod 600`をしてはいけない理由は何ですか?</summary>
@@ -526,7 +532,7 @@ key未install、wrong permissions、drop-in未include、狭すぎる`AllowUsers`
 `sudo sshd -t`と`sudo sshd -T | grep ...`の後、allowed networkから`ssh -o BatchMode=yes ...`でreal key-only loginを行います。active firewallは`ufw status verbose`、`iptables -S INPUT`、`nft list ruleset`、listenersは`sudo ss -lntup`で確認します。unallowed segmentの`nc -vz -w 3 <node> 22`はexpected refusal/timeoutになるべきです。
 </details>
 
-<details><summary>8. **振り返り（第10章）。** host-level least privilegeとKubernetes API RBACの一方だけで十分でない例は何ですか?</summary>
+<details><summary>8. **振り返り（第10章）。** この章は**ホスト**レベルのleast privilege（Linux users、groups、socketsへのaccess）を扱います。第10章は**Kubernetes API**レベルのleast privilege（RBAC）を扱います。narrow RBACがexcessive host accessによるattackから守れない例（逆も同様）を具体的に挙げてください。つまり、この二つのlevelのどちらか一方だけではなぜ決して十分でないかを説明してください。</summary>
 
 ServiceAccountが`get pods`だけのnarrow Roleでも、containerd/Docker socket accessまたはbroad `sudo`を持つuserはnode rootとなりAPI boundaryをbypassできます。逆にstrict host firewall/file modesも、stolen ServiceAccount tokenのRBACがSecret readまたは`pods/exec`を許せばPodを止めません。両layersが必要です。
 </details>

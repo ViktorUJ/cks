@@ -48,7 +48,7 @@ Profile は unique name を持つ policy で、kernel に load されます。fi
 
 profile には二つの重要な mode があります。
 
-| Mode | Behavior | 使用する場面 |
+| Mode | 動作 | 使用する場面 |
 |---|---|---|
 | `enforce` | policy 外の operation を block し、kernel が denial を記録する | test 後の standard production mode |
 | `complain` | operation は許可するが、violation を audit/log に記録する | real workload の observation と policy の改善 |
@@ -80,7 +80,7 @@ node では最初に AppArmor が enabled か確認してから、policy を loa
 ```bash
 # node 上で実行する。通常の Pod 内ではない。
 sudo cat /sys/module/apparmor/parameters/enabled
-# Expected: Y
+# 期待値: Y
 
 sudo aa-status
 sudo apparmor_status
@@ -124,7 +124,7 @@ sudo aa-status
 
 現行の Kubernetes API は `securityContext.appArmorProfile` で profile を指定します。field は Pod `securityContext` 内で container の baseline にでき、より狭い policy が必要なら individual container の `securityContext` にも置けます。必要なく一つの Pod に異なる profile を与えてはいけません。audit と investigation を複雑にします。
 
-| `type` | Meaning | 使用する場面 |
+| `type` | 意味 | 使用する場面 |
 |---|---|---|
 | `RuntimeDefault` | container runtime が提供する profile | runtime と node が support する場合の安全な common baseline |
 | `Localhost` | node に事前 load された named profile | verified application-specific policy |
@@ -237,7 +237,7 @@ kubectl get pod -A -o json | jq -r '
 kubectl get pod -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.metadata.name}{"\t"}{.spec.securityContext.appArmorProfile}{"\n"}{end}'
 ```
 
-empty Pod audit result は、container-level override または controller 内の legacy configuration がないことを証明しません。Deployment、StatefulSet、DaemonSet、Job、CronJob の template も追加で確認します。最初の四つは `.spec.template.metadata.annotations`、`.spec.template.spec.securityContext.appArmorProfile`、container override、CronJob は `.spec.jobTemplate.spec.template` 配下の同じ field です。migration では、controller/template manifest を修正し、それが作成した Pod だけを修正しません。
+empty Pod audit result は、container-level override または controller 内の legacy configuration がないことを証明しません。Deployment、StatefulSet、DaemonSet、Job、CronJob の template も追加で確認します。最初の四つは `.spec.template.metadata.annotations`、`.spec.template.spec.securityContext.appArmorProfile`、container override を確認し、CronJob は `.spec.jobTemplate.spec.template` 配下の同じ field を確認します。migration では、controller/template manifest を修正し、それが作成した Pod だけを修正しません。
 
 > 🎯 container creation error と runtime denial を区別してから、node、name、profile load、effective enforcement、kernel evidence を確認します。原因を `Unconfined` に置き換えてはいけません。
 
@@ -286,20 +286,20 @@ fi
 
 ```bash
 kubectl exec -n demo apparmor-localhost -- cat /proc/1/attr/current
-# Expected: k8s-demo (enforce)
+# 期待値: k8s-demo (enforce)
 kubectl exec -n demo apparmor-localhost -- touch /aa-mode-probe-enforce
-# Expected Permission denied: implicit denial in enforce.
+# 期待結果は Permission denied（enforce では implicit denial）。
 kubectl exec -n demo apparmor-localhost -- cat /etc/shadow
-# Expected Permission denied and audit evidence: audit deny.
+# 期待結果は Permission denied と audit evidence（audit deny）。
 
 sudo aa-complain /etc/apparmor.d/k8s-demo
 sudo grep -F 'k8s-demo' /sys/kernel/security/apparmor/profiles
 kubectl exec -n demo apparmor-localhost -- cat /proc/1/attr/current
-# Expected: k8s-demo (complain)
+# 期待値: k8s-demo (complain)
 kubectl exec -n demo apparmor-localhost -- touch /aa-mode-probe-complain
-# Expected success and ALLOWED/complain telemetry.
+# 期待結果は成功と ALLOWED/complain telemetry。
 kubectl exec -n demo apparmor-localhost -- cat /etc/shadow
-# Permission denied: explicit audit deny applies in complain too.
+# Permission denied: explicit audit deny は complain でも有効。
 sudo aa-enforce /etc/apparmor.d/k8s-demo
 ```
 
@@ -417,7 +417,7 @@ Fix: AppArmor を enabled にし compatible runtime を持つ Linux node pool �
 >
 > **Retest:** fix 後も forbidden operation が block されたままであること。
 
-## 16.9. Self-check question
+## 16.9. 自己確認問題
 
 <details>
 <summary>1. AppArmor が UID/GID、capabilities、seccomp、RBAC を置き換えないのはなぜですか？</summary>
@@ -462,12 +462,12 @@ key は exact container name で終わる必要があり、Localhost の value �
 </details>
 
 <details>
-<summary>8. **Flashback（第18章）。** 第18章の PSA `restricted` は seccomp に `RuntimeDefault`/`Localhost` を要求しますが、disabled default を除き specific AppArmor profile を要求**しません**。built-in PSA が検査する範囲はどこまでで、この章で explicit に割り当てた `Localhost` AppArmor profile だけが閉じられる範囲はどこからですか？</summary>
+<summary>8. **Flashback（第18章）。** 第18章の PSA `restricted` は seccomp に `RuntimeDefault`/`Localhost` を要求しますが、`RuntimeDefault`/disabled でない default を超える specific AppArmor profile を要求**しません**。built-in PSA が検査する範囲はどこまでで、この章で explicit に割り当てた `Localhost` AppArmor profile だけが閉じられる範囲はどこからですか？</summary>
 
 PSA は built-in standard に対する Pod-spec の許容性を検査します。これには disabled でない AppArmor default と seccomp の `RuntimeDefault`/`Localhost` が含まれますが、specific application の path と operation contract は model 化しません。node-local named AppArmor policy の配布や確認もしません。explicit な `Localhost` profile は次の範囲を閉じます。選択した node 上で kernel が enforce する、specific の allowed path、file operation、capability、network、mount rule です。
 </details>
 
-## Practice
+## 練習
 
 まず[CKA Lab 106](../../../cka/labs/106/README_JP.MD)で `securityContext`、non-root execution、capabilities を練習します。これは chapter topic の main practice ではなく prerequisite です。次に test node で `k8s-demo` profile を作り、`apparmor_parser` で load し、`appArmorProfile.type: Localhost` を持つ Pod を割り当て、`complain` と `enforce` の behavior を比較します。次の[第17章](../17/jp.md)で seccomp を追加します。AppArmor は profile の object と operation を制限し、seccomp は process が利用できる syscall set を制限します。
 
@@ -477,11 +477,11 @@ PSA は built-in standard に対する Pod-spec の許容性を検査します�
 [tasks/cka/labs/106](../../../cka/labs/106/README_JP.MD)
 🌐 追加 interactive practice（killer.sh/killercoda、external resource）: [apparmor](https://killercoda.com/killer-shell-cks/scenario/apparmor)
 
-## Links
+## 参考資料
 
 - [Kubernetes: AppArmor による container resource access の制限](https://kubernetes.io/docs/tutorials/security/apparmor/)
 - [Kubernetes API: AppArmorProfile](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#AppArmorProfile)
-- [AppArmor: official documentation](https://apparmor.net/)
+- [AppArmor: 公式ドキュメント](https://apparmor.net/)
 - [AppArmor project: Wiki](https://gitlab.com/apparmor/apparmor/-/wikis/home)
 - [Kubernetes: Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
 

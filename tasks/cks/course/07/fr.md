@@ -6,7 +6,7 @@
 
 > **La suite.** Les politiques réseau limitent le chemin de l'attaquant entre les workloads. Vérifions maintenant la sécurité de la configuration du control plane et des nœuds eux-mêmes. Le **CIS Kubernetes Benchmark** transforme les recommandations de hardening en points vérifiables, et `kube-bench` les compare automatiquement avec la configuration du cluster. Cela fait partie du domaine **Cluster Setup** (CKS, 15 %) : il faut non seulement trouver un paramètre non sûr, mais aussi le corriger sans perdre le fonctionnement du cluster.
 
-> **Ce qu'il faut connaître de CKA.** Ce chapitre ne répète pas le fonctionnement de `kubeadm`, des static Pod et de PKI. Avant de commencer, revoyez [kubeadm et les fichiers du control plane](../../../cka/course/35/fr.md) et les [certificats Kubernetes](../../../cka/course/39/fr.md).
+> **Ce qu'il faut connaître de CKA.** Ce chapitre ne répète pas le fonctionnement de `kubeadm`, des static Pod et de la PKI. Avant de commencer, revoyez [kubeadm et les fichiers du control plane](../../../cka/course/35/fr.md) et les [certificats Kubernetes](../../../cka/course/39/fr.md).
 
 ## 07.1. CIS Kubernetes Benchmark : ce que nous vérifions exactement
 
@@ -74,7 +74,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-control-plane.txt
 sudo kube-bench run --targets master --check 1.2.1
 ```
 
-Si le binaire `kube-bench` n'est pas installé directement sur le nœud, il peut aussi être exécuté dans un Pod/Job avec `hostPID` et les montages `hostPath` nécessaires à la configuration et aux données des composants ; le dépôt upstream de `kube-bench` contient des exemples prêts à l'emploi. Cette exécution ne vérifie que les nœuds sur lesquels le Pod peut être planifié et dont les host namespaces/fichiers lui sont accessibles. Dans Kubernetes managed, elle permet en général de vérifier les worker-nœuds accessibles, mais pas le control plane GKE/EKS/AKS/ACK appartenant au provider : l'accès à l'API Kubernetes seul ne rend pas les control-plane checks accessibles.
+Si le binaire `kube-bench` n'est pas installé directement sur le nœud, il peut aussi être exécuté dans un Pod/Job avec `hostPID` et les montages `hostPath` nécessaires à la configuration et aux données des composants ; le dépôt upstream de `kube-bench` contient des exemples prêts à l'emploi. Cette exécution ne vérifie que les nœuds sur lesquels le Pod peut être planifié et dont les host namespaces/fichiers lui sont accessibles. Dans Kubernetes managed, elle permet en général de vérifier les nœuds worker accessibles, mais pas le control plane GKE/EKS/AKS/ACK appartenant au provider : l'accès à l'API Kubernetes seul ne rend pas les control-plane checks accessibles.
 
 Ce chapitre suppose un cluster monté avec `kubeadm` et un accès direct aux nœuds ; il utilise donc l'exécution locale dans la suite.
 
@@ -134,7 +134,7 @@ La vérification de la désactivation de profiling existe pour les trois princip
 - `1.3.2` - `kube-controller-manager`;
 - `1.4.1` - `kube-scheduler`.
 
-Les trois concernent le target `master`, et non `node`. Par exemple, pour scheduler :
+Les trois concernent le target `master`, et non `node`. Par exemple, pour le scheduler :
 
 ```text
 [FAIL] 1.4.1 Ensure that the --profiling argument is set to false (Automated)
@@ -156,11 +156,11 @@ kind: KubeSchedulerConfiguration
 enableProfiling: false
 ```
 
-`kube-bench v0.16.0 / cis-1.12` a une limite : le check `1.4.1` analyse la process command line et ne lit pas `KubeSchedulerConfiguration`. Avec un scheduler utilisant `--config`, le résultat `1.4.1` ne peut donc pas être considéré comme une preuve autonome de l'effective profiling state : une config correcte peut produire un `FAIL`, et un `--profiling=false` ignoré un `PASS` formel. Dans ce cas, contrôlez séparément le fichier `--config` actif, assurez-vous que `enableProfiling: false`, vérifiez la santé de scheduler et consignez la divergence de `kube-bench` comme une limite de la version benchmark/tool utilisée. N'ajoutez pas un CLI-flag ignoré dans le seul but d'obtenir un `PASS`.
+`kube-bench v0.16.0 / cis-1.12` a une limite : le check `1.4.1` analyse la process command line et ne lit pas `KubeSchedulerConfiguration`. Avec un scheduler utilisant `--config`, le résultat `1.4.1` ne peut donc pas être considéré comme une preuve autonome de l'effective profiling state : une config correcte peut produire un `FAIL`, et un `--profiling=false` ignoré un `PASS` formel. Dans ce cas, contrôlez séparément le fichier `--config` actif, assurez-vous que `enableProfiling: false`, vérifiez la santé du scheduler et consignez la divergence de `kube-bench` comme une limite de la version benchmark/tool utilisée. N'ajoutez pas un CLI-flag ignoré dans le seul but d'obtenir un `PASS`.
 
 Pour `kube-controller-manager`, `--profiling` reste un CLI-flag normal ; son constat (`1.3.2`) se corrige donc exactement comme en 07.3, sans cette réserve.
 
-Le même cycle - exécuter `kube-bench`, trouver `FAIL`, éditer le manifeste, vérifier - se fait aussi sur les worker-nœuds, uniquement avec les targets et l'ensemble de flags `node` (`kubelet`, et non les composants control plane). La section 07.5 traite précisément ce constat.
+Le même cycle - exécuter `kube-bench`, trouver `FAIL`, éditer le manifeste, vérifier - se fait aussi sur les nœuds worker, uniquement avec les targets et l'ensemble de flags `node` (`kubelet`, et non les composants control plane). La section 07.5 traite précisément ce constat.
 
 **À l'examen, la vitesse prime sur l'exhaustivité.** Une tâche CKS typique indique qu'un rapport kube-bench pour kube-apiserver/kubelet contient un FAIL pour un ID donné et demande de le corriger ; c'est le fait de la correction qui est évalué, non une revue générale de tous les constats. Algorithme rapide : ouvrir `== Remediations ==` pour l'ID précis → déterminer s'il s'agit d'un static Pod ou d'un service systemd (kubelet) → éditer le bon fichier → attendre le redémarrage → revérifier avec le même `--check <ID>`, et non tout le target.
 
@@ -266,7 +266,7 @@ kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" \
 
 Pour un utilisateur externe, l'accès à `10250` doit toujours être limité par le firewall et la topologie réseau. `authorization-mode=Webhook` ne rend pas le port sûr en soi - il oblige kubelet à demander à l'API Kubernetes les droits du sujet authentifié.
 
-## 07.6. Exemple : trouver et corriger un FAIL de etcd
+## 07.6. Exemple : trouver et corriger un FAIL d'etcd
 
 etcd stocke le persistent state de l'API Kubernetes : Secrets, RBAC, configuration et spécifications des workloads. Lire le data directory ou une TLS private key équivaut à une grave compromission du cluster ; CIS vérifie donc séparément le propriétaire et les droits des fichiers etcd.
 
@@ -303,7 +303,7 @@ sudo chown etcd:etcd "$DATA_DIR"
 sudo kube-bench run --targets master --check 1.1.12
 ```
 
-Les droits constituent un check distinct, `1.1.11` ("permissions 700 ou plus restrictives") ; s'il faut aussi le corriger, appliquez-le et revérifiez-le séparément :
+Les droits constituent un check distinct, `1.1.11` (« permissions 700 ou plus restrictives ») ; s'il faut aussi le corriger, appliquez-le et revérifiez-le séparément :
 
 ```bash
 sudo chmod 700 "$DATA_DIR"
@@ -390,7 +390,7 @@ Erreurs courantes et diagnostic :
 - Pour `kube-apiserver`, il importe de minimiser l'accès anonymous en tenant compte des health probes et du kubeadm discovery, d'utiliser une authorization sûre, audit et `--profiling=false`. N'appliquez pas `--anonymous-auth=false` mécaniquement sans vérifier le lifecycle du cluster.
 - profiling doit être désactivé sur `kube-apiserver`, `kube-controller-manager` et `kube-scheduler`, mais la manière active de le configurer dépend du composant : pour `kube-scheduler` avec `--config`, vérifiez `enableProfiling: false` dans `KubeSchedulerConfiguration`, et non le CLI-flag `--profiling`.
 - Pour kubelet, utilisez `--read-only-port=0`, `--anonymous-auth=false`, `--authorization-mode=Webhook` et `--protect-kernel-defaults=true`, ou leurs équivalents dans `config.yaml`.
-- Le etcd data directory, les PKI private keys, le kubeconfig et les manifestes static Pod nécessitent des droits minimaux. Pour un CIS check, déterminez d'abord le data directory réel, puis appliquez exactement les benchmark ownership/permissions requis, compte tenu de l'applicabilité du profile et du runtime model de l'installation concernée.
+- L'etcd data directory, les PKI private keys, le kubeconfig et les manifestes static Pod nécessitent des droits minimaux. Pour un CIS check, déterminez d'abord le data directory réel, puis appliquez exactement les benchmark ownership/permissions requis, compte tenu de l'applicabilité du profile et du runtime model de l'installation concernée.
 
 ## 07.11. Utilité à l'examen et dans le travail réel
 
@@ -415,7 +415,7 @@ Kubelet doit remarquer la modification du manifeste et recréer le static Pod, m
 <details>
 <summary>3. Sur quels composants du control plane faut-il désactiver profiling, et la méthode de configuration est-elle identique ?</summary>
 
-profiling doit être désactivé sur `kube-apiserver`, `kube-controller-manager` et `kube-scheduler` : il ne suffit pas de le faire seulement sur apiserver, car CIS vérifie les profiling endpoints des trois composants. La méthode de configuration n'est pas toujours identique : `kube-apiserver` et `kube-controller-manager` utilisent le CLI-flag `--profiling=false`, mais ce flag scheduler est deprecated - s'il s'exécute avec `--config=<path>`, il faut désactiver profiling avec `enableProfiling: false` dans `KubeSchedulerConfiguration`, et non via le CLI. Désactiver profiling n'équivaut pas à désactiver les metrics.
+Profiling doit être désactivé sur `kube-apiserver`, `kube-controller-manager` et `kube-scheduler` : il ne suffit pas de le faire seulement sur apiserver, car CIS vérifie les profiling endpoints des trois composants. La méthode de configuration n'est pas toujours identique : `kube-apiserver` et `kube-controller-manager` utilisent le CLI-flag `--profiling=false`, mais ce flag scheduler est deprecated - s'il s'exécute avec `--config=<path>`, il faut désactiver profiling avec `enableProfiling: false` dans `KubeSchedulerConfiguration`, et non via le CLI. Désactiver profiling n'équivaut pas à désactiver les metrics.
 </details>
 
 <details>

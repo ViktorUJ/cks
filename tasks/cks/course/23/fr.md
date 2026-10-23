@@ -294,22 +294,22 @@ nœud dans un ticket, un chat ou Git. En cas de suspicion de compromission :
 5. répétez la vérification fonctionnelle et au niveau des paquets de la section 23.10.
 
 `kubectl get secret -A` et des permissions larges pour lire les Secrets donnent accès non seulement au matériel
-IPsec, mais aussi à de nombreux autres secrets. Limitez RBAC et l’audit access à `kube-system`.
+IPsec, mais aussi à de nombreux autres secrets. Restreignez l’accès à `kube-system` par RBAC et auditez-le.
 
 > 🔬 IPsec est un backend Cilium alternatif avec rotation de clé, diagnostic ESP, Cilium CLI compatible et fenêtre de recouvrement des clés.
 
 ## 23.5. IPsec : quand il est nécessaire et comment ne pas compromettre la gestion des clés
 
 IPsec dans Cilium fournit aussi un chiffrement transparent de nœud à nœud, mais utilise des associations de sécurité ESP
-IPsec. Il est souvent choisi lorsque des exigences d'entreprise ou l'infrastructure réseau existante
-requièrent IPsec. Un paquet sur l'interface physique apparaît comme ESP (protocole IP 50) ; l'HTTP de l'application
-ne doit pas pouvoir y être lu. N'appliquez pas ici le modèle IKE/NAT-T général avec UDP/4500 : il
+IPsec. Il est souvent choisi lorsque des exigences d’entreprise ou l’infrastructure réseau existante
+requièrent IPsec. Un paquet sur l’interface physique apparaît comme ESP (protocole IP 50) ; l’HTTP de l’application
+ne doit pas pouvoir y être lu. N’appliquez pas ici le modèle IKE/NAT-T général avec UDP/4500 : il
 ne fait pas partie de ce mécanisme Cilium.
 
-Une transition typique pour une release Cilium prenant en charge IPsec commence par le Secret de clé : l'agent
-doit recevoir `cilium-ipsec-keys` **avant** d'activer `encryption.type=ipsec`. Effectuez la
-création uniquement depuis une machine d'administration disposant d'une Cilium CLI compatible prise en charge et d'un
-kubeconfig. Si le Secret existe déjà, ne l'écrasez pas accidentellement - vérifiez d'abord son
+Une transition typique pour une release Cilium prenant en charge IPsec commence par le Secret de clé : l’agent
+doit recevoir `cilium-ipsec-keys` **avant** d’activer `encryption.type=ipsec`. Effectuez la
+création uniquement depuis une machine d’administration disposant d’une Cilium CLI compatible prise en charge et d’un
+kubeconfig. Si le Secret existe déjà, ne l’écrasez pas accidentellement - vérifiez d’abord son
 propriétaire et la procédure de rotation propre à la version :
 
 ```bash
@@ -338,53 +338,53 @@ kubectl -n kube-system get pods -l k8s-app=cilium -o name |
 ```
 
 Cilium stocke le matériel de clé IPsec dans le Secret `cilium-ipsec-keys` de `kube-system`. Ne
-l'imprimez pas dans un terminal, un log CI ni la documentation. Il est acceptable de vérifier sa présence et
+l’imprimez pas dans un terminal, un log CI ni la documentation. Il est acceptable de vérifier sa présence et
 ses métadonnées sans décoder les données.
 
 Pour la rotation, utilisez uniquement une version **compatible** prise en charge de la Cilium CLI et la
 procédure propre à la version. Obtenez un état ordinaire ne contenant pas de secret avec `cilium encryption
 status` depuis une machine d'administration et `cilium-dbg encrypt status` sur chaque nœud. La
-commande `cilium encryption key-status` imprime le matériel de clé IPsec : ne l'exécutez que lorsqu'une
-procédure de rotation approuvée l'exige explicitement, dans un terminal protégé, sans sortie vers CI, un log,
+commande `cilium encryption key-status` imprime le matériel de clé IPsec : ne l’exécutez que lorsqu’une
+procédure de rotation approuvée l’exige explicitement, dans un terminal protégé, sans sortie vers CI, un log,
 un ticket ou un chat.
 
 ```bash
-# Machine d'administration avec une Cilium CLI compatible prise en charge.
+# Machine d’administration avec une Cilium CLI compatible prise en charge.
 cilium encryption status
 cilium encryption rotate-key
 ```
 
 Pour plusieurs clusters ou une release non standard, ajoutez les paramètres nécessaires `--context`,
-`--namespace kube-system` et `--helm-release-name` aux commandes. N'effectuez pas de
+`--namespace kube-system` et `--helm-release-name` aux commandes. N’effectuez pas de
 rotation depuis un Pod Cilium. Vérifiez la disponibilité de la subcommand avec `cilium encryption --help`
 et la compatibility table de la CLI. Avec `encryption.ipsec.keyWatcher=true` (par défaut), les agents prennent
-en compte le Secret mis à jour sans redémarrage du DaemonSet ; normalement, tous les agents l'appliquent en environ une minute,
-et les anciennes et nouvelles clés coexistent pendant la fenêtre de rotation. Un redémarrage/rollout du DaemonSet n'est nécessaire
-que lorsque le watcher est désactivé ou que la documentation de la version installée l'exige explicitement.
+en compte le Secret mis à jour sans redémarrage du DaemonSet ; normalement, tous les agents l’appliquent en environ une minute,
+et les anciennes et nouvelles clés coexistent pendant la fenêtre de rotation. Un redémarrage/rollout du DaemonSet n’est nécessaire
+que lorsque le watcher est désactivé ou que la documentation de la version installée l’exige explicitement.
 
 Vous ne pouvez pas remplacer manuellement le Secret par une seule chaîne aléatoire : la désynchronisation des
 peers entraîne une perte de paquets. Le minimum pratique pour une demande de changement :
 
 - générez la nouvelle clé avec un aléa cryptographique et transférez-la par un canal protégé ;
-- prenez l'ordre et le format du Secret de clé dans la documentation du Cilium installé ;
+- prenez l’ordre et le format du Secret de clé dans la documentation du Cilium installé ;
 - vérifiez le `resourceVersion` du Secret et `cilium-dbg encrypt status` sur **tous** les agents avant la
   fin de la fenêtre de recouvrement des clés ;
-- mesurez les pertes/erreurs et prévoyez un rollback avant de supprimer l'ancienne clé ;
-- après la rotation, vérifiez l'application et la capture physique sur la paire de nœuds requise.
+- mesurez les pertes/erreurs et prévoyez un rollback avant de supprimer l’ancienne clé ;
+- après la rotation, vérifiez l’application et la capture physique sur la paire de nœuds requise.
 
-**Ne confondez pas la clé IPsec avec l'AC mTLS.** La clé IPsec protège les peers de transport, tandis que
-le certificat mesh confirme l'identité du workload. Leur propriétaire, intervalle de rotation, audit et blast
+**Ne confondez pas la clé IPsec avec l’AC mTLS.** La clé IPsec protège les peers de transport, tandis que
+le certificat mesh confirme l’identité du workload. Leur propriétaire, intervalle de rotation, audit et blast
 radius peuvent différer.
 
 Ceci achève la configuration du chiffrement de transport Cilium. Istio est considéré délibérément juste
-après : ce n'est **pas** le paramètre Cilium suivant ni un prérequis pour IPsec, mais une couche supplémentaire
-indépendante. Pour une requête entre nœuds, Cilium protège le paquet extérieur entre les nœuds, tandis qu'Istio mTLS permet à un
-proxy de vérifier l'identité d'un workload spécifique. Un chiffrement Cilium sain ne prouve donc pas encore l'injection Istio,
+après : ce n’est **pas** le paramètre Cilium suivant ni un prérequis pour IPsec, mais une couche supplémentaire
+indépendante. Pour une requête entre nœuds, Cilium protège le paquet extérieur entre les nœuds, tandis qu’Istio mTLS permet à un
+proxy de vérifier l’identité d’un workload spécifique. Un chiffrement Cilium sain ne prouve donc pas encore l’injection Istio,
 les certificats ni la politique mTLS - ces vérifications sont effectuées séparément dans la section suivante.
 
-> 🎯 Istio mTLS lie un certificat à l'identité du workload ; distinguez `PeerAuthentication: STRICT` de `DestinationRule` avec `ISTIO_MUTUAL`, et vérifiez le proxy/l'injection.
+> 🎯 Istio mTLS lie un certificat à l’identité du workload ; distinguez `PeerAuthentication: STRICT` de `DestinationRule` avec `ISTIO_MUTUAL`, et vérifiez le proxy/l’injection.
 
-> 🔬 **Primitive d'identité upstream.** Kubernetes v1.37 a stabilisé Pod Certificates et ClusterTrustBundles. Ils fournissent des primitives X.509 au niveau Kubernetes, mais ne rendent pas automatiquement inutile le plan d'identité Istio/SPIFFE : le signer, le modèle de confiance et la mesh enforcement sont des décisions architecturales distinctes. Voir [Kubernetes v1.37 Security Delta (uniquement en russe)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🔬 **Primitive d’identité upstream.** Kubernetes v1.37 a stabilisé Pod Certificates et ClusterTrustBundles. Ils fournissent des primitives X.509 au niveau Kubernetes, mais ne rendent pas automatiquement inutile le plan d’identité Istio/SPIFFE : le signer, le modèle de confiance et la mesh enforcement sont des décisions architecturales distinctes. Voir [Kubernetes v1.37 Security Delta (uniquement en russe)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 23.6. Istio : sidecar, identité de workload SPIFFE et `PeerAuthentication`
 
@@ -392,58 +392,59 @@ les certificats ni la politique mTLS - ces vérifications sont effectuées sépa
 ### Quel problème Istio résout après Cilium
 
 Les sections précédentes ont déjà protégé le **transport entre les nœuds** : Cilium WireGuard/IPsec
-chiffre le paquet extérieur et authentifie le peer de nœud. Mais cela est insuffisant lorsqu'il
+chiffre le paquet extérieur et authentifie le peer de nœud. Mais cela est insuffisant lorsqu’il
 importe de répondre à la question : « quel workload exact appelle le Service ? » Cilium ne
-donne pas à l'application ou au serveur une identité vérifiable pour le Pod/ServiceAccount client et ne
-force pas lui-même un serveur à n'accepter que mTLS. De plus, le chiffrement des nœuds Cilium ne crée pas de
+donne pas à l’application ou au serveur une identité vérifiable pour le Pod/ServiceAccount client et ne
+force pas lui-même un serveur à n’accepter que mTLS. De plus, le chiffrement des nœuds Cilium ne crée pas de
 tunnel extérieur pour les Pods situés sur le même nœud, de par sa conception.
 
 Istio résout une autre partie du problème : les proxies de workload reçoivent des certificats, établissent mTLS
-et vérifient l'identité du peer. `PeerAuthentication: STRICT` peut rejeter le trafic entrant plaintext.
+et vérifient l’identité du peer. `PeerAuthentication: STRICT` peut rejeter le trafic entrant plaintext.
 Ensemble, ils fonctionnent ainsi : **Istio protège et authentifie la connexion de workload à workload,
 tandis que Cilium protège en plus le paquet sur le segment inter-nœuds non fiable**.
 `NetworkPolicy` reste une troisième couche - elle détermine quel flux est autorisé.
 
 | Question | Cilium WireGuard/IPsec | Istio mTLS |
 |---|---|---|
-| Bénéfice principal | Chiffrement transparent de nœud à nœud sans modifier l'application ni le Service | Identité du workload, authentification mutuelle et `STRICT` contre un client plaintext |
-| Ce que cela ne résout pas | Ne fournit pas au serveur l'identité du workload client ; ne chiffre pas, de par sa conception, le flux du même nœud | Ne masque pas les métadonnées L3/L4 extérieures à l'underlay et ne couvre pas les flux hors mesh ; ne remplace pas NetworkPolicy |
-| Coût/limite | CNI/kernel, firewall et MTU compatibles sont requis ; les clés appartiennent aux nœuds | Nécessite un control plane, des certificats et un proxy/un dataplane ambient ; le mode sidecar ajoute un conteneur et de l'overhead |
-| Éléments à démontrer | État de l'agent Cilium et WireGuard/ESP extérieur sur la NIC physique | Injection/enrôlement, état du proxy/certificat et tests mTLS/`STRICT` |
+| Bénéfice principal | Chiffrement transparent de nœud à nœud sans modifier l’application ni le Service | Identité du workload, authentification mutuelle et `STRICT` contre un client plaintext |
+| Ce que cela ne résout pas | Ne fournit pas au serveur l’identité du workload client ; ne chiffre pas, de par sa conception, le flux du même nœud | Ne masque pas à l’underlay les métadonnées L3/L4 extérieures et ne couvre pas les flux hors mesh ; ne remplace pas NetworkPolicy |
+| Coût/limite | CNI/kernel, firewall et MTU compatibles sont requis ; les clés appartiennent aux nœuds | Nécessite un control plane, des certificats et un proxy/un dataplane ambient ; le mode sidecar ajoute un conteneur et de l’overhead |
+| Éléments à démontrer | État de l’agent Cilium et WireGuard/ESP extérieur sur la NIC physique | Injection/enrôlement, état du proxy/certificat et tests mTLS/`STRICT` |
 
-Il ne s'agit pas d'un « double chiffrement » obligatoire. Si **les deux** workloads sont déjà dans le mesh,
+Il ne s’agit pas d’un « double chiffrement » obligatoire. Si **les deux** workloads sont déjà dans le mesh,
 que la confiance est vérifiée et que `PeerAuthentication: STRICT` est effectivement appliqué, mTLS chiffre déjà la
-payload applicative entre les proxies. Il n'est pas nécessaire d'activer le chiffrement des nœuds Cilium seulement pour
+payload applicative entre les proxies. Il n’est pas nécessaire d’activer le chiffrement des nœuds Cilium seulement pour
 chiffrer à nouveau la même payload.
 
-Cilium ajoute une valeur distincte lorsque le threat model exige de protéger l'underlay de nœud à nœud :
-masquer l'IP/le port Pod interne et d'autres métadonnées L3/L4 au réseau physique, couvrir un
+Cilium ajoute une valeur distincte lorsque le threat model exige de protéger l’underlay de nœud à nœud :
+masquer l’IP/le port Pod interne et d’autres métadonnées L3/L4 au réseau physique, couvrir un
 flux sensible entre nœuds hors mesh ou satisfaire une exigence de politique/conformité pour le
-chiffrement entre nœuds. Les deux couches ne sont nécessaires que lorsque **les deux** objectifs s'appliquent :
-identité de workload/mTLS **et** protection de l'underlay ou du trafic hors mesh. Si l'application n'exige pas
-d'identité de workload ou de comportement compatible avec le mesh, Istio n'est pas activé automatiquement - évaluez d'abord
-le threat model, la compatibilité et l'overhead.
+chiffrement entre nœuds. Les deux couches ne sont nécessaires que lorsque **les deux** objectifs s’appliquent :
+identité de workload/mTLS **et** protection de l’underlay ou du trafic hors mesh. Si l’application n’exige pas
+d’identité de workload ou de comportement compatible avec le mesh, Istio n’est pas activé automatiquement - évaluez d’abord
+le threat model, la compatibilité et l’overhead.
+
 Le sidecar Istio (`istio-proxy`, Envoy) intercepte le trafic entrant/sortant du workload. Istiod émet un
 certificat de workload basé sur le ServiceAccount Kubernetes ; les proxies établissent mTLS et vérifient
-l'identité du peer. L'identité du workload a la forme d'ID SPIFFE :
-`spiffe://<trust-domain>/ns/<namespace>/sa/<service-account>`. L'application continue normalement
-d'écouter sur son port HTTP ordinaire, car TLS se termine dans le sidecar, et non dans le conteneur de l'application.
+l’identité du peer. L’identité du workload a la forme d’ID SPIFFE :
+`spiffe://<trust-domain>/ns/<namespace>/sa/<service-account>`. L’application continue normalement
+d’écouter sur son port HTTP ordinaire, car TLS se termine dans le sidecar, et non dans le conteneur de l’application.
 
-En **mode ambient**, Istio n'ajoute pas de sidecar séparé à chaque Pod. À la place, `ztunnel`
-(**Zero Trust Tunnel**) - un proxy dédié au niveau du nœud - s'exécute sur chaque nœud. Il effectue
-les tâches mesh L3/L4, y compris mTLS et l'authentification, sans exiger que l'application travaille elle-même avec
+En **mode ambient**, Istio n’ajoute pas de sidecar séparé à chaque Pod. À la place, `ztunnel`
+(**Zero Trust Tunnel**) - un proxy dédié au niveau du nœud - s’exécute sur chaque nœud. Il effectue
+les tâches mesh L3/L4, y compris mTLS et l’authentification, sans exiger que l’application travaille elle-même avec
 TLS.
 
 `HBONE` (**HTTP-Based Overlay Network Environment**) est un tunnel Istio sécurisé entre les composants mesh.
 Il transporte plusieurs flux TCP dans une connexion mTLS ; par conséquent, le trafic de workload peut être
-protégé même si `istio-proxy` n'apparaît pas parmi les conteneurs du Pod. L'absence de `istio-proxy`
+protégé même si `istio-proxy` n’apparaît pas parmi les conteneurs du Pod. L’absence de `istio-proxy`
 en mode ambient ne signifie pas un client plaintext. Dans les deux modèles,
-`PeerAuthentication` avec `STRICT` n'autorise pas le trafic entrant plaintext : en mode ambient, le
+`PeerAuthentication` avec `STRICT` n’autorise pas le trafic entrant plaintext : en mode ambient, le
 serveur attend un flux HBONE/mTLS protégé.
 
-La vérification suivante de `istio-injection=enabled` et de la présence de `istio-proxy` s'applique **uniquement
-au mode sidecar**. Pour le mode ambient, vérifiez l'enrôlement du workload et l'état de `ztunnel` à l'aide de la
-documentation de la version Istio installée, plutôt que d'attendre un conteneur supplémentaire dans le
+La vérification suivante de `istio-injection=enabled` et de la présence de `istio-proxy` s’applique **uniquement
+au mode sidecar**. Pour le mode ambient, vérifiez l’enrôlement du workload et l’état de `ztunnel` à l’aide de la
+documentation de la version Istio installée, plutôt que d’attendre un conteneur supplémentaire dans le
 Pod.
 
 ```mermaid
@@ -459,10 +460,10 @@ flowchart TB
     style out fill:#db4437,color:#fff
 ```
 
-### Activer l'injection et vérifier le sidecar
+### Activer l’injection et vérifier le sidecar
 
-Pour un namespace de formation, activez l'injection avant de créer les Pods. En production, utilisez le label
-de révision de l'installation Istio contrôlée par le processus de changement ; ne mélangez pas différentes révisions
+Pour un namespace de formation, activez l’injection avant de créer les Pods. En production, utilisez le label
+de révision de l’installation Istio contrôlée par le processus de changement ; ne mélangez pas différentes révisions
 sans plan de migration.
 
 ```bash
@@ -476,7 +477,7 @@ kubectl -n mesh-demo get pod -l app=server \
   -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.containers[*].name}{"\n"}{end}'
 ```
 
-La liste des conteneurs doit inclure `istio-proxy` à côté de `server`. Un sidecar absent n'est pas un
+La liste des conteneurs doit inclure `istio-proxy` à côté de `server`. Un sidecar absent n’est pas un
 défaut cosmétique : un client plaintext ne deviendra pas un client mTLS, et `STRICT` le rejettera à juste titre.
 Pour un Deployment existant, effectuez un rollout contrôlé après avoir appliqué le label :
 
@@ -490,10 +491,10 @@ kubectl -n mesh-demo get pod -l app=server \
 ### `PeerAuthentication` : le serveur exige mTLS
 
 `PeerAuthentication` définit la politique mTLS entrante. `STRICT` signifie que le proxy serveur accepte
-uniquement le trafic mTLS d'un peer capable de présenter un certificat de confiance. Le TCP plaintext provenant
-d'un workload sans sidecar n'est pas une solution de repli autorisée.
+uniquement le trafic mTLS d’un peer capable de présenter un certificat de confiance. Le TCP plaintext provenant
+d’un workload sans sidecar n’est pas une solution de repli autorisée.
 
-La ressource suivante s'applique à l'ensemble du namespace `mesh-demo`. Un selector de namespace n'est pas
+La ressource suivante s’applique à l’ensemble du namespace `mesh-demo`. Un selector de namespace n’est pas
 nécessaire ici : le namespace est indiqué par `metadata.namespace`.
 
 ```yaml
@@ -524,7 +525,7 @@ spec:
     mode: STRICT
 ```
 
-N'appliquez pas `STRICT` à l'ensemble du namespace et une politique de workload avec `PERMISSIVE` en conflit au
+N’appliquez pas `STRICT` à l’ensemble du namespace et une politique de workload avec `PERMISSIVE` en conflit au
 même moment sans comprendre la priorité. Une bonne migration ressemble généralement à ceci :
 
 ```text
@@ -532,14 +533,14 @@ inventory clients -> inject/fix clients -> PERMISSIVE measurement (if needed) ->
 verify mTLS -> STRICT narrow scope -> STRICT namespace -> remove temporary exception
 ```
 
-`PERMISSIVE` n'est utile que pour une compatibilité temporaire : le proxy accepte à la fois mTLS et plaintext,
+`PERMISSIVE` n’est utile que pour une compatibilité temporaire : le proxy accepte à la fois mTLS et plaintext,
 donc un `curl` réussi ne prouve pas encore mTLS. `DISABLE` pour un workload TCP ordinaire crée une
-exception qui doit être minimisée et documentée avec un propriétaire et une date d'expiration.
+exception qui doit être minimisée et documentée avec un propriétaire et une date d’expiration.
 
 ### `DestinationRule` : le client ne doit pas désactiver TLS
 
-L'auto mTLS Istio peut sélectionner TLS automatiquement, mais un `DestinationRule` explicite est utile comme
-intention côté client vérifiable dans un environnement de formation ou lorsqu'une politique organisationnelle exige une
+L’auto mTLS Istio peut sélectionner TLS automatiquement, mais un `DestinationRule` explicite est utile comme
+intention côté client vérifiable dans un environnement de formation ou lorsqu’une politique organisationnelle exige une
 configuration explicite. `PeerAuthentication` protège le serveur entrant, tandis que `DestinationRule`
 définit TLS pour le trafic client sortant - ce sont deux côtés différents de la connexion.
 
@@ -556,10 +557,10 @@ spec:
       mode: ISTIO_MUTUAL
 ```
 
-`ISTIO_MUTUAL` signifie qu'Envoy utilise les certificats et le trust bundle gérés par Istio. Ne le
+`ISTIO_MUTUAL` signifie qu’Envoy utilise les certificats et le trust bundle gérés par Istio. Ne le
 remplacez pas par `SIMPLE` : `SIMPLE` crée un client TLS ordinaire sans certificat client de workload
 et ne satisfait pas mTLS. `DISABLE` envoie du plaintext et doit être rejeté lorsque le serveur est
-`STRICT`. Les Services externes exigent habituellement des réglages `ServiceEntry`/TLS distincts ; n'utilisez pas
+`STRICT`. Les Services externes exigent habituellement des réglages `ServiceEntry`/TLS distincts ; n’utilisez pas
 cet exemple comme règle globale pour tous les `*.svc.cluster.local`.
 
 Vérifiez les objets appliqués et la configuration réelle du proxy :
@@ -571,9 +572,9 @@ istioctl proxy-config cluster deploy/client -n mesh-demo | grep server.mesh-demo
 istioctl analyze -n mesh-demo
 ```
 
-`istioctl analyze` et `proxy-config` dépendent de la version Istio, mais l'idée utile demeure :
-inspectez non seulement le YAML dans Git, mais aussi la configuration d'exécution du proxy. La création réussie d'une CR
-ne garantit pas que le selector/l'host correspondaient à l'endpoint prévu.
+`istioctl analyze` et `proxy-config` dépendent de la version Istio, mais l’idée utile demeure :
+inspectez non seulement le YAML dans Git, mais aussi la configuration d’exécution du proxy. La création réussie d’une CR
+ne garantit pas que le selector/l’host correspondaient à l’endpoint prévu.
 
 > 🎯 Avec `STRICT`, un client dans le mesh reçoit `200` ; un client sans sidecar ne reçoit pas de succès plaintext.
 
@@ -763,7 +764,7 @@ mesh pour le namespace ou effectuez une migration documentée.
 
 Avant l’installation de Linkerd, vérifiez les prérequis du cluster, la présence de CRD Gateway API
 compatibles et utilisez une publication figée. Linkerd moderne nécessite des CRD Gateway API ; s’ils
-sont absents, installez d’abord une version compatible avec votre release selon l’instruction officielle.
+sont absents, installez d’abord une version compatible avec votre release selon les instructions officielles.
 
 ```bash
 kubectl get crd gateways.gateway.networking.k8s.io
@@ -1041,7 +1042,7 @@ conséquences de l’erreur d’une autre, mais aucune ne dispense des mises à 
   doivent pas être imprimées dans les logs, et la rotation IPsec s’effectue avec un overlap de clé selon la procédure de la version.
 - Istio `PeerAuthentication: STRICT` exige mTLS en inbound du serveur, l’injection ajoute
   `istio-proxy`, et un `DestinationRule` avec `ISTIO_MUTUAL` configure explicitement le côté client.
-- Linkerd fournit automatiquement mTLS aux workloads du mesh et lie l’identity à ServiceAccount ; ne
+- Linkerd fournit automatiquement mTLS aux workloads du mesh et lie l’identity au ServiceAccount ; ne
   mélangez pas son sidecar avec Istio dans le même Pod.
 - Une preuve convaincante inclut un `200` dans le mesh, un reset/échec plaintext à l’extérieur,
   `cilium-dbg encrypt status` et tcpdump montrant WireGuard/IPsec externe sur la NIC physique sans payload HTTP.
@@ -1182,7 +1183,7 @@ Avant le lab, il peut être utile de revoir les bases CKA : [chapitre 30 de CKA 
 
 En complément spécifique pour le mTLS natif de Cilium (sans sidecar Istio) - **lab 115 :
 Cilium Mutual Authentication avec SPIRE** (niveau avancé/production, hors périmètre
-formel de l'examen CKS Core) : [tasks/cks/labs/115](../../labs/115/README_FR.MD).
+formel de l’examen CKS Core) : [tasks/cks/labs/115](../../labs/115/README_FR.MD).
 
 Pour votre propre test, utilisez un cluster disposable et des namespaces séparés. Ne testez pas `STRICT` en
 désactivant un sidecar de production ou en capturant les paquets avec payload sensible sur un nœud partagé.

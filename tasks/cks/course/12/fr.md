@@ -47,7 +47,7 @@ L'ordre est important lors d'une investigation. `401 Unauthorized` signifie qu'u
 
 Anonymous access est parfois conservé pour un legacy health check ou par habitude. Le sujet anonyme ne permet rien à lui seul, mais un seul `RoleBinding` ou `ClusterRoleBinding` erroné pour `system:anonymous` ou `system:unauthenticated` rend l'API disponible sans clé, certificat ni token. Fermez d'abord l'entrée, puis supprimez les permissions déjà accordées : désactiver anonymous access aujourd'hui ne rend pas une binding dangereuse sûre pour toujours.
 
-Pour kubeadm standard, désactiver complètement avec `--anonymous-auth=false` ne peut pas être considéré comme une baseline universelle : ses health probes appellent `/livez` et `/readyz` sans credentials, donc une interdiction globale de anonymous peut renvoyer `401` et redémarrer l'API server. L'option principale pour un tel cluster est une `AuthenticationConfiguration` stable connectée par `--authentication-config`. Ses conditions forment une allowlist de paths **exacts** : aucun autre path ne devient anonyme, même avec une binding RBAC permissive. Cela affecte aussi `kubeadm join` fondé sur un token : avant de faire confiance à l'API, un client lit `/api/v1/namespaces/kube-public/configmaps/cluster-info` sans authentification. Choisissez l'une des deux options testées : ajoutez ce path exact lors de public token discovery, ou désactivez public discovery et employez file/HTTPS discovery. Une allowlist limitée aux health checks sans ce path est incompatible avec le token-based join ordinaire. N'ajoutez `/healthz` que si un health check l'utilise réellement. Chaque exception nécessite une revue distincte des routes, de l'accès réseau et des permissions du sujet anonyme.
+Pour kubeadm standard, désactiver complètement avec `--anonymous-auth=false` ne peut pas être considéré comme une baseline universelle : ses health probes appellent `/livez` et `/readyz` sans credentials, donc une interdiction globale d'anonymous peut renvoyer `401` et redémarrer l'API server. L'option principale pour un tel cluster est une `AuthenticationConfiguration` stable connectée par `--authentication-config`. Ses conditions forment une allowlist de paths **exacts** : aucun autre path ne devient anonyme, même avec une binding RBAC permissive. Cela affecte aussi `kubeadm join` fondé sur un token : avant de faire confiance à l'API, un client lit `/api/v1/namespaces/kube-public/configmaps/cluster-info` sans authentification. Choisissez l'une des deux options testées : ajoutez ce path exact lors de public token discovery, ou désactivez public discovery et employez file/HTTPS discovery. Une allowlist limitée aux health checks sans ce path est incompatible avec le token-based join ordinaire. N'ajoutez `/healthz` que si un health check l'utilise réellement. Chaque exception nécessite une revue distincte des routes, de l'accès réseau et des permissions du sujet anonyme.
 
 Sur un control-plane kubeadm, `kube-apiserver` est en général un static Pod. Modifiez le manifest actif localement sur le control-plane avec un accès à la console du node et une procédure de rollback enregistrée. Ne copiez pas de YAML de sauvegarde dans `/etc/kubernetes/manifests/` : kubelet peut le considérer comme un autre static Pod.
 
@@ -187,7 +187,7 @@ authorization:
 --authorization-mode=Webhook
 ```
 
-`10255` est le port kubelet historique read-only non authentifié ; désactivez-le. N'« ouvrez pas `10250` à tous » : l'API kubelet normale doit rester protégée par l'authentification, l'autorisation `Webhook` et des règles réseau. Le legacy `--insecure-port` de `kube-apiserver` a été supprimé dans les Kubernetes modernes ; ce n'est pas une raison d'ignorer les anciens manifests, images et documents. Recherchez-le comme l'indicateur d'une configuration non prise en charge ou non sécurisée, et non comme une option à activer pour la compatibilité.
+`10255` est le port kubelet historique read-only non authentifié ; désactivez-le. L'API kubelet normale sur `10250` ne doit pas être « ouverte à tous » : elle doit rester protégée par l'authentification, l'autorisation `Webhook` et des règles réseau. Le legacy `--insecure-port` de `kube-apiserver` a été supprimé dans les Kubernetes modernes ; ce n'est pas une raison d'ignorer les anciens manifests, images et anciennes documentations. Recherchez-le comme l'indicateur d'une configuration non prise en charge ou non sécurisée, et non comme une option à activer pour la compatibilité.
 
 ```bash
 # Sur chaque node : une erreur ss est une erreur de vérification, pas une confirmation que le port est fermé.
@@ -277,7 +277,7 @@ flowchart TB
     kubelet["kubelet<br/>system:node:worker-1"] --> nodeauth["Node authorizer<br/>cette requête est-elle nécessaire<br/>au node lui-même ?"]
     nodeauth --> restriction["NodeRestriction<br/>mutating requests<br/>propre Node / Pods<br/>liés"]
     restriction --> allowed["action<br/>autorisée"]
-    bad["worker-2<br/>label protégée<br/>node-restriction"] -. "refuser" .-> restriction
+    bad["worker-2<br/>label protégé<br/>node-restriction"] -. "refuser" .-> restriction
     style kubelet fill:#326ce5,color:#fff
     style nodeauth fill:#f4b400,color:#000
     style restriction fill:#673ab7,color:#fff
@@ -397,7 +397,7 @@ sudo grep -n -- '--config' /etc/kubernetes/manifests/kube-scheduler.yaml
 
 | Constat | Pourquoi c'est dangereux | Orientation sûre |
 |---|---|---|
-| broad anonymous access | une requête sans credential reçoit `system:anonymous` ; avec une selective config, seuls les exact allowed paths sont exclus | `AuthenticationConfiguration` avec un allowlist minimal d'exact paths ou `--anonymous-auth=false` si cela est compatible avec les probes/le bootstrapping ; cleanup des bindings |
+| broad anonymous access | une requête sans credential reçoit `system:anonymous` ; avec une selective config, seuls les exact allowed paths sont exclus | `AuthenticationConfiguration` avec une allowlist minimale d'exact paths ou `--anonymous-auth=false` si cela est compatible avec les probes/le bootstrapping ; cleanup des bindings |
 | `--authorization-mode=AlwaysAllow` | tout sujet authentifié ou anonymous passe authz | `Node,RBAC` ou une intégration Webhook réfléchie |
 | `NodeRestriction` absent | un kubelet compromis obtient une voie plus large vers l'API | activer le plugin en préservant les defaults existants |
 | profiling activé sans nécessité | endpoints de diagnostic superflus | pour apiserver/controller-manager - `--profiling=false` ; pour scheduler avec `--config` - `enableProfiling: false` dans le `KubeSchedulerConfiguration` actif |
@@ -455,7 +455,7 @@ kubectl auth can-i delete pods -n cks-104 \
   --as=system:serviceaccount:cks-104:app-sa
 ```
 
-Attendez `no` pour les vérifications anonymous et pour le `delete` interdit ; `list pods`
+Attendez-vous à `no` pour les vérifications anonymous et pour le `delete` interdit ; `list pods`
 pour le `app-sa` dédié doit renvoyer `yes` seulement dans le namespace indiqué. `kubectl auth
 can-i` vérifie l'authorizer pour une identity impersonated, mais n'établit pas une vraie
 connexion sans credential et ne prouve pas l'état de l'authenticator anonymous. Conservez les
@@ -529,7 +529,7 @@ preuve que le contrôle fonctionne, et non seulement qu'il est déclaré.
 
 - L'API est protégée par plusieurs couches indépendantes : réseau, TLS, authentication et
   authorization ; admission s'applique en plus aux mutating requests et aux custom requests
-  pris en charge.
+  prises en charge.
 - Pour kubelet, désactivez l'accès anonymous (`--anonymous-auth=false`). Sur kube-apiserver,
   limitez-le explicitement à ses health endpoints et, tant que le public token discovery est
   nécessaire, au path exact `kube-public/cluster-info` via `AuthenticationConfiguration` ; dans
@@ -607,7 +607,7 @@ pourrait régénérer un manifeste avec une configuration obsolète.
 
 **Dans le travail réel.** La restriction de l'API fait partie de la conception du réseau et de
 l'identity, et non d'une correction CIS ponctuelle. Un private endpoint est une option forte ;
-si l'endpoint est public, compensez-le par un strict allowlist et une authentication forte. Des
+si l'endpoint est public, compensez-le par une allowlist stricte et une authentication forte. Des
 bound tokens de courte durée, des bindings minimaux et une vérification automatisée de la dérive
 de configuration rendent la compromission d'un node ou d'un Pod nettement moins destructrice.
 
@@ -640,9 +640,9 @@ RoleBinding et ClusterRoleBinding, puis supprimez précisément le binding inuti
 <details>
 <summary>3. En quoi `10255` diffère-t-il de `10250` et quels réglages sont nécessaires pour kubelet API ?</summary>
 
-`10255` est le legacy kubelet API historique non authentifié en lecture seule et doit être
-désactivé avec `readOnlyPort: 0` ou `--read-only-port=0`. `10250` est le kubelet API normal,
-qui ne doit pas être ouvert à tous : il nécessite authentication, authorization `Webhook` et
+`10255` est la legacy kubelet API historique non authentifiée en lecture seule et doit être
+désactivée avec `readOnlyPort: 0` ou `--read-only-port=0`. `10250` est la kubelet API normale,
+qui ne doit pas être ouverte à tous : elle nécessite authentication, authorization `Webhook` et
 des règles réseau/firewall. Confirmez la désactivation de `10255` avec `ss`, et non seulement
 par une ligne de configuration.
 </details>
@@ -675,7 +675,7 @@ NetworkPolicy est appliquée par le CNI au trafic des Pod et ne couvre pas néce
 même manière le trafic host, externe ou control-plane ; de plus, la standard policy ne
 sélectionne pas un Service de destination par son nom DNS. Firewall et Security Group
 restreignent l'accès des sources à `:6443` à un autre niveau. Un public endpoint n'est
-acceptable qu'avec une justification explicite, un strict CIDR allowlist, une authentication
+acceptable qu'avec une justification explicite, une allowlist CIDR stricte, une authentication
 forte et la maîtrise de l'architecture réseau ; un private endpoint est souvent préférable.
 </details>
 
@@ -685,9 +685,9 @@ forte et la maîtrise de l'architecture réseau ; un private endpoint est souven
 Depuis une machine administrative ou autre machine autorisée, vérifiez l'accessibilité réseau
 et la santé avec `kubectl cluster-info` ou `kubectl get --raw='/livez?verbose'`. Vérifiez
 Authentication avec un `curl` sans credential vers un protected path, tel que `/version`, en
-attendant une API `401`. Avec une selective configuration, testez séparément l'exact allowed
+vous attendant à une API `401`. Avec une selective configuration, testez séparément l'exact allowed
 health/discovery path : il peut intentionnellement ne pas renvoyer `401`. `kubectl auth can-i
-... --as=system:anonymous --as-group=system:unauthenticated`, en attendant `no`, ne vérifie que
+... --as=system:anonymous --as-group=system:unauthenticated`, dont le résultat attendu est `no`, ne vérifie que
 l'authorizer pour une identity impersonated. Diagnostiquez un timeout ou un refused comme un
 problème réseau, et non comme une preuve d'Authentication.
 </details>

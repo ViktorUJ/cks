@@ -200,7 +200,7 @@ loaded and warn about schema-validation or probe errors.
 ### DaemonSet installation through Helm
 
 The official chart deploys Falco as a DaemonSet. Check chart values and the driver backend
-against the chart version: key names can change. The example selects the modern
+against the chart version: key names can change. The example selects the
 **modern eBPF** driver (`modern_ebpf`, CO-RE - no kernel headers or module build required)
 and the `falco` namespace; before a production installation, use a pinned chart version
 compatible with your Kubernetes and kernel.
@@ -803,7 +803,7 @@ A `rule` is a named detector; its `condition` is a Boolean expression over event
 <details>
 <summary>6. Which fields should be in output so an alert can be connected to a Kubernetes workload?</summary>
 
-At minimum, include the rule name and time, process/command, container ID and image, namespace, Pod, and host/node. The chapter also recommends retaining the available image digest, while `k8s.pod.uid` and a full container ID are useful for reliable Kubernetes correlation. If a metadata field yields `<NA>`, do not replace it with a guess; supplement the investigation.
+At minimum, include the rule name and time, process/command, container ID and image, namespace, Pod, and host/node. The chapter also recommends retaining the available image digest, while `k8s.pod.uid` and a full container ID are useful for reliable Kubernetes correlation. If a metadata field yields `<NA>`, do not replace it with a guess; supplement it with an investigation.
 </details>
 
 <details>

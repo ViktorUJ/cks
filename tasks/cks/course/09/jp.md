@@ -55,7 +55,7 @@ Hardening は「CIS 用」の line 集ではありません。変更前に四つ
 | `kubelet` | `--authorization-mode=AlwaysAllow` | authenticated client が kubelet API に過剰な access を得る | `--authorization-mode=Webhook` |
 | `kubelet` | `--protect-kernel-defaults=false` | baseline が不一致でも kubelet は fail-fast せず、host-level kernel flag を期待値に変えようとする可能性がある | sysctl 確認後の `--protect-kernel-defaults=true` |
 | `kube-controller-manager` | `--profiling=true` または `--use-service-account-credentials=false` | 余分な diagnostic、または別々の SA でなく広い credentials の使用 | `--profiling=false`、個別 service account credentials |
-| `kube-scheduler` | profiling 有効、または広い `--bind-address` の endpoint | diagnostic endpoint が不要な network に公開される | `enableProfiling: false`。deprecated CLI `--profiling` と config-based scheduler における kube-bench の制限は [第07章](../07/jp.md) |
+| `kube-scheduler` | profiling 有効、または広い `--bind-address` の endpoint | diagnostic endpoint が不要な network に公開される | `enableProfiling: false`。deprecated CLI `--profiling` と config-based scheduler における kube-bench の制限は [第07章](../07/jp.md) で扱います |
 | `etcd` | `--client-cert-auth=false`、安全でない `--listen-client-urls` | mTLS なしの client または external network が cluster store に access | mTLS、localhost/internal network、firewall |
 
 specific CIS/CKS 課題で benchmark が `--anonymous-auth=false` を明示的に要求する場合、課題の requirement をそのまま実施し結果を証明します。
@@ -201,7 +201,7 @@ modern Go と Kubernetes の default はすでに obsolete protocol と insecure
 
 Kubernetes component の flag で許される string value は通常 `VersionTLS12` と `VersionTLS13` です。etcd の value 名は etcd version に依存し、current help では `TLS1.2`/`TLS1.3` を使うことがあります。推測で program 間の value を移さず、編集前に memory や別 release documentation ではなく、その version で実行中の binary の `--help` を確認してください。
 
-試験では、web を探すより実行中 process 自身から正確な flag と許容 value list を得るほうが速いです。必要 version の documentation page が見つからない、または search に時間がかかることがあります。component が static Pod で container が `Running` なら最初に `kubectl exec` を使えます。`Ready=False` 自体は exec を妨げません。exec に必要なのは running container と使用可能な API/RBAC/streaming path です。Readiness は Pod の `Ready` state を決め、Service traffic への含有や workload controller の availability/rollout semantics に使われますが、`kubectl exec` の gate ではありません。`kubectl exec` の API/RBAC/streaming path が使えず、component が実際に CRI container として実行されているなら、specific container ID で `crictl exec` を使います。
+試験では、web を探すより実行中 process 自身から正確な flag と許容 value list を得るほうが速いです。必要 version の documentation page が見つからない、または search に時間がかかることがあります。component が static Pod で container が `Running` なら最初に `kubectl exec` を使えます。`Ready=False` 自体は exec を妨げません。exec に必要なのは running container と使用可能な API/RBAC/streaming path です。Readiness は Pod の `Ready` state を決め、Service traffic への組み込みや workload controller の availability/rollout semantics に使われますが、`kubectl exec` の gate ではありません。`kubectl exec` の API/RBAC/streaming path が使えず、component が実際に CRI container として実行されているなら、specific container ID で `crictl exec` を使います。
 
 component が独立した host `systemd` service なら `crictl exec` は使えません。active process または `ExecStart` から executable を得て、node 上で直接 `--help` を呼びます。
 
@@ -263,7 +263,7 @@ TLS minimum の検証には二つの別事項が必要です。
 1. protocol evidence - 許可 version は成功して negotiate され、設定 minimum 未満の version は拒否される。
 2. application health - component は変更後も動作可能である。
 
-apiserver は `6443` の handshake で十分です。kubelet `10250` は handshake 後に client certificate と authorization を要することが多いです。etcd の `etcdctl endpoint health` は application health だけを証明するため、protocol handshake は `openssl s_client` で別に検査します。private key を terminal に出力・copy しません。
+apiserver は `6443` の handshake で十分です。kubelet `10250` は handshake 後に client certificate と authorization を要することが多いです。etcd の `etcdctl endpoint health` は application health だけを証明するため、protocol handshake は `openssl s_client` で別に検査します。private key を terminal に出力せず、PKI を node から copy しません。
 
 negative test 前に、TLS client が実際に test する legacy protocol version を提案できるか確認します。modern OpenSSL や system crypto policy 自身が TLS 1.1 を禁止することがあります。client が local で TLS 1.1 を拒否しても server-side `tls-min-version` の証明にはなりません。negative test が証拠になるのは、client が legacy protocol を negotiate しようとし、拒否が検査 endpoint から来たことが分かるときだけです。この rule は apiserver、kubelet、etcd に共通です。
 
@@ -502,7 +502,7 @@ sha256sum --check "${BIN}.sha256sum"
 sha256sum /usr/bin/kubelet
 ```
 
-したがって expected identity/issuer を備えた signature/certificate は provenance を提供し、checksum は trusted release digest に対する integrity を提供します。Kubernetes は signed SBOM（SPDX）も公開しますが、image digest pinning、container-image signature、SBOM、admission policy は、この章の Cluster Setup ではなく**Supply Chain Security（20%）**domain に属します。これらの control は[第24〜28章](../24/jp.md)を参照してください。ここでは Kubernetes platform 自体の release artifact と binary だけを検証します。
+したがって expected identity/issuer を備えた signature/certificate は provenance を提供し、checksum は trusted release digest に対する integrity を提供します。Kubernetes は signed SBOM（SPDX）も公開しますが、image digest pinning、container-image signature、SBOM、admission policy は、この章の Cluster Setup ではなく**Supply Chain Security（20%）** domain に属します。これらの control は[第24〜28章](../24/jp.md)を参照してください。ここでは Kubernetes platform 自体の release artifact と binary だけを検証します。
 
 digest、signing、SBOM を含む詳細な container-image verification は、意図してここに重複させません。Supply Chain Security なので、[第24〜28章](../24/jp.md)を参照してください。
 
@@ -633,13 +633,13 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 
 ## 09.9. ミニ glossary
 
-- **static Pod** — Kubernetes API 経由で scheduler によらず、kubelet が管理する local node manifest の Pod。
-- **`--anonymous-auth`** — API endpoint の anonymous identity を許可または拒否する setting。
-- **read-only kubelet port** — legacy の unauthenticated kubelet port。value `0` で無効にする必要がある。
-- **TLS minimum version** — server が client と negotiate する最小 TLS version。
-- **cipher suite** — TLS cryptographic algorithm の set。許可 set は certificate algorithm と client に互換でなければならない。
-- **SHA-256 checksum** — published artifact との厳密な byte equality の検証に使う 256-bit file digest。
-- **provenance** — 実証可能な artifact origin。誰が、どの trusted release または pipeline から release したか。
+- **static Pod** - Kubernetes API 経由の scheduler ではなく、kubelet が管理する local node manifest の Pod。
+- **`--anonymous-auth`** - API endpoint の anonymous identity を許可または拒否する setting。
+- **read-only kubelet port** - legacy の unauthenticated kubelet port。value `0` で無効にする必要があります。
+- **TLS minimum version** - server が client と negotiate する最小 TLS version。
+- **cipher suite** - TLS cryptographic algorithm の set。許可 set は certificate algorithm と client に互換でなければなりません。
+- **SHA-256 checksum** - published artifact との厳密な byte equality の検証に使う 256-bit file digest。
+- **provenance** - 実証可能な artifact origin。誰が、どの trusted release または pipeline から release したか。
 
 ## 09.10. 章のまとめ
 
@@ -681,7 +681,7 @@ kubelet は static Pod directory を scan し、`.yaml`/`.yml` file だけに限
 <details>
 <summary>4. Kubernetes component の `VersionTLS12` と etcd CLI で可能な `TLS1.2` はどう異なり、正しい value はどう見つけますか？</summary>
 
-Kubernetes component は通常 `VersionTLS12` string を受け付けますが、current etcd は `TLS1.2` を期待できます。これらは別 program の interface なので、推測で value を移してはいけません。変更前に、running version の `etcd --help` または package documentation を確認します。
+Kubernetes component は通常 `VersionTLS12` string を受け付けますが、current etcd は `TLS1.2` を期待する場合があります。これらは別 program の interface なので、推測で value を移してはいけません。変更前に、running version の `etcd --help` または package documentation を確認します。
 </details>
 
 <details>
@@ -705,7 +705,7 @@ tag は mutable reference であり、republish 後に別の byte を指せる�
 <details>
 <summary>8. SHA-256 は integrity を確認しても provenance を確認しないのはなぜですか？ また Kubernetes binary に対して `cosign verify-blob` はどの certificate identity と OIDC issuer を確認すべきですか？</summary>
 
-SHA-256 は選択した digest との byte equality を確認しますが、同じ信頼できない file と共に得た digest は release 者を証明しません。provenance では `cosign verify-blob` が identity `krel-staging@k8s-releng-prod.iam.gserviceaccount.com` と issuer `https://accounts.google.com` を持つ signature と certificate を検証します。successful verification のためにどちらの constraint も外してはいけません。
+SHA-256 は選択した digest との byte equality を確認しますが、同じ信頼できない file と共に得た digest は 誰が release したかを証明しません。provenance では `cosign verify-blob` が identity `krel-staging@k8s-releng-prod.iam.gserviceaccount.com` と issuer `https://accounts.google.com` を持つ signature と certificate を検証します。successful verification のためにどちらの constraint も外してはいけません。
 </details>
 
 ## Practice

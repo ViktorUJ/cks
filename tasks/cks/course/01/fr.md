@@ -18,7 +18,7 @@
 |---|---|---|
 | KCSA | Quels sont les risques de Kubernetes ? | Expliquer les principes et la terminologie de base |
 | CKA | Comment déployer et administrer un cluster ? | Diagnostiquer les composants, le réseau, le storage et les mises à niveau |
-| CKS | Comment limiter et détecter une compromission ? | Configurer des policy, du hardening, audit, le scanning et la protection runtime |
+| CKS | Comment limiter et détecter une compromission ? | Configurer des policy, du hardening, de l'audit, le scanning et la protection runtime |
 
 CKA fournit la base opérationnelle : comment fonctionnent API server, kubelet, CNI, RBAC et static Pod. CKS emploie ces connaissances dans un scénario de sécurité. Par exemple, CKA apprend à créer une `NetworkPolicy`, alors que CKS demande de commencer par default-deny, de ne pas casser DNS, de limiter le metadata endpoint et de prouver par un test que le trafic interdit ne passe pas.
 
@@ -43,7 +43,7 @@ La sécurité n'est pas un paramètre distinct appliqué à la fin d'un projet. 
 
 L'examen CKS est performance-based : les tâches pratiques sont réalisées dans un terminal sur les clusters et les nodes fournis. Vous disposez de 2 heures et le score de réussite est de 67 %. Au moment de la vérification, les Important Instructions indiquent **15-20 tâches pratiques** ; c'est un paramètre instantané que la Linux Foundation peut modifier. L'inscription et le passage de CKS nécessitent d'avoir auparavant réussi CKA, mais sa validité peut expirer au moment de CKS : le certificat CKA n'a pas à rester actif. Un bon modèle de préparation consiste à changer délibérément de context et à vérifier l'état réel après chaque modification.
 
-Une tâche peut attribuer un host distinct : dans ce cas, exécutez `ssh <host>` depuis la machine de base (`base`), réalisez le travail et revenez sur `base`. Le SSH imbriqué entre les host cibles n'est pas pris en charge. Les ensembles d'outils préinstallés sur `base` et sur le host cible peuvent différer ; commencez donc par vérifier où exactement une commande doit être exécutée. **L'inscription CKS standard** comprend deux tentatives d'examen réelles (**One Retake**) pendant une eligibility window de **12 mois** ; le certificat obtenu est valable **2 ans**. Il ne s'agit pas de tentatives de simulator : l'inscription standard comprend aussi deux tentatives du Killer.sh simulator, chacune activée pendant **36 heures** et contenant **17 questions** ; **CKS-SINGLE n'inclut pas l'accès au simulator**. Entraînez le cycle complet : lire la condition, choisir le host/context, faire la modification minimale et vérifier le résultat.
+Une tâche peut attribuer un host distinct : dans ce cas, exécutez `ssh <host>` depuis la machine de base (`base`), réalisez le travail et revenez sur `base`. Le SSH imbriqué entre les host cibles n'est pas pris en charge. Les ensembles d'outils préinstallés sur `base` et sur le host cible peuvent différer ; commencez donc par vérifier où exactement une commande doit être exécutée. **L'inscription CKS standard** comprend deux tentatives d'examen réelles (**One Retake**) pendant une eligibility window de **12 mois** ; le certificat obtenu est valable **2 ans**. Il ne s'agit pas de tentatives de simulator : l'inscription standard comprend aussi deux tentatives du Killer.sh simulator, chacune activée pendant **36 heures** et contenant **17 questions** ; **CKS-SINGLE n'inclut pas l'accès au simulator**. Entraînez-vous sur le cycle complet : lire la condition, choisir le host/context, faire la modification minimale et vérifier le résultat.
 
 Les versions de Kubernetes doivent être distinguées :
 
@@ -84,20 +84,20 @@ Les changements du curriculum datés du **15 octobre 2024** sont entrés en vigu
 
 | Domaine | Poids | Chapitres du cours |
 |---|---:|---|
-| Cluster Setup | 15% | 04-09 |
-| Cluster Hardening | 15% | 10-13 |
-| System Hardening | 10% | 14-17 |
-| Minimize Microservice Vulnerabilities | 20% | 18-23 |
-| Supply Chain Security | 20% | 24-28 |
-| Monitoring, Logging and Runtime Security | 20% | 29-32 |
+| Cluster Setup | 15 % | 04-09 |
+| Cluster Hardening | 15 % | 10-13 |
+| System Hardening | 10 % | 14-17 |
+| Minimize Microservice Vulnerabilities | 20 % | 18-23 |
+| Supply Chain Security | 20 % | 24-28 |
+| Monitoring, Logging and Runtime Security | 20 % | 29-32 |
 
 ```mermaid
 flowchart TB
-    setup["Configuration du cluster<br/>15%"] --> hardening["Hardening du cluster<br/>15%"]
-    hardening --> system["Hardening du système<br/>10%"]
-    system --> workload["Microservices<br/>20%"]
-    workload --> supply["Supply chain<br/>20%"]
-    supply --> runtime["Monitoring, logging<br/>et runtime<br/>20%"]
+    setup["Configuration du cluster<br/>15 %"] --> hardening["Hardening du cluster<br/>15 %"]
+    hardening --> system["Hardening du système<br/>10 %"]
+    system --> workload["Microservices<br/>20 %"]
+    workload --> supply["Supply chain<br/>20 %"]
+    supply --> runtime["Monitoring, logging<br/>et runtime<br/>20 %"]
     style setup fill:#326ce5,color:#fff
     style hardening fill:#db4437,color:#fff
     style system fill:#f4b400,color:#000
@@ -115,7 +115,7 @@ L'édition 2024 contient des thèmes qui exigent une pratique dédiée, et pas s
 - `kube-linter` avec `kubesec` et `hadolint`.
 - Sandboxed containers via `RuntimeClass` : gVisor (`runsc`) et Kata Containers.
 
-La carte complète « compétence -> chapitre » se trouve dans [la table des matières du cours](../README_FR.md#compétence--chapitre). L'essentiel est ici de voir la logique : les policy limitent l'accès, le hardening réduit la surface d'attaque, la supply chain empêche un artefact non fiable, et la protection runtime ainsi qu'audit aident à détecter le risque restant.
+La carte complète « compétence -> chapitre » se trouve dans [la table des matières du cours](../README_FR.md#compétence--chapitre). L'essentiel est ici de voir la logique : les policy limitent l'accès, le hardening réduit la surface d'attaque, la supply chain empêche un artefact non fiable, et la protection runtime ainsi que l'audit aident à détecter le risque restant.
 
 ## 01.4 Prérequis CKA : ce que ce cours ne répète pas
 
@@ -124,7 +124,7 @@ CKS ne répète pas la syntaxe de base ni le fonctionnement de Kubernetes. Si, d
 | Compétence de niveau CKA | Où la réviser | Utilisation dans CKS |
 |---|---|---|
 | SecurityContext et capabilities | [chapitre 20](../../../cka/course/20/fr.md) | Hardened Pod, PSA, seccomp, AppArmor, immutable rootfs |
-| Secret, ServiceAccount et admission | [chapitre 19](../../../cka/course/19/fr.md), [chapitre 21](../../../cka/course/21/fr.md) | Protection des secrets, des tokens et du policy admission |
+| Secret, ServiceAccount et admission | [chapitre 19](../../../cka/course/19/fr.md), [chapitre 21](../../../cka/course/21/fr.md) | Protection des secrets, des tokens et de la policy d'admission |
 | Images et Dockerfile | [chapitre 23](../../../cka/course/23/fr.md) | Images minimales, SBOM, scan et signature |
 | NetworkPolicy et réseau de Pod | [chapitre 34](../../../cka/course/34/fr.md), [chapitre 30](../../../cka/course/30/fr.md) | Default-deny, protection de metadata, policy Cilium |
 | kubeadm, upgrade et PKI | [chapitre 35](../../../cka/course/35/fr.md), [chapitre 36](../../../cka/course/36/fr.md), [chapitre 39](../../../cka/course/39/fr.md) | CIS, TLS hardening, audit et mise à niveau de composants vulnérables |
@@ -139,14 +139,14 @@ Un outil ne remplace pas un modèle de menace. Choisissez-le selon ce qui est co
 | Outil | Ce qu'il vérifie ou réalise | Chapitres principaux |
 |---|---|---|
 | `kube-bench` | Compare la configuration des nodes et des composants au CIS Benchmark | 07 |
-| `trivy` | Trouve les CVE dans image, filesystem, config et SBOM | 28 |
+| `trivy` | Trouve les CVE dans l'image, le filesystem, la config et le SBOM | 28 |
 | `kubesec`, `kube-linter`, `hadolint` | Analysent statiquement les manifest et Dockerfile avant deploy | 27 |
-| `syft`, `bom` | Créent un SBOM pour image et les artefacts | 25 |
+| `syft`, `bom` | Créent un SBOM pour les images et les artefacts | 25 |
 | `cosign` / sigstore | Signent et vérifient une image | 26 |
 | Falco | Observe les événements runtime suspects par syscall/eBPF | 29-30 |
 | Cilium et Hubble | Mettent en œuvre et observent les policy réseau, encryption et mTLS | 06, 23 |
 | OPA/Gatekeeper et Kyverno | Empêchent l'admission de manifest qui violent les policy | 20, 26 |
-| gVisor (`runsc`) et Kata | Isolent les workload via un sandbox runtime | 22 |
+| gVisor (`runsc`) et Kata | Isolent les workloads via un sandbox runtime | 22 |
 
 Avant d'exécuter un scanner, identifiez l'objet vérifié et la décision attendue. Par exemple, un avertissement `trivy` ne signifie pas que tout CVE est immédiatement exploitable : il faut tenir compte du paquet, du chemin d'exécution, de la disponibilité d'une image corrigée et du risque pour le workload concerné. À l'inverse, un rapport propre ne supprime pas le besoin de RBAC, de network isolation et de runtime monitoring.
 
@@ -158,7 +158,7 @@ Le cours progresse du modèle de menace vers les couches de protection. Chaque c
 flowchart TB
     intro["01-03<br/>contexte et<br/>modèle de menace"] --> setup["04-09<br/>Configuration du cluster"]
     setup --> hardening["10-17<br/>hardening du cluster<br/>et du système"]
-    hardening --> workload["18-23<br/>protection des workload<br/>et du réseau"]
+    hardening --> workload["18-23<br/>protection des workloads<br/>et du réseau"]
     workload --> supply["24-28<br/>supply chain"]
     supply --> detect["29-32<br/>détection runtime<br/>et audit"]
     detect --> exam["33<br/>stratégie<br/>d'examen"]
@@ -186,8 +186,8 @@ Une erreur typique consiste à appliquer un outil de sécurité sans vérifier l
 ## 01.7 Application en production
 
 - **La sécurité comme cycle d'ingénierie.** L'équipe décrit le modèle de menace, introduit les policy et le hardening dans l'IaC, les vérifie dans CI et observe le résultat en production.
-- **Droits minimaux par défaut.** Les nouveaux workload reçoivent un SecurityContext non-root, un ServiceAccount restreint, network default-deny et des dépendances explicitement autorisées.
-- **Décaler les vérifications vers la gauche.** `hadolint`, `kube-linter`, `kubesec`, SBOM et `trivy` sont exécutés avant la publication d'une image ; le policy admission ne permet pas de contourner les exigences critiques.
+- **Droits minimaux par défaut.** Les nouveaux workloads reçoivent un SecurityContext non-root, un ServiceAccount restreint, network default-deny et des dépendances explicitement autorisées.
+- **Décaler les vérifications vers la gauche.** `hadolint`, `kube-linter`, `kubesec`, SBOM et `trivy` sont exécutés avant la publication d'une image ; la policy d'admission ne permet pas de contourner les exigences critiques.
 - **La protection des nodes est tout aussi importante.** L'accès à kubelet, au container runtime socket, à etcd, au static Pod manifest et aux fichiers audit est restreint aussi strictement que l'accès à l'API.
 - **Exceptions vérifiables.** Si un workload nécessite une capability, le privileged mode ou l'accès à hostPath, l'exception est documentée, limitée au namespace et réexaminée périodiquement.
 
@@ -204,7 +204,7 @@ Une erreur typique consiste à appliquer un outil de sécurité sans vérifier l
 ## 01.9 Résumé du chapitre
 
 - CKS prolonge CKA et vérifie la protection pratique du cluster, des workloads, des nodes et de la supply chain.
-- La version cible du cours et des core labs `101-114` est Kubernetes v1.36 (la lab `113` démarre sur v1.35.x, car son sujet est le upgrade lui-même vers v1.36.x).
+- La version cible du cours et des core labs `101-114` est Kubernetes v1.36 (la lab `113` démarre sur v1.35.x, car son sujet est l'upgrade lui-même vers v1.36.x).
 - L'examen exige une maîtrise du terminal, de plusieurs clusters et de la configuration des nodes.
 - Les six domaines couvrent la configuration du cluster, le hardening, les workloads, la supply chain et la protection runtime.
 - Les nouveaux axes du programme 2024 sont Cilium, CIS, SBOM, KubeLinter et les sandboxed containers.
@@ -255,7 +255,7 @@ Une pratique spécifique est requise pour `CiliumNetworkPolicy` avec L3/L4/L7, l
 <details>
 <summary>6. Quand utiliser `kube-bench`, `trivy`, `kube-linter` et Falco ?</summary>
 
-`kube-bench` compare la configuration des nodes et des composants au CIS Benchmark, tandis que `trivy` recherche les CVE dans image, filesystem, config et SBOM. `kube-linter` analyse statiquement les manifest Kubernetes avant deploy, tandis que Falco observe les événements runtime suspects par syscall/eBPF.
+`kube-bench` compare la configuration des nodes et des composants au CIS Benchmark, tandis que `trivy` recherche les CVE dans l'image, le filesystem, la config et le SBOM. `kube-linter` analyse statiquement les manifest Kubernetes avant deploy, tandis que Falco observe les événements runtime suspects par syscall/eBPF.
 </details>
 
 <details>

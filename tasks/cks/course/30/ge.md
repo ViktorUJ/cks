@@ -4,7 +4,7 @@
 
 > **პრობლემა.** ერთი Falco alert shell-ის, ფაილის წაკითხვის ან ქსელური კავშირის
 > შესახებ არ ამტკიცებს, რომელი workload არის კომპრომეტირებული, ვინ მიიღო წვდომა
-> და მოასწრო თუ არა თავდამსხმელმა closehold-ის მოპოვება. სანამ Pod
+> და მოასწრო თუ არა თავდამსხმელმა ფეხის მოკიდება. სანამ Pod
 > გადაიტვირთება, PID და runtime-კონტექსტი ქრება, ხოლო დაუკავშირებელი log-ები
 > ვერ გამოარჩევს ჩვეულებრივ მოქმედებას execution → persistence → exfiltration
 > ჯაჭვისგან. საჭიროა runtime, API, ქსელისა და აპლიკაციის კორელაცია containment-მდე.
@@ -83,10 +83,7 @@ within physical infrastructure, apps, networks, data, users, and workloads" -
 physical infrastructure-ს ცალკე ახსენებს ზემოთ ჩამოთვლილი ფენებისგან. სტრიქონი
 „ინფრასტრუქტურა“ 30.1 ნაწილის ცხრილში - ეს არის node/host **კლასტერის შიგნით**
 (Falco, kernel warning, container runtime socket), და არა დატაცენტრის
-ფიზიკური დონე. განვიხილოთ, რა რეალურად დგას ამ ტერმინის უკან cloud native
-კონტექსტში (
-[CNCF Cloud Native Security Whitepaper](https://github.com/cncf/tag-security/blob/main/community/resources/security-whitepaper/v2/cloud-native-security-whitepaper.md)-ის
-მიხედვით), რა კვეთის წერტილები აქვს Kubernetes-პრაქტიკასთან და რა არის
+ფიზიკური დონე. განვიხილოთ, რა რეალურად დგას ამ ტერმინის უკან cloud native-ის კონტექსტში ([CNCF Cloud Native Security Whitepaper](https://github.com/cncf/tag-security/blob/main/community/resources/security-whitepaper/v2/cloud-native-security-whitepaper.md)-ის მიხედვით), რა კვეთის წერტილები აქვს Kubernetes-პრაქტიკასთან და რა არის
 მთლიანად იმ ინჟინრის პასუხისმგებლობის მიღმა, რომელიც მხოლოდ
 `kubectl`/API-ით მუშაობს.
 
@@ -120,7 +117,7 @@ Logging and Runtime Security დომენში) ფიზიკურ დო
   გარანტიები დამოკიდებულია ტექნოლოგიასა და მის threat model-ზე: Intel SGX
   იცავს enclave-ს, ხოლო AMD-ის VM-based confidential computing-ისთვის
   ყველაზე ძლიერ მოდელს malicious host/hypervisor-ის წინააღმდეგ SEV-SNP
-  იძლევა. უფრო ადრეული SEV/SEV-ES-ს განსხვავებული threat model აქვს და არ
+  იძლევა. უფრო ადრეულ SEV/SEV-ES-ს განსხვავებული threat model აქვს და არ
   უნდა იქნას ავტომატურად აღწერილი როგორც სრულად კომპრომეტირებული host-ისგან
   დაცვა. privacy-sensitive დატვირთვებისთვის ამოწმებენ attestation-ს,
   firmware/TCB-ს და არჩეული ტექნოლოგიის შეზღუდვებს. Kubernetes-ში ეს
@@ -177,12 +174,11 @@ computing-ისთვის ან TPM-ის ყოფნისთვის No
 თავად მთლიანობის შემოწმება კლასტერის ფარგლებს გარეთ ხდება. curriculum-ის
 ოფიციალური კომპეტენცია physical infrastructure-ს არ გამორიცხავს - რეალური
 დასკვნა ისაა, რომ performance-based გამოცდაზე დატაცენტრზე ფიზიკური
-წვდომის გარეშე ფიზიკურ ურთიერთქმედებაზე დავალებების მოლოდინი არ შეიძლება;
+წვდომის გარეშე პირდაპირ ფიზიკურ ურთიერთქმედებაზე დავალებების მოლოდინი არ შეიძლება;
 ამ კომპეტენციის პრაქტიკული გაშუქება უფრო სავარაუდოდ ინფრასტრუქტურულ/node-სიგნალებში
 და საფრთხის სწორ კლასიფიკაციაში ვლინდება, როგორც ზემოთაა ნაჩვენები. თუ
 დავალება სრულფასოვან ფიზიკურ security-პროგრამას მოითხოვს (წვდომის
-კონტროლი, აპარატურის მომწოდებელთა აუდიტი), ეს ცალკე ISO 27001/SOC 2-style
-პროგრამის საგანია, რომელსაც ეს კურსი შემდგომში აღარ განიხილავს - მაგრამ
+კონტროლი, აპარატურის მომწოდებელთა აუდიტი), ეს ცალკე ISO 27001/SOC 2-style პროგრამის საგანია, რომელსაც ეს კურსი შემდგომში აღარ განიხილავს - მაგრამ
 ზემოთ ჩამოთვლილი ტერმინების ცოდნა მაინც საშუალებას გაძლევთ სწორად
 დააკლასიფიციროთ საფრთხე და არ ეძებოთ მისთვის არარსებული
 Kubernetes-კონტროლი.
@@ -212,7 +208,7 @@ kubectl get pod -n "$NAMESPACE" "$POD" -o jsonpath='{range .status.initContainer
 kubectl get pod -n "$NAMESPACE" "$POD" \
   -o jsonpath='{range .metadata.ownerReferences[*]}{.kind}{"/"}{.name}{"\n"}{end}'
 
-# axali API-მოქმედებები alert-ის დროსთან ახლოს. Events მხოლოდ დამხმარე წყაროა.
+# ბოლო დროის API-მოქმედებები alert-ის დროსთან ახლოს. Events მხოლოდ დამხმარე წყაროა.
 kubectl get events -A --sort-by='.lastTimestamp'
 ```
 
@@ -234,7 +230,7 @@ sudo systemctl cat falco
 sudo grep -nE '^(rules_files):|falco_rules' /etc/falco/falco.yaml
 sudo ls -l /etc/falco/falco_rules*.yaml /etc/falco/rules.d 2>/dev/null || true
 
-# rules-ების სახელები და აღწერები.
+# rule-ების სახელები და აღწერები.
 sudo falco -L | grep -Ei 'shell|sensitive|dev.mem|read.*shadow'
 ```
 
@@ -300,7 +296,7 @@ service-ი.
 
 Reload-მდე დაავალიდირეთ სრული კონფიგი. როცა ჩართულია
 `watch_config_files`, Falco hot-reload-ავს rule/config ფაილს; ჯერ
-შეამოწმეთ წარმატებული reload ჟურნალში. Restart — fallback-ია, თუ
+შეამოწმეთ წარმატებული reload ჟურნალში. Restart - fallback-ია, თუ
 watching გამორთულია, reload ვერ მოხდა, ან ცვლილება ამას მოითხოვს.
 Production node-ზე შეათანხმეთ ფანჯარა და დააკვირდით agent-ის health-ს:
 გაუმართავმა YAML-წესმა შეიძლება runtime detection დატოვოს
@@ -345,7 +341,7 @@ kubectl -n falco logs daemonset/falco -c falco --all-pods=true --prefix --since=
 | `%fd.name`, `%fd.typechar` | ფაილი/descriptor, რომელთანაც syscall მუშაობდა | path შეიძლება იყოს ფარდობითი ან runtime-ის მიერ resolved |
 | `%fd.lip`, `%fd.lport`, `%fd.rip`, `%fd.rport` | ქსელური event-ის local/remote endpoint | გამოიყენება ქსელურ event-ებზე და არა file open-ზე; client/server semantics-ისთვის გამოიყენეთ `%fd.cip`/`%fd.cport` და `%fd.sip`/`%fd.sport` |
 | `%container.id`, `%container.full_id`, `%container.name` | კონტეინერი CRI-სთან კავშირისთვის | `container.id` ჩვეულებრივ შემოკლებულია; შეინახეთ `full_id`, როცა enrichment მას აწვდის |
-| `%container.image.repository`, `%container.image.tag`, `%container.image.digest` | image-ის მიმართვა და registry digest runtime enrichment-იდან | digest შეიძლება ცარიელი იყოს enrichment-ის დაყოვნების/არარსებობის დროს; `ContainerStatus.imageID` — runtime-specific identifier-ია, ამიტომ ნუ მოითხოვთ მათ უნივერსალურ თანასწორობას; საჭიროებისას შეადარეთ CRI/runtime inspect-ს |
+| `%container.image.repository`, `%container.image.tag`, `%container.image.digest` | image-ის მიმართვა და registry digest runtime enrichment-იდან | digest შეიძლება ცარიელი იყოს enrichment-ის დაყოვნების/არარსებობის დროს; `ContainerStatus.imageID` - runtime-specific identifier-ია, ამიტომ ნუ მოითხოვთ მათ უნივერსალურ თანასწორობას; საჭიროებისას შეადარეთ CRI/runtime inspect-ს |
 | `%k8s.ns.name`, `%k8s.pod.name`, `%k8s.pod.uid` | Kubernetes scope და სტაბილური Pod UID | ველები საჭიროებს runtime/Kubernetes metadata-ის სწორ ინტეგრაციას |
 
 სრული ფორმატი file-წესისთვის უკვე ნაჩვენებია 30.2 ნაწილში. ქსელური
@@ -364,7 +360,7 @@ output: >
 ```
 
 არ დაამატოთ ყველა ველი „ყოველი შემთხვევისთვის“. `proc.cmdline`,
-environment და request body-ს შეუძლიათ გამჟღავნონ pass-word-ები, bearer
+environment და request body-ს შეუძლიათ გამჟღავნონ password-ები, bearer
 token-ები და PII. განსაზღვრეთ redact policy, შეზღუდეთ წვდომა SIEM-სა
 და Falco-ს ჟურნალზე, შენახვის ვადა და evidence-ის გადაცემის პროცედურა.
 ამასთან, არ შეიძლება ამოიჭრას container ID, Pod UID, node, UTC-დრო და,
@@ -373,12 +369,12 @@ token-ები და PII. განსაზღვრეთ redact policy, შ
 `container_full_id` ცარიელია, შეინახეთ საწყისი alert და დაამატეთ მას
 `kubectl get pod`-ისა და `crictl inspect`-ის შედეგები და არ ჩასვათ
 ვარაუდი. Attribution-ისთვის პირველ რიგში შეადარეთ Pod UID, ზუსტი
-container ID, node და timestamp. `status.containerStatuses[].imageID` —
+container ID, node და timestamp. `status.containerStatuses[].imageID` -
 runtime-specific identifier/მინიშნებაა და არა გადატანადი მტკიცებულება
 `%container.image.digest`-თან თანასწორობისთვის; უფრო ძლიერ evidence-ს
 იძლევა digest-pinned `spec.containers[].image`. Multi-arch image-ისთვის
 გაითვალისწინეთ index-ის resolution-ი არჩეული node-არქიტექტურის platform
-manifest-ში; `crictl inspect` ან `crictl images --digests` — დამატებითი
+manifest-ში; `crictl inspect` ან `crictl images --digests` - დამატებითი
 evidence-ია.
 
 ### ხელმისაწვდომი ველებისა და რეალური enrichment-ის შემოწმება
@@ -410,7 +406,7 @@ plugin-ის ვერსია/metadata, შემდეგ ხელით �
 ერთი syscall ავტომატურად არ აღნიშნავს შეტევის ფაზას. ტერმინები
 `Initial Access`, `Execution`, `Credential Access`, `Lateral Movement`,
 `Persistence`, `Privilege Escalation`, `Defense Evasion` და `Exfiltration`
-ქვემოთ — ეს არის MITRE ATT&CK-ის tactics და არა კლასიკური Lockheed
+ქვემოთ - ეს არის MITRE ATT&CK-ის tactics და არა კლასიკური Lockheed
 Martin Cyber Kill Chain. ფაზას განსაზღვრავენ თანმიმდევრობით, identity-ითა
 და მიზნით. ქვემოთ - controlled incident-ის მაგალითი: web-Pod იღებს
 shell-ს, კითხულობს service-account token-ს, მიმართავს API-ს და
@@ -442,7 +438,7 @@ sequenceDiagram
 | API audit: `system:serviceaccount:ns:sa` კითხულობს Secret-ს ან ქმნის Pod-ს | lateral movement ან persistence | `verb`, `objectRef`, response code, source IP, SA-ს წინა ჩვეულებრივი მოქმედებები | უფლებების გაუქმება/შეზღუდვა, ამ identity-ის ყველა მოქმედების პოვნა |
 | API audit: ახალი `CronJob`, `DaemonSet`, RoleBinding | persistence ან privilege escalation | owner, manifest diff, `escalate`/`bind`, ვინ გამოიძახა API | controller-ის გაჩერება, manifest-ისა და audit evidence-ის შენახვა |
 | Falco: `/dev/mem`, runtime socket, host mount | privilege escalation / defense evasion attempt | Pod `privileged`, capabilities, `hostPID`, `hostPath`, ოპერაციის შედეგი | node/Pod-ის იზოლაცია runbook-ის მიხედვით, host-ის მთლიანობის შემოწმება |
-| Flow/DNS: დიდი egress გარე destination-ისკენ | exfiltration | destination ownership, byte-ების რაოდენობა, რა data-event-ები იყო ადრე | egress-ის დაბლოკვა, flow-ის შენახვა და credentials-ის შეზღუდვა |
+| Flow/DNS: დიდი egress გარე destination-ისკენ | exfiltration | destination ownership, byte-ების რაოდენობა, რა data-event-ები იყო ადრე | egress-ის დაბლოკვა, flow-ისა და credentials-ის scope-ის შენახვა |
 
 თანმიმდევრობა „Falco shell → audit `create CronJob` → network egress“
 უფრო ძლიერია სამ ცალკეულ alert-ზე. კორელაციისთვის გამოიყენეთ დროის
@@ -518,7 +514,7 @@ sudo crictl inspect "$CONTAINER_ID" > "$EVIDENCE/crictl-inspect.json"
 )
 ```
 
-> 🏭 Containment — თანმიმდევრული workflow-ია, შექცევადი პირველი
+> 🏭 Containment - თანმიმდევრული workflow-ია, შექცევადი პირველი
 > ნაბიჯებით, გადაწყვეტილების ცხადი owner-ითა და შედეგის მტკიცებულებით.
 > არჩევანი quarantine-სა, cordon-სა და workload-ის წაშლას შორის scope-სა
 > და შენახულ evidence-ზეა დამოკიდებული.
@@ -539,7 +535,7 @@ Pod, node და identity დადგენილია, საჭიროა 
 | მოქმედება | რას აკეთებს | როდის არის მისაღები | რას კარგავთ/რას არ იძლევა გარანტიად |
 | --- | --- | --- | --- |
 | **NetworkPolicy quarantine** | არჩეული Pod-ის additive L3/L4 იზოლაცია CNI-ზე, რომელიც რეალურად enforces NetworkPolicy-ს | შექცევადი პირველი ნაბიჯი: ზღუდავს ახალ დაშვებულ TCP/UDP/SCTP connection-ებს, ინარჩუნებს რა Pod-სა და evidence-ს | არა priority deny: ყველა selecting policy allow-ს აჯამებს; traffic-ი resident node-ზე, non-L4 და არსებული connection-ები შეზღუდვების ქვეშაა/CNI-ზეა დამოკიდებული |
-| **Node-ის cordon** | `kubectl cordon <node>` — scheduling freeze: ბლოკავს ახალი ჩვეულებრივი Pod-ების scheduling-ს; არსებული Pod-ები აგრძელებენ მუშაობას | დამატებითი მოსამზადებელი ნაბიჯი node-ის კომპრომეტაციის ეჭვის დროს | არ იზოლირებს კომპრომეტირებულ node-ს, kubelet-ს, host-პროცესს, ქსელს ან credentials-ს; საჭიროა infrastructure isolation runbook |
+| **Node-ის cordon** | `kubectl cordon <node>` - scheduling freeze: ბლოკავს ახალი ჩვეულებრივი Pod-ების scheduling-ს; არსებული Pod-ები აგრძელებენ მუშაობას | დამატებითი მოსამზადებელი ნაბიჯი node-ის კომპრომეტაციის ეჭვის დროს | არ იზოლირებს კომპრომეტირებულ node-ს, kubelet-ს, host-პროცესს, ქსელს ან credentials-ს; საჭიროა infrastructure isolation runbook |
 | **Owning workload-ის გაჩერება** | owner-ის/controller-ის დადგენა და source desired state-ის შეცვლა, მაგალითად `kubectl scale deployment --replicas=0` | დადასტურებული აქტიური რისკი, evidence უკვე შენახულია | უბრალო `kubectl delete pod` ჩვეულებრივ შექმნის replacement-ს და დაკარგავს live-პროცესს, `/proc`-კონტექსტსა და ხელახალი `strace`-ის შესაძლებლობას |
 
 თანმიმდევრობა ჩვეულებრივ ასეთია: ჯერ ამოწმებენ CNI-ის შესაძლებლობებსა
@@ -556,7 +552,7 @@ node-ისა და workload-ის credentials-ის შეზღუდვ�
 თუ controller არ არის გაჩერებული.
 
 ```bash
-# ნაბიჯი 1: NetworkPolicy quarantine — ახალი L3/L4 connection-ების შეზღუდვა, evidence-ს არ ანადგურებს.
+# ნაბიჯი 1: NetworkPolicy quarantine - ახალი L3/L4 connection-ების შეზღუდვა, evidence-ს არ ანადგურებს.
 # გამოყენებამდე დაადასტურეთ, რომ CNI enforces NetworkPolicy-ს, და გადახედეთ ყველა policy-ს,
 # რომელიც უკვე ირჩევს ამ Pod-ს: მათი allow rules ემატება quarantine-ს.
 # არ გამოიცნოთ კომპრომეტირებული Pod-ის არსებული label: მიანიჭეთ ცალკე marker.
@@ -580,7 +576,7 @@ kubectl -n "$NAMESPACE" get networkpolicy
 kubectl -n "$NAMESPACE" get networkpolicy incident-quarantine
 # შეამოწმეთ ახალი კავშირი გამოყენების შემდეგ; უკვე დამყარებულის ბედი CNI-ზეა დამოკიდებული.
 
-# ნაბიჯი 2 — მხოლოდ scheduling freeze და არა node isolation:
+# ნაბიჯი 2 - მხოლოდ scheduling freeze და არა node isolation:
 NODE="${NODE:?set NODE to the node from the Falco alert}"
 kubectl cordon "$NODE"
 kubectl get node "$NODE"
@@ -646,7 +642,7 @@ DNS allow-rule-ის გარეშე ჩვეულებრივ ბლ�
 non-L4-ის ან უკვე არსებული ტრაფიკის ბლოკირებას.
 
 > 🔬 Falco Talon ავტომატიზირებს post-detection response-ს, ხოლო
-> Tetragon-ს შეუძლია ცალკე მოქმედება enforce-ი inline-ად.
+> Tetragon-ს შეუძლია ცალკე მოქმედების enforcement-ის განხორციელება inline-ად.
 
 ### რეაგირების ავტომატიზაცია: Falco Talon და Tetragon enforcement
 
@@ -801,18 +797,18 @@ sudo grep -E 'openat|openat2|connect|execve|clone' \
 ```
 
 `strace -f` მიჰყვება მხოლოდ `fork`/`vfork`/`clone`-ს, რომლებიც შეიქმნა
-**შემდეგ**, უკვე ტრასირებულ პროცესზე attach-ის; `-ff` იმავეს აკეთებს
-და წერს ცალკე ფაილს პროცესზე. უკვე არსებულ descendants-ებს ის ვერ
+უკვე ტრასირებულ პროცესზე attach-ის **შემდეგ**; `-ff` იმავეს აკეთებს
+და წერს ცალკე ფაილს პროცესზე. უკვე არსებულ descendant-ებს ის ვერ
 პოულობს. ამიტომ attach კეთდება ზუსტ ცოცხალ host PID `%proc.pid`-ზე
 alert-იდან; კონტეინერის PID 1 გამოიყენება მხოლოდ საბაზისო
 `/proc`-კონტექსტისთვის.
 
 **თუ კონტეინერი უკვე დასრულებულია ან გადატვირთულია:** მიმდინარე
 PID-ის არარსებობა alert-ს არ უარყოფს. დაუყოვნებლივ შეინახეთ durable
-evidence — Falco-ს საწყისი სტრიქონი, audit/flow ID-ები, timestamp-ები,
+evidence - Falco-ს საწყისი სტრიქონი, audit/flow ID-ები, timestamp-ები,
 Pod UID, image digest, `kubectl get pod -o yaml`,
 `kubectl logs --previous` (თუ გამოსადეგია), CRI/journal log-ები და
-restart count. `/proc/<pid>`, მიმდინარე cgroup და runtime record —
+restart count. `/proc/<pid>`, მიმდინარე cgroup და runtime record -
 volatile evidence-ია და შესაძლოა გაქრეს cleanup-ის დროს; Falco/audit/application
 log-ები და შენახული CRI inspect უნდა ამოვიღოთ დესტრუქციულ
 containment-მდე. ნუ შეეცდებით „გაიმეოროთ“ საზიანო მოქმედება
@@ -841,7 +837,7 @@ flowchart TB
   `%k8s.pod.uid`-ის ან `crictl`-ის შემოწმების გარეშე.
 - Pod-ის ძებნა სხვა node-ზე reschedule-ის შემდეგ და დასკვნის გაკეთება
   დამთხვეული სახელის მიხედვით.
-- Linux `%user.name`-ის Falco-ში ერევა authenticated Kubernetes user-ში
+- Linux `%user.name`-ის Falco-ში აღრევა authenticated Kubernetes user-თან
   audit-log-ში.
 - Pod-ის წაშლა PodSpec-ის, owner-ის, image digest-ის, alert-ისა და
   CRI/PID evidence-ის შენახვამდე, როცა სიტუაცია ამის საშუალებას იძლევა.
@@ -897,7 +893,7 @@ workload. `emptyDir` იძლევა writable path-ს image-ის root file
 ```bash
 set -euo pipefail
 sudo falco -c /etc/falco/falco.yaml --dry-run
-# watch_config_files: true-ის შემთხვევაში შეამოწმეთ hot reload ჟურნალში; restart — მხოლოდ fallback.
+# watch_config_files: true-ის შემთხვევაში შეამოწმეთ hot reload ჟურნალში; restart - მხოლოდ fallback.
 sudo journalctl -u falco --since '2 minutes ago' --no-pager
 
 # Fail closed: ნუ გააგრძელებთ და ნუ წაშლით namespace-ს, თუ ის უკვე არსებობდა.
@@ -952,7 +948,7 @@ alert შეიცავს საკუთარი rule-ის სახელ
 არსებობს UTC-დრო, node, `%proc.pid`, `%container.id`,
 `k8s_ns=runtime-lab`, `k8s_pod=marker-reader` და `k8s_pod_uid`;
 ხელმისაწვდომი runtime enrichment-ის დროს ასევე `container_full_id` და
-`image_digest`. UID, ზუსტი container ID და status type ერევა
+`image_digest`. UID, ზუსტი container ID და status type შეადარეთ
 `kubectl get pod`-ს; `imageID` ინახება როგორც runtime-specific
 identifier და მისი უნივერსალური თანასწორობა Falco registry digest-თან
 არ მოითხოვება. Rule სხვა namespace-ებში alert-ს არ ქმნის. ტესტის
@@ -1011,10 +1007,10 @@ integration ცალკე და მაინც შეადარეთ cont
 - **ზღუდავენ წვდომას telemetry-ზე.** Runtime log-ებმა შეიძლება
   შეიცავდეს command line-ს, path-ს credentials-ამდე და ქსელურ
   მისამართებს. მათზე წვდომა - privileged production access-ია;
-  იყენებენ redaction-ს, encryption-ს, retention-სა და კითხულებთა
+  იყენებენ redaction-ს, encryption-ს, retention-სა და მკითხველთა
   audit-ს.
 - **containment-ს ფრთხილად ავტომატიზირებენ.** CRITICAL alert-ს
-  შეუძლია შექმნას ticket, page ან დროებით იზოლირდეს Pod მხოლოდ
+  შეუძლია შექმნას ticket, page ან დროებით მოახდინოს Pod-ის იზოლაცია მხოლოდ
   წინასწარ შეთანხმებული playbook-ის მიხედვით. ყველა Pod-ის
   ავტომატური წაშლა ერთი rule-ის მიხედვით ხშირად ანადგურებს
   evidence-ს და false positive-ს outage-ად აქცევს.
@@ -1131,7 +1127,7 @@ upstream-თან. ლოკალური rules და override-ები გ
 <details>
 <summary>4. რითი განსხვავდება `%user.name` Kubernetes user/ServiceAccount-ისგან API audit-log-ში?</summary>
 
-`%user.name` — პროცესის effective Linux user-ია, რომელსაც Falco
+`%user.name` - პროცესის effective Linux user-ია, რომელსაც Falco
 ხედავს node-ზე. Kubernetes-ის authenticated user ან ServiceAccount
 აისახება audit event-ის `.user.username`-ში და ეხება API request-ს.
 ეს identity-ები ერთმანეთთან ვერ გაუთანაბრდება: attribution-ისთვის
@@ -1201,7 +1197,7 @@ responseStatus-ს, audit/request UID-ს, `.sourceIPs`-ს, `userAgent`-სა
 და annotations-ს, შემდეგ ადარებენ IP/agent-ს სანდო proxy-ებთან,
 IdP/cloud/network telemetry-სთან. Request იმავე SA-თი, მაგრამ
 უჩვეულო გარე წყაროდან, ატიპური დროით ან ატიპური scope-ით,
-გამოძიებულია, როგორც მოპარული token-ის შესაძლო გამოყენება; თავად
+ექვემდებარება გამოძიებას, როგორც მოპარული token-ის შესაძლო გამოყენება; თავად
 `sourceIPs` და userAgent მტკიცებულებას არ წარმოადგენს.
 
 თანამედროვე generated ServiceAccount token-ისთვის Kubernetes

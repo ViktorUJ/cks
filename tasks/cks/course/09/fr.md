@@ -5,7 +5,7 @@
 > **Le problème.** Un attaquant qui obtient un accès réseau à un endpoint du control plane ou
 > la capacité de modifier un fichier sur un nœud ne cherche pas une vulnérabilité dans Kubernetes lui-même, mais un argument
 > adjacent non sécurisé : accès anonyme, port kubelet en lecture seule, TLS faible, ou un
-> `kubelet`/`kubectl`/une image altéré(e) ou remplacé(e) de façon inattendue avant même son démarrage. Une telle faille peut ouvrir un accès à
+> `kubelet`/`kubectl`/une image altéré(e) ou remplacé(e) avant même son démarrage. Une telle faille peut ouvrir un accès à
 > l’API/etcd ou permettre l’exécution de code dans le contexte d’un artefact altéré ou remplacé. Pour un
 > binaire de plateforme, les conséquences dépendent de l’exécution : un binaire kubelet/control-plane altéré ou remplacé obtient
 > les permissions de son processus de service, tandis qu’un `kubectl` altéré ou remplacé obtient les permissions de l’utilisateur
@@ -85,8 +85,8 @@ une remédiation.
 | `kubelet` | `--authorization-mode=AlwaysAllow` | tout client authentifié obtient un accès excessivement étendu à l’API kubelet | `--authorization-mode=Webhook` |
 | `kubelet` | `--protect-kernel-defaults=false` | en cas de non-concordance avec la baseline, kubelet n’échoue pas rapidement et peut tenter de modifier les flags du kernel au niveau hôte pour atteindre les valeurs attendues | `--protect-kernel-defaults=true` après vérification de sysctl |
 | `kube-controller-manager` | `--profiling=true` ou `--use-service-account-credentials=false` | diagnostics inutiles ou utilisation d’identifiants étendus au lieu de SAs distincts | `--profiling=false`, identifiants de service account distincts |
-| `kube-scheduler` | profiling activé ou endpoint sur une large `--bind-address` | un endpoint de diagnostic devient accessible à un réseau inutile | `enableProfiling: false` ; le CLI `--profiling` obsolète et la gestion par kube-bench d’un scheduler fondé sur une configuration sont abordés au [chapitre 07](../07/fr.md) |
-| `etcd` | `--client-cert-auth=false`, `--listen-client-urls` non sécurisé | un client sans mTLS ou un réseau externe accède au stockage du cluster | mTLS, réseau local/interne, firewall |
+| `kube-scheduler` | profiling activé ou endpoint sur une large `--bind-address` | un endpoint de diagnostic devient accessible à un réseau inutile | `enableProfiling: false` ; le CLI `--profiling` obsolète et la limitation de kube-bench pour un scheduler fondé sur une configuration sont abordés au [chapitre 07](../07/fr.md) |
+| `etcd` | `--client-cert-auth=false`, `--listen-client-urls` non sécurisé | un client sans mTLS ou un réseau externe accède au stockage du cluster | mTLS, localhost/réseau interne, firewall |
 
 Pour une tâche CIS/CKS précise, un benchmark peut exiger explicitement `--anonymous-auth=false` ;
 respectez alors l’exigence exacte de la tâche et démontrez le résultat.
@@ -100,8 +100,8 @@ des endpoints de santé anonymes.
 Dans Kubernetes 1.34+, vous pouvez utiliser `AuthenticationConfiguration`, en autorisant l’accès
 anonyme uniquement aux endpoints explicitement requis. Si `cluster-info` public n’est plus
 nécessaire, déplacez d’abord l’ajout/la découverte des nœuds vers une alternative appropriée, puis seulement supprimez cet accès.
-Par exemple, un fichier distinct monté dans le Pod statique via
-`--authentication-config=<path>` peut contenir :
+Par exemple, un fichier distinct, connecté au Pod statique via
+`--authentication-config=<path>` et le montage correspondant, peut contenir :
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -170,8 +170,8 @@ dans la configuration du composant, vérifiez `enableProfiling: false`.
 
 Pour `kube-controller-manager`, Kubernetes 1.36 n’a pas d’option générale `--config`
 équivalente à scheduler : ses paramètres de fonctionnement sont toujours définis par des flags CLI dans le manifeste actif /
-les arguments du processus. `KubeControllerManagerConfiguration` existe comme configuration de composant
-API et représentation interne/configz, mais n’est pas un fichier externe général `--config` pour
+les arguments du processus. `KubeControllerManagerConfiguration` existe comme API de configuration de composant
+et représentation interne/configz, mais n’est pas un fichier externe général `--config` pour
 kube-controller-manager.
 
 Ainsi, déterminez d’abord l’exécution du composant particulier, puis vérifiez exactement la
@@ -231,7 +231,7 @@ sudo crictl logs "$(sudo crictl ps -aq --name kube-apiserver | head -n1)"
 Conservez tout de même les fichiers de sauvegarde permanents hors de `/etc/kubernetes/manifests/` (comme à l’étape 1
 ci-dessus) : un candidat caché n’est nécessaire que pour le remplacement lui-même, non comme copie à long terme.
 
-Avant kubelet, vérifiez d’abord les valeurs et la configuration sysctl, puis ne redémarrez que celui-ci. Un `systemctl restart kubelet` ordinaire à lui seul n’arrête pas les Pods et conteneurs déjà en cours d’exécution : le runtime de conteneur continue de les exécuter et, après le démarrage, kubelet restaure la réconciliation. Néanmoins, sur un control plane, modifiez kubelet un nœud à la fois et surveillez le heartbeat du Node, les logs kubelet et `/readyz` : une erreur de configuration peut laisser un nœud `NotReady` ou empêcher la gestion ultérieure des Pods statiques.
+Pour kubelet, vérifiez d’abord les valeurs sysctl et la configuration, puis ne redémarrez que celui-ci. Un `systemctl restart kubelet` ordinaire à lui seul n’arrête pas les Pods et conteneurs déjà en cours d’exécution : le runtime de conteneur continue de les exécuter et, après le démarrage, kubelet restaure la réconciliation. Néanmoins, sur un control plane, modifiez kubelet un nœud à la fois et surveillez le heartbeat du Node, les logs kubelet et `/readyz` : une erreur de configuration peut laisser un nœud `NotReady` ou empêcher la gestion ultérieure des Pods statiques.
 
 ```yaml
 # /var/lib/kubelet/config.yaml - exemple de fragment d’API de configuration.
@@ -342,7 +342,7 @@ cluster ; il n’y a donc pas de décalage avec la documentation d’une autre r
 passer au navigateur.
 
 La preuve de l’exigence du benchmark « etcd n’accepte pas moins que TLS 1.2 » est le
-`--tls-min-version` actif et un handshake vérifié, et non une liste arbitraire de chiffres RSA uniquement ;
+`--tls-min-version` actif et un handshake vérifié, et non une liste arbitraire de suites de chiffrement RSA uniquement ;
 vérifiez le libellé exact et la version du benchmark utilisé.
 
 ```yaml
@@ -478,7 +478,7 @@ check_tls11_rejected() {
 check_tls11_rejected "$API" kubernetes
 
 # etcd : vérifiez d’abord le handshake TLS 1.2 autorisé avec mTLS - le même modèle
-# que pour apiserver : statut de sortie de s_client, -verify_return_error et vérification du
+# que pour apiserver : statut de sortie de s_client, -verify_return_error et vérification de la
 # suite de chiffrement réellement négociée, pas uniquement du code Verify return.
 OUT="$(mktemp)"
 
@@ -784,7 +784,7 @@ sudo crictl ps | grep -E 'kube-apiserver|kube-controller-manager|kube-scheduler|
 | `kubectl` ne répond pas après une modification de Pod statique | `journalctl -u kubelet`, `crictl ps -a`, journaux du conteneur | YAML, flag ou montage incorrect |
 | le flag est visible, mais `kube-bench` est toujours en FAIL | arguments du processus et une source de la valeur | le modèle, et non le manifeste actif, a été modifié ; il existe un doublon |
 | le port `10255` est toujours à l’écoute | drop-in systemd et `ps` de kubelet | le mauvais fichier de configuration a été modifié ou un ancien flag écrase YAML |
-| un client TLS 1.2 ne se connecte plus | algorithme du certificat, liste de cipher, TLS client | ensemble de suites trop étroit ou client incompatible |
+| un client TLS 1.2 ne se connecte plus | algorithme du certificat, liste des suites de chiffrement, client TLS | ensemble de suites trop étroit ou client incompatible |
 | `sha256sum --check` renvoie FAIL | manifeste approuvé, chemin et version | mauvais binaire, téléchargement endommagé ou substitution |
 
 `kube-bench` est utile comme contrôle de régression, mais son profil doit correspondre à la version
@@ -839,7 +839,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 
 ## 09.10. Résumé du chapitre
 
-- Les dangereux `anonymous-auth`, `AlwaysAllow`, profiling, port kubelet read-only et larges
+- Les paramètres dangereux `anonymous-auth`, `AlwaysAllow`, profiling, port kubelet read-only et larges
   endpoints de diagnostic étendent la surface d’attaque du control plane et des nœuds.
 - Déterminez d’abord la source active du paramètre. Les composants du control plane de kubeadm sont
   généralement des Pods statiques de `/etc/kubernetes/manifests/` ; kubelet est un service systemd
@@ -995,13 +995,13 @@ Cluster Setup (chapitres 04-09) est acquis, et non simplement lu dans l’ordre 
    host-network/nœud (les chapitres 04 et 05 sont des chapitres distincts d’un même domaine ; vérifiez
    que vous ne confondez pas les niveaux) ?
 4. **Exercice mixte.** Prenez Secure Ingress avec TLS (chapitre 08) et expliquez ce qui se produirait
-   si le Pod backend n’a pas de NetworkPolicy : quel contournement serait possible si TLS se termine
-   à l’Ingress et que le trafic de l’Ingress vers le Pod à l’intérieur du cluster n’est pas restreint ?
+   si le Pod backend n’avait pas de NetworkPolicy : quel contournement serait possible si TLS se terminait
+   à l’Ingress et que le trafic de l’Ingress vers le Pod à l’intérieur du cluster n’était pas restreint ?
 5. Sans indice, nommez la commande avec laquelle vous vérifieriez le sha256/la signature d’un binaire
    de plateforme sur un nœud (chapitre 09), et expliquez pourquoi la liaison à un digest d’artefact de
    publication précis est plus fiable que le téléchargement via un lien de version mutable tel que
    `latest` (il s’agit ici d’un modèle d’identité distinct du tag/digest d’image de conteneur : il est
-   question d’un binaire de publication avec dl.k8s.io, et non d’un registry de conteneurs).
+   question d’un binaire de publication provenant de dl.k8s.io, et non d’un registry de conteneurs).
 
 Si l’exercice 4 vous a posé problème, revenez aux chapitres 04 et 08 ensemble, et non séparément.
 

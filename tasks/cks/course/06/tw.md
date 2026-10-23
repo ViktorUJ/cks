@@ -18,7 +18,7 @@
 > 因此請將 Cilium 專屬的命令與 CRD 視為深化知識,適用於實際提供 Cilium 的叢集。
 
 > **Cilium 不會自己出現在叢集中。** 它是獨立的 CNI,由叢集管理員透過 `cilium` CLI 或 Helm
-> chart 安裝——可以在已建立的叢集上安裝,也可以在建立叢集時取代標準 CNI。若你的環境尚未安裝
+> chart 安裝-可以在已建立的叢集上安裝,也可以在建立叢集時取代標準 CNI。若你的環境尚未安裝
 > Cilium,本章所有範例在安裝前都無法套用。官方安裝說明:
 > [Cilium Quick Installation](https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/)。
 > 比本章更詳細的 L3/L4/L7 規則範例,請見官方章節
@@ -39,7 +39,7 @@
 在本章之前,封包到達 Service 的路徑由 `kube-proxy` 負責。這個機制由三部分組成:
 
 - **觀察。** 每個節點上的 `kube-proxy` 監聽 Service 與 `EndpointSlice` 物件的變化。
-- **編寫核心規則。** 每次變化時,它會更新核心規則——通常透過 `iptables` 或 `nftables`
+- **編寫核心規則。** 每次變化時,它會更新核心規則-通常透過 `iptables` 或 `nftables`
   (逐漸淘汰的 `ipvs` 也仍可能使用)。
 - **攔截與 DNAT。** 規則攔截往 `ClusterIP:port` 的流量,並 DNAT 到隨機或依 session
   affinity 選出的特定 Pod 的 IP。
@@ -60,7 +60,7 @@ Cilium 為同一條封包路徑提出了不同的架構:
   BPF maps 中保存 Service/backend 狀態,並執行 lookup 而不必依序遍歷長串的 `iptables`
   鏈。這是與 `iptables` 模式下 kube-proxy 的重要差異。請不要把這個比較套用到 kube-proxy
   的 `nftables` 模式:現代的 nftables 模式同樣使用以 map 為基礎的分派
-  (`verdict map`),lookup 大約是 O(1)——詳情請見 Kubernetes 官方部落格關於
+  (`verdict map`),lookup 大約是 O(1)-詳情請見 Kubernetes 官方部落格關於
   kube-proxy nftables 模式的說明。
 - **兩種運作模式。** 完整的 **kube-proxy-replacement** 在 eBPF 中實作整個 Service 負載
   平衡,並允許將 `kube-proxy` 從叢集中移除。在協作模式下,`kube-proxy` 繼續服務
@@ -170,7 +170,7 @@ egress 呈 default-deny。只有 `ingress` 的政策不會關閉 egress,反之�
 selector 必須精確。
 
 這個行為可以透過 `enableDefaultDeny` 更改:設為 `false` 的方向不會被納入 default-deny
-的判斷。這樣管理員就能安全地套用 cluster-wide 政策——例如攔截 DNS——而不會有把
+的判斷。這樣管理員就能安全地套用 cluster-wide 政策-例如攔截 DNS-而不會有把
 endpoint 轉為 default-deny、封鎖合法流量的風險。這個例外不應套用到 L7 政策:
 `enableDefaultDeny` 不適用於 layer-7 規則,即使已明確停用 default-deny,加入
 L7 rule 而沒有對應的 L7 allow-all 仍會導致 DROP。
@@ -246,7 +246,7 @@ Active FTP 展示了 L3/L4 政策的界限。客戶端在 TCP/21 上開啟控制
 
 在 Kubernetes 與 Cilium 之前,這個問題是由**核心層的 connection tracking** 解決的:
 `nf_conntrack_ftp` 模組會解析控制通道,看到協商出的埠,並動態把這條 related 連線加入
-允許清單。`kube-proxy` 及其 `iptables`/`nftables` 規則本身無法解決這個問題——這是由
+允許清單。`kube-proxy` 及其 `iptables`/`nftables` 規則本身無法解決這個問題-這是由
 netfilter 之上一個獨立的 conntrack helper 解決的,而不是 Service forwarding 機制本身。
 
 對於有受支援的應用層語義的協定,Cilium 可以使用 L7 proxy,但 FTP 不屬於這類協定。
@@ -357,7 +357,7 @@ spec:
           path: "/cloudcity.DoorManager/GetLocation"
 ```
 
-呼叫 `SetAccessCode` 不會符合任何規則而被拒絕——客戶端會收到 gRPC 狀態
+呼叫 `SetAccessCode` 不會符合任何規則而被拒絕-客戶端會收到 gRPC 狀態
 `PERMISSION_DENIED`,而不是一般的網路 timeout。附有示範應用程式的詳細逐步範例請見
 官方文件:[Securing gRPC](https://docs.cilium.io/en/stable/security/grpc/)。
 
@@ -365,7 +365,7 @@ spec:
 另一個問題。gRPC 使用一條長效的 TCP 連線,並在其中連續執行大量呼叫。Cilium 一般的
 eBPF 負載平衡是在**建立連線時選擇一次** Pod,而不是連線內每次個別呼叫都重新選擇。如果
 客戶端開啟連線後長時間保持不放,它的所有流量都會流向同一個 Pod,而其他 backend 副本
-分不到應有的負載份額——這稱為連線 pinning。
+分不到應有的負載份額-這稱為連線 pinning。
 
 解決方法是為所需的 Service 啟用 Cilium 的 **Proxy Load Balancing**:流量會經由內建
 的 Envoy 導向,它能夠檢視 HTTP/2 串流內部,把個別的 gRPC 呼叫分配到不同的 Pod,而不是
@@ -397,17 +397,17 @@ Envoy。一般 Pod-to-Pod 的 L3/L4 流量,如果沒有啟用這些以 proxy 為
 **這對延遲與連線參數有何影響。** 每個被重新導向的封包都會多經過同一節點上 Envoy
 這個 userspace 處理程序一次,而不是經過網路到另一個節點或 Pod。這會增加:
 
-- **每個請求的少量額外延遲**——從核心到 userspace 再返回的切換,加上協定解析
+- **每個請求的少量額外延遲**-從核心到 userspace 再返回的切換,加上協定解析
   (HTTP/gRPC)。對本地 hop 而言這個量通常很小,但並非零,啟用前值得在真實負載下
   測量。
-- **節點上額外的 CPU 與記憶體使用**——Envoy 是作為獨立處理程序處理流量,因此在
+- **節點上額外的 CPU 與記憶體使用**-Envoy 是作為獨立處理程序處理流量,因此在
   L7 流量較大時,節點負載會相應增加。
 - **Source address 取決於 proxy path 與設定。** 經過 Envoy 這一事實本身,並不代表
   backend 一定會看到 proxy 自己的 source IP。對於 L7 policy enforcement,Cilium
   預設使用 original source address;`CiliumEnvoyConfig`、Ingress 與 Gateway API
   則有各自的設定與 source visibility 規則。因此 backend 可見的 source IP/port
   需要針對具體模式驗證,不能單憑使用了 Envoy 這一點就推斷。
-- **額外負擔只施加在被選中的流量上**——沒有 L7 規則、沒有 `lb-l7` annotation 的一般
+- **額外負擔只施加在被選中的流量上**-沒有 L7 規則、沒有 `lb-l7` annotation 的一般
   L3/L4 連線不會付出這個代價:它們仍走快速的 eBPF 路徑,不經過 Envoy。
 
 > **時效性提醒。** Cilium 的 Kafka L7 過濾從 1.18 版起已被 deprecated,並在 1.20
@@ -467,7 +467,7 @@ spec:
 名稱 `example.com`。如果同時需要 `example.com` 及其子網域,請用獨立的規則分別表達。
 不要在沒有明確需要時使用 `"*"`:在 `toFQDNs` 中這種 pattern 會取消 DNS 名稱的限制,
 允許所有符合名稱在 DNS 快取中取得的目的地;同一規則中的其他條件,例如
-`toPorts`,仍會繼續生效。套用前請確認你叢集中 CoreDNS 實際的 labels——某些安裝
+`toPorts`,仍會繼續生效。套用前請確認你叢集中 CoreDNS 實際的 labels-某些安裝
 使用的 label 不是 `k8s-app: kube-dns`。
 
 ```bash
@@ -477,9 +477,9 @@ kubectl -n kube-system get pod --show-labels | grep -E 'coredns|dns'
 下面的範例是說明性的手動檢查,而不是確定性的 acceptance test。IANA 明確指出,
 文件用網域(`example.com`、`example.org` 等)的 HTTP 服務是 best-effort 提供的,
 並非設計給軟體作為 testing endpoint:
-https://www.iana.org/news/2024/example-domain-http-methods.html。如果你的環境
+https://www.iana.org/news/2024/example-domain-http-methods。如果你的環境
 中 `example.com`/`www.google.com` 無法存取(網路限制、暫時性故障、特定網路的封鎖),
-這不代表政策有誤——請換成你在套用政策**之前**已經獨立確認過 DNS 可解析且 HTTPS
+這不代表政策有誤-請換成你在套用政策**之前**已經獨立確認過 DNS 可解析且 HTTPS
 可正常運作的 FQDN。
 
 ```bash
@@ -497,7 +497,7 @@ kubectl -n cks-102 exec deploy/frontend -- \
 網路存取控制。DoH/DoT 會讓 DNS 查詢對 DNS-proxy 不可見,本身不會填入 FQDN 快取。
 直接連往 IP 也不會建立 FQDN 對應;只有當該 IP 已因先前被允許的 DNS 回應而存在於快取
 中,或有更寬的 L3/L4 規則允許時才會成功。如果這對你的威脅模型很重要,不要放行未經
-解析的 DNS 伺服器、DoH/DoT 或直接 IP:將 egress 限制到可信的 DNS、開啟所需的 DNS
+授權的 DNS 伺服器、DoH/DoT 或直接 IP:將 egress 限制到可信的 DNS、開啟所需的 DNS
 visibility,並將這些規則與邊界的 proxy/firewall 結合使用。
 
 > 🔬 `world`、`cluster`、`host` 與 CCNP 用於 platform-wide 邊界;測試時範圍要窄,
@@ -581,19 +581,19 @@ TCP/UDP listener 的路徑。Runtime CRI socket 是另一個機制:例如 contai
 **Hubble** 是 Cilium 的可觀測性元件,讀取 datapath 本來就在收集的同一批 eBPF 事件,
 並將其轉換成可讀的 flow 事件串流:source/destination identity、L4/L7 上下文、
 verdict(`FORWARDED`/`DROPPED`)與拒絕原因。它不會取代 Kubernetes audit log,也不會
-替你讀取請求的內容——它顯示的是 Cilium 對某個具體連線做出了什麼決定,以及原因。
+替你讀取請求的內容-它顯示的是 Cilium 對某個具體連線做出了什麼決定,以及原因。
 
 > 🔬 Hubble 的 Server/Relay/UI 架構、CLI 與各元件依 Cilium 的版本與安裝方式而不同。
 
 架構上,Hubble 由四個部分組成:
 
-- **Hubble Server**——內建在 `cilium-agent` 中,在每個節點上執行;透過 gRPC 提供
+- **Hubble Server**-內建在 `cilium-agent` 中,在每個節點上執行;透過 gRPC 提供
   flow events。
-- **Hubble Relay**(`hubble-relay`)——一個獨立元件,連接所有節點上的 Server,提供
+- **Hubble Relay**(`hubble-relay`)-一個獨立元件,連接所有節點上的 Server,提供
   統一的叢集視角,而不必逐節點查看。
-- **Hubble CLI**(`hubble`)——命令列客戶端;可以連到 Relay 取得叢集層級的視角,
+- **Hubble CLI**(`hubble`)-命令列客戶端;可以連到 Relay 取得叢集層級的視角,
   也可以連到單一節點上的本地 Server。
-- **Hubble UI**(`hubble-ui`)——建立在 Relay 之上、可選用的圖形介面,附帶服務關係
+- **Hubble UI**(`hubble-ui`)-建立在 Relay 之上、可選用的圖形介面,附帶服務關係
   地圖。
 
 **如何啟用。** 在 managed 發行版與標準安裝中,Hubble 通常是在安裝或升級 Cilium 時
@@ -601,7 +601,7 @@ verdict(`FORWARDED`/`DROPPED`)與拒絕原因。它不會取代 Kubernetes audit
 `--set hubble.relay.enabled=true --set hubble.ui.enabled=true`;確切的 flag 依
 chart 版本而異。對 CKS 與本章而言,只需知道一件事:如果叢集中已啟用 Hubble,
 `cilium status` 會顯示其狀態,而 CLI `hubble` 可以透過 port-forward 連到 Relay,
-如下所示。為這個 lab 從零啟用 Hubble不是必須的——那是叢集管理員的工作,不是你套用
+如下所示。為這個 lab 從零啟用 Hubble不是必須的-那是叢集管理員的工作,不是你套用
 CNP 的一部分。
 
 > 🎯 產生預期中允許與禁止的流量,然後用 namespace、verdict 或 protocol 篩選觀察
@@ -703,23 +703,23 @@ Mode 之後,同一個測試如果真的被規則禁止,會變成 `DENIED`;如果
   錯誤的 endpoint。
 - **L7 用於高價值的 API。** 只允許預期中的 HTTP methods/paths 能降低橫向移動的
   風險,但不能取代 OAuth、mTLS 與應用程式層的授權。
-- **Egress 依 DNS 與目的地構建。** `toFQDNs` 用於已知的外部 API,而不是作為通用
+- **Egress 依 DNS 與目的地建構。** `toFQDNs` 用於已知的外部 API,而不是作為通用
   規則。DNS、proxy 與邊界防火牆仍是縱深防禦的各層。
 - **在事件發生前就啟用 Hubble。** 針對 `DROPPED` flows 的儀表板與 flow log 的
   保存,能區分政策錯誤與應用程式故障,並更快調查可疑的 egress。
 
 ## 06.9. 小詞彙表
 
-- **Cilium**——為 Kubernetes 提供的、以 eBPF 為基礎的 CNI 與安全平台。
-- **CiliumNetworkPolicy(CNP)**——namespace 層級的 Cilium 政策資源。
-- **CiliumClusterwideNetworkPolicy(CCNP)**——叢集層級的 Cilium 政策。
-- **Identity**——Cilium 依 labels 建構出的 endpoint 識別碼。
-- **L3/L4**——網路層與傳輸層協定/埠。
-- **L7**——協定層,例如 HTTP method/path 或 DNS。
-- **`toFQDNs`**——依 DNS 名稱與觀察到的 DNS 回應設定的 egress 規則。
-- **Entity**——Cilium 預先定義的位址群組,例如 `world`、`cluster`、`host`。
-- **Hubble**——Cilium 網路 flows 的可觀測性元件。
-- **eBPF**——Linux 核心的機制,Cilium 藉此實作 datapath 與 policy enforcement。
+- **Cilium**-為 Kubernetes 提供的、以 eBPF 為基礎的 CNI 與安全平台。
+- **CiliumNetworkPolicy(CNP)**-namespace 層級的 Cilium 政策資源。
+- **CiliumClusterwideNetworkPolicy(CCNP)**-叢集層級的 Cilium 政策。
+- **Identity**-Cilium 依 labels 建構出的 endpoint 識別碼。
+- **L3/L4**-網路層與傳輸層協定/埠。
+- **L7**-協定層,例如 HTTP method/path 或 DNS。
+- **`toFQDNs`**-依 DNS 名稱與觀察到的 DNS 回應設定的 egress 規則。
+- **Entity**-Cilium 預先定義的位址群組,例如 `world`、`cluster`、`host`。
+- **Hubble**-Cilium 網路 flows 的可觀測性元件。
+- **eBPF**-Linux 核心的機制,Cilium 藉此實作 datapath 與 policy enforcement。
 
 ## 06.10. 本章總結
 

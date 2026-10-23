@@ -83,7 +83,7 @@ enterprise-დისტრიბუტივს ფანჯარა შეი�
 შემოწმდეს.
 
 ამ ლაბორატორიაში Kubernetes `v1.36` აღნიშნავს მაგალითის **სამიზნე (target) ვერსიას**,
-და არა Kubernetes-ის „მიმდინარე stable" ვერსიას და არც მისი აქტუალური support
+და არა Kubernetes-ის „მიმდინარე stable“ ვერსიას და არც მისი აქტუალური support
 window-ის დაპირებას. ნამდვილი change window-ის წინ შეამოწმეთ ფაქტობრივად მხარდაჭერილი
 target-branch და fixed patch advisory-დან. გადასვლა კეთდება თანმიმდევრულად, ერთი
 minor-ვერსიით, მაგალითად `v1.34` -> `v1.35` -> `v1.36`; patch-ი branch-ის შიგნით
@@ -93,7 +93,7 @@ minor-ვერსიით, მაგალითად `v1.34` -> `v1.35` -> `
 ```mermaid
 flowchart TB
     n["N: მიმდინარე<br/>minor-branch"] --> n1["N-1: მხარდაჭერილია"] --> n2["N-2: ბოლო<br/>upstream-<br/>მხარდაჭერილი"] --> n3["N-3: ჩვეულებრივ EOL<br/>ახალი<br/>upstream-patch-ების<br/>გარეშე"]
-    cp["kube-apiserver<br/>ინახება პირველი"] --> worker["kubelet: არა უფრო<br/>ახალი ვიდრე<br/>apiserver<br/>და არაუმეტეს 3<br/>minor-ით უფრო ძველი"]
+    cp["kube-apiserver<br/>ნახლდება პირველი"] --> worker["kubelet: არა უფრო<br/>ახალი ვიდრე<br/>apiserver<br/>და არაუმეტეს 3<br/>minor-ით უფრო ძველი"]
     style n fill:#0f9d58,color:#fff
     style n1 fill:#0f9d58,color:#fff
     style n2 fill:#f4b400,color:#000
@@ -139,7 +139,7 @@ kubelet-ის ზედა საზღვარს: kubelet არ შეი�
 გადაწყვეტილების წყარო - პირველადი advisory-ია და არა მხოლოდ CVE-აგრეგატორი. Kubernetes-
 ისთვის ეს არის [security advisories](https://kubernetes.io/docs/reference/issues-security/security/)
 და release notes; OS-ის, cloud-მომწოდებლის, CNI-ისა და runtime-ის - მათი
-წარმომადგენლის advisory. NVD, GitHub Advisory Database და კორპორატიული CVE feed-ები
+მწარმოებლის advisory. NVD, GitHub Advisory Database და კორპორატიული CVE feed-ები
 სასარგებლოა შეტყობინებებისა და ძებნისთვის, მაგრამ შეიძლება ჩამორჩეს, შეიცავდეს
 არასრულ ვერსია-დიაპაზონებს ან არ აღწერდეს კონფიგურაციულ პირობებს.
 
@@ -190,11 +190,11 @@ calendar, node image/AMI და deadline, რომლის შემდეგ�
 
 ### ოფიციალური მარშრუტი
 
-- [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/) — ძირითადი დოკუმენტი: target ვერსიის არჩევა, პირველი და დამატებითი control-plane ნოდები, კლასტერის შემოწმება და recovery.
-- [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) — ცალკე თანმიმდევრობა Linux worker-ნოდისთვის.
-- [Changing the Kubernetes package repository](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/change-package-repository/) — გამოიყენეთ, როცა target minor მოითხოვს `pkgs.k8s.io` repository-ის გადართვას.
-- [Safely Drain a Node](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/) — `drain`-ის ქცევა, PodDisruptionBudget და DaemonSet.
-- [Version Skew Policy](https://kubernetes.io/releases/version-skew-policy/) — თავსებადობის საზღვრები, თუ დავალების ფორმულირება ეჭვს იწვევს.
+- [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/) - ძირითადი დოკუმენტი: target ვერსიის არჩევა, პირველი და დამატებითი control-plane ნოდები, კლასტერის შემოწმება და recovery.
+- [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) - ცალკე თანმიმდევრობა Linux worker-ნოდისთვის.
+- [Changing the Kubernetes package repository](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/change-package-repository/) - გამოიყენეთ, როცა target minor მოითხოვს `pkgs.k8s.io` repository-ის გადართვას.
+- [Safely Drain a Node](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/) - `drain`-ის ქცევა, PodDisruptionBudget და DaemonSet.
+- [Version Skew Policy](https://kubernetes.io/releases/version-skew-policy/) - თავსებადობის საზღვრები, თუ დავალების ფორმულირება ეჭვს იწვევს.
 
 თუ target minor განსხვავდება მიმდინარე upstream-ისგან, დოკუმენტაციაში გადართეთ
 ვერსიის selector შესაბამის branch-ზე: ბრძანებები და package-ვერსიები უნდა
@@ -237,8 +237,8 @@ CNI/CSI/runtime-თავსებადობა, capacity და ტესტ�
 
 `kube-apiserver`-ის patch არ ანახლებს `containerd`-ს, `runc`-ს, ბირთვს, OpenSSL-ს,
 `systemd`-ს და OS-პაკეტებს. კონტეინერიდან შეტევისთვის სწორედ runtime და ბირთვი
-ხშირად წარმოადგენენ საზღვარს workload-სა და ნოდას შორის. ამიტომ inventory-სა და
-patch-policy-ს უნდა მოიცავდეს მთელი node image.
+ხშირად წარმოადგენენ საზღვარს workload-სა და ნოდას შორის. ამიტომ inventory და
+patch-policy უნდა მოიცავდეს მთელ node image-ს.
 
 | დამოკიდებულება | რისკი ჩამორჩენისას | რა შევამოწმოთ rollout-ის წინ |
 |---|---|---|
@@ -301,20 +301,20 @@ rolling-ჩანაცვლებით და წაიშალოს ძვ
 Package repository-ის განახლებისას შეამოწმეთ repository-ის წყარო და ხელმოწერა. ნუ
 შეურევთ შემთხვევით ვერსიებს სხვადასხვა repository-დან და ნუ ჩაატარებთ ერთდროულად
 დიდ Kubernetes-, runtime- და OS-migration-ს გამოყოფილი ტესტის გარეშე: ასე რთულია
-CVE-remediation-ის regression-ისგან გარჩევა და უსაფრთხოდ rollback.
+CVE-remediation-ის regression-ისგან გარჩევა და უსაფრთხოდ rollback-ის შესრულება.
 
 > 🎯 არ დაარღვიოთ version skew, არ განაახლოთ ყველა ნოდა ერთდროულად, არ გვერდი აუაროთ PDB-ს ან preflight-ს მიზეზის გარეშე და დაადასტურეთ შედეგი ვერსიებითა და health-ით.
 
 ## 13.6. Security-განახლების ტიპური შეცდომები
 
-- **„ჩვენ არ გვაქვს საჯარო API, CVE ჩვენ არ გვეხება".** დაუცველი kubelet ან runtime
+- **„ჩვენ არ გვაქვს საჯარო API, CVE ჩვენ არ გვეხება“.** დაუცველი kubelet ან runtime
   შეიძლება ხელმისაწვდომი იყოს შიდა შემტევისთვის Pod-ის ან ნოდის კომპრომეტაციის
   შემდეგ.
 - **Patch-ვდება მხოლოდ control plane.** Worker-ის kubelet, `containerd`, `runc` და OS
   რჩება დაუცველი, თუმცა `kubectl version` უკვე კარგად გამოიყურება.
 - **EOL-ს იღებენ დაბალ რისკად.** ახალი advisory-ის არარსებობა ნიშნავს patch-ის
   არარსებობას და არა დაუცველობების არარსებობას.
-- **Გადახტება minor-ვერსიებზე ან kubelet-ის განახლება API server-ზე ადრე.** ეს
+- **გამოტოვებენ minor-ვერსიებს ან განაახლებენ kubelet-ს API server-ზე ადრე.** ეს
   არღვევს version skew-ს და ქმნის მძიმედ დიაგნოსტირებად მდგომარეობას.
 - **ყველა ნოდის ერთდროული განახლება ან PDB-ის გვერდის ავლა.** სასწრაფო CVE არ
   ამართლებს ყველა replica-ს დაკარგვას; ჯერ ფასდება ექსპოზიცია და capacity, შემდეგ
@@ -329,7 +329,7 @@ CVE-remediation-ის regression-ისგან გარჩევა და �
 - **Patch management, როგორც პროცესი.** გუნდი გამოწერილია upstream- და vendor-
   advisory-ებზე, აკავშირებს CVE-ს inventory-სთან, ანიჭებს severity-based SLA-ს,
   პასუხისმგებელს, rollout-ის ფანჯარას და დახურვის დადასტურებას. ეს უკეთესია, ვიდრე
-  ცალკეული „განახლების დღეები" წელიწადში ერთხელ.
+  ცალკეული „განახლების დღეები“ წელიწადში ერთხელ.
 - **Patch-ის გამოქვეყნების შემდეგ რისკი იზრდება.** Diff დაუცველ და შესწორებულ
   ვერსიას შორის ხშირად ავიწროვებს CVE-ის მიზეზის ძებნის არეალს და ამარტივებს reverse
   engineering-ს. ამიტომ ცნობილი, შემტევისთვის ხელმისაწვდომი და ჯერ არაგამოსწორებული
@@ -351,7 +351,7 @@ CVE-remediation-ის regression-ისგან გარჩევა და �
   განაგრძოს მთელი პარკის ჩანაცვლება.
 - **ერთიანი SBOM/asset inventory.** ის აკავშირებს advisory-ს არა მხოლოდ Kubernetes-
   თან, არამედ `containerd`-თან, `runc`-თან, CNI-სთან, OS-თან და ბირთვთან, ამიტომ
-  გუნდი არ ტოვებს გამოტოვებულ ნოდაზე შეტევის მეორე ნახევარს.
+  გუნდი არ გამოტოვებს ნოდაზე შეტევის მეორე ნახევარს.
 
 ## 13.8. მინი-ლექსიკონი
 
@@ -405,7 +405,7 @@ apply`, worker-ზე - `kubeadm upgrade node`.
 დამოკიდებულებებს, ტესტავს node image-ს, მიდის rolling-ტალღით და ამის შემდეგ ამტკიცებს
 როგორც შესწორებულ ვერსიას, ისე სერვისების მუშაუნარიანობას.
 
-> 🏭 Production gate აფიქსირებს ვერსიების, readiness-ისა და health-ის evidence-ს; ის არ ცვლის ტესტირებული rollback-ს.
+> 🏭 Production gate აფიქსირებს ვერსიების, readiness-ისა და health-ის evidence-ს; ის არ ცვლის ტესტირებულ rollback-ს.
 
 ## 13.11. დამოუკიდებელი პრაქტიკა: security upgrade gate
 
@@ -512,7 +512,7 @@ kubectl get --raw /metrics \
 
 ### Production note: custom security flags-ის შენარჩუნება
 
-Self-hosted `kubeadm` production upgrade-ში გუნდს შეუძლია გადაწეროს static Pod
+Self-hosted `kubeadm` production upgrade-ში ბრძანებას შეუძლია გადაწეროს static Pod
 manifest-ები `ClusterConfiguration`-იდან. ამიტომ custom audit, encryption და
 profiling პარამეტრები უნდა იყოს დაფიქსირებული Infrastructure as Code-ში და ცალკე
 შემოწმებული change/rollback პროცედურაში.
@@ -530,8 +530,8 @@ upgrade-პროცესის შემდეგ დაადასტურ�
 
 ნამდვილი rollout-ისთვის დამატებით ინახავენ ზუსტ ვერსიებს before-ისა და
 after-ისთვის, შემოწმებული etcd snapshot-ის სტატუსს, health/smoke ტესტების შედეგებსა
-და ტესტირებული rollback-ს. Custom RBAC-ის ან admission policy-ის ცვლილებები მოწმდება
-პროექტ-სპეციფიკური პროცედურის მიხედვით და არ ცდილობენ ზოგადი YAML diff-ით ცნონ ისინი
+და ტესტირებულ rollback-ს. Custom RBAC-ის ან admission policy-ის ცვლილებები მოწმდება
+პროექტ-სპეციფიკური პროცედურის მიხედვით და არ ცდილობენ ზოგადი YAML diff-ით სცნონ ისინი
 უსაფრთხოდ.
 
 > 🎯 **CKS Core.** გამოცდაზე მიჰყევით მხოლოდ დავალების პირობებს: control plane ნახლდება worker-ზე ადრე, worker-ის განახლებამდე გამოიყენეთ `cordon`/`drain`, შემოწმების შემდეგ დაუბრუნეთ ნოდა `uncordon`-ის მეშვეობით.
@@ -565,7 +565,7 @@ CVSS არ აღწერს კლასტერის კონკრეტ
 <details>
 <summary>5. რატომ ნახლდება control plane worker-ნოდებზე ადრე, რატომ არ უნდა იყოს kubelet API server-ზე უფრო ახალი და რატომ არ შეიძლება ჩამორჩეს მას სამ minor-ვერსიაზე მეტად?</summary>
 
-Version skew მოითხოვს, რომ kubelet არ იყოს kube-apiserver-ზე უფრო ახალი და არაუმეტეს სამი minor-ვერსიით უფრო ძველი მასზე, ამიტომ ჯერ ინახება control plane. HA-ში ძველი API server ასევე ზღუდავს kubelet-ის დასაშვებ ზედა ვერსიას, სანამ ის რჩება კლასტერში. ასეთი skew დასაშვებია მხოლოდ rolling upgrade-ის დროისთვის და არა როგორც მუდმივი მდგომარეობა.
+Version skew მოითხოვს, რომ kubelet არ იყოს kube-apiserver-ზე უფრო ახალი და არაუმეტეს სამი minor-ვერსიით უფრო ძველი მასზე, ამიტომ ჯერ ნახლდება control plane. HA-ში ძველი API server ასევე ზღუდავს kubelet-ის დასაშვებ ზედა ვერსიას, სანამ ის რჩება კლასტერში. ასეთი skew დასაშვებია მხოლოდ rolling upgrade-ის დროისთვის და არა როგორც მუდმივი მდგომარეობა.
 </details>
 
 <details>

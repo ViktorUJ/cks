@@ -12,7 +12,7 @@
 > სამუშაო დროს. მაგრამ ინციდენტისას საჭიროა დადგინდეს, **ვინ** მიმართა API-ს, **რისი** გაკეთება
 > სცადა, რომელ ობიექტთან და რით დასრულდა. Audit logging წერს ამ კვალს `kube-apiserver`-ის
 > საზღვარზე. ეს არის CKS-ის დომენის **Monitoring, Logging & Runtime Security (20%)** ნაწილი:
-> journal სასარგებლო უნდა იყოს გამოძიებისთვის, მაგრამ არ უნდა ახსნას Secret ან დატვირთოს
+> journal სასარგებლო უნდა იყოს გამოძიებისთვის, მაგრამ არ უნდა გახსნას Secret ან დატვირთოს
 > API server ლოგების მოცულობით.
 
 > **რა გვჭირდება CKA-დან.** Self-managed kubeadm-კლასტერში `kube-apiserver` არის static
@@ -24,7 +24,7 @@
 
 > 🧠 Kubernetes audit აფიქსირებს API-request-ს და არა shell-ბრძანებას ან control plane-ის უწყვეტ მდგომარეობას. გამოძიებისთვის განასხვავეთ `stage` (როდის ჩაიწერა event) და `level` (რამდენი მონაცემი ჩაიწერა): `Metadata` ჩვეულებრივ იძლევა საჭირო identity/action/outcome-ს body-ისა და Secret-ის გაჟონვის რისკის გარეშე.
 
-## 32.1. რატომ გვჭირდება audit: პასუხის გაცემა „ვინ, რა, როდის და რა შედეგით"
+## 32.1. რატომ გვჭირდება audit: პასუხის გაცემა „ვინ, რა, როდის და რა შედეგით“
 
 **Audit event** - `kube-apiserver`-ის ჩანაწერია Kubernetes API-ისადმი მიმართვის შესახებ.
 ყოველი request `kubectl`-იდან, controller-იდან, ServiceAccount-იდან ან გარე client-იდან
@@ -66,15 +66,15 @@ flowchart TB
 Audit **არ არის** application log-ის, ქსელური flow log-ის ან runtime detector-ის ([29-ე
 თავის](../29/ge.md) Falco-ს) ჩანაცვლება. ის ხედავს Kubernetes API-სთან მიმართვას და არა,
 მაგალითად, SQL-request-ს Pod-ის შიგნით ან shell-ბრძანებას, რომელმაც API არ გამოიძახა. ასევე
-ჩანაწერი „request ავტორიზებულია" არ ამტკიცებს, რომ ქმედება ლეგიტიმური იყო: audit
-ანიჭებს evidence-ს ძებნისთვის, ხოლო RBAC, admission policy და hardening უნდა
+ჩანაწერი „request ავტორიზებულია“ არ ამტკიცებს, რომ ქმედება ლეგიტიმური იყო: audit
+იძლევა evidence-ს ძებნისთვის, ხოლო RBAC, admission policy და hardening უნდა
 ხელს უშლიდნენ დაუშვებელ ქმედებებს წინასწარ.
 
 განსაკუთრებით ღირებულია audit-ლოგები:
 
 - Deployment-ის, RoleBinding-ის, NetworkPolicy-ის წაშლის ან Secret-ის ცვლილების გამოძიებისთვის;
 - მოპარული ServiceAccount identity-ის ძებნისთვის identity-ის, დროის, scope-ისა და ქსელური
-  კონტექსტის უჩვეულო კომბინაციის მიხედვით; `sourceIPs`/`userAgent` ინარჩუნებენ სანდო proxy-სთან
+  კონტექსტის უჩვეულო კომბინაციის მიხედვით; `sourceIPs`/`userAgent` საჭიროებენ სანდო proxy-სთან
   და სხვა telemetry-სთან შედარებას და თავისთავად მტკიცებულებად არ ითვლება;
 - პრივილეგირებული ოპერაციებისა და security-sensitive რესურსების ცვლილების კონტროლისთვის;
 - დასადასტურებლად, რომელმა user-მა და რა response code-ით შეასრულა ქმედება;
@@ -163,7 +163,7 @@ level ქმნის ზედმეტ მოცულობასა და �
 
 1. გამორიცხეთ საჯარო health endpoints და კონკრეტული უსაფრთხო ხმაური.
 2. ჩაწერეთ `Metadata` Secret-ისა და security-sensitive ქმედებებისთვის: ეს იძლევა identity-სა
-   და object-ს, მაგრამ არ ახსნის `data`-ს.
+   და object-ს, მაგრამ არ გახსნის `data`-ს.
 3. ჩართეთ `Request` მხოლოდ შეზღუდული namespace/resource/verb-ისთვის და დასაბუთებით.
 4. დაასრულეთ policy catch-all `Metadata` rule-ით, რომ არ დაიკარგოს უცნობი API-გამოძახება.
 
@@ -174,7 +174,7 @@ level ქმნის ზედმეტ მოცულობასა და �
 Policy-ის ფაილს აქვს API `audit.k8s.io/v1`, kind `Policy`. მისი `rules` მოწმდება **ზემოდან
 ქვემოთ**, და გამოიყენება **პირველი დამთხვეული** rule. ამიტომ კონკრეტული გამონაკლისები და
 sensitive resources დგება ფართო catch-all-მდე ადრე. ნუ დაეყრდნობით იმას, რომ შემდეგი rule
-„დაამატებს" მონაცემებს წინას.
+„დაამატებს“ მონაცემებს წინას.
 
 Rule შესაძლებელია შეიზღუდოს `users`-ით, `userGroups`-ით, `verbs`-ით, `namespaces`-ით,
 `resources`-ით (API Group/Resource/Subresource), `nonResourceURLs`-ით და `omitStages`-ით.
@@ -258,7 +258,7 @@ sudo sed -n '1,220p' /etc/kubernetes/audit/audit-policy.yaml
 სხვა ველებს, ამიტომ არ ცვლის `Metadata`-ს Secret-ისთვის.
 
 `Policy` არის node-ზე API server-ის კონფიგურაცია და არა Kubernetes-ობიექტი: ის არ გამოიყენება
-`kubectl apply`-ით. ამ ფაილთან და audit log-თან access უნდა შეიზღუდოს: ვინც შეუძლია
+`kubectl apply`-ით. ამ ფაილთან და audit log-თან access უნდა შეიზღუდოს: ვისაც შეუძლია
 policy-ის შეცვლა, შეუძლია evidence-ის გამორთვა; ვინც `Request` level-ის log-ს კითხულობს,
 შეუძლია სენსიტიურ მონაცემებზე access-ის მიღება.
 
@@ -357,7 +357,7 @@ sudo stat -c '%A %a %U:%G %n' \
 
 არ დაამატოთ `--audit-log-path`-ის მეორე instance ან სხვა audit flag-ის დუბლიკატი: flag-ს
 აქვს ერთი აქტიური მნიშვნელობა, ხოლო დუბლიკატს შეუძლია მოგვცეს conflict, არასწორი ქცევა ან
-სტარტის ვერგაკეთება API server-ის მიერ. არ mount-ოთ მხოლოდ policy-ის ფაილი
+API server-ის გაშვების ჩავარდნა. არ mount-ოთ მხოლოდ policy-ის ფაილი
 `hostPath.type: File`-ად, თუ catalog ჯერ არ არსებობს: directory mount-ის შემოწმება უფრო
 მარტივია და მასში შესაძლებელია ვერსირებადი policy-ის შენახვა პროგნოზირებადი უფლებებით.
 
@@ -380,7 +380,7 @@ sudo ls -l /var/log/kubernetes/audit/audit.log
 
 თუ API server არ ბრუნდება, დაუყოვნებლივ შეამოწმეთ `journalctl -u kubelet`, exited
 container-ი `crictl ps -a`/`crictl logs`-ის მეშვეობით და manifest-ის YAML. საჭიროების
-შემთხვევაში დააბრუნეთ შენახული `.bak` ფაილი manifests catalog-ის **გარეთ**: manifests
+შემთხვევაში დააბრუნეთ `kube-apiserver.yaml`-ის timestamp-იანი ასლი `/root/k8s-manifest-backup`-იდან manifests catalog-ის **გარეთ**: manifests
 catalog-ის შიგნით backup-ი `/etc/kubernetes/manifests/`-ში kubelet-მა შეიძლება მიიღოს
 როგორც კიდევ ერთი static Pod manifest.
 
@@ -414,7 +414,7 @@ latency და loss/retry-სცენარები და არ გადმ
 
 ## 32.6. ლოკალური rotation, retention და მიწოდება node-ის ფარგლებს გარეთ
 
-`kube-apiserver` აყალიბებს rotation-ს ლოკალური log ფაილისთვის `--audit-log-maxsize`-ის
+`kube-apiserver` ახორციელებს rotation-ს ლოკალური log ფაილისთვის `--audit-log-maxsize`-ის
 მიხედვით, ინარჩუნებს არაუმეტეს `--audit-log-maxbackup`-ს ძველ ასლს და შლის ასლებს,
 `--audit-log-maxage`-ზე უფრო ძველს. მაგალითად, `100` MiB, `10` backup და `30` დღე ზღუდავს
 ლოკალურ buffer-ს, მაგრამ არ ცვლის გამოძიების ან compliance-ის retention-ის მოთხოვნებს.
@@ -463,7 +463,7 @@ backlog-ს/შეცდომებს.
 მიდის: `RequestReceived` stage-ზე audit-ის შეცდომისას kube-apiserver თავად request-ს
 უარყოფს. ეს აძლიერებს fail-closed evidence-ს, მაგრამ audit backend-ის ჩავარდნას clients-ის
 API-ის უარყოფად აქცევს; აირჩიეთ ის მხოლოდ შემოწმებული capacity-ით, HA-თი და recovery-ით და
-არა როგორც უნივერსალური „უსაფრთხო" რეჟიმი.
+არა როგორც უნივერსალური „უსაფრთხო“ რეჟიმი.
 
 > 🏭 Audit events-ის ცენტრალიზებული შეგროვება, webhook backends, SIEM და ოპერაციული pipeline: TLS, queue, capacity და trade-off loss risk-სა და API-ის ხელმისაწვდომობას შორის.
 
@@ -534,7 +534,7 @@ Webhook-ს აქვს საკუთარი batching/truncation-flags (`--
 ჩართეთ `--audit-log-truncate-enabled` ან `--audit-webhook-truncate-enabled` მხოლოდ
 შეგნებულად და დააყენეთ შესაბამისი `*-truncate-max-event-size` და
 `*-truncate-max-batch-size`. ზედმეტად დიდი event ჯერ კარგავს request/response body-ს, ხოლო
-თუ ეს არასაკმარისია - ისმევა. Ნუ გადმოიტანთ რიცხვებს სხვისი კლასტერიდან ბრმად: შეაფასეთ
+თუ ეს არასაკმარისია - მთლიანად ჩამოგდებულია. ნუ გადმოიტანთ რიცხვებს სხვისი კლასტერიდან ბრმად: შეაფასეთ
 audit rate, collector-ის latency, დასაშვები დანაკარგი restart-ისას და დატვირთვა API
 server-ზე.
 
@@ -612,7 +612,7 @@ sudo jq -r --arg name "$CM" '
 ' /var/log/kubernetes/audit/audit.log
 ```
 
-მოსალოდნელია `Request` level-ის strings, თქვენი username-ით, `create`/`delete`-ით,
+მოსალოდნელია `Request` level-ის სტრიქონები, თქვენი username-ით, `create`/`delete`-ით,
 `$CM` სახელის ობიექტით და წარმატებული response code `2xx` კლასისა. კონკრეტული code
 დამოკიდებულია ოპერაციასა და API-ზე. თუ policy სხვა namespace/resource-ს იყენებს, ტესტი
 და ფილტრი ზუსტად მას უნდა შეესაბამებოდეს.
@@ -720,7 +720,7 @@ RFC3339-timestamp-ში, ფაილების rotation და batch/webhook
 
 | სიმპტომი | რა შევამოწმოთ |
 |---|---|
-| API server არ იწყებს რედაქტირების შემდეგ | static Pod-ის YAML, `journalctl -u kubelet`, `crictl logs`, mount path-ისა და policy ფაილის არსებობა |
+| API server არ ეშვება რედაქტირების შემდეგ | static Pod-ის YAML, `journalctl -u kubelet`, `crictl logs`, mount path-ისა და policy ფაილის არსებობა |
 | `audit.log` არ არსებობს | `--audit-log-path`, volumeMount/hostPath, catalog-ის უფლებები, აქტიური static Pod |
 | Log არსებობს, მაგრამ არა ტესტური ობიექტი | rules-ის თანმიმდევრობა, namespace/verb/group/resource, ეძებება თუ არა მხოლოდ `ResponseComplete` |
 | Secret-ს აქვს body | Secret-ის rule ფართო `Request`/`RequestResponse`-ის შემდეგ დგას; გადაიტანეთ ის ზემოთ და გადატვირთეთ API server |
@@ -759,7 +759,7 @@ RFC3339-timestamp-ში, ფაილების rotation და batch/webhook
 - **დაიცავით evidence.** წაკითხვის roles, encryption, retention, უცვლელობა და alert
   policy/static Pod-ის ცვლილებაზე ისეთივე მნიშვნელოვანია, როგორც log ფაილის შექმნა თავად.
 - **რეგულარულად შეამოწმეთ stream.** სინთეტიკური request უსაფრთხო marker-ითა და dashboard
-  „ბოლო მიღებული event" უფრო სწრაფად აღმოაჩენს გატეხილ collector-ს, ვიდრე ინციდენტის
+  „ბოლო მიღებული event“ უფრო სწრაფად აღმოაჩენს გატეხილ collector-ს, ვიდრე ინციდენტის
   მოლოდინი.
 - **Managed Kubernetes განსხვავდება.** EKS/GKE/AKS-ში customer ჩვეულებრივ არ არედაქტირებს
   `kube-apiserver`-ის static Pod-ს. ჩართეთ provider-ის control-plane audit logs და
@@ -787,7 +787,7 @@ RFC3339-timestamp-ში, ფაილების rotation და batch/webhook
 
 ## 32.11. თავის შედეგები
 
-- Audit logging პასუხობს „ვინ, რა, როდის, საიდან და რა შედეგით" Kubernetes API-ისადმი
+- Audit logging პასუხობს „ვინ, რა, როდის, საიდან და რა შედეგით“ Kubernetes API-ისადმი
   request-ებზე; ეს არის evidence და არა runtime-/application-/network-telemetry-ის
   ჩანაცვლება.
 - `ResponseComplete` ჩვეულებრივ გამოძიების მთავარი stage-ია; `omitStages: RequestReceived`
@@ -841,9 +841,9 @@ outcome, audit log-ის ახალ გაჟონვის წყარო�
 ## 32.13. თვითშემოწმების კითხვები
 
 <details>
-<summary>1. რომელი audit event-ის ველები პასუხობს „ვინ", „რა", „საიდან" და „წარმატებული იყო თუ არა"?</summary>
+<summary>1. რომელი audit event-ის ველები პასუხობს „ვინ“, „რა“, „საიდან“ და „წარმატებული იყო თუ არა“?</summary>
 
-„ვინ" იძლევა `.user.username`, `.user.groups`, `.user.uid` და, თუ არსებობს, `.impersonatedUser`; „რა" - `.verb`, `.requestURI` და `.objectRef`. „საიდან"-ისთვის გამოიყენება `.sourceIPs` და `.userAgent`, მაგრამ ისინი შედარდება სანდო proxy-სა და სხვა წყაროებთან. წარმატებას აჩვენებს `.responseStatus.code` და `.responseStatus.reason`.
+„ვინ“ იძლევა `.user.username`, `.user.groups`, `.user.uid` და, თუ არსებობს, `.impersonatedUser`; „რა“ - `.verb`, `.requestURI` და `.objectRef`. „საიდან“-ისთვის გამოიყენება `.sourceIPs` და `.userAgent`, მაგრამ ისინი შედარდება სანდო proxy-სა და სხვა წყაროებთან. წარმატებას აჩვენებს `.responseStatus.code` და `.responseStatus.reason`.
 </details>
 
 <details>
@@ -879,7 +879,7 @@ Rules მოწმდება ზემოდან ქვემოთ, ხო�
 <details>
 <summary>7. რით განსხვავდება `blocking-strict` `blocking`-ისგან და რა availability trade-off-ს ქმნის?</summary>
 
-`blocking` წერს audit event-ს response-ის დამუშავების გზაზე და ნელი/მიუწვდომელი backend-ი ზრდის API-ის latency-ს. `blocking-strict` დამატებით უარყოფს request-ს, თუ audit `RequestReceived`-ზე შეცდომით დასრულდა. ეს აძლიერებს fail-closed evidence-ს, მაგრამ audit backend-ის ჩავარდნას clients-ის API-ის უარყოფად აქცევს, ამიტომ მოითხოვს capacity-, HA- და recovery-დიზაინს.
+`blocking` წერს audit event-ს response-ის დამუშავების გზაზე და ნელი/მიუწვდომელი backend-ი შეიძლება ზრდიდეს API-ის latency-ს. `blocking-strict` დამატებით უარყოფს request-ს, თუ audit `RequestReceived`-ზე შეცდომით დასრულდა. ეს აძლიერებს fail-closed evidence-ს, მაგრამ audit backend-ის ჩავარდნას clients-ის API-ის უარყოფად აქცევს, ამიტომ მოითხოვს capacity-, HA- და recovery-დიზაინს.
 </details>
 
 <details>
@@ -897,7 +897,7 @@ JSON Lines-ში ფილტრავენ `stage == "ResponseComplete"`-ს,
 <details>
 <summary>10. **Flashback (12-ე თავი).** 12-ე თავი გამორთავს `--anonymous-auth`-ს და ამოწმებს ამას HTTP-request-ით მომენტში. რატომ **ვერ** შეუძლია audit log-ს თავისთავად მისცეს უწყვეტი მტკიცებულება, რომ ნებისმიერი გასული პერიოდის განმავლობაში ეს flag არ შეცვლილა? რისი დადასტურება ზუსტად შეუძლია მას ანონიმური API-request-ების შესახებ ინტერვალზე და რომელი დამატებითი controls არის საჭირო კონფიგურაციის continuous assurance-ისთვის?</summary>
 
-Audit აფიქსირებს API requests-ს და არა static Pod manifest-ის ან kube-apiserver-ის flag-ის უწყვეტ მდგომარეობას. ხელმისაწვდომ და შენახულ ინტერვალზე მას შეუძლია აჩვენოს ანონიმური requests, მათი დრო, verb, ობიექტი და response, მაგრამ ასეთი strings-ის არარსებობა არ ამტკიცებს, რომ `--anonymous-auth` არ შეცვლილა. Continuous assurance-ისთვის საჭიროა periodic config checks, file-integrity monitoring, GitOps drift detection და alert policy-ის/static Pod manifest-ის ცვლილებაზე.
+Audit აფიქსირებს API requests-ს და არა static Pod manifest-ის ან kube-apiserver-ის flag-ის უწყვეტ მდგომარეობას. ხელმისაწვდომ და შენახულ ინტერვალზე მას შეუძლია აჩვენოს ანონიმური requests, მათი დრო, verb, ობიექტი და response, მაგრამ ასეთი სტრიქონების არარსებობა არ ამტკიცებს, რომ `--anonymous-auth` არ შეცვლილა. Continuous assurance-ისთვის საჭიროა periodic config checks, file-integrity monitoring, GitOps drift detection და alert policy-ის/static Pod manifest-ის ცვლილებაზე.
 </details>
 
 ## პრაქტიკა
@@ -942,7 +942,7 @@ CKS-ის ლაბა 112 აერთიანებს Falco-ს, audit-ს�
 
 თუ საბოლოო დავალებამ სირთულე გამოიწვია - დაუბრუნდით 10-ე, 12-ე და 30-32-ე თავებს
 ერთად: ეს არის Cluster Hardening-ისა და Runtime Security-ის შორის კავშირის ბირთვი,
-რომელსაც გამოცდა სხვა domain-თაშორის კავშირებზე ხშირად ამოწმებს.
+რომელსაც გამოცდა სხვა დომენთაშორის კავშირებზე ხშირად ამოწმებს.
 
 ---
 [სარჩევი](../README_GE.md) · [თავი 31](../31/ge.md) · [თავი 33](../33/ge.md)

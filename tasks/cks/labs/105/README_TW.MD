@@ -227,7 +227,7 @@ Kubernetes manifests。
 <details>
 <summary>💡 任務 10 的提示</summary>
 
-在編輯 `limits.conf` 之後，你「目前」SSH 工作階段中的 `ulimit -c` 不會改變 - PAM 的限制只在建立「新的」工作階段/login-shell 時才套用。請透過 `sudo su - ubuntu -c 'ulimit -c'` 檢查(新的 login;`sudo` 是必須的 - 如果不是從 root 呼叫，即使 `su` 切換成自己也總是會要求密碼)，或開啟新的 SSH 工作階段，而不是在你編輯檔案的同一個 shell 中檢查 `ulimit -c`。兩個值都需要：`hard` 是絕對上限，`soft` 是預設生效的值；如果只設定 `soft`，行程可以自己把限制提高到 `hard`。這個任務的關鍵陷阱：`ulimit -c 0` 與 `fs.suid_dumpable=0` 在 Ubuntu 上自己「並不會」停用 core dump - `man 5 core` 明確指出，如果 `kernel.core_pattern` 指向 pipe handler(`|program`)，核心會忽略 `RLIMIT_CORE`，而 Ubuntu 預設正是把 crash 導向這樣的 handler(Apport)，它不管 `ulimit` 都會攔截 dump。唯一可靠的方法是覆寫 `kernel.core_pattern` 本身(例如改成 `|/bin/false`)，而不只是行程的限制。
+在編輯 `limits.conf` 之後，你「目前」SSH 工作階段中的 `ulimit -c` 不會改變 - PAM 的限制只在建立「新的」工作階段/login-shell 時才套用。請透過 `sudo su - ubuntu -c 'ulimit -c'` 檢查(新的 login;`sudo` 是必須的 - 如果不是從 root 呼叫，即使 `su` 切換成自己也總是會要求密碼)，或開啟新的 SSH 工作階段，而不是在你編輯檔案的同一個 shell 中檢查 `ulimit -c`。兩個值都需要：`hard` 是絕對上限，`soft` 是預設生效的值；如果只設定 `soft`，行程可以自己把限制提高到 `hard`。這個任務的關鍵陷阱：`ulimit -c 0` 與 `fs.suid_dumpable=0` 在 Ubuntu 上自己「並不會」停用 core dump - `man 5 core` 明確指出，如果 `kernel.core_pattern` 指向 pipe handler(`|program`)，核心會忽略 `RLIMIT_CORE`，而 Ubuntu 預設正是把 crash 導向這樣的 handler(Apport)，它不管 `ulimit` 為何都會攔截 dump。唯一可靠的方法是覆寫 `kernel.core_pattern` 本身(例如改成 `|/bin/false`)，而不只是行程的限制。
 </details>
 
 ## 補充：kernel 與 containerd/CRI hardening

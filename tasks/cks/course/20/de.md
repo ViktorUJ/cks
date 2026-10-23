@@ -57,13 +57,13 @@ PSA und eine Policy Engine ersetzen einander nicht. PSA wendet Standardbeschrän
 >
 > Der API server wertet `matchConditions` **vor** dem Aufruf des Webhooks aus. Gibt mindestens eine Bedingung `false` zurück, wird der Webhook regulär übersprungen. Ist keine `false`, endet jedoch mindestens eine mit einem Fehler, wird der Webhook nicht aufgerufen: Bei `Fail` lehnt der API server die Anfrage ab, bei `Ignore` setzt er sie ohne diesen Webhook fort. Wurde der Webhook erfolgreich aufgerufen und gibt ausdrücklich `allowed: false` zurück, wird die Anfrage sowohl bei `Fail` als auch bei `Ignore` abgelehnt.
 >
-> Bei `Fail` lehnt ein solcher technischer/Evaluation-Fehler Create/Update ebenfalls ab: Die Policy kann nicht stillschweigend umgangen werden, aber ein Webhook-Ausfall **oder ein Fehler in seinen `matchConditions`** kann ein Deployment und Teile der Control-Plane-Operationen anhalten. Ein security-kritischer Webhook muss daher zuverlässiger als ein einzelner Pod sein: Mehrere Replicas verringern das Ausfallrisiko, ein PDB verhindert, dass ein freiwilliges Disruption alle Replicas gleichzeitig entfernt, korrektes TLS stellt eine vertrauenswürdige HTTPS-Verbindung bereit und Error-/Latency-Metriken und Alerts zeigen eine Verschlechterung vor dem Outage.
+> Bei `Fail` lehnt ein solcher technischer/Evaluation-Fehler Create/Update ebenfalls ab: Die Policy kann nicht stillschweigend umgangen werden, aber ein Webhook-Ausfall **oder ein Fehler in seinen `matchConditions`** kann ein Deployment und Teile der Control-Plane-Operationen anhalten. Ein security-kritischer Webhook muss daher zuverlässiger als ein einzelner Pod sein: Mehrere Replicas verringern das Ausfallrisiko, ein PDB verhindert, dass eine freiwillige Disruption alle Replicas gleichzeitig entfernt, korrektes TLS stellt eine vertrauenswürdige HTTPS-Verbindung bereit und Error-/Latency-Metriken und Alerts zeigen eine Verschlechterung vor dem Outage.
 >
-> Bei `Ignore` bleibt die API verfügbar, doch während eines solchen Fehlers passiert das Objekt **ohne die Prüfung dieses Webhooks** - dies ist ein bewusstes Fenster zum Umgehen der Policy, nicht ein Modus für ein "weicheres Deny". Für ein kritisches, ausgereiftes Verbot wird gewöhnlich `Fail` gewählt; `Ignore` kann beim Rollout ein temporärer Kompromiss oder für eine nicht kritische Kontrolle passend sein, wenn das Bypass-Risiko ausdrücklich akzeptiert wird.
+> Bei `Ignore` bleibt die API verfügbar, doch während eines solchen Fehlers passiert das Objekt **ohne die Prüfung dieses Webhooks** - dies ist ein bewusstes Fenster zum Umgehen der Policy, nicht ein Modus für ein „weicheres Deny“. Für ein kritisches, ausgereiftes Verbot wird gewöhnlich `Fail` gewählt; `Ignore` kann beim Rollout ein temporärer Kompromiss oder für eine nicht kritische Kontrolle passend sein, wenn das Bypass-Risiko ausdrücklich akzeptiert wird.
 
 ## 20.2. Webhook: Verfügbarkeit ist ebenfalls eine Sicherheitsentscheidung
 
-Gatekeeper und Kyverno laufen gewöhnlich als Admission Webhooks: `kube-apiserver` sendet ihnen über HTTPS ein `AdmissionReview` und wartet dann auf `allowed: true/false` sowie mögliche JSON Patches. Ein Webhook hat in `MutatingWebhookConfiguration` oder `ValidatingWebhookConfiguration` zwei besonders wichtige Parameter:
+Gatekeeper und Kyverno laufen gewöhnlich als Admission Webhooks: `kube-apiserver` sendet ihnen über HTTPS ein `AdmissionReview` und wartet dann auf `allowed: true/false` sowie mögliche JSON Patches. Ein Webhook hat in `MutatingWebhookConfiguration` oder `ValidatingWebhookConfiguration` fünf besonders wichtige Parameter:
 
 | Parameter | Bedeutung für die Sicherheit | Risiko |
 |---|---|---|
@@ -73,7 +73,7 @@ Gatekeeper und Kyverno laufen gewöhnlich als Admission Webhooks: `kube-apiserve
 | `namespaceSelector`/`objectSelector` | schränkt den Webhook-Scope ein | ein fehlerhafter Selector kann einen kritischen Namespace überspringen |
 | `matchPolicy` | bestimmt das API-Version-Matching | ein unerwartetes Match kann eine Regel zu breit oder zu eng anwenden |
 
-Ändern Sie `failurePolicy` eines durch Helm Chart installierten Webhooks nicht blind: Das Chart kann die Änderung überschreiben. Stellen Sie zuerst sicher, dass die Engine mehrere Replicas, PodDisruptionBudget, TLS und einen Alert für Fehler/Latency besitzt. Ein neues Verbot wird sicherer als Audit/Warn eingeführt, bestehende Verstöße werden korrigiert und erst danach wird Enforcement aktiviert. Eine kritische, ausgereifte Regel verwendet gewöhnlich `Fail`; bei einem ersten Rollout ist es wichtiger, einen Cluster-Outage zu vermeiden, als dies mit einem Beweis funktionierenden Schutzes zu verwechseln.
+Ändern Sie `failurePolicy` eines durch Helm Chart installierten Webhooks nicht blind: Das Chart kann die Änderung überschreiben. Stellen Sie zuerst sicher, dass die Engine mehrere Replicas, PodDisruptionBudget, TLS und einen Alert für Fehler/Latency besitzt. Ein neues Verbot wird sicherer als Audit/Warn eingeführt, bestehende Verstöße werden korrigiert und erst danach wird Enforcement aktiviert. Eine kritische, ausgereifte Regel verwendet gewöhnlich `Fail`; bei einem ersten Rollout ist es wichtiger, den Cluster nicht lahmzulegen und dies nicht für den Beweis eines funktionierenden Schutzes zu halten.
 
 Eine minimale Webhook-Konfiguration muss Endpoint, TLS-Vertrauen und den `AdmissionReview`-Vertrag explizit definieren. Der validating Webhook unten verwendet zum Beispiel einen Service; die Struktur für einen mutating Webhook ist analog, fügen Sie jedoch `reinvocationPolicy: IfNeeded` oder `Never` hinzu und machen Sie die Mutation idempotent. `caBundle` ist hier abgekürzt: Ein funktionierendes Manifest enthält das base64-kodierte CA-Zertifikat des Webhooks.
 
@@ -260,9 +260,9 @@ spec:
 
 Zuerst betrachtet Gatekeeper den `match` im `Constraint`. Hier prüft er nur Pods und überspringt die aufgezählten System-Namespaces; ein Objekt außerhalb des Scope gelangt überhaupt nicht in diese Regel. Für jedes passende Create/Update bildet Gatekeeper `input.review.object`: Dies ist der eingehende Pod in der Form der Kubernetes-API. Gleichzeitig übergibt er `spec.parameters` des Constraints in `input.parameters`. Daher ist in diesem Beispiel `input.parameters.labels` gleich `["owner"]`.
 
-Eine Rego-Regel ist eine Menge von Bedingungen, die durch ein logisches **UND** verbunden sind. Sie liest sich von unten nach oben als "erzeuge eine Violation, wenn alle Zeilen im Rumpf erfüllt sind":
+Eine Rego-Regel ist eine Menge von Bedingungen, die durch ein logisches **UND** verbunden sind. Sie liest sich von unten nach oben als „erzeuge eine Violation, wenn alle Zeilen im Rumpf erfüllt sind“:
 
-- `required := input.parameters.labels[_]` durchläuft jedes verpflichtende Label; `_` bedeutet "nächstes Array-Element". Hier ist der einzige Wert `owner`.
+- `required := input.parameters.labels[_]` durchläuft jedes verpflichtende Label; `_` bedeutet „nächstes Array-Element“. Hier ist der einzige Wert `owner`.
 - `not input.review.object.metadata.labels[required]` ist wahr, wenn der eingehende Pod diesen Label Key nicht besitzt.
 - `msg := ...` bildet eine verständliche Meldung, und `violation[{"msg": msg}]` ist das spezielle Ergebnis, das Gatekeeper als Verstoß betrachtet. Bei `dryrun` erscheint es in `status.violations`; bei `deny` liefert der API server diese Meldung zurück und erstellt keinen Pod.
 
@@ -415,7 +415,7 @@ Die Bedingung `container.securityContext.privileged == true` trifft bei einem fe
 
 ### Kyverno-CEL-Policy lesen
 
-Kyverno ist eine Kubernetes Policy Engine: Seine Controller und Admission Webhook lesen
+Kyverno ist eine Kubernetes Policy Engine: Seine Controller und sein Admission Webhook lesen
 Policy-Ressourcen aus der API und reagieren auf Objektoperationen. Bei den neuen CEL-basierten
 Policy-Typen ist die Policy eine gewöhnliche YAML-Ressource, und CEL ist eine kurze
 Ausdruckssprache im Feld `expression`. Sie ersetzt YAML nicht und ist kein Shell-Skript: Der
@@ -426,7 +426,7 @@ Lesen Sie jedes Beispiel zunächst in einem Flow: **Welche Operation und Ressour
 `matchConstraints` → welche zusätzlichen Bedingungen sind erfüllt → was macht die Policy**.
 `ValidatingPolicy` wertet einen booleschen Ausdruck aus: `true` lässt das Objekt zu, `false`
 erzeugt einen Verstoß; die Action `Audit` zeichnet ihn nur auf, `Deny` lehnt die Anfrage ab.
-`MutatingPolicy` gibt eine Objektänderung vor dessen Speicherung zurück. `GeneratingPolicy`
+`MutatingPolicy` gibt eine Objektänderung vor der Speicherung des Objekts zurück. `GeneratingPolicy`
 fordert einen Background Controller auf, nach dem Match einer Source Resource ein anderes Objekt
 zu erstellen oder zu synchronisieren. Generation ist daher kein unmittelbarer Admission Deny.
 
@@ -463,8 +463,8 @@ kubectl -n kyverno get deploy -o jsonpath='{..image}'
 
 ### `ValidatingPolicy`: `runAsNonRoot` verlangen
 
-`ValidatingPolicy` ändert nichts: Sie beantwortet die Frage "darf dieses Objekt zugelassen
-werden?". Zunächst trifft die Policy auf Create/Update eines Pods, dann erhält CEL den Pod als
+`ValidatingPolicy` ändert nichts: Sie beantwortet die Frage „darf dieses Objekt zugelassen
+werden?“. Zunächst trifft die Policy auf Create/Update eines Pods, dann erhält CEL den Pod als
 `object`. Der Ausdruck muss `true` zurückgeben, anderenfalls erzeugt Kyverno einen Verstoß mit
 dem Feld `message`. `Audit` lässt die Anfrage zu und sammelt das Ergebnis zur Korrektur von
 Manifesten; nach Prüfung des realen Scope schalten Sie auf `Deny`, das einen solchen Pod ablehnt.
@@ -474,7 +474,7 @@ vollständige PSS `restricted`.
 ```yaml
 # API der neuen CEL-basierten Kyverno Policy.
 apiVersion: policies.kyverno.io/v1
-# Validation ändert das Objekt nicht: Sie lässt zu oder zeichnet/lehnen einen Verstoß ab.
+# Validation ändert das Objekt nicht: Sie lässt zu oder zeichnet einen Verstoß auf bzw. lehnt ihn ab.
 kind: ValidatingPolicy
 metadata:
   # Eindeutiger Name der Policy im Cluster.
@@ -508,8 +508,8 @@ kubectl patch validatingpolicy require-pod-run-as-non-root --type merge \
 
 ### `MutatingPolicy`: transparente Kennzeichnung
 
-`MutatingPolicy` beantwortet nicht "zulassen oder verbieten", sondern "welchen sicheren Default
-dem bereits akzeptierten Objekt hinzufügen". Sie wird nach dem Match ausgelöst, erstellt ein
+`MutatingPolicy` beantwortet nicht „zulassen oder verbieten“, sondern „welchen sicheren Default
+dem bereits akzeptierten Objekt hinzufügen“. Sie wird nach dem Match ausgelöst, erstellt ein
 geändertes Fragment des Objekts und der API server speichert das Ergebnis. Mutation darf ein
 unsicheres Image nicht verdecken: Für security-kritische Felder ist meist explizite Validation
 besser. Das sichere Lernbeispiel fügt nur ein Audit Label hinzu. `ApplyConfiguration` bedeutet,
@@ -1078,7 +1078,7 @@ Prüfen Sie vor einem Gatekeeper-/Kyverno-Update CRD Migration, Kompatibilität 
 - **Policy as Code.** Bewahren Sie Templates, Constraints, Policies, Test Fixtures und Ausnahmen im Repository auf. Code Review muss positive wie negative Beispiele sehen, und CI muss die Policy vor dem Cluster Rollout prüfen.
 - **Schrittweise Aktivierung.** Beginnen Sie mit einem Namespace, `Audit`/`dryrun`/`Warn`, sammeln Sie reale Verstöße, helfen Sie Teams bei der Korrektur ihrer Manifeste und aktivieren Sie erst danach `Enforce`/`Deny`.
 - **Admission Observability.** Sammeln Sie Webhook Latency-/Error-Metriken, die Zahl der Violations, API-server-Audit-Events und Alerts für fehlende ready Replicas. Prüfen Sie die Policy nach Updates von Kubernetes und der Engine.
-- **Minimale Ausnahmen.** Eine Ausnahme gilt für einen konkreten Namespace, Service Account, RuntimeClass oder ein approved Image, mit Owner und Ablaufdatum. Verwenden Sie keinen breiten Bypass, um ein einzelnes Deployment zu "reparieren".
+- **Minimale Ausnahmen.** Eine Ausnahme gilt für einen konkreten Namespace, Service Account, RuntimeClass oder ein approved Image, mit Owner und Ablaufdatum. Verwenden Sie keinen breiten Bypass, um ein einzelnes Deployment zu „reparieren“.
 
 ## 20.10. Mini-Glossar
 
@@ -1108,8 +1108,8 @@ Prüfen Sie vor einem Gatekeeper-/Kyverno-Update CRD Migration, Kompatibilität 
 
 **In der Prüfung.** Die verlinkte öffentliche Curriculum-Datei heißt derzeit `CKS_Curriculum
 v1.34`, während die CKS-Prüfungsumgebung derzeit Kubernetes v1.35 verwendet. Das sind
-unterschiedliche Versionen: das Curriculum beschreibt Themen, die Runtime bestimmt die
-verfügbaren APIs und das Cluster-Verhalten. Bestimmen Sie schnell, wo der Control liegt, lesen
+unterschiedliche Versionen: Das Curriculum beschreibt Themen, die Runtime bestimmt die
+verfügbaren APIs und das Cluster-Verhalten. Bestimmen Sie schnell, wo sich die Kontrolle befindet, lesen
 Sie `ConstraintTemplate` und `Constraint`, erstellen/prüfen Sie Policy, unterscheiden Sie `Audit`
 von `Deny` und finden Sie die Ursache von `denied the request`. Schreiben Sie der Prüfung keine
 Erweiterungen des Kurses zu: Kubernetes 1.36 native MAP und Kyverno 1.19 sind
@@ -1123,7 +1123,7 @@ Kyverno 1.19 sind als Production Extension nützlich, nachdem die Compatibility 
 konkreten Cluster und der Engine geprüft wurde. Das wertvollste Ergebnis ist nicht die Anzahl
 der Policies, sondern eine verständliche, testbare Baseline mit engen Ausnahmen,
 Observability und klarer Verantwortungsverteilung. Das ist zugleich der Einstiegspunkt für
-Supply-Chain-Control: der nächste Teil des Kurses wendet Policy auf Registry, Signaturen und
+Supply-Chain-Control: Der nächste Teil des Kurses wendet Policy auf Registry, Signaturen und
 Artefakte an.
 
 ## 20.13. Fragen zur Selbstkontrolle
@@ -1131,13 +1131,13 @@ Artefakte an.
 <details>
 <summary>1. Warum kann RBAC allein `privileged: true` nicht einem Benutzer verbieten, der einen Pod erstellen darf?</summary>
 
-RBAC entscheidet, ob eine Identity das Verb `create` für Pod besitzt, und inspiziert nicht die Felder des YAML. Ein berechtigter Benutzer kann einen Pod mit `privileged: true` senden, wenn kein Validating Admission eine gesonderte Regel durchsetzt. PSA, VAP, Gatekeeper oder Kyverno prüfen genau den Inhalt des Objekts vor etcd.
+RBAC entscheidet, ob eine Identity das Verb `create` für Pod besitzt, und inspiziert nicht die Felder des YAML. Ein berechtigter Benutzer kann einen Pod mit `privileged: true` senden, wenn keine Validating Admission eine gesonderte Regel durchsetzt. PSA, VAP, Gatekeeper oder Kyverno prüfen genau den Inhalt des Objekts vor etcd.
 </details>
 
 <details>
 <summary>2. In welcher Reihenfolge laufen Mutating und Validating Admission ab, und warum muss Mutation idempotent sein?</summary>
 
-Mutating Admission läuft vor Validating, daher sieht Validation bereits das geänderte Objekt. Webhooks können nach einer Änderung durch einen anderen Mutating Webhook erneut aufgerufen werden, und MAP mit `IfNeeded` erlaubt ebenfalls eine wiederholte Auswertung. Deshalb darf ein erneutes Anwenden der Mutation nicht ein zweites Mal denselben Volume, Label oder Sidecar hinzufügen.
+Mutating Admission läuft vor Validating, daher sieht Validation bereits das geänderte Objekt. Webhooks können nach einer Änderung durch einen anderen Mutating Webhook erneut aufgerufen werden, und MAP mit `IfNeeded` erlaubt ebenfalls eine wiederholte Auswertung. Deshalb darf ein erneutes Anwenden der Mutation nicht ein zweites identisches Volume, Label oder Sidecar hinzufügen.
 </details>
 
 <details>
@@ -1161,7 +1161,7 @@ Bei `Ignore` passiert das Objekt bei Timeout, TLS-Fehler oder Nichtverfügbarkei
 <details>
 <summary>6. Warum wird Policy zuerst in `Audit`/`dryrun` ausgeführt und nicht sofort in `Enforce`/`Deny`?</summary>
 
-Audit/dryrun sammelt reale Verstöße, ohne Legacy-Workloads und Systemkomponenten zu blockieren. Danach korrigieren die Owner die Manifests und prüfen Scope sowie positives/negatives Szenario. Erst danach wird `Deny`/`Enforce` als kontrolliertes Verbot eingeführt, nicht als plötzlicher Outage.
+Audit/dryrun sammelt reale Verstöße, ohne Legacy-Workloads und Systemkomponenten zu blockieren. Danach korrigieren die Owner die Manifeste und prüfen Scope sowie positives/negatives Szenario. Erst danach wird `Deny`/`Enforce` als kontrolliertes Verbot eingeführt, nicht als plötzlicher Outage.
 </details>
 
 <details>
@@ -1177,7 +1177,7 @@ Es müssen `containers`, `initContainers` und `ephemeralContainers` geprüft wer
 </details>
 
 <details>
-<summary>9. **Flashback (Kapitel 04).** `NetworkPolicy` Default-Deny (Kapitel 04) und `failurePolicy: Fail` mit `enforce`/`Deny` in Admission Policy (dieses Kapitel) - beide setzen dasselbe Allow-List-Prinzip auf verschiedenen Ebenen des Stacks um. Formulieren Sie diese Analogie explizit: Was entspricht in Admission Policy dem "Default-Deny für alle Ingress/Egress", und was entspricht der "engen erlaubten Regel"?</summary>
+<summary>9. **Flashback (Kapitel 04).** `NetworkPolicy` Default-Deny (Kapitel 04) und `failurePolicy: Fail` mit `enforce`/`Deny` in Admission Policy (dieses Kapitel) - beide setzen dasselbe Allow-List-Prinzip auf verschiedenen Ebenen des Stacks um. Formulieren Sie diese Analogie explizit: Was entspricht in Admission Policy dem „Default-Deny für alle Ingress/Egress“, und was entspricht der „engen erlaubten Regel“?</summary>
 
 In Admission Policy entspricht dem Default-Deny die Enforcing Rule, bei der ein Objekt, das die Anforderungen nicht erfüllt, abgelehnt wird, und `failurePolicy: Fail` lässt bei einem Webhook-Fehler keinen Bypass zu. Das Äquivalent der engen Erlaubnis sind die genauen `match`/Selectors, Conditions und geprüften Felder, durch die ein konkretes zulässiges Objekt die Policy passiert. Wie bei NetworkPolicy zerstört eine breite Ausnahme das Allow-List-Modell und erschwert das Audit.
 </details>

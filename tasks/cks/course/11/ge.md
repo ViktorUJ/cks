@@ -34,10 +34,10 @@
 
 ტიპური შეტევის გზა: დაუცველობა აპლიკაციაში იძლევა shell-ს Pod-ში, შემტევი
 კითხულობს token-ს მონტირებული ტომიდან, შემდეგ აგზავნის მას API-ში. თუ
-`default` SA-მ მიიღო RoleBinding „მოხერხებულობისთვის" ან დაკავშირებულია
+`default` SA-მ მიიღო RoleBinding „მოხერხებულობისთვის“ ან დაკავშირებულია
 ფართო ClusterRole-თან, შესაძლებელია Secret-ის წაკითხვა, Pod-ის შექმნა ან
 შეტევის შემდგომი განვითარება. თუნდაც token მიმდინარე უფლებების გარეშე
-საჭირო არ არის ჩვეულებრივი HTTP-სერვისისთვის და არ უნდა იდოს მისი ფაილურ
+საჭირო არ არის ჩვეულებრივი HTTP-სერვისისთვის და არ უნდა იდოს მის ფაილურ
 სისტემაში.
 
 ```mermaid
@@ -149,7 +149,7 @@ JWT-ში მოცემულია claims issuer-ის, subject-ის `sys
 `audience` ზღუდავს token-ის მიმღებს. Token Kubernetes API-სთვის უნდა ატარებდეს
 audience-ს, რომელსაც იღებს apiserver; token გარე სერვისისთვის - ამ სერვისის
 audience-ს. გარე სერვისი ვალდებულია შეამოწმოს ხელმოწერა, `iss`, `aud`,
-მოქმედების ვადა და subject. არ გამოიყენოთ ერთი token „ყველაფრისთვის": ეს
+მოქმედების ვადა და subject. არ გამოიყენოთ ერთი token „ყველაფრისთვის“: ეს
 აფართოებს არეს, სადაც მოპარული credential გამოდგება ავთენტიფიკაციისთვის.
 
 ```mermaid
@@ -273,7 +273,7 @@ Kubernetes v1.33+-ში `ServiceAccountNodeAudienceRestriction` არის Be
 სტატუსში და ნაგულისხმევად ჩართული. თავად შეზღუდვას იყენებს admission
 plugin `NodeRestriction`: როცა feature gate ჩართულია, `NodeRestriction`
 აქტიურია და TokenRequest-ის მოთხოვნა მოდის ამოცნობილი node/kubelet
-identity-დან, kubelet ნაგულისხმევად შეუძლია მოითხოვოს მხოლოდ ის audiences,
+identity-დან, kubelet-ს ნაგულისხმევად შეუძლია მოითხოვოს მხოლოდ ის audiences,
 რომლებიც უკვე გამოიყენება workloads-ის მიერ ამ Node-ზე. დასაბუთებული
 გამონაკლისებისთვის ადმინისტრატორს შეუძლია გასცეს RBAC verb
 `request-serviceaccounts-token-audience`.
@@ -391,7 +391,7 @@ kubectl auth can-i --list -n cks-104 \
 
 უფლება შექმნათ ან შეცვალოთ workload - არა მხოლოდ აპლიკაციის გაშვების
 უფლებაა. თუ subject-ს შეუძლია შექმნას Pod/Deployment სხვა, უფრო
-პრივილეგირებული SA-ს `serviceAccountName`-ით იმავე namespace-ში, მას
+პრივილეგირებული SA-ის `serviceAccountName`-ით იმავე namespace-ში, მას
 შეუძლია გაუშვას კოდი ამ SA-ის token-ითა და API-უფლებებით. ამიტომ
 ჩაშენებული როლი `edit` არ შეიძლება ჩაითვალოს უვნებლად: workload-ის
 ცვლილებისა და Secret-ის წაკითხვის გარდა, მას შეუძლია გაუშვას Pod
@@ -426,7 +426,7 @@ scope, ხოლო შემოწმებისთვის გამოი�
 kubectl -n cks-104 exec app-without-api -- \
   test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
 
-# api-reader-ს არ აქვს სტანდარტული mount, მაგრამ აქვს ცალსახად proj­ected token.
+# api-reader-ს არ აქვს სტანდარტული mount, მაგრამ აქვს ცალსახად projected token.
 kubectl -n cks-104 exec api-reader -- sh -ec '
   test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
   test -r /var/run/secrets/tokens/token
@@ -450,7 +450,7 @@ kubectl -n cks-104 exec api-reader -- sh -ec '
   token-ის გზა, ხელმოწერა/issuer, `audience`, `exp`/დრო და token-ის
   მთლიანობა.
 - HTTP `403 Forbidden`: authentication გაიარა, მაგრამ authorizer-მა არ
-  დართო მოქმედება - შეამოწმეთ Role/RoleBinding, namespace და targeted
+  დართო ნება მოქმედებას - შეამოწმეთ Role/RoleBinding, namespace და targeted
   `kubectl auth can-i`.
 
 თუ Pod-ში SA-ის ცვლილების შემდეგაც კვლავ არის სტანდარტული token,
@@ -462,7 +462,7 @@ kubectl -n cks-104 exec api-reader -- sh -ec '
 | Token არსებობს ჩვეულებრივ აპლიკაციაში | Pod spec და ServiceAccount | არ არის დაყენებული `automount: false`, ან Pod-მა ცალსახად გადააფარა SA `true`-ს მნიშვნელობით |
 | `can-i` აბრუნებს `no`-ს მოსალოდნელი მოქმედებისთვის | `roleRef`, namespace, subject | RoleBinding სხვა namespace-შია ან SA-ის სახელი არასწორია |
 | TLS/certificate error, HTTP status არ მიღებულა | CA, DNS/SAN, endpoint, TLS connectivity | კლიენტმა ვერ დაამყარა სანდო TLS-კავშირი |
-| API პასუხობს `401`-ით | token-ის გზა, issuer/signature, `audience`, `exp`, დრო | Credential ვადაგასულია, დაზიანებულია ან authenticator-ს არ მიაქვს |
+| API პასუხობს `401`-ით | token-ის გზა, issuer/signature, `audience`, `exp`, დრო | Credential ვადაგასულია, დაზიანებულია ან authenticator-ის მიერ არ მიიღება |
 | API პასუხობს `403`-ით | targeted `kubectl auth can-i`, Role/RoleBinding, namespace | Credential ვალიდურია, მაგრამ საჭირო verb/resource არ არის ნებადართული |
 | Git-ში გამოჩნდა token Secret | Git-ის ისტორია და CI-ლოგები | შეიქმნა legacy Secret ან credential გამოტანილია ბრძანებით; გააუქმეთ/ხელახლა გასცით და წაშალეთ ლოგებიდან |
 
@@ -485,7 +485,7 @@ kubectl -n cks-104 exec api-reader -- sh -ec '
 - **Bound token სტატიკური secret-ის ნაცვლად.** Pod-ისთვის იყენებენ
   projected token-ს მოკლე ვადითა და ვიწრო audience-ით. გარე სისტემებისთვის
   იყენებენ TokenRequest-ს, OIDC workload identity-ს ან ღრუბლოვან
-  federation-ს, ვიდრე service-account-token Secret-ის კოპირებას.
+  federation-ს და არა service-account-token Secret-ის კოპირებას.
 - **Identity ღრუბლისთვის ცალკე Kubernetes RBAC-სგან.** IRSA, Workload
   Identity და მსგავსი მექანიზმები აკავშირებს SA-ს ღრუბლოვან როლთან. ეს
   არ აუქმებს Kubernetes RBAC-ს: ცალკე შეამოწმეთ, რა API-უფლებებსა და რა
@@ -559,13 +559,13 @@ surface-ის ნაწილი. პოლიტიკა „token არ ა�
 <details>
 <summary>1. რატომ არის `default` SA-ის token საშიში იმ Pod-შიც კი, რომელიც ამჟამად API-ს არ მიმართავს?</summary>
 
-Token არის credential-ი `default` ServiceAccount-ის identity-სთვის, თუნდაც მიმდინარე აპლიკაცია API-ს არ იძახებდეს. RCE-ის შემდეგ შემტევს შეუძლია წაიკითხოს მონტირებული token და გამოიყენოს ყველა უფლება, რომელიც SA-ს ახლა აქვს ან მოგვიანებით მიენიჭება RBAC-ის მეშვეობით. ჩვეულებრივ HTTP-სერვისს ასეთი credential არ სჭირდება მისი filesystem-ში, ამიტომ automount გამორთულია.
+Token არის credential-ი `default` ServiceAccount-ის identity-სთვის, თუნდაც მიმდინარე აპლიკაცია API-ს არ იძახებდეს. RCE-ის შემდეგ შემტევს შეუძლია წაიკითხოს მონტირებული token და გამოიყენოს ყველა უფლება, რომელიც SA-ს ახლა აქვს ან მოგვიანებით მიენიჭება RBAC-ის მეშვეობით. ჩვეულებრივ HTTP-სერვისს ასეთი credential არ სჭირდება filesystem-ში, ამიტომ automount გამორთულია.
 </details>
 
 <details>
 <summary>2. როგორ ეხმიანება ერთმანეთს `automountServiceAccountToken` ServiceAccount-ზე და Pod-ზე? რომელი მნიშვნელობა მოქმედებს კონფლიქტისას?</summary>
 
-თუ Pod არ ითვალისწინებს ამ ველს, გამოიყენება მისი ServiceAccount-ის მნიშვნელობა. Pod-ის თავად `spec`-ში მითითებულ მნიშვნელობას აქვს პრიორიტეტი, ამიტომ Pod-ს შეუძლია ცალსახად ჩართოს ან გამორთოს mount SA-ზე ნაგულისხმევის მიუხედავად. SA-ის ცვლილება არ შლის volume-ს უკვე შექმნილი Pod-იდან: workload ხელახლა უნდა შეიქმნას და ახალი Pod შემოწმდეს.
+თუ Pod-ში ეს ველი მითითებული არ არის, გამოიყენება მისი ServiceAccount-ის მნიშვნელობა. Pod-ის თავად `spec`-ში მითითებულ მნიშვნელობას აქვს პრიორიტეტი, ამიტომ Pod-ს შეუძლია ცალსახად ჩართოს ან გამორთოს mount SA-ზე ნაგულისხმევის მიუხედავად. SA-ის ცვლილება არ შლის volume-ს უკვე შექმნილი Pod-იდან: workload ხელახლა უნდა შეიქმნას და ახალი Pod შემოწმდეს.
 </details>
 
 <details>
@@ -589,13 +589,13 @@ Bound token გაიცემა TokenRequest API-ის მიერ, და�
 <details>
 <summary>6. როგორ განვასხვავოთ TLS-პრობლემა, არასწორი token (`401`) და არასაკმარისი RBAC-უფლებები (`403`)?</summary>
 
-თუ TLS trust არ არის დამყარებული, კლიენტი HTTP authentication-მდე იღებს certificate/TLS error-ს: ამოწმებენ CA-ს, DNS/SAN-ს და endpoint-ს. `401 Unauthorized` ნიშნავს, რომ API server-მა მიიღო HTTP request, მაგრამ არ მიიღო credential: ამოწმებენ token-ის გზას, issuer/signature-ს, audience-ს, expiry-ს და დროს. `403 Forbidden` ნიშნავს, რომ authentication გაიარა, მაგრამ authorizer-მა არ დართო საჭირო resource/verb/scope; ეს დასტურდება targeted `kubectl auth can-i`-ით.
+თუ TLS trust არ არის დამყარებული, კლიენტი HTTP authentication-მდე იღებს certificate/TLS error-ს: ამოწმებენ CA-ს, DNS/SAN-ს და endpoint-ს. `401 Unauthorized` ნიშნავს, რომ API server-მა მიიღო HTTP request, მაგრამ არ მიიღო credential: ამოწმებენ token-ის გზას, issuer/signature-ს, audience-ს, expiry-ს და დროს. `403 Forbidden` ნიშნავს, რომ authentication გაიარა, მაგრამ authorizer-მა არ დართო ნება საჭირო resource/verb/scope-ს; ეს დასტურდება targeted `kubectl auth can-i`-ით.
 </details>
 
 <details>
 <summary>7. რომელი შემოწმებები დაამტკიცებს, რომ სტანდარტული ავტომატური ServiceAccount token არ არის მონტირებული Pod-ში API-ამოცანის გარეშე?</summary>
 
-დაადასტურეთ `automountServiceAccountToken: false` ServiceAccount-ზე და ახალი Pod-ის spec-ში, ითვალისწინებდით Pod-ის ველის პრიორიტეტს. შემდეგ კონტეინერში შეამოწმეთ სტანდარტული გზის არარსებობა:
+დაადასტურეთ `automountServiceAccountToken: false` ServiceAccount-ზე და ახალი Pod-ის spec-ში, Pod-ის ველის პრიორიტეტის გათვალისწინებით. შემდეგ კონტეინერში შეამოწმეთ სტანდარტული გზის არარსებობა:
 
 ```bash
 test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
@@ -606,7 +606,7 @@ workload-ის ცვლილების შემდეგ ხელახ�
 
 ეს ადასტურებს **სტანდარტული ავტომატური ინექციის** არარსებობას და არა
 ნებისმიერი შესაძლო ServiceAccount credential-ის არარსებობას. თუ
-მოთხოვნაა „Pod საერთოდ არ უნდა იღებდეს SA token-ს", დამატებით
+მოთხოვნაა „Pod საერთოდ არ უნდა იღებდეს SA token-ს“, დამატებით
 გადახედეთ `volumes`-ს, `projected.serviceAccountToken`-ს, Secret/env-ს,
 sidecar/init-container-ს და credential-ის გაცემის სხვა მექანიზმებს.
 </details>

@@ -271,11 +271,11 @@ availability.
 > 🏭 For a compromised node: isolate it, preserve evidence, remove the old peer from trust; the private key never goes into a ticket, Git, or chat.
 
 **What this means in practice:** "compromised" means there is reason to believe that an attacker
-could run commands on the node or read its data. **Isolate it** means do not schedule new Pods to
+could run commands on the node or read its data. **Isolate it** means to stop scheduling new Pods to
 it, and limit its participation in the cluster according to the approved incident procedure; this
 contains the spread, but does not erase evidence. **Evidence** is the metadata and logs needed
 for investigation (time, node name, Cilium state, and events), not a copy of the private key.
-**Remove the old peer from trust** means, after regenerating a key or replacing a node, confirm
+**Remove the old peer from trust** means to confirm, after regenerating a key or replacing a node,
 that the other nodes no longer accept traffic authenticated with the old public key. The following
 list shows the safe sequence for these actions.
 
@@ -425,6 +425,7 @@ encryption between nodes. Both layers are needed only when **both** goals apply:
 identity/mTLS **and** underlay or non-mesh traffic protection. If the application does not
 require workload identity or mesh-compatible behavior, Istio is not enabled automatically - first
 evaluate the threat model, compatibility, and overhead.
+
 Istio sidecar (`istio-proxy`, Envoy) intercepts inbound/outbound workload traffic. Istiod issues a
 workload certificate based on the Kubernetes ServiceAccount; proxies establish mTLS and verify
 peer identity. Workload identity has the SPIFFE ID form:
@@ -800,7 +801,7 @@ linkerd -n linkerd-demo viz stat deploy
 As with Istio, check not only the annotation, but also the actual proxy container,
 identity/certificate status, and a successful request between meshed Pods. It is important to
 distinguish automatic mTLS from strict inbound: Linkerd automatically uses mTLS between meshed
-workloads, but inbound authorization accepts plaintext from a non-meshed source
+workloads, but without inbound authorization it accepts plaintext from a non-meshed source
 (`all-unauthenticated`) by default. The mere presence of automatic mTLS does not mean the server
 accepts only mTLS.
 

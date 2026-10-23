@@ -162,7 +162,7 @@ La imagen oficial `curlimages/curl` ejecuta el proceso sin root (`running as cur
 
 Para Linux Kubernetes v1.36, el projected ServiceAccount token tiene permission semantics especiales: cuando todos los containers del Pod usan el mismo `runAsUser`, kubelet asigna el token a ese UID e impone el mode `0600`. Así, en este Pod de un contenedor, el token pasa a ser owner-readable solo para UID `10001` sin `fsGroup`.
 
-`defaultMode: 0444` es necesario para la mixed projection de `ca.crt` y `namespace` no secretos, que el client non-root también debe leer. No vuelve la bearer token world-readable: para `serviceAccountToken`, kubelet aplica por separado el `0600` descrito antes.
+`defaultMode: 0444` es necesario para la mixed projection de `ca.crt` y `namespace` no secretos, que el client non-root también debe leer. No vuelve el bearer token world-readable: para `serviceAccountToken`, kubelet aplica por separado el `0600` descrito antes.
 
 Aquí no se requiere `fsGroup`. Si se agrega, kubelet aplica group ownership al volume y, para projected ServiceAccount token, extiende los permissions de `0600` a `0640`. Use tal acceso de grupo solamente cuando de verdad lo necesiten varios procesos o un GID, no como requisito obligatorio para non-root `runAsUser`.
 
@@ -253,11 +253,11 @@ kubectl auth can-i --list -n cks-104 \
   --as=system:serviceaccount:cks-104:app-sa
 ```
 
-> 🧠 Crear o modificar un workload permite elegir el ServiceAccount de otra persona y ejecutar código con su token.
+> 🧠 Crear o modificar un workload permite elegir un ServiceAccount ajeno y ejecutar código con su token.
 
 ## 11.4.1. RBAC: los permisos sobre workload pueden convertirse en escalada de ServiceAccount
 
-El permiso para crear o modificar workloads no es solo un permiso para iniciar una aplicación. Si un sujeto puede crear Pod/Deployment con `serviceAccountName` de otro SA más privilegiado en el mismo namespace, puede ejecutar código con el token y los permisos API de ese SA. Por ello, el rol integrado `edit` no puede considerarse inocuo: además de modificar workload y leer Secret, puede iniciar Pod en nombre de cualquier ServiceAccount del namespace. Separe permisos de deployer y los de gestión de ServiceAccount, y no deje los SA sensibles disponibles a creadores de workload ordinarios.
+El permiso para crear o modificar workloads no es solo un permiso para iniciar una aplicación. Si un sujeto puede crear Pod/Deployment con `serviceAccountName` de otro SA más privilegiado en el mismo namespace, puede ejecutar código con el token y los permisos API de ese SA. Por ello, el rol integrado `edit` no puede considerarse inocuo: además de modificar workload y leer Secret, puede iniciar Pod en nombre de cualquier ServiceAccount del namespace. Separe permisos de deployer y los de gestión de ServiceAccount, y no deje los SA sensibles disponibles para los creadores de workload ordinarios.
 
 Compruebe otros RBAC escalation paths por separado de los permisos read/write normales: crear `PersistentVolume` puede dar a un Pod acceso a datos o una ruta de host; crear/aprobar CSR puede emitir una identity nueva; modificar `ValidatingWebhookConfiguration` o `MutatingWebhookConfiguration` puede cambiar admission control. Los permisos `bind`, `escalate`, `impersonate`, la gestión de RoleBinding/ClusterRoleBinding y estas vías se conceden solo a roles administrativos separados. No añada usuarios a `system:masters`: este grupo recibe acceso superuser ilimitado y evita RBAC y authorization webhooks.
 

@@ -4,11 +4,11 @@
 
 ## Beschreibung
 
-In dieser Übung konfigurierst du eine CiliumNetworkPolicy für einen kleinen Service und
+In diesem Lab konfigurierst du eine CiliumNetworkPolicy für einen kleinen Service und
 belegst das tatsächliche Netzwerkverhalten. Es geht nicht darum, ein ähnlich aussehendes YAML zu schreiben,
 sondern darum, den L3/L4-Zugriff anhand von Labels einzugrenzen, dann einen L7-HTTP-Filter hinzuzufügen, den egress
 per FQDN einzuschränken und evidence aus Hubble zu sichern. Die Kubernetes-Basisobjekte dienen hier nur als
-Lernumgebung; Gegenstand der Übung sind die Möglichkeiten von Cilium.
+Lernumgebung; Gegenstand des Labs sind die Möglichkeiten von Cilium.
 
 ## Ziel
 

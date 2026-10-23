@@ -38,18 +38,18 @@ Réponse pratique à un advisory :
 3. Choisissez la version corrigée dans l'advisory, vérifiez la support policy et la compatibilité, testez en stage, puis effectuez le rollout avec vérification et rollback.
 4. Si un patch immédiat est impossible, réduisez temporairement l'exposition selon les recommandations de l'advisory, attribuez un responsable et une échéance. Une mitigation temporaire ne doit pas devenir permanente.
 
-> 🏭 Release cadence et support window définissent le lifecycle : un cluster pris en charge est plus facile à patcher qu'une migration urgente depuis EOL.
+> 🏭 Release cadence et support window définissent le lifecycle : il est plus facile de patcher un cluster pris en charge que de migrer en urgence depuis EOL.
 
 ## 13.2. Release cadence, support window et version skew
 
 Kubernetes publie régulièrement des versions minor, normalement trois fois par an, et des patch-releases au fur et à mesure que les correctifs sont prêts. Prenez la date exacte et la liste des correctifs dans les release notes de la branche concernée, pas dans un ancien runbook. Upstream prend normalement en charge les trois dernières branches minor : la branche actuelle `N`, `N-1` et `N-2`. Par conséquent, `N-3` est généralement EOL ; un service managed ou une distribution enterprise peut avoir une fenêtre différente, à vérifier séparément.
 
-Dans ce laboratoire, Kubernetes `v1.36` désigne la **version cible de l'exemple**, et non la version stable actuelle de Kubernetes ni une promesse concernant sa support window actuelle. Avant une véritable change window, vérifiez la branche cible réellement prise en charge et le fixed patch de l'advisory. La transition s'effectue séquentiellement, une version minor à la fois, par exemple `v1.34` -> `v1.35` -> `v1.36` ; dans une branche, mettez directement à jour vers la version corrigée. Ce rythme laisse du temps pour les tests et ne transforme pas un CVE urgent en projet de migration de plusieurs versions.
+Dans ce laboratoire, Kubernetes `v1.36` désigne la **version cible de l'exemple**, et non la version stable actuelle de Kubernetes ni une promesse concernant sa support window actuelle. Avant une véritable change window, vérifiez la branche cible réellement prise en charge et le fixed patch de l'advisory. La transition s'effectue séquentiellement, une version minor à la fois, par exemple `v1.34` -> `v1.35` -> `v1.36` ; au sein d'une même branche, les versions patch peuvent être mises à jour directement jusqu'à la version corrigée. Ce rythme laisse du temps pour les tests et ne transforme pas un CVE urgent en projet de migration de plusieurs versions.
 
 ```mermaid
 flowchart TB
     n["N : branche<br/>minor actuelle"] --> n1["N-1 : prise en charge"] --> n2["N-2 : dernière<br/>branche prise en charge<br/>par upstream"] --> n3["N-3 : généralement EOL<br/>pas de nouveaux<br/>patches upstream"]
-    cp["kube-apiserver<br/>est mis à niveau en premier"] --> worker["kubelet : pas plus récent<br/>que apiserver<br/>et pas plus de 3<br/>minor plus ancien"]
+    cp["kube-apiserver<br/>est mis à niveau en premier"] --> worker["kubelet : pas plus récent<br/>qu'apiserver<br/>et pas plus de 3<br/>minor plus ancien"]
     style n fill:#0f9d58,color:#fff
     style n1 fill:#0f9d58,color:#fff
     style n2 fill:#f4b400,color:#000
@@ -62,8 +62,8 @@ flowchart TB
 
 **Version skew** limite l'ordre de la mise à niveau. Pour chaque kubelet, vérifiez deux limites par rapport à son `kube-apiserver` :
 
-1. kubelet **ne doit pas être plus récent** que API server ;
-2. kubelet ne doit pas être **plus de trois versions minor plus ancien** que API server.
+1. kubelet **ne doit pas être plus récent** que l'API server ;
+2. kubelet ne doit pas être **plus de trois versions minor plus ancien** que l'API server.
 
 Il en découle l'ordre : on met d'abord à niveau le control plane, puis les worker nodes. Le skew autorisé est un état temporaire pour une courte rolling upgrade, et non le mode de fonctionnement normal de vieux nœuds pendant des mois. La plage des autres composants dépend de la version et du rôle ; avant une modification, consultez la [policy version skew](https://kubernetes.io/releases/version-skew-policy/) officielle.
 
@@ -159,7 +159,7 @@ Dans Kubernetes v1.36, `KubeletCgroupDriverFromCRI` est déjà GA. Si le CRI run
 ```yaml
 # Dans le KubeletConfiguration actif, trouvé à partir de la startup configuration.
 failCgroupV1: true
-# cgroupDriver: systemd  # fallback uniquement pour un runtime sans RuntimeConfig
+# cgroupDriver : systemd  # fallback uniquement pour un runtime sans RuntimeConfig
 ```
 
 ```bash
@@ -180,7 +180,7 @@ Pour CRI-O, containerd avec une installation non standard ou un autre runtime, v
 
 Une stratégie sûre consiste à séparer le risque : vérifiez d'abord la combinaison compatible Kubernetes + runtime + OS en stage, puis déployez nœud par nœud. Si un CVE runtime/OS urgent exige une remediation immédiate, utilisez le même lifecycle : `cordon` -> `drain` -> patch/reboot ou replacement -> health check -> `uncordon`. Pour un immutable node pool, il est souvent plus sûr de créer un nouveau pool patché, de migrer la workload par remplacement progressif et de supprimer les anciens nœuds, plutôt que de modifier de nombreux packages sur place.
 
-Lors de la mise à jour du package repository, vérifiez la source et la signature du repository. Ne mélangez pas des versions aléatoires de plusieurs repositories et n'effectuez pas en même temps une vaste migration Kubernetes, runtime et OS sans test dédié : il devient alors difficile de distinguer la CVE remediation d'une regression et de revenir en arrière en sécurité.
+Lors de la mise à jour du package repository, vérifiez la source et la signature du repository. Ne mélangez pas des versions aléatoires de plusieurs repositories et n'effectuez pas en même temps une vaste migration Kubernetes, runtime et OS sans test dédié : il devient alors difficile de distinguer la CVE remediation d'une regression et de revenir en arrière en toute sécurité.
 
 > 🎯 Ne violez pas le version skew, ne mettez pas à niveau tous les nœuds à la fois, ne contournez pas PDB ou preflight sans raison et confirmez le résultat avec les versions et health.
 

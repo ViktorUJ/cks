@@ -418,7 +418,7 @@ kubectl apply -f minimal-api.yaml
 kubectl wait --for=condition=Ready pod/minimal-api --timeout=90s
 kubectl logs minimal-api
 
-# Успешный запуск приложения проверяют её endpoint/health probe, а не shell.
+# Успешный запуск проверяют endpoint/health probe приложения, а не shell.
 kubectl port-forward pod/minimal-api 8080:8080
 # В другом terminal: curl -fsS http://127.0.0.1:8080/health
 
@@ -622,7 +622,7 @@ Rootless Podman запускает build/run обычным пользовате
 </details>
 
 <details>
-<summary>11. **Flashback (глава 14).** Минимизация base image (эта глава: distroless, отсутствие shell/package manager) и минимизация host footprint (глава 14: отключение лишних сервисов/пакетов на ноде) - это один и тот же принцип "меньше поверхность атаки", применённый на двух разных уровнях. Если у вас ограничено время перед экзаменом/ инцидентом, какой из этих двух уровней минимизации снижает риск для **уже скомпрометированного** container быстрее - и почему ни один не заменяет другой?</summary>
+<summary>11. **Flashback (глава 14).** Минимизация base image (эта глава: distroless, отсутствие shell/package manager) и минимизация host footprint (глава 14: отключение лишних сервисов/пакетов на ноде) - это один и тот же принцип "меньше поверхность атаки", применённый на двух разных уровнях. Если у вас ограничено время перед экзаменом/инцидентом, какой из этих двух уровней минимизации снижает риск для **уже скомпрометированного** container быстрее - и почему ни один не заменяет другой?</summary>
 
 Для уже скомпрометированного container быстрее меняет доступные атакующему инструменты минимизация runtime image: в нём сразу может не быть shell, package manager и downloader. Минимизация host footprint защищает node и другие workloads, уменьшая сервисы и пакеты, через которые можно развивать escape после host access. Образ не защищает скомпрометированную node, а безопасная node не убирает лишние инструменты внутри container, поэтому нужны оба уровня.
 </details>

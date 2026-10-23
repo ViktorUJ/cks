@@ -314,7 +314,7 @@ Syft は、フラグ `-o cyclonedx-json` で CycloneDX を生成します (同�
 | **9b** | **Fresh signed ALLOW: policy の作成後の新しい Pod** |
 | :---: | :--- |
 | やること | • 課題 9a の policy は、署名された `$HARDENED_IMAGE` を許可する必要があります - しかし、すでに存在する Deployment を再度 `kubectl apply` しても、これは**証明されません**：template が変わっていなければ、新しい ReplicaSet/Pod は作成されないことがあり、`Running` は単に、policy の前に作成された古い Pod である可能性があります。<br/>• **新しい**、以前には存在しなかったオブジェクトを作成します：`kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 3600`。<br/>• この Pod の `creationTimestamp`、9a の policy の `creationTimestamp`、そして最終的な `status.phase`/`Ready` condition を `9b/signed-admission-check.json` に保存します。 |
-| 受け入れ基準 | • **Pod:** `signed-admission-check` が存在し、まさに `$HARDENED_IMAGE` を使用している；それに対して `cosign verify --key cosign.pub "$HARDENED_IMAGE"` が成功し、`status.phase` が `Failed` ではなく、`Ready` 条件が `True` に達している。<br/>• **成果物：** `9b/signed-admission-check.json` にこの image が含まれ、Pod の `creationTimestamp` が `ImageValidatingPolicy require-signed-catalog-images` の `creationTimestamp` **以降**である。<br/>• これは、policy の作成前から残っている古い Pod ではなく、検証可能な形で署名された image の、policy の後の新しい admission を実証する。 |
+| 受け入れ基準 | • **Pod:** `signed-admission-check` が存在し、まさに `$HARDENED_IMAGE` を使用している；それに対して `cosign verify --key cosign.pub "$HARDENED_IMAGE"` が成功し、`status.phase` が `Failed` ではなく、`Ready` condition が `True` に達している。<br/>• **成果物：** `9b/signed-admission-check.json` にこの image が含まれ、Pod の `creationTimestamp` が `ImageValidatingPolicy require-signed-catalog-images` の `creationTimestamp` **以降**である。<br/>• これは、policy の作成前から残っている古い Pod ではなく、検証可能な形で署名された image の、policy の後の新しい admission を実証する。 |
 
 <details>
 <summary>💡 課題 9b のヒント</summary>

@@ -267,7 +267,6 @@ sudo ss -lxnp | grep -E 'docker|containerd' || true
 | kube-apiserver `6443/tcp` | control-plane；依架構供 worker 與 administrators 使用 | allowlist/private endpoint，而非 `0.0.0.0/0` |
 | etcd `2379`、`2380/tcp` | 僅 control-plane/etcd peers | 不向 worker 或外部網路公開 |
 | Docker TCP API（常見 `2375`/`2376`） | 僅在有合理理由的遠端管理時 | 不監聽 `2375`；任何 TCP endpoint 都需要明確例外、mTLS 與精確 firewall |
-
 | containerd/NRI Unix socket | 節點本機 | `root` 與最少允許的系統 consumers |
 
 不要只從 port number 推論而不看 process：例如 control-plane 的 `6443` 是預期的，但 worker 上出現可能是錯誤；
@@ -568,7 +567,7 @@ plugin（`[plugins."io.containerd.nri.v1.nri"]` 與 `disable = true`）；若使
 
 Debug 與 metrics 是獨立的 API surfaces。Unix debug socket 應限制為 `root` 與獲准的 system consumers；
 絕不公開 TCP debug endpoint。containerd metrics 常沒有 TLS 和 authentication：僅將它們 bind 至 loopback
-或專用 management interface，並額外限制 firewall/routing。變更前請核對正是你所使用 containerd 版本支援的
+或專用 management interface，並額外限制 firewall/routing。變更前請核對正是你所使用的 containerd 版本所支援的
 parameters，並在 restart 後以 `ss` 檢查 listeners。
 
 ### Docker：僅在確實需要時使用

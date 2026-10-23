@@ -475,7 +475,7 @@ sudo strace -f -p "$PID" -e trace=%file,%network
 | AppArmor | profile-based, пути файлов и операции | Ubuntu, Debian и часть managed-нод | `aa-status`, загруженный profile, `DENIED` в audit log |
 | SELinux | labels и type enforcement | RHEL, Fedora, OpenShift и совместимые ОС | `getenforce`, labels, AVC denial в audit log |
 
-Оба механизма решают одну задачу, но профили и эксплуатация не взаимозаменяемы. Нельзя скопировать AppArmor profile в SELinux-ноде и ожидать его применения. Перед проектированием policy определите, что реально включено на образе ноды:
+Оба механизма решают одну задачу, но профили и эксплуатация не взаимозаменяемы. Нельзя скопировать AppArmor profile на SELinux-ноду и ожидать его применения. Перед проектированием policy определите, что реально включено на образе ноды:
 
 ```bash
 sudo aa-status || true

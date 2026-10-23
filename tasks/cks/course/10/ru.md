@@ -674,7 +674,7 @@ Secret часто содержит пароль, registry credential, ключ �
 `escalate` вместе с `create`/`update` Role или ClusterRole позволяет записать в роль
 permissions, которых субъект сам не имеет. `bind` вместе с `create`/`update`
 RoleBinding или ClusterRoleBinding позволяет назначить referenced role, не обладая
-самому всеми её permissions. Поэтому при аудите проверяют обе части пути:
+сам всеми её permissions. Поэтому при аудите проверяют обе части пути:
 возможность изменить RBAC-объект и наличие соответствующего bypass-verb.
 </details>
 
@@ -702,7 +702,7 @@ RoleBinding или ClusterRoleBinding позволяет назначить refe
 <summary>8. Как label `rbac.authorization.k8s.io/aggregate-to-view=true` меняет effective access и
    почему wildcard в агрегированной роли особенно рискован?</summary>
 
-Контроллер RBAC добавляет правила ClusterRole с этой меткой в итоговую встроенную роль `view`, поэтому все её пользователи получают новый доступ. Wildcard в такой источниковой роли захватывает текущие и будущие API-группы, ресурсы, subresource и verbs сразу для широкой аудитории `view`. Поэтому нужно ревьюить и итоговую роль, и все роли-источники aggregation.
+Контроллер RBAC добавляет правила ClusterRole с этой меткой в итоговую встроенную роль `view`, поэтому все её пользователи получают новый доступ. Wildcard в такой роли-источнике захватывает текущие и будущие API-группы, ресурсы, subresource и verbs сразу для широкой аудитории `view`. Поэтому нужно ревьюить и итоговую роль, и все роли-источники aggregation.
 </details>
 
 <details>

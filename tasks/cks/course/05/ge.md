@@ -10,7 +10,7 @@
 
 ## 05.1. შეტევის სცენარი: Pod კითხულობს cloud metadata-ს
 
-Cloud provider ხშირად აწვდის ვირტუალური მანქანის ეგზემპლარს metadata service-ს link-local მისამართზე. ყველაზე ცნობილი IPv4-მისამართია `169.254.169.254`. თუ Pod-ს შეუძლია მასთან წვდომა node-ის ქსელის მეშვეობით, აპლიკაციის მოწყვლადობა, SSRF ან shell-ზე წვდომა თავდამსხმელს აძლევს ახალ გზას: ეგზემპლარის შესახებ ცნობების მიღება, ხოლო არასწორად კონფიგურირებული cloud identity-ის შემთხვევაში - node-ის role-ის დროებით credentials-ს.
+Cloud provider ხშირად აწვდის ვირტუალური მანქანის ეგზემპლარს metadata service-ს link-local მისამართზე. ყველაზე ცნობილი IPv4-მისამართია `169.254.169.254`. თუ Pod-ს შეუძლია მასთან წვდომა node-ის ქსელის მეშვეობით, აპლიკაციის მოწყვლადობა, SSRF ან shell-ზე წვდომა თავდამსხმელს აძლევს ახალ გზას: ეგზემპლარის შესახებ ცნობების მიღება, ხოლო არასწორად კონფიგურირებული cloud identity-ის შემთხვევაში - node-ის role-ის დროებითი credentials-ის მიღება.
 
 ```mermaid
 flowchart TB
@@ -56,7 +56,7 @@ kubectl -n payments exec metadata-check -- sh -c '
 '
 ```
 
-მხოლოდ დასრულებული `curl`, სწრაფი HTTP-პასუხით (`200`, `401` ან სხვა status), ამტკიცებს ქსელის მისაწვდომობას, მაგრამ არ ამტკიცებს credentials-ზე წვდომას. Timeout, route/runtime error ან სხვა ვარდნა მოითხოვს policy/CNI-ის ცალკე შემოწმებას: ეს **არ** არის IMDS-ის დაბლოკვის დამტკიცება. შემოწმების შემდეგ წაშალეთ დროებითი Pod:
+მხოლოდ დასრულებული `curl`, სწრაფი HTTP-პასუხით (`200`, `401` ან სხვა status), ამტკიცებს ქსელის მისაწვდომობას, მაგრამ არ ამტკიცებს credentials-ზე წვდომას. Timeout, route/runtime error ან სხვა ჩავარდნა მოითხოვს policy/CNI-ის ცალკე შემოწმებას: ეს **არ** არის IMDS-ის დაბლოკვის დამტკიცება. შემოწმების შემდეგ წაშალეთ დროებითი Pod:
 
 ```bash
 kubectl -n payments delete pod metadata-check
@@ -73,7 +73,7 @@ Metadata-ს მისამართი და პროტოკოლი prov
 1. Namespace-ისთვის ჩართეთ default-deny egress.
 2. ცალსახად დაუშვით DNS და აპლიკაციის რეალური დამოკიდებულებები.
 3. ნუ დაუშვებთ node metadata path-ს, თუ ის არ სჭირდება workload-ის არჩეულ provider identity-ს; გამოიყენეთ provider-specific allow/block.
-4. შეამოწმეთ ნებადართული გზები და workload-ის labels-ის მქონე Pod-იდან credentials/identity-ზე Pod-ის წვდომის არარსებობა.
+4. შეამოწმეთ ნებადართული გზები და workload-ის labels-ის მქონე Pod-იდან node-ის credentials/identity-ზე Pod-ის წვდომის არარსებობა.
 
 ქვემოთ არის baseline, რომელიც იზოლირებს `payments` namespace-ის ყველა Pod-ის egress-ს.
 
@@ -154,7 +154,7 @@ spec:
 
 GKE Workload Identity ქმნის ერთი შეხედვით მნიშვნელოვან პარადოქსს: უსაფრთხო workload identity თავად იყენებს GKE metadata server-ს. ამიტომ `169.254.169.254`-ის უნივერსალურ წესად დაბლოკვა შეუძლებელია: ამ მისამართს იყენებენ Azure IMDS და GKE Dataplane V2, და არა მხოლოდ AWS. Strict `NetworkPolicy`-ისას დაუშვით მხოლოდ დოკუმენტირებული გზა GKE-ის ფაქტობრივი dataplane-ისთვის: `169.254.169.252/32` TCP `988`-ზე და `987`-ზე Workload Identity Federation-ისთვის ჩვეულებრივ dataplane-ში, ან `169.254.169.254/32` TCP `80`-ზე და `8080`-ზე GKE Dataplane V2-ისთვის. ეს არის მიმდინარე მაგალითები და არა მარადიული მუდმივები: გამოყენებამდე გადაამოწმეთ GKE-ის დოკუმენტაცია. `hostNetwork` Pod-ებს წვდომის სხვა მოდელი აქვთ და ცალკე შეფასებას მოითხოვენ.
 
-AWS-ზე ჩართეთ IMDSv2 instance template-ის ან instance-ის დონეზე: `HttpTokens=required` კლიენტს აიძულებს, ჯერ `PUT`-ის მეშვეობით დროებითი token მიიღოს, შემდეგ header-ში გადასცეს ის. ეს ამცირებს SSRF-შეტევების იმ კლასს, რომელიც მარტივ `GET`-ზეა გათვლილი, მაგრამ egress policy-ს არ ანაცვლებს: კომპრომეტირებულ Pod-ს კვლავ შეუძლია სწორი IMDSv2 exchange-ის შესრულება, თუ endpoint მისაწვდომია. **მხარდაჭერილი node types-ზე ახალი workload-ებისთვის** AWS გირჩევთ **EKS Pod Identity**-ს; **IRSA** ალტერნატივად რჩება არსებული OIDC/IRSA-განლაგებებისთვის და შემთხვევებისთვის, სადაც Pod Identity არ არის მხარდაჭერილი, მათ შორის ზოგიერთი Fargate, Windows ან SDK სცენარისთვის. EKS-ისთვის AWS გირჩევთ, **არ გამორთოთ IMDS endpoint**: მასზე node-ის კომპონენტები შეიძლება იყოს დამოკიდებული. IRSA/EKS Pod Identity-ს გამოყენებელი ჩვეულებრივი non-`hostNetwork` workload-ისთვის საბაზისო უსაფრთხო ვარიანტია IMDSv2 hop limit **1**-ით, რომ IMDSv2-ის response-მა pod-ქსელში დამატებითი network hop არ გაიაროს. Hop limit **2**-ს იყენებენ მხოლოდ გააზრებულ გამონაკლისად, როცა workload-ს ნამდვილად სჭირდება IMDS-თან მიმართვა.
+AWS-ზე ჩართეთ IMDSv2 instance template-ის ან instance-ის დონეზე: `HttpTokens=required` კლიენტს აიძულებს, ჯერ `PUT`-ის მეშვეობით დროებითი token მიიღოს, შემდეგ header-ში გადასცეს ის. ეს ამცირებს SSRF-შეტევების იმ კლასს, რომელიც მარტივ `GET`-ზეა გათვლილი, მაგრამ egress policy-ს არ ანაცვლებს: კომპრომეტირებულ Pod-ს კვლავ შეუძლია სწორი IMDSv2 exchange-ის შესრულება, თუ endpoint მისაწვდომია. **მხარდაჭერილი node types-ზე ახალი workload-ებისთვის** AWS გირჩევთ **EKS Pod Identity**-ს; **IRSA** ალტერნატივად რჩება არსებული OIDC/IRSA-განლაგებებისთვის და შემთხვევებისთვის, სადაც Pod Identity არ არის მხარდაჭერილი, მათ შორის ზოგიერთი Fargate, Windows ან SDK სცენარისთვის. EKS-ისთვის AWS გირჩევთ, **არ გამორთოთ IMDS endpoint**: მასზე node-ის კომპონენტები შეიძლება იყოს დამოკიდებული. ჩვეულებრივი non-`hostNetwork` workload-ისთვის, რომელიც იყენებს IRSA/EKS Pod Identity-ს, საბაზისო უსაფრთხო ვარიანტია IMDSv2 hop limit **1**-ით, რომ IMDSv2-ის response-მა pod-ქსელში დამატებითი network hop არ გაიაროს. Hop limit **2**-ს იყენებენ მხოლოდ გააზრებულ გამონაკლისად, როცა workload-ს ნამდვილად სჭირდება IMDS-თან მიმართვა.
 
 ეს შეზღუდვა არ იცავს `hostNetwork: true` Pod-ს: AWS მიუთითებს, რომ ასეთი Pod-ები ინარჩუნებენ IMDS-თან პირდაპირ წვდომას. არასანდო workload-ისთვის ცალკე შეზღუდეთ `hostNetwork`-ის გამოყენება admission/policy-ის მეშვეობით და hop limit `1` host-network Pod-ისთვის საკმარის დაცვად ნუ ჩათვლით.
 
@@ -218,7 +218,7 @@ sudo grep -nE 'readOnlyPort|anonymous:|authorization:|webhook:' \
 
 მოსალოდნელია, რომ `10250`, `2379`, `2380` და `6443` topology-ის მიხედვით საჭირო ინტერფეისზე მოისმენონ. კრიტერიუმი არ არის ყველა პორტის გამორთვა, არამედ წყაროების შეზღუდვა და აუთენტიფიკაციის ჩართვა. kubelet-ისთვის შეამოწმეთ `--read-only-port=0`, `--anonymous-auth=false` და `--authorization-mode=Webhook`; flags და CIS-პარამეტრები დაწვრილებით 07-ე თავშია განხილული.
 
-ცალკე გადახედეთ RBAC-ს: უფლებამ `nodes/proxy` შეიძლება subject-ს kubelet API-ზე წვდომა მისცეს API server-ის მეშვეობით, და, აქედან გამომდინარე, node-ის მგრძნობიარე ოპერაციებზეც. იპოვეთ roles, ამ უფლებით, და შეამოწმეთ მათი bindings:
+ცალკე გადახედეთ RBAC-ს: უფლებამ `nodes/proxy` შეიძლება subject-ს kubelet API-ზე წვდომა მისცეს API server-ის მეშვეობით, და, აქედან გამომდინარე, node-ის მგრძნობიარე ოპერაციებზეც. იპოვეთ ამ უფლების მქონე roles და შეამოწმეთ მათი bindings:
 
 ```bash
 kubectl get clusterrole -o yaml | grep -n -C 3 'nodes/proxy' || true
@@ -226,7 +226,7 @@ kubectl get clusterrolebinding \
   -o custom-columns=NAME:.metadata.name,ROLE:.roleRef.name,SUBJECTS:.subjects[*].name
 ```
 
-`Webhook` authorization აუცილებელი baseline-ია, მაგრამ არა kubelet-ის უსაფრთხოების დამტკიცება. Kubernetes v1.36-ში **Fine-Grained Kubelet Authorization - GA-ა და feature gate ჩაკეტილია ჩართულ მდგომარეობაში**. monitoring/observability-ის role-ისთვის ფართო `nodes/proxy`-ის ნაცვლად გასცით მხოლოდ საჭირო subresources მინიმალური verbs-ების ნაკრებით და მხოლოდ იქ, სადაც ეს ნამდვილად საჭიროა. endpoint → RBAC subresource-ის სრული GA-რუკა ასეთია:
+`Webhook` authorization აუცილებელი baseline-ია, მაგრამ არა kubelet-ის უსაფრთხოების დამტკიცება. Kubernetes v1.36-ში **Fine-Grained Kubelet Authorization - GA-ა და feature gate ჩაკეტილია ჩართულ მდგომარეობაში**. monitoring/observability-ის role-ისთვის ფართო `nodes/proxy`-ის ნაცვლად გასცით მხოლოდ საჭირო subresources მინიმალური verb-ების ნაკრებით და მხოლოდ იქ, სადაც ეს ნამდვილად საჭიროა. endpoint → RBAC subresource-ის სრული GA-რუკა ასეთია:
 
 | Kubelet endpoint | Fine-grained RBAC resource | Fallback `nodes/proxy`-ის მეშვეობით |
 |---|---|---|
@@ -264,7 +264,7 @@ Cloud-ის დონეზე გამოიყენეთ security group �
 
 ## 05.4. Legacy: დაარქივებული Kubernetes Dashboard და GUI-ის მინიმალური წვდომა
 
-უკვე დაყენებული Dashboard-ისთვის დაგეგმეთ ჩანაცვლება ან ექსპლუატაციიდან გამოყვანა. ამამდე ნუ გამოაქვეყნებთ UI-ს public `LoadBalancer`-ის ან Internet-facing Ingress-ის მეშვეობით და ნუ გამოიყენებთ `cluster-admin`-ს ყოველდღიურ identity-ად. UI შეინახეთ VPN-ის ან authenticated access proxy-ის უკან, გამოიყენეთ TLS და მინიმალური namespace-scoped RBAC. იგივე მოთხოვნები ვრცელდება Kubernetes API-ზე ნაშენ ნებისმიერ სხვა მხარდაჭერილ web ან desktop UI-ზეც: private exposure, strong authentication, მოკლე სესიები, audit და minimal-scope kubeconfig ან ServiceAccount.
+უკვე დაყენებული Dashboard-ისთვის დაგეგმეთ ჩანაცვლება ან ექსპლუატაციიდან გამოყვანა. მანამდე ნუ გამოაქვეყნებთ UI-ს public `LoadBalancer`-ის ან Internet-facing Ingress-ის მეშვეობით და ნუ გამოიყენებთ `cluster-admin`-ს ყოველდღიურ identity-ად. UI შეინახეთ VPN-ის ან authenticated access proxy-ის უკან, გამოიყენეთ TLS და მინიმალური namespace-scoped RBAC. იგივე მოთხოვნები ვრცელდება Kubernetes API-ზე ნაშენ ნებისმიერ სხვა მხარდაჭერილ web ან desktop UI-ზეც: private exposure, strong authentication, მოკლე სესიები, audit და minimal-scope kubeconfig ან ServiceAccount.
 
 read-only role-ში რესურსების ზოგადი ჩამონათვალისთვის საჭიროა `get/list/watch`, ხოლო `pods/log` subresource-ისთვის პრაქტიკულად საჭიროა მხოლოდ `get`:
 
@@ -327,7 +327,7 @@ kubectl -n payments exec egress-test -- sh -c '
 # AKS: Entra Workload ID ცალკე შეამოწმეთ; IMDS restriction - Preview-ია, hostNetwork Pod-ს არ ფარავს, არ არის განკუთვნილი production SLA-სთვის, შეიძლება შეუთავსებელი იყოს add-ons/extension სცენარებთან და არ უჭერს მხარს Windows node pool-ებს.
 ```
 
-Timeout-ისას `curl`-მა შეიძლება ნულოვანი არ არის კოდით დაასრულოს, ამიტომ ავტომატიზაციაში შეინახეთ როგორც exit code, ისე stdout/stderr. ლაბ 101-ში metadata-ს შემოწმება სწორედ `curl --max-time 3`-ზეა აგებული; ყველა CNI-სგან კონკრეტული შეცდომის ტექსტი ნუ მოგეთხოვებათ.
+Timeout-ისას `curl`-მა შეიძლება არანულოვანი კოდით დაასრულოს, ამიტომ ავტომატიზაციაში შეინახეთ როგორც exit code, ისე stdout/stderr. ლაბ 101-ში metadata-ს შემოწმება სწორედ `curl --max-time 3`-ზეა აგებული; ყველა CNI-სგან კონკრეტული შეცდომის ტექსტი ნუ მოითხოვთ.
 
 | სიმპტომი | შემოწმება და სავარაუდო მიზეზი |
 |---|---|
@@ -369,7 +369,7 @@ Timeout-ისას `curl`-მა შეიძლება ნულოვა�
 - Cloud metadata შეიძლება იყოს კრიტიკული გზა კომპრომეტირებული Pod-იდან node-ის cloud identity-მდე, მაგრამ provider-specific workload identity მოსალოდნელ ქცევას ცვლის: GKE-ში metadata server WIF-ისთვის საჭიროა, ხოლო AWS-ში ასევე გაითვალისწინეთ IPv6 IMDS.
 - დაიწყეთ default-deny egress-ით და დაუშვით მხოლოდ DNS და საჭირო დანიშნულებები. `ipBlock` `except: 169.254.169.254/32`-ით სასარგებლოა გარდამავალი ფართო allow-სთვის, მაგრამ არ ანაცვლებს წერტილოვან allowlist-ს.
 - EKS-ისთვის IMDSv2 hop limit `1`-ით ბლოკავს node IMDS-ისკენ ჩვეულებრივ გზას non-`hostNetwork` Pod-ისთვის. ეს არ ეხება `hostNetwork: true` Pod-ს, რომელიც IMDS-ზე წვდომას ინარჩუნებს და ცალკე კონტროლს მოითხოვს; IMDS-ის endpoint არ გამორთოთ, ხოლო hop limit 2 დატოვეთ მხოლოდ workload-ის დასაბუთებული წვდომისთვის. ეს არ ანაცვლებს workload identity-ს, ქსელურ იზოლაციას და მინიმალური უფლებების cloud identity-ს.
-- kubelet, etcd და kube-apiserver დაცულია private network-ის, firewall-ის, TLS-ის, authentication-ის, authorization-ის, `nodes/proxy`-ის გადახედვისა და უსაფრთხო flags-ების ერთობლიობით, და არა მხოლოდ Pod policy-ით.
+- kubelet, etcd და kube-apiserver დაცულია private network-ის, firewall-ის, TLS-ის, authentication-ის, authorization-ის, `nodes/proxy`-ის გადახედვისა და უსაფრთხო flag-ების ერთობლიობით, და არა მხოლოდ Pod policy-ით.
 - დაარქივებული Kubernetes Dashboard ახალი ინსტალაციებისთვის არ გამოიყენება; არსებული GUI არ უნდა იყოს public ან მუშაობდეს `cluster-admin`-ისგან. read-only role-ისთვის `pods/log` მოითხოვს მხოლოდ `get`-ს, და არა `list/watch`-ს.
 - შეამოწმეთ რეალური provider-specific ტრაფიკი: AWS-ში Pod-ი node IMDS credentials-ს არ იღებს, GKE WIF მხოლოდ მოსალოდნელი metadata path-ის მეშვეობით მუშაობს, AKS-ში ცალკე მოწმდება Entra federation და IMDS restriction-ის გამოყენებადობა; node-ის endpoint-ები ზედმეტ წყაროებზე ღია არ არის.
 
@@ -394,14 +394,14 @@ Timeout-ისას `curl`-მა შეიძლება ნულოვა�
 >
 > **Retest:** metrics კვლავ მუშაობს, ხოლო management/exec path აღარ არის ავტორიზებული.
 >
-> **ATT&CK:** [T1609 — Container Administration Command](https://attack.mitre.org/techniques/T1609/) და [T1613 — Container and Resource Discovery](https://attack.mitre.org/techniques/T1613/).
+> **ATT&CK:** [T1609 - Container Administration Command](https://attack.mitre.org/techniques/T1609/) და [T1613 - Container and Resource Discovery](https://attack.mitre.org/techniques/T1613/).
 
 ## 05.10. თვითშემოწმების კითხვები
 
 <details>
 <summary>1. რატომ არის Pod-ის წვდომა `169.254.169.254`-ზე უფრო საშიში, ვიდრე ჩვეულებრივი გარე HTTP-მოთხოვნა?</summary>
 
-ეს node-ის cloud metadata-ს ტიპური endpoint-ია, და არა ჩვეულებრივი გარე Service: SSRF-ის ან shell-ის მეშვეობით Pod-ს შეუძლია ეგზემპლარის შესახებ ცნობების მიღება, ხოლო არასწორი cloud identity-ის დროს - node-ის role-ის დროებითი credentials-ისაც. ასეთი გზა ხელს უწყობს RBAC-ის, ServiceAccount-ისა და აპლიკაციის policy-ის გვერდის ავლას და შეიძლება cloud API-ში lateral movement გახსნას.
+ეს node-ის cloud metadata-ს ტიპური endpoint-ია, და არა ჩვეულებრივი გარე Service: SSRF-ის ან shell-ის მეშვეობით Pod-ს შეუძლია ეგზემპლარის შესახებ ცნობების მიღება, ხოლო არასწორი cloud identity-ის დროს - node-ის role-ის დროებითი credentials-ისაც. ასეთი გზა გვერდს უვლის RBAC-ს, ServiceAccount-სა და აპლიკაციის policy-ს და შეიძლება cloud API-ში lateral movement გახსნას.
 </details>
 
 <details>
@@ -437,19 +437,19 @@ AWS IMDSv2 მოითხოვს, ჯერ `PUT`-ის მეშვეო�
 <details>
 <summary>7. რატომ არის `nodes/proxy`-ზე `get`-იც კი უფრო სარისკო, ვიდრე `nodes/metrics`-ზე ან `nodes/stats`-ზე მინიმალური `get` უფლებები?</summary>
 
-`nodes/proxy` — ეს kubelet API-ზე ფართო წვდომაა, და მასზეც კი `get`-მა kubelet-ის WebSocket endpoint-ების მეშვეობით შეიძლება კონტეინერებში ბრძანებების შესრულება დაუშვას. v1.36-ში fine-grained kubelet authorization monitoring-role-ს საშუალებას აძლევს, ჰქონდეს მხოლოდ `get` `nodes/metrics`-ზე და/ან `nodes/stats`-ზე; მიგრაციის შემდეგ ფართო `nodes/proxy` უნდა წაიშალოს.
+`nodes/proxy` - ეს kubelet API-ზე ფართო წვდომაა, და მასზეც კი `get`-მა kubelet-ის WebSocket endpoint-ების მეშვეობით შეიძლება კონტეინერებში ბრძანებების შესრულება დაუშვას. v1.36-ში fine-grained kubelet authorization monitoring-role-ს საშუალებას აძლევს, ჰქონდეს მხოლოდ `get` `nodes/metrics`-ზე და/ან `nodes/stats`-ზე; მიგრაციის შემდეგ ფართო `nodes/proxy` უნდა წაიშალოს.
 </details>
 
 <details>
 <summary>8. რით განსხვავდება metadata endpoint, node identity და workload identity AWS/EKS-ში, GKE-სა და AKS-ში, და რატომ არ შეიძლება GKE-სთვის metadata path-ის უპირობო ბლოკირება?</summary>
 
-AWS/EKS-ში IMDS node-ის identity-ს გასცემს, ხოლო workload-ები EKS Pod Identity-ს ან IRSA-ს იყენებენ; GKE-ში Workload Identity Federation short-lived workload token-ს GKE metadata server-ის მეშვეობით იღებს; AKS-ში გამოიყენება Microsoft Entra Workload ID. ამიტომ GKE metadata path შეიძლება საჭირო იყოს workload identity-სთვის, ხოლო strict policy მხოლოდ გამოყენებული dataplane-ის დოკუმენტირებულ გზას უშვებს და არა მისამართის უპირობო ბლოკირებას.
+AWS/EKS-ში IMDS node-ის identity-ს გასცემს, ხოლო workload-ები EKS Pod Identity-ს ან IRSA-ს იყენებენ; GKE-ში Workload Identity Federation short-lived workload token-ს GKE metadata server-ის მეშვეობით იღებს; AKS-ში გამოიყენება Microsoft Entra Workload ID. ამიტომ GKE metadata path შეიძლება საჭირო იყოს workload identity-სთვის, ხოლო strict policy მხოლოდ გამოყენებული dataplane-ის დოკუმენტირებულ გზას უშვებს და მისამართს უპირობოდ არ ბლოკავს.
 </details>
 
 <details>
 <summary>9. რატომ საჭიროებს read-only role ჩვეულებრივ legacy Dashboard-ისთვის ან სხვა web UI-სთვის `get/list/watch`-ს რესურსებზე, მაგრამ `pods/log`-ზე მხოლოდ `get`-ს, და როგორ მოწმდება ეს `kubectl auth can-i`-ით, UI-ზე რეალური წვდომის გარეშე?</summary>
 
-Pod-ების, Service-ებისა და Events-ის ჩამონათვალის ჩვენებისთვის UI-ს სჭირდება `get`, `list` და `watch`, მაგრამ `pods/log` subresource-ის წაკითხვა პრაქტიკულად მხოლოდ `get`-ს მოითხოვს. კონკრეტული ServiceAccount-ის უფლებები სამიზნე namespace-ში მოწმდება ბრძანებით `kubectl auth can-i`: `get pods/log`-მა `yes` უნდა დააბრუნოს, ხოლო `get secrets`-მა და `create pods/exec`-მა — `no`.
+Pod-ების, Service-ებისა და Events-ის ჩამონათვალის ჩვენებისთვის UI-ს სჭირდება `get`, `list` და `watch`, მაგრამ `pods/log` subresource-ის წაკითხვა პრაქტიკულად მხოლოდ `get`-ს მოითხოვს. კონკრეტული ServiceAccount-ის უფლებები სამიზნე namespace-ში მოწმდება ბრძანებით `kubectl auth can-i`: `get pods/log`-მა `yes` უნდა დააბრუნოს, ხოლო `get secrets`-მა და `create pods/exec`-მა - `no`.
 </details>
 
 ## პრაქტიკა

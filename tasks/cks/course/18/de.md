@@ -37,7 +37,7 @@ schützt nicht vor Resource Exhaustion/Noisy Neighbors: Dies sind eigene Pod-Fel
 
 ```mermaid
 flowchart TB
-    vuln["Verwundbarer Prozess<br/>im Container"] --> sc["SecurityContext<br/>UID, Capabilities,<br/>no_new_privs,<br/>schreibgeschützte Root"]
+    vuln["Verwundbarer Prozess<br/>im Container"] --> sc["SecurityContext<br/>UID, Capabilities,<br/>no_new_privs,<br/>schreibgeschütztes<br/>Root-Dateisystem"]
     sc --> kernel["Kernel und<br/>Container-Runtime"]
     kernel --> aa["AppArmor<br/>welches Objekt<br/>und welche Operation"]
     kernel --> sec["seccomp<br/>welcher<br/>Syscall"]
@@ -276,10 +276,9 @@ Linux `runAsUser`/UID und SELinux ersetzen `runAsUserName` nicht.
 
 `initContainers` werden vor der Anwendung ausgeführt, können aber Dateien mit ungeeignetem Owner/Mode erstellen
 oder übermäßige Rechte benötigen. Für gehärtete Workloads erhalten sie dasselbe Prinzip:
-explizite Non-root-UID, alle Capabilities entfernen, keine Escalation, schreibgeschützte Root und ein separates beschreibbares Volume,
+explizite Non-root-UID, alle Capabilities entfernen, keine Escalation, schreibgeschütztes Root-Dateisystem und ein separates beschreibbares Volume,
 falls nötig. Starten Sie einen initContainer nicht als root nur für `chown -R`: Das verschleiert oft
-einen Image-Fehler. Versuchen Sie zuerst `fsGroup`, korrekten Ownership im Image oder eine Storage-Class-
-Policy; eine privilegierte Ausnahme muss kurz, begründet und isoliert sein.
+einen Image-Fehler. Versuchen Sie zuerst `fsGroup`, korrekten Ownership im Image oder eine Storage-Class-Policy; eine privilegierte Ausnahme muss kurz, begründet und isoliert sein.
 
 Ein Ephemeral-Container, der über `kubectl debug` hinzugefügt wird, erbt ebenfalls nicht automatisch den
 Container-Security-Context des Workloads. Er ist für kontrollierte Incident Response nützlich, darf aber
@@ -299,7 +298,7 @@ eine gewöhnliche API, einen Worker oder Batch Job erforderlich. „Der Prozess 
 | Einstellung | Was sie öffnet | Warum dies ein Risiko ist | Sichere Alternative |
 |---|---|---|---|
 | `privileged: true` | fast alle Capabilities, Geräte und gelockerte Runtime-Isolation | die Kompromittierung des Containers kommt der Kompromittierung des Nodes nahe | gewöhnlicher Container mit `drop: ALL`; nur bei nachgewiesenem Bedarf eine Capability hinzufügen |
-| `hostPID: true` | Prozesse des Nodes im PID-Namespace | Host-Prozesse können eingesehen/signaliert und sensible `/proc`-Daten gesammelt werden | Metrics API, kubelet Summary API oder ein separater vertrauenswürdiger Node-Agent |
+| `hostPID: true` | Prozesse des Nodes im PID-Namespace | Host-Prozesse können eingesehen, Signale an sie gesendet und sensible `/proc`-Daten gesammelt werden | Metrics API, kubelet Summary API oder ein separater vertrauenswürdiger Node-Agent |
 | `hostNetwork: true` | Network-Namespace des Nodes, Host-Ports und dessen IP | Umgehung der Pod-Netzwerkisolierung, Port-Konflikte, Zugriff auf localhost-Services des Nodes | Service, Ingress, NetworkPolicy und gewöhnliches Pod-Netzwerk |
 | `hostIPC: true` | IPC-Namespace des Nodes | Zugriff auf Shared Memory und IPC von Host-Prozessen | Volume, Service oder Message Queue mit Auth |
 | `hostPath`-Volume | ausgewählter Pfad des Dateisystems des Nodes | Lesen von kubelet-Credentials, Container-Sockets, Runtime-State oder Schreiben auf den Host | PVC, ConfigMap, Secret, `emptyDir`; enger schreibgeschützter Pfad nur für einen vertrauenswürdigen Daemon |
@@ -332,8 +331,7 @@ spec:
 ```
 
 Ermitteln Sie bei einer Untersuchung zuerst, **warum** die Einstellung hinzugekommen ist: Helm Chart, injizierter
-Sidecar, initContainer, DaemonSet oder manueller Patch. Entfernen Sie `host*` nicht aus einem CNI-/CSI-/Monitoring-
-DaemonSet, ohne seinen Vertrag zu verstehen: Das Netzwerk oder Storage des gesamten Clusters kann brechen. Für
+Sidecar, initContainer, DaemonSet oder manueller Patch. Entfernen Sie `host*` nicht aus einem CNI-/CSI-/Monitoring-DaemonSet, ohne seinen Vertrag zu verstehen: Das Netzwerk oder Storage des gesamten Clusters kann brechen. Für
 gewöhnliche Workloads ersetzen Sie den Zugriff durch eine unterstützte API/ein unterstütztes Volume und prüfen den Rollout in Staging.
 
 Schneller Audit aller Pods über Namespaces hinweg:
@@ -365,8 +363,7 @@ In Kubernetes v1.36 sind User Namespaces stable. `hostUsers: false` weist kubele
 User Namespace zu erstellen und ein sich nicht überschneidendes UID/GID-Mapping auszuwählen: UID 0 oder `runAsUser` im
 Container wird auf eine nicht privilegierte UID/GID des Nodes abgebildet. Capabilities gelten nur in
 diesem Namespace: Beispielsweise gibt `CAP_SYS_ADMIN` keine Rechte außerhalb davon. Dies ist eine zusätzliche
-Barriere für Workloads, die root innerhalb des Containers benötigen, aber keinen Zugriff auf Host-
-Namespaces oder Ressourcen des Nodes benötigen.
+Barriere für Workloads, die root innerhalb des Containers benötigen, aber keinen Zugriff auf Host-Namespaces oder Ressourcen des Nodes benötigen.
 
 ```yaml
 apiVersion: v1
@@ -573,8 +570,7 @@ kubectl get pod hardened-web -o json | jq '
 
 JSONPath zeigt die deklarierte Konfiguration. Bei einem fehlenden Boolean-Feld ist leere Ausgabe nicht
 gleich `false`: In Audit-Anforderungen müssen die Werte explizit sein, statt sich auf einen Default zu verlassen.
-Prüfen Sie auch `initContainers`, injizierte Service-Mesh-/Observability-Sidecars und Ephemeral-
-Container: Ein schwacher Container teilt Netzwerk und Volumes desselben Pods.
+Prüfen Sie auch `initContainers`, injizierte Service-Mesh-/Observability-Sidecars und Ephemeral-Container: Ein schwacher Container teilt Netzwerk und Volumes desselben Pods.
 
 ### 2. Start und effektive Identity prüfen
 
@@ -626,7 +622,7 @@ Secrets sollten nicht in ein beschreibbares `emptyDir` kopiert werden, wenn die 
 gemountetes Secret lesen kann. Muss ein Programm ein Zertifikat/eine Konfiguration umwandeln,
 erstellen Sie ein separates kleines beschreibbares Volume, minimieren Sie dessen Lifecycle und Rechte und
 vermischen Sie es nicht mit allgemeinem Cache. `readOnlyRootFilesystem` schützt den Inhalt eines Volumes nicht vor einem anderen
-Container desselben Pods, dem dieses Volume ebenfalls gemountet ist.
+Container desselben Pods, in dem dieses Volume ebenfalls gemountet ist.
 
 > 🏭 Versionierte Templates, Inventar, Image-Behebung, Canary, Runtime-Tests, Admission Guardrails und dokumentierte Ausnahmen.
 
@@ -634,10 +630,9 @@ Container desselben Pods, dem dieses Volume ebenfalls gemountet ist.
 
 Führen Sie die Baseline im Deployment-/StatefulSet-/Job-Template und Helm Chart ein, nicht manuell in
 einem erstellten Pod. Der `securityContext` der meisten Running Pods ist immutable: Eine korrekte Änderung wird
-durch einen neuen ReplicaSet/Pod ausgerollt und der Rollout beobachtet.
+durch ein neues ReplicaSet bzw. einen neuen Pod ausgerollt und der Rollout beobachtet.
 
-1. Inventarisieren Sie Prozesse, beschreibbare Pfade, Low Ports, Volume-Ownership, Syscall-/Profil-
-   Anforderungen und aktuelle `privileged`/`host*`-Ausnahmen.
+1. Inventarisieren Sie Prozesse, beschreibbare Pfade, Low Ports, Volume-Ownership, Syscall-/Profil-Anforderungen und aktuelle `privileged`/`host*`-Ausnahmen.
 2. Korrigieren Sie das Image: Non-root-`USER`, Dateien sind für die benötigte UID/GID lesbar, die Anwendung schreibt in
    dokumentierte Verzeichnisse statt nach `/`.
 3. Fügen Sie die Pod-Baseline hinzu: `runAsNonRoot`, explizite Nonzero-UID/GID, `RuntimeDefault` seccomp
@@ -725,7 +720,7 @@ Manifest auf `privileged`, `host*`, `hostPath`, `Unconfined` und das Fehlen erfo
 im Cluster wird diese Prüfung durch Pod Security Admission oder eine Policy Engine ergänzt.
 
 Die Einführung erfolgt schrittweise: Zuerst wird der Workload mit beobachtbaren Logs und Metrics in
-Staging ausgeführt, dann werden Einschränkungen für eine Replik oder einen Canary aktiviert und Rollout, Startfehler
+Staging ausgeführt, dann werden Einschränkungen für ein einzelnes Replikat oder einen Canary aktiviert und Rollout, Startfehler
 und die Nutzung von Ephemeral Storage beobachtet. Nach Bestätigung des Vertrags gehen die Änderungen in das
 Workload-Template ein. Node-Agents, die tatsächlich Host-Zugriff oder spezielle
 Capabilities benötigen, werden von Application-Namespaces isoliert und separat überprüft.

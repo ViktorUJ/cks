@@ -31,7 +31,7 @@ Docker daemon, თუ kubelet მუშაობს containerd-თან. ყო
 
 - ბინარებსა და დამოკიდებულებებს CVE-ით;
 - უფლებებისა და კონფიგურაციის მქონე პროცესს;
-- მისმენად პორტს ან ლოკალურ socket-ს;
+- მოსმენის რეჟიმში მყოფ პორტს ან ლოკალურ socket-ს;
 - journal-ს, ანგარიშებს, unit-ფაილებს და გზას მცდარ კონფიგურაციამდე.
 
 ```mermaid
@@ -50,7 +50,7 @@ flowchart TB
 ```
 
 ეს არ არის მოწოდება, წავშალოთ ყველაფერი გაუთვალისწინებლად. `kubelet`, containerd, CNI,
-SSH თანმიმდევრული ადმინისტრირებისთვის და control-plane-ის კომპონენტები შესაბამის ნოდაზე
+SSH შეთანხმებული ადმინისტრირებისთვის და control-plane-ის კომპონენტები შესაბამის ნოდაზე
 შეიძლება საჭირო იყოს. მიზანია მივიღოთ ცხადი სია: **კომპონენტი -> მფლობელი -> დანიშნულება
 -> პორტი/socket**. თუ დანიშნულება და მფლობელი არ არსებობს, კომპონენტს შლიან ან
 გამორთავენ დამოკიდებულებებისა და rollback-გეგმის შემოწმების შემდეგ.
@@ -81,7 +81,7 @@ fi
 
 > 🧠 ნოდის კომპრომეტაცია შეიძლება დაიწყოს ზედმეტი პროცესით, პაკეტით, listener-ით ან socket-ით; შეინარჩუნეთ კომპონენტის, მფლობელის, დანიშნულებისა და დასაშვები წვდომის რუკა.
 
-> 🎯 ჩაატარეთ service-ის, პაკეტის, kernel module-ისა და listener-ის ინვენტარიზაცია; შეცვალეთ მხოლოდ საჭირო არ არსებული ობიექტი, შეინარჩუნეთ baseline და შეამოწმეთ `kubelet`/containerd. `disable --now`, წაშლა და პორტის დახურვა საჭიროებს სხვადასხვა შემოწმებას.
+> 🎯 ჩაატარეთ service-ის, პაკეტის, kernel module-ისა და listener-ის ინვენტარიზაცია; შეცვალეთ მხოლოდ არასაჭირო ობიექტი, შეინარჩუნეთ baseline და შეამოწმეთ `kubelet`/containerd. `disable --now`, წაშლა და პორტის დახურვა საჭიროებს სხვადასხვა შემოწმებას.
 
 ## 14.2. ზედმეტი სერვისების ინვენტარიზაცია და გამორთვა
 
@@ -111,11 +111,11 @@ sudo journalctl -u "$SERVICE" --since '24 hours ago'
 | `kubelet.service` | ნოდა შედის კლასტერში? | დატოვება; შესწორება მხოლოდ გააზრებულად |
 | `containerd.service` | ეს kubelet-ის CRI endpoint-ია? | დატოვება Kubernetes-ნოდაზე |
 | `docker.service`/`docker.socket` | Docker ამ ნოდას სჭირდება? | წაშლა/გამორთვა, თუ CRI - containerd-ია და Docker საჭირო არ არის |
-| `sshd.service` | არსებობს თანმიმდევრული bastion/console გზა? | დატოვება 15-ე თავის hardening-ით ან გამორთვა მხოლოდ ალტერნატიული წვდომის შემთხვევაში |
+| `sshd.service` | არსებობს შეთანხმებული bastion/console გზა? | დატოვება 15-ე თავის hardening-ით ან გამორთვა მხოლოდ ალტერნატიული წვდომის შემთხვევაში |
 | `cups`, `avahi-daemon`, Bluetooth, GUI-service | არსებობს დოკუმენტირებული სერვერული დანიშნულება? | ჩვეულებრივ წაშლა ან გამორთვა |
 | უცნობი service | ვინ არის მფლობელი, რომელი პაკეტი და პორტი? | გამოძიება, არ გამოვიცნოთ |
 
-ცნობილი, საჭირო არ არსებული unit-ისთვის უსაფრთხო საბაზისო ოპერაციაა მისი ახლავე
+ცნობილი არასაჭირო unit-ისთვის უსაფრთხო საბაზისო ოპერაციაა მისი ახლავე
 გაჩერება და ავტოგაშვების აკრძალვა. ბრძანება შექცევადია: `enable --now` საჭიროების
 შემთხვევაში service-ს დააბრუნებს.
 
@@ -210,11 +210,11 @@ desktop-ს, compiler-ებს, ტესტურ utility-ებსა და 
 | პაკეტის წაშლა მომუშავე ნოდაზე | სწრაფად აღმოფხვრის ცნობილ ზედაპირს | ნოდებს შორის დრეიფი; დააფიქსირეთ IaC/image-ში |
 | Golden image პაკეტების allowlist-ით | ერთგვაროვანი, აუდირებადი მდგომარეობა | საჭიროებს ხელახლა აწყობისა და განახლების პროცესს |
 | Immutable/minimal OS | ნაკლები პაკეტი და ცვლილება runtime-ში | წინასწარ გავითვალისწინოთ debug და განახლება |
-| „წავშალოთ ყველა უცნობი" | არ არსებობს | შეიძლება დაამტვრიოს kubelet, CNI, storage, monitoring ან წვდომა |
+| „წავშალოთ ყველა უცნობი“ | არ არსებობს | შეიძლება დაამტვრიოს kubelet, CNI, storage, monitoring ან წვდომა |
 
 ## 14.4. ბირთვის მოდულები: ინვენტარიზაცია და კონტროლირებადი გამორთვა
 
-ბირთვის მოდული attack surface-ის ნაწილია, მაგრამ არ არის „ზედმეტი პაკეტი", რომლის
+ბირთვის მოდული attack surface-ის ნაწილია, მაგრამ არ არის „ზედმეტი პაკეტი“, რომლის
 შედეგების გარეშე წაშლაც შესაძლებელია. ჯერ დააფიქსირეთ ჩატვირთული მოდულები, მათი
 პარამეტრები და ჩატვირთვის წესები; შეამოწმეთ მოდულის დანიშნულება იმიჯის მფლობელთან და
 OS-ის დოკუმენტაციაში.
@@ -223,7 +223,7 @@ OS-ის დოკუმენტაციაში.
 MODULE='example_module'
 lsmod | sort
 sudo modinfo "$MODULE"
-# `modprobe -c` — ჭეშმარიტების წყარო effective configuration-ისთვის.
+# `modprobe -c` - ჭეშმარიტების წყარო effective configuration-ისთვის.
 EFFECTIVE_MODPROBE_CONFIG=$(sudo modprobe -c) || {
   echo 'ERROR: cannot read effective modprobe configuration' >&2
   exit 2
@@ -293,11 +293,10 @@ sudo ss -lxnp | grep -E 'docker|containerd' || true
 | წერტილი | სად სჭირდება ჩვეულებრივ | უსაფრთხო მიმართულება |
 |---|---|---|
 | SSH `22/tcp` | მართვადი წვდომა ნოდაზე | მხოლოდ bastion/VPN/ადმინისტრაციული CIDR |
-| kubelet `10250/tcp` | control-plane და თანმიმდევრული დიაგნოსტიკა | არ გახსნათ ინტერნეტში; TLS, authn/authz და firewall |
+| kubelet `10250/tcp` | control-plane და შეთანხმებული დიაგნოსტიკა | არ გახსნათ ინტერნეტში; TLS, authn/authz და firewall |
 | kube-apiserver `6443/tcp` | control-plane; worker და ადმინისტრატორები არქიტექტურის მიხედვით | allowlist/private endpoint, არა `0.0.0.0/0` |
 | etcd `2379`, `2380/tcp` | მხოლოდ control-plane/etcd peers | არ გამოაქვეყნოთ worker-ზე ან გარე ქსელში |
 | Docker TCP API (ხშირად `2375`/`2376`) | მხოლოდ დასაბუთებული დისტანციური მართვისთვის | `2375` არ უნდა ისმენდეს; ნებისმიერი TCP endpoint საჭიროებს ცხად გამონაკლისს, mTLS-სა და ზუსტ firewall-ს |
-
 | containerd/NRI Unix socket | ლოკალურად ნოდაზე | `root` და მინიმალური ნაკრები დაშვებული სისტემური მომხმარებლებისა |
 
 არ გააკეთოთ დასკვნა პორტის ნომრით პროცესის გარეშე: მაგალითად, `6443` control-plane-ზე
@@ -323,18 +322,18 @@ fi
 echo "OK: TCP listener ${PORT} is absent"
 ```
 
-> 🎯 ჩაატარეთ service-ის, პაკეტის, kernel module-ისა და listener-ის ინვენტარიზაცია; შეცვალეთ მხოლოდ საჭირო არ არსებული ობიექტი, შეინარჩუნეთ baseline და შეამოწმეთ `kubelet`/containerd. `disable --now`, წაშლა და პორტის დახურვა საჭიროებს სხვადასხვა შემოწმებას.
+> 🎯 ჩაატარეთ service-ის, პაკეტის, kernel module-ისა და listener-ის ინვენტარიზაცია; შეცვალეთ მხოლოდ არასაჭირო ობიექტი, შეინარჩუნეთ baseline და შეამოწმეთ `kubelet`/containerd. `disable --now`, წაშლა და პორტის დახურვა საჭიროებს სხვადასხვა შემოწმებას.
 
 ## 14.6. containerd-ისა და არააუცილებელი Docker-ის უსაფრთხოება
 
 თანამედროვე Kubernetes-ნოდაზე containerd არის ძირითადი CRI runtime; Docker daemon და
-მისი socket არ არიან CRI baseline-ი და სჭირდებათ მხოლოდ ცალკე დადასტურებული ამოცანა.
+მისი socket არ არიან CRI baseline-ი და საჭიროა მხოლოდ ცალკე დადასტურებული ამოცანისთვის.
 Runtime daemon-ს აქვს მეტი უფლება, ვიდრე ჩვეულებრივ კონტეინერს. client-მა, რომელსაც
 შეუძლია მიმართოს containerd-ს, NRI-ს ან Docker API-ს, ხშირად შეუძლია გაუშვას
 პრივილეგირებული კონტეინერი, მიამონტოს ჰოსტის filesystem ან მიიღოს ნოდის credentials.
 ამიტომ Unix socket წარმოადგენს წვდომის საზღვარს, და არა უწყინარ იმპლემენტაციის დეტალს.
 
-> 🎯 containerd CRI socket-ზე წვდომა — მხოლოდ `root`-ს და მინიმალურ სისტემურ მომხმარებლებს, world-writable mode-ისა და არაპრივილეგირებულ workload-ში mount-ის გარეშე.
+> 🎯 containerd CRI socket-ზე წვდომა - მხოლოდ `root`-ს და მინიმალურ სისტემურ მომხმარებლებს, world-writable mode-ისა და არაპრივილეგირებულ workload-ში mount-ის გარეშე.
 
 ```mermaid
 flowchart TB
@@ -358,13 +357,13 @@ flowchart TB
 `dockerd -H tcp://0.0.0.0:2375` ხსნის Docker API-ს ყველასთვის, ვისაც შეუძლია პორტამდე
 მისვლა. `2375`-ზე არ არის TLS და აუთენტიფიკაცია: ეს პრაქტიკულად დისტანციური root-ია. ის
 არ უნდა იყოს არც `ExecStart`-ში systemd unit-ისთვის, არც drop-in-ში, არც
-`/etc/docker/daemon.json`-ში. არ სცადოთ `2375`-ის „დაფარვა" მხოლოდ firewall-ით: წესის
+`/etc/docker/daemon.json`-ში. არ სცადოთ `2375`-ის „დაფარვა“ მხოლოდ firewall-ით: წესის
 შეცდომა კვლავ ხელმისაწვდომს გახდის API-ს.
 
 ```bash
 set -euo pipefail
 # ეს gate ამოწმებს დამოუკიდებლად effective configuration-ს და actual listeners-ს.
-# false — უსაფრთხო baseline; true დასაშვებია მხოლოდ documented risk exception-ისთვის.
+# false - უსაფრთხო baseline; true დასაშვებია მხოლოდ documented risk exception-ისთვის.
 ALLOW_REMOTE_DOCKER_API=false
 declare -a TCP_CONFIGURATION_SOURCES=()
 USES_SOCKET_ACTIVATION=false
@@ -459,7 +458,7 @@ if sudo test -f /etc/docker/daemon.json && sudo grep -qE '"hosts"[[:space:]]*:' 
 fi
 
 # `Listen` არის systemd-ის effective socket-თვისება. გავარჩიოთ არარსებული unit იმ unit-ისგან,
-# რომლის effective კონფიგურაციაც წაუკითხავია; ეს უკანასკნელი არასდროს გადავაქციოთ PASS-დ.
+# რომლის effective კონფიგურაციის წაკითხვა შეუძლებელია; ეს უკანასკნელი არასდროს გადავაქციოთ PASS-დ.
 DOCKER_SOCKET_LOAD_STATE=$(sudo systemctl show docker.socket -p LoadState --value 2>/dev/null) || {
   echo 'REVIEW_REQUIRED: cannot determine whether docker.socket exists' >&2
   exit 2
@@ -554,7 +553,7 @@ sudo systemctl --no-pager --full status docker.service
 sudo journalctl -u docker.service -n 50 --no-pager
 ```
 
-თუ დისტანციური Docker API ნამდვილად თანმიმდევრული მოთხოვნაა, პორტის ნომერი TLS-ის ან
+თუ დისტანციური Docker API ნამდვილად შეთანხმებული მოთხოვნაა, პორტის ნომერი TLS-ის ან
 mTLS-ის მტკიცებულება არ არის: `2376`-იც კი მტკიცებულება არ არის. **ყოველი** დაშვებული TCP
 endpoint-ისთვის დაადასტურეთ effective `tlsverify=true`, CA, server certificate და key,
 ასევე client certificate-ის რეალური აუთენტიფიკაცია; შეზღუდეთ წყაროები
@@ -592,12 +591,12 @@ sudo grep -Rns -- '--container-runtime-endpoint\|containerRuntimeEndpoint' \
   /var/lib/kubelet /etc/systemd/system /usr/lib/systemd/system 2>/dev/null || true
 ```
 
-არ დაცვათ მხოლოდ socket. `/run/containerd` შეიცავს runtime-მდგომარეობასა და
+დაიცავით არა მხოლოდ socket-ი. `/run/containerd` შეიცავს runtime-მდგომარეობასა და
 sockets-ს, ხოლო `/var/lib/containerd` - persistent content-სა და metadata-ს.
 containerd-ისთვის ორიენტირია `0700` `/var/lib/containerd`-ისთვის და `0711` root-ისთვის
 `/run/containerd`-ში: მეორე mode-ი უშვებს traversal-ს, რომელიც შეიძლება საჭირო იყოს
 user-namespaced workload-ისთვის, მაგრამ არ ააშკარავებს catalog-ის შემცველობას.
-მგრძნობიარე ქვე-catalog-ები უნდა იყოს `0700`, sockets — `0660` სისტემური ჯგუფით
+მგრძნობიარე ქვე-catalog-ები უნდა იყოს `0700`, sockets - `0660` სისტემური ჯგუფით
 არაპრივილეგირებული მომხმარებლების გარეშე; არც ერთი გზა არ უნდა იყოს writable
 ჩვეულებრივი მომხმარებლებისთვის ან კონტეინერებისთვის. კონფიგურაცია, plugins და CNI
 ასევე უნდა იყოს root-owned და დაცული არაავტორიზებული სუბიექტების ჩაწერისგან:
@@ -845,7 +844,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
   მომხმარებლები არ არიან.
 - **ამოწმებენ დრეიფს.** რეგულარული CIS/OS scan, პაკეტების inventory, enabled unit და
   listeners ადარებენ baseline-ს. მფლობელის გარეშე ახალი listener - ინციდენტია ან
-  change, და არა „ჩვეულებრივი მდგომარეობა".
+  change, და არა „ჩვეულებრივი მდგომარეობა“.
 - **ცვლილება ხდება ეტაპობრივად.** ჯერ staging-ნოდა და ერთი service, შემდეგ
   `kubelet`/`containerd`-ის health check, მხოლოდ ამის შემდეგ rollout. control-plane-ისთვის
   ინახავენ out-of-band console-ს და ტესტირებულ rollback-ს.
@@ -896,7 +895,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 - პორტები ფასდება პროცესითა და წყაროებით: kubelet `10250` და API `6443` არ უნდა
   იყოს ღია მთელი ინტერნეტისთვის, ხოლო Docker `2375` საერთოდ არ უნდა ისმენდეს.
 - `-H tcp://0.0.0.0:2375` - არააუთენტიფიცირებული დისტანციური root-ია. დატოვეთ Docker
-  Unix socket-ზე; ნებისმიერი TCP endpoint — მხოლოდ დასაბუთებული mTLS-გამონაკლისი, ხოლო
+  Unix socket-ზე; ნებისმიერი TCP endpoint - მხოლოდ დასაბუთებული mTLS-გამონაკლისი, ხოლო
   `2376` არ არის მისი უსაფრთხოების მტკიცებულება.
 - containerd - თანამედროვე ძირითადი CRI runtime-ია; წვდომა მის socket-სა და NRI
   socket-ზე root-equivalent-ია, შეზღუდულია სისტემური სუბიექტებით და არასდროს
@@ -938,7 +937,7 @@ service-ის გამორთვა. ცვლილების შემ�
 <details>
 <summary>2. რით განსხვავდება `systemctl disable --now` `mask`-ისგან, და როდის სჭირდება თითოეული ვარიანტი?</summary>
 
-`systemctl disable --now` დაუყოვნებლივ აჩერებს service-ს და კრძალავს მის ჩვეულებრივ ავტოგაშვებას; ეს შექცევადი საბაზისო ოპერაციაა ცნობილი, საჭირო არ არსებული unit-ისთვის. `mask` უფრო ძლიერია: ის unit-ს მიმართავს `/dev/null`-ზე და კრძალავს ხელით და დამოკიდებულების საფუძველზე გაშვებას. Mask-ს იყენებენ service-ისთვის, რომელიც იმიჯში ზუსტად არ უნდა გაჩნდეს, Kubernetes-ის დამოკიდებულების დამასკვის გარეშე შედეგების გააზრებით.
+`systemctl disable --now` დაუყოვნებლივ აჩერებს service-ს და კრძალავს მის ჩვეულებრივ ავტოგაშვებას; ეს შექცევადი საბაზისო ოპერაციაა ცნობილი, საჭირო არ არსებული unit-ისთვის. `mask` უფრო ძლიერია: ის unit-ს მიმართავს `/dev/null`-ზე და კრძალავს ხელით და დამოკიდებულების საფუძველზე გაშვებას. Mask-ს იყენებენ service-ისთვის, რომელიც იმიჯში ზუსტად არ უნდა გაჩნდეს, ხოლო Kubernetes-ის დამოკიდებულებების დამასკვა შედეგების გააზრების გარეშე არ ხდება.
 </details>
 
 <details>
@@ -948,9 +947,9 @@ service-ის გამორთვა. ცვლილების შემ�
 </details>
 
 <details>
-<summary>4. რატომ არ შეიძლება `10250` და `6443` ერთნაირად „ყველგან დაიხუროს", ხოლო `2375` საერთოდ არ უნდა არსებობდეს?</summary>
+<summary>4. რატომ არ შეიძლება `10250` და `6443` ერთნაირად „ყველგან დაიხუროს“, ხოლო `2375` საერთოდ არ უნდა არსებობდეს?</summary>
 
-`10250` სჭირდება დაცულ kubelet API-ს, ხოლო `6443` — API server-ს, ამიტომ მათი წვდომა დამოკიდებულია ნოდის როლსა და არქიტექტურაზე: control plane-ს, worker-ს, ადმინისტრატორებსა და monitoring-ს აძლევენ ზუსტ allowlist-ს. ისინი არ უნდა იყოს ხელმისაწვდომი ინტერნეტისთვის, მაგრამ სრული დახურვა დაამტვრევს საჭირო ნაკადებს. `2375` — არააუთენტიფიცირებული Docker TCP API-ია და უსაფრთხო baseline-ში საერთოდ არ არის საჭირო.
+`10250` სჭირდება დაცულ kubelet API-ს, ხოლო `6443` - API server-ს, ამიტომ მათი წვდომა დამოკიდებულია ნოდის როლსა და არქიტექტურაზე: control plane-ს, worker-ს, ადმინისტრატორებსა და monitoring-ს აძლევენ ზუსტ allowlist-ს. ისინი არ უნდა იყოს ხელმისაწვდომი ინტერნეტისთვის, მაგრამ სრული დახურვა დაამტვრევს საჭირო ნაკადებს. `2375` - არააუთენტიფიცირებული Docker TCP API-ია და უსაფრთხო baseline-ში საერთოდ არ არის საჭირო.
 </details>
 
 <details>

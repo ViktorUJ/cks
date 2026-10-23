@@ -2,7 +2,7 @@
 
 # 第11章. ServiceAccounts: 最小化とtoken
 
-> **問題。** 脆弱なPod内のshellは、攻撃者にマウント済みServiceAccount bearer tokenへのアクセスを与えます。tokenが`default` accountまたは過剰なRBAC権限を持つidentityに発行されている場合、container外でSecretの読み取り、Podの作成、APIでのさらなるescalationに使用できます。short-lived tokenでも有効期間中は危険です。
+> **問題。** 脆弱なPod内のshellは、攻撃者にmount済みServiceAccount bearer tokenへのアクセスを与えます。tokenが`default` accountまたは過剰なRBAC権限を持つidentityに発行されている場合、container外でSecretの読み取り、Podの作成、APIでのさらなるescalationに使用できます。short-lived tokenでも有効期間中は危険です。
 
 > **次に行うこと。** 第10章でRBACにより権限を減らしました。次はPodが得るidentity自体、すなわちServiceAccountとそのtokenを制限します。侵害されたcontainer内の余計なtokenはKubernetes APIへの入口です。最小のServiceAccountと短命tokenはincidentの影響を減らします。これはCKSのCluster Hardening (15%) domainです。次章ではanonymous requests、network、apiserver settingsの側面からもAPIへのアクセスを閉じます。
 

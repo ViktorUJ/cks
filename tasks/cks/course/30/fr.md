@@ -75,7 +75,7 @@ séparément des couches énumérées ci-dessus. La ligne « Infrastructure » d
 une node/un host **dans** le cluster (Falco, kernel warning, container runtime socket), et non le
 niveau physique d'un centre de données. Examinons ce que ce terme recouvre réellement dans un contexte cloud native
 (selon le [CNCF Cloud Native Security Whitepaper](https://github.com/cncf/tag-security/blob/main/community/resources/security-whitepaper/v2/cloud-native-security-whitepaper.md)),
-où il rejoint la pratique Kubernetes et ce qui relève entièrement d'un
+où il rejoint la pratique Kubernetes et ce qui échappe entièrement à la responsabilité d'un
 ingénieur travaillant uniquement via `kubectl`/l'API.
 
 **Ce que couvre la couche physique.** Le contrôle d'accès au centre de données, la détection de
@@ -358,7 +358,7 @@ sequenceDiagram
     A->>F: shell et ouverture de fichier
     F-->>N: alerte execution + contexte Pod
     A->>F: lecture du service-account token
-    A->>K: API request from ServiceAccount
+    A->>K: requête API de ServiceAccount
     K-->>N: user, verb, ressource, résultat
     A->>F: open /dev/mem
     F-->>N: alerte CRITICAL
@@ -390,7 +390,7 @@ informations sur les processus/cgroup/namespace. N'exécutez pas de commandes de
 `kubectl exec` sauf nécessité et ne copiez pas un Secret dans un ticket.
 
 ```bash
-# Conserver le desired state et le owner pour le cas d'incident avant remediation.
+# Conserver le desired state et l'owner pour le cas d'incident avant remediation.
 NAMESPACE="${NAMESPACE:?set NAMESPACE to the affected Pod namespace}"
 POD="${POD:?set POD to the affected Pod name}"
 kubectl get pod -n "$NAMESPACE" "$POD" -o yaml > pod-evidence.yaml
@@ -668,7 +668,7 @@ sudo test -d "/proc/$SUSPICIOUS_HOST_PID" || { echo 'suspicious process has exit
 # Dans un scope cgroup containerd + systemd, l'application contient CONTAINER_ID, pas SANDBOX_ID :
 # un sandbox est lié à un Pod mais constitue un cgroup distinct du conteneur d'application.
 sudo grep -F "$CONTAINER_ID" "/proc/$SUSPICIOUS_HOST_PID/cgroup" || {
-  echo 'cgroup does not confirm CONTAINER_ID; re-check the mapping between the Pod UID, container identity, and host PID before attaching'
+  echo 'cgroup ne confirme pas CONTAINER_ID ; revérifiez la correspondance entre Pod UID, container identity et host PID avant attach'
   exit 1
 }
 
@@ -727,7 +727,7 @@ Erreurs d'investigation courantes :
 La vérification comprend deux parties : Falco doit charger une rule et une action contrôlée doit générer une alerte
 avec des champs suffisants. N'utilisez pas de test `/dev/mem` sur une node de production : l'accès au périphérique dépend des
 privilèges et peut créer un risque supplémentaire. Pour une démonstration sûre et reproductible, utilisez un fichier marker
-dans un `emptyDir` inscriptible ; la rule est limitée au namespace `runtime-lab`. Ne générez l'événement que
+dans un `emptyDir` inscriptible ; la rule est limitée au namespace `runtime-lab`. Générez l'événement uniquement
 après Ready afin que l'enrichissement runtime ait le temps de relier le conteneur aux metadata Kubernetes.
 
 ### Rule du test
@@ -759,7 +759,7 @@ inscriptible sans écrire dans le système de fichiers racine de l'image.
 ```bash
 set -euo pipefail
 sudo falco -c /etc/falco/falco.yaml --dry-run
-# Avec watch_config_files: true, vérifier le hot reload dans le journal ; restart est seulement un fallback.
+# Avec watch_config_files : true, vérifier le hot reload dans le journal ; restart est seulement un fallback.
 sudo journalctl -u falco --since '2 minutes ago' --no-pager
 
 # Fail closed : ne pas continuer ni supprimer le namespace s'il existait déjà.
@@ -833,7 +833,7 @@ séparément et faites toujours correspondre le container ID via `crictl`.
 
 > 🏭 **Production.** Dans une grande organisation, un analyste ne recherche normalement pas manuellement le
 > même incident dans chaque système. Les logs Falco, Kubernetes audit, network flow, application et cloud
-> identity sont envoyés à une plateforme centralisée de security operations. Celle-ci relie les signaux par heure et
+> identity sont envoyés à une plateforme centralisée de security operations. Celle-ci relie les signaux par l'heure et des
 > identifiers stables et crée un enregistrement d'incident unique avec l'alerte, l'enrichissement et l'historique d'action.
 > L'automatisation selon un scénario préapprouvé ajoute un contexte sûr ou crée un ticket ; un humain et le
 > runbook d'incident conservent la décision d'isoler une node ou un Pod à haut risque.
@@ -851,8 +851,8 @@ séparément et faites toujours correspondre le container ID via `crictl`.
 - **Conservez les sources séparément et corrélez-les centralement.** Falco, API audit, application logs et
   network flows ont des rétentions, accès et précisions différents. Reliez-les dans la plateforme d'incident
   par l'heure et des IDs stables, mais ne réécrivez pas les enregistrements originaux.
-- **Restreignez l'accès à la télémétrie.** Les runtime logs peuvent contenir lignes de commande, chemins vers des credentials et
-  adresses réseau. Leur accès est un accès de production privilégié ; appliquez masquage, chiffrement,
+- **Restreignez l'accès à la télémétrie.** Les runtime logs peuvent contenir des lignes de commande, des chemins vers des credentials et des
+  adresses réseau. Leur accès est un accès de production privilégié ; appliquez le masquage, le chiffrement, la
   rétention et audit des lecteurs.
 - **Automatisez le confinement avec précaution.** Une alerte CRITICAL peut créer un ticket, pager ou temporairement
   isoler un Pod seulement via un playbook préapprouvé. Supprimer automatiquement tous les Pods pour une rule
@@ -878,7 +878,7 @@ séparément et faites toujours correspondre le container ID via `crictl`.
 - **Kill chain** - séquence de phases d'attaque, de l'accès initial à un objectif tel que
   l'exfiltration.
 - **Pod UID** - UID immuable d'une instance précise de Pod, plus fiable qu'un nom pour la corrélation.
-- **Runtime detection** - détection des actions d'un processus déjà exécuté par syscall/eBPF et
+- **Runtime detection** - détection des actions d'un processus déjà en cours d'exécution par syscall/eBPF et
   runtime metadata.
 - **`strace`** - traçage diagnostique des syscalls d'un processus ; outil d'investigation ciblée, et non
   monitoring permanent.
@@ -996,7 +996,7 @@ collecteur et SHA-256. N'exécutez pas de commandes de l'attaquant et ne copiez 
 </details>
 
 <details>
-<summary>9. **Retour au chapitre 11.** Au chapitre 11, un projected token lié réduit les conséquences du vol de token par rapport à un Secret token legacy. Concevez un scénario d'investigation : comment `%user.name`/l'audit log peuvent-ils distinguer une requête légitime d'un Pod utilisant son propre ServiceAccount d'une requête avec un token **volé** du même SA depuis une autre source (par exemple un host hors du cluster) ?</summary>
+<summary>9. **Flashback (chapitre 11).** Au chapitre 11, un projected token lié réduit les conséquences du vol de token par rapport à un Secret token legacy. Concevez un scénario d'investigation : comment `%user.name`/l'audit log peuvent-ils distinguer une requête légitime d'un Pod utilisant son propre ServiceAccount d'une requête avec un token **volé** du même SA depuis une autre source (par exemple un host hors du cluster) ?</summary>
 
 `%user.name` montre seulement le user Linux d'un processus et ne prouve pas l'origine d'une requête Kubernetes API.
 Dans l'audit, recherchez le ServiceAccount `.user.username`, l'heure, le verb, objectRef,

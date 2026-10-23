@@ -15,7 +15,7 @@
 > არის CKS-ის ოფიციალური დომენის **Minimize Microservice Vulnerabilities (20%)** მასალა:
 > `SecurityContext` და Pod Security Standards. Cluster Setup მას ირიბად
 > ეხება: node-ების kubelet-სა და runtime-ს უნდა შეეძლოთ ამ პარამეტრების მხარდაჭერა და
-> გამოყენება. მიზანი არ არის „ყველგან true/false დაყენება",
+> გამოყენება. მიზანი არ არის „ყველგან true/false დაყენება“,
 > არამედ ის, რომ ყოველმა კონტეინერმა მიიღოს ზუსტად საჭირო უფლებები და ეს დამტკიცებადი იყოს.
 
 > **რა გჭირდებათ CKA-დან.** `SecurityContext`-ის ველები, UID/GID, capabilities და Pod-/
@@ -26,7 +26,7 @@
 
 > 🧠 `SecurityContext` ზღუდავს პროცესის უფლებებს, მაგრამ არ აღმოფხვრის image-ის, RBAC-ის, ქსელის ან რესურსების დაუცველობებს.
 
-## 18.1. მოდელი: პროცესის დაცვა, და არა „უსაფრთხო image"
+## 18.1. მოდელი: პროცესის დაცვა, და არა „უსაფრთხო image“
 
 კონტეინერი იზოლირებს filesystem-სა და namespaces-ს, მაგრამ მისი პროცესი მაინც მიმართავს
 ბირთვს. თუ პროცესი კომპრომეტირებულია, ზედმეტი UID 0, capability, writable root filesystem
@@ -122,9 +122,9 @@ spec:
       sizeLimit: 256Mi
 ```
 
-ეს არ არის უნივერსალური „ჩასვი და დაივიწყე" manifest. `automountServiceAccountToken: false`
+ეს არ არის უნივერსალური „ჩასვი და დაივიწყე“ manifest. `automountServiceAccountToken: false`
 შესაფერისია მხოლოდ მაშინ, როცა აპლიკაციას Kubernetes API არ სჭირდება. თუ ტოკენი
-საჭიროა, შექმენით ცალკე ServiceAccount და მინიმალური RBAC, და არა დააბრუნოთ default
+საჭიროა, შექმენით ცალკე ServiceAccount და მინიმალური RBAC, და არ დააბრუნოთ default
 token. `emptyDir.medium: Memory` სწრაფია, მაგრამ ხარჯავს Pod-ის/node-ის memory-ს და
 გავსების შემთხვევაში შეუძლია OOM-მდე მიგვიყვანოს; disk-cache-ისთვის ჩვეულებრივ ტოვებენ
 default filesystem-ს და აყენებენ `sizeLimit`-ს.
@@ -186,7 +186,7 @@ flowchart TB
 | `seccompProfile` | Pod და container | container-პროფილის override ძლიერია; დააყენეთ `RuntimeDefault` Pod-ზე და დოკუმენტირება გაუკეთეთ ყოველ `Localhost`-override-ს |
 | `fsGroup`, `fsGroupChangePolicy`, `supplementalGroups`, `supplementalGroupsPolicy` | მხოლოდ Pod | ეს არის საერთო Pod-ის და მისი ტომების კონტექსტი; container-ის `fsGroup` არ არსებობს |
 | `capabilities`, `privileged`, `allowPrivilegeEscalation`, `readOnlyRootFilesystem` | მხოლოდ container | გაიმეორეთ გამკვრივებული პარამეტრები **ყოველ** container-სა და initContainer-ში |
-| `hostNetwork`, `hostPID`, `hostIPC`, `hostUsers` | Pod spec | ეს არ არის `securityContext`; container-ს არ შეუძლია უსაფრთხოდ „გადაფაროს" host namespace-ზე წვდომა |
+| `hostNetwork`, `hostPID`, `hostIPC`, `hostUsers` | Pod spec | ეს არ არის `securityContext`; container-ს არ შეუძლია უსაფრთხოდ „გადაფაროს“ host namespace-ზე წვდომა |
 
 კონფლიქტის მაგალითი დიაგნოსტიკაში სასარგებლოა:
 
@@ -239,12 +239,12 @@ spec:
     image: registry.example.invalid/app:1.4.2
 ```
 
-`supplementalGroupsPolicy` — GA/stable Kubernetes v1.35-ში (lifecycle: alpha v1.31 → beta
+`supplementalGroupsPolicy` - GA/stable Kubernetes v1.35-ში (lifecycle: alpha v1.31 → beta
 v1.33 → GA v1.35), ოფიციალური Kubernetes release blog-ის მიხედვით. Feature gate
 `SupplementalGroupsPolicy` დაფიქსირებულია enabled by default მდგომარეობაში. მაინც
 საჭიროა CRI support-ით: ცნობილი support აქვს containerd-ს v2.0-იდან და CRI-O-ს
 v1.31-იდან. შეამოწმეთ node `status.features.supplementalGroupsPolicy: true`-ით. v1.33-იდან
-kubelet უარყოფს Pod-ს `Strict`-ით მხარდაუჭერელ node-ზე და არა ჩუმად იყენებს `Merge`-ს;
+kubelet უარყოფს Pod-ს `Strict`-ით მხარდაუჭერელ node-ზე და არ იყენებს ჩუმად `Merge`-ს;
 events-ში იქნება `SupplementalGroupsPolicyNotSupported`.
 
 > 🔬 SELinux labels, `procMount`, sysctls და Windows identity მოითხოვს Kubernetes-ის, runtime-ის, CSI-ის, OS-ისა და policy-ის შემოწმებას.
@@ -266,7 +266,7 @@ CSI-ისა/ფაილური სისტემის იზოლაც�
 
 > 🔬 **Upstream v1.37.** Kubernetes v1.37-ში `SELinuxMount` გახდა GA და ჩართულია ნაგულისხმევად. SELinux-ჩართული კლასტერის upgrade-მდე შეამოწმეთ volume-label-ის კონფლიქტები; საჭიროების შემთხვევაში workload-ს შეუძლია ცხადად შეინარჩუნოს რეკურსიული ქცევა `spec.securityContext.seLinuxChangePolicy: Recursive`-ის მეშვეობით. დეტალები: [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
-`procMount` — მხოლოდ container-დონის Linux-ოფციაა: უსაფრთხო default `Default` ტოვებს
+`procMount` - მხოლოდ container-დონის Linux-ოფციაა: უსაფრთხო default `Default` ტოვებს
 `/proc`-ის მგრძნობიარე ნაწილებს დაფარულს; `Unmasked` აფართოებს პროცესის ხედვას და
 არ შეესაბამება restricted workload-ს. Kubernetes v1.30-იდან `Unmasked` დასაშვებია
 მხოლოდ user namespace-ში მყოფი Pod-ისთვის, ანუ `spec.hostUsers: false`-ის შემთხვევაში.
@@ -281,7 +281,7 @@ Windows-ისთვის ეს Linux-კონტროლები არ �
 Windows-node-ის support ცალკე: Linux `runAsUser`/UID და SELinux არ არის
 `runAsUserName`-ის ჩანაცვლება.
 
-> 🧠 Init, sidecar და ephemeral container-ს აქვთ საკუთარი effective-პარამეტრები; სუსტი კონტეინერი აღწევს ირგვლივ Pod-ის hardening-ს.
+> 🧠 Init, sidecar და ephemeral container-ს აქვთ საკუთარი effective-პარამეტრები; სუსტი კონტეინერი გვერდს უვლის Pod-ის hardening-ს.
 
 ### Init, sidecar და ephemeral container - ცალკეული პროცესები
 
@@ -308,11 +308,11 @@ Deployment-template და შექმენით ახალი Pod, და 
 ზოგიერთი პარამეტრი პროცესს აძლევს წვდომას არა მხოლოდ საკუთარ Pod-ზე, არამედ
 node-ის რესურსებზე. ისინი შეიძლება საჭირო იყოს CNI-ს, CSI-ს, node monitoring-ს ან
 runtime agent-ს, მაგრამ თითქმის არასოდეს არის საჭირო ჩვეულებრივ API-ს, worker-ს ან
-batch job-ს. „პროცესი არ არის root" ასეთ წვდომას უსაფრთხოს არ ხდის.
+batch job-ს. „პროცესი არ არის root“ ასეთ წვდომას უსაფრთხოს არ ხდის.
 
 | პარამეტრი | რას ხსნის | რატომ არის ეს რისკი | უსაფრთხო ალტერნატივა |
 |---|---|---|---|
-| `privileged: true` | თითქმის ყველა capabilities, მოწყობილობებს და runtime isolation-ის შესუსტებას | კონტეინერის კომპრომეტაცია node-ის კომპრომეტაციასთან ახლოსაა | ჩვეულებრივი container `drop: ALL`-ით; ერთი capability დაამატეთ მხოლოდ დამტკიცებული საჭიროებისას |
+| `privileged: true` | თითქმის ყველა capabilities-ს, მოწყობილობებს და runtime isolation-ის შესუსტებას | კონტეინერის კომპრომეტაცია node-ის კომპრომეტაციასთან ახლოსაა | ჩვეულებრივი container `drop: ALL`-ით; ერთი capability დაამატეთ მხოლოდ დამტკიცებული საჭიროებისას |
 | `hostPID: true` | node-ის პროცესებს PID-namespace-ში | შესაძლებელია host-პროცესების ხედვა/სიგნალის გაგზავნა, მგრძნობიარე `/proc`-მონაცემების შეგროვება | Metrics API, kubelet Summary API ან ცალკე სანდო node-agent |
 | `hostNetwork: true` | node-ის network-namespace-ს, host-პორტებსა და მის IP-ს | Pod-ქსელის იზოლაციის გვერდის ავლას, პორტების კონფლიქტს, node-ის localhost-სერვისებზე წვდომას | Service, Ingress, NetworkPolicy და ჩვეულებრივი Pod-ქსელი |
 | `hostIPC: true` | node-ის IPC-namespace-ს | წვდომას host-პროცესების shared memory-სა და IPC-ზე | volume, Service ან auth-ის მქონე message queue |
@@ -321,7 +321,7 @@ batch job-ს. „პროცესი არ არის root" ასეთ �
 `privileged: true` აიძულებს `allowPrivilegeEscalation`-ს effective `true` გახდეს და
 ეწინააღმდეგება გამკვრივებული workload-ის მიზანს. ასეთი container ასევე იღებს seccomp
 `Unconfined`-ს, AppArmor მისთვის იგნორირდება, ხოლო SELinux context ხდება `unconfined_t`.
-ნუ ეცდებით ამის „გასწორებას" მეზობელი `allowPrivilegeEscalation: false`-ით: container
+ნუ ეცდებით ამის „გასწორებას“ მეზობელი `allowPrivilegeEscalation: false`-ით: container
 რჩება privileged-ად. იგივე effective-წესი `allowPrivilegeEscalation`-ისთვის მოქმედებს
 `CAP_SYS_ADMIN`-ის დროსაც. ანალოგიურად, `hostNetwork: true`-ს ვერ გახდით უსაფრთხოს
 ერთი `NetworkPolicy`-ით, რადგან NetworkPolicy ჩვეულებრივ გათვლილია ჩვეულებრივ
@@ -378,7 +378,7 @@ DaemonSet-ს სჭირდება კონტექსტური review:
 
 Kubernetes v1.36-ში user namespaces stable-ია. `hostUsers: false` სთხოვს kubelet-ს,
 Pod-ისთვის შექმნას user namespace და შეარჩიოს არაგადაკვეთადი UID/GID mapping: UID 0 ან
-`runAsUser` container-ის შიგნით ასახვას node-ის არაპრივილეგირებულ UID/GID-ზე. Capabilities
+`runAsUser` container-ის შიგნით აისახება node-ის არაპრივილეგირებულ UID/GID-ზე. Capabilities
 მოქმედებს მხოლოდ ამ namespace-ში: მაგალითად, `CAP_SYS_ADMIN` მის ფარგლებს გარეთ
 უფლებას არ იძლევა. ეს დამატებითი ბარიერია workload-ისთვის, რომელსაც container-ის შიგნით
 root სჭირდება, მაგრამ host namespaces-ზე ან node-ის რესურსებზე წვდომა არ სჭირდება.
@@ -404,7 +404,7 @@ spec:
 აკრძალულია. v1.36-ში alpha gate `UserNamespacesHostNetworkSupport` (default `false`)
 ცალკე ანებართლებს `hostNetwork: true`-ს `hostUsers: false`-თან ერთად; `hostPID` და
 `hostIPC` ისევ აკრძალულია. გამკვრივებული baseline არ უნდა ეყრდნობოდეს ამ alpha-
-გამონაკლისს: ასეთი შეთანხმება მოითხოვს ცხად gate-ს, ცალკე review-სა და threat model-ის
+გამონაკლისს: ასეთი კომბინაცია მოითხოვს ცხად gate-ს, ცალკე review-სა და threat model-ის
 შემოწმებას. საჭიროა idmapped mounts node-ის filesystem-სა და ყველა volume-ზე,
 მხარდამჭერი CRI/OCI-runtime და თავსებადი ბირთვი; აქტუალურ დოკუმენტაციაში მითითებულია
 containerd v2.0+, CRI-O v1.25+, runc v1.2+ ან crun v1.9+. NFS-ს idmapped mounts-ის
@@ -489,7 +489,7 @@ Logs ჩვეულებრივ იგზავნება stdout/stderr-�
 ### Debug hardening-ის მოხსნის გარეშე
 
 სიმპტომი `Read-only file system` - სასარგებლო სიგნალია. ჯერ დაადგინეთ path, შემდეგ
-გადაწყვიტეთ, დროებითია თუ არა ის, cache არის თუ მონაცემები. ნუ „მოაგვარებთ" incident-ს
+გადაწყვიტეთ, დროებითია თუ არა ის, cache არის თუ მონაცემები. ნუ „მოაგვარებთ“ incident-ს
 `privileged: true`-ის დამატებით ან `hostPath`-ში ჩაწერით.
 
 ```bash
@@ -578,7 +578,7 @@ runtime-log-ის შემოწმება. ნუ აქცევთ სა
 ```bash
 # მიმდინარე სასწავლო Pod-ის დეკლარაციული intent.
 kubectl get pod hardened-web -o yaml
-# Production-ში მართვადი workload-ის source of truth — მისი controller-template:
+# Production-ში მართვადი workload-ის source of truth - მისი controller-template:
 # kubectl get deploy <deployment-name> -o yaml
 
 # Pod-დონის context და ყოველი ჩვეულებრივი/init container-ის context
@@ -595,7 +595,7 @@ kubectl get pod hardened-web -o json | jq '
 
 JSONPath აჩვენებს declared configuration-ს. არარსებული boolean-ველისთვის ცარიელი
 გამოტანა არ ნიშნავს `false`-ს: audit-ის მოთხოვნები უნდა იყოს explicit, და არ უნდა
-ითვლისწინებდეს default-ზე. შეამოწმეთ ასევე `initContainers`, injected service-mesh/
+ეყრდნობოდეს default-ს. შეამოწმეთ ასევე `initContainers`, injected service-mesh/
 observability-sidecars და ephemeral containers: ერთი სუსტი container იზიარებს იმავე
 Pod-ის ქსელსა და volumes-ს.
 
@@ -638,7 +638,7 @@ smoke-test-Pod ან უვნებელი path, ჯერ გამორ�
 
 | სიმპტომი | სავარაუდო მიზეზი | გასწორება |
 |---|---|---|
-| `container has runAsNonRoot and image will run as root` | image-ში მითითებული არ არის non-root USER, UID დაუყენებელია | ააშენეთ image non-root USER-ით ან ცხადად დააყენეთ დამტკიცებული ნულის-არა UID |
+| `container has runAsNonRoot and image will run as root` | image-ში მითითებული არ არის non-root USER, UID დაუყენებელია | ააშენეთ image non-root USER-ით ან ცხადად დააყენეთ დამტკიცებული ნულისგან განსხვავებული UID |
 | `Permission denied` mounted volume-ზე | UID/GID არ ემთხვევა, `fsGroup` არ არის გამოყენებული driver-ის მიერ | შეამოწმეთ ownership, storage-driver, `fsGroup`; ნუ გააკეთებთ ბრმა `chmod 777` |
 | `Read-only file system` | app წერს PID/cache/temp-ს image-layer-ში | დაამატეთ ვიწრო `emptyDir` ან PVC ზუსტად საჭირო path-ზე |
 | Pod არ იქმნება `Localhost` seccomp-ით | profile არ არის არჩეულ node-ზე | მიაწოდეთ profile და შეზღუდეთ placement ან დაბრუნდით `RuntimeDefault`-ზე |
@@ -658,14 +658,14 @@ mount-გაკეთებული აქვს.
 ## 18.9. გამკვრივებული baseline-ის ეტაპობრივი დანერგვა
 
 დანერგეთ baseline Deployment-/StatefulSet-/Job-template-სა და Helm chart-ში, და არა
-ხელით შექმნილ Pod-ში. უმეტესი running Pod-ის `securityContext` immutable-ია: სწორი
+ხელით შექმნილ Pod-ში. running Pod-ების უმეტესობის `securityContext` immutable-ია: სწორი
 ცვლილება გამოიცემა ახალი ReplicaSet-ით/Pod-ით და დაკვირვება ხდება rollout-ზე.
 
 1. ჩაატარეთ ინვენტარიზაცია: პროცესები, writable paths, low ports, volume ownership,
    syscall/profile მოთხოვნები და მიმდინარე `privileged`/`host*`-გამონაკლისები.
 2. გაასწორეთ image: non-root `USER`, ფაილები საჭირო UID/GID-ისთვის წაკითხვადია,
    აპლიკაცია წერს დოკუმენტირებულ დირექტორიებში და არა `/`-ში.
-3. დაამატეთ Pod-baseline: `runAsNonRoot`, ცხადი ნულის-არა UID/GID, `RuntimeDefault`
+3. დაამატეთ Pod-baseline: `runAsNonRoot`, ცხადი ნულისგან განსხვავებული UID/GID, `RuntimeDefault`
    seccomp და საჭიროებისას `fsGroup`.
 4. დაამატეთ container-baseline **ყველა** app-/init-/sidecar-container-ისთვის:
    `drop: ["ALL"]`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`,
@@ -690,7 +690,7 @@ mount-გაკეთებული აქვს.
 <details>
 <summary>2. Container securityContext-ის რომელი ველები უნდა დაყენდეს ცალკე initContainer-ისა და sidecar-ისთვის?</summary>
 
-ყოველი app-ის, sidecar-ისა და initContainer-ისთვის ცალკე უნდა დაყენდეს `capabilities.drop: ["ALL"]`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true` და საჭიროებისას `privileged: false`. Pod-დონის `runAsNonRoot`, UID/GID და `seccompProfile` იძლევა baseline-ს, მაგრამ container-ს შეუძლია მისი override. ამიტომ საჭიროა ყველა container-ების სიის შემოწმება, injected sidecars-ის ჩათვლით.
+ყოველი app-ის, sidecar-ისა და initContainer-ისთვის ცალკე უნდა დაყენდეს `capabilities.drop: ["ALL"]`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true` და საჭიროებისას `privileged: false`. Pod-დონის `runAsNonRoot`, UID/GID და `seccompProfile` იძლევა baseline-ს, მაგრამ container-ს შეუძლია მისი override. ამიტომ საჭიროა container-ების ყველა სიის შემოწმება, injected sidecars-ის ჩათვლით.
 </details>
 
 <details>
@@ -702,7 +702,7 @@ mount-გაკეთებული აქვს.
 <details>
 <summary>4. რატომ არ შეიძლება `fsGroup` ჩაითვალოს image-layer-ის ყველა ფაილის უფლებების გასწორების მექანიზმად?</summary>
 
-`fsGroup` — Pod-პარამეტრია, რომელიც ეხმარება ჯგუფურ წვდომას მხარდაჭერილ volume-ზე. ის არ არის განკუთვნილი image-layer-ის ყველა ფაილის owner-ის შესაცვლელად და არ ცვლის image-ში სწორ ownership-სა და UID-ს. Writable paths-ისთვის ასევე საჭიროა ცხადად volume-ის არჩევა და storage-driver-ის support-ის შემოწმება.
+`fsGroup` - Pod-პარამეტრია, რომელიც ეხმარება ჯგუფურ წვდომას მხარდაჭერილ volume-ზე. ის არ არის განკუთვნილი image-layer-ის ყველა ფაილის owner-ის შესაცვლელად და არ ცვლის image-ში სწორ ownership-სა და UID-ს. Writable paths-ისთვის ასევე საჭიროა ცხადად volume-ის არჩევა და storage-driver-ის support-ის შემოწმება.
 </details>
 
 <details>
@@ -724,7 +724,7 @@ mount-გაკეთებული აქვს.
 </details>
 
 <details>
-<summary>8. სამი დამოუკიდებელი შემოწმებიდან რომელია საჭირო, რომ დამტკიცდეს hardening `kubectl apply`-ის შემდეგ?</summary>
+<summary>8. რომელი სამი დამოუკიდებელი შემოწმებაა საჭირო, რომ დამტკიცდეს hardening `kubectl apply`-ის შემდეგ?</summary>
 
 ჯერ მოწმდება intent: security context template-ში და ყველა container-ში. შემდეგ დასტურდება admission და გაშვება: Pod Ready, events არ აჩვენებს UID-ის, profile-ის ან volume-ის კონფლიქტს. საბოლოოდ მოწმდება runtime-ეფექტი: non-root UID, ნულოვანი capabilities, `NoNewPrivs`, seccomp და მხოლოდ მოსალოდნელი writable mounts, უარყოფითი სცენარების ჩათვლით.
 </details>
@@ -738,7 +738,7 @@ mount-გაკეთებული აქვს.
 <details>
 <summary>10. **Flashback (მე-10 თავი).** PSA მოქმედებს namespace-ის labels-ის მეშვეობით, რომლებიც შეიძლება დაყენდეს ობიექტის შექმნისთანავე, და არა მხოლოდ ცალკე `patch`-ით. მე-10 თავი აღწერს RBAC-კონტროლს არსებული namespace-ის labels-ის **შეცვლისთვის** (`patch` labels `Namespace`), მაგრამ არა თავად namespace-ის **შექმნისთვის**. რატომ არ არის საკმარისი ერთი RBAC-შეზღუდვა verb `create`-ისთვის `namespaces`-ზე, რომ გარანტირებულ იქნას, ახალმა namespace-მა მიიღოს `enforce=restricted`, და რომელი მექანიზმია (RBAC თუ admission-დონის) სინამდვილეში საჭირო, რომ დაიხუროს ზუსტად ეს PSA-გვერდის ავლის გზა?</summary>
 
-RBAC `create namespaces` წყვეტს, შეუძლია თუ არა identity-ს ობიექტის შექმნა, მაგრამ არ ამოწმებს სავალდებულო metadata-labels-ს ახალ მოთხოვნაში. მომხმარებელს ამ უფლებით შეუძლია შექმნას namespace `pod-security.kubernetes.io/enforce=restricted`-ის გარეშე, ხოლო PSA მოქმედებს default configuration-ის მიხედვით, რომელიც restricted-ად ყოფნას არ ვალდებულდება. საჭიროა admission-დონის policy, მაგალითად ValidatingAdmissionPolicy ან policy engine, რომელიც CREATE-ზე მოითხოვს საჭირო labels-ს; RBAC რჩება დამატებით შეზღუდვად namespace-ის შემქმნელთა წრისთვის.
+RBAC `create namespaces` წყვეტს, შეუძლია თუ არა identity-ს ობიექტის შექმნა, მაგრამ არ ამოწმებს სავალდებულო metadata-labels-ს ახალ მოთხოვნაში. მომხმარებელს ამ უფლებით შეუძლია შექმნას namespace `pod-security.kubernetes.io/enforce=restricted`-ის გარეშე, ხოლო PSA მოქმედებს default configuration-ის მიხედვით, რომელსაც restricted-ად ყოფნა არ ევალება. საჭიროა admission-დონის policy, მაგალითად ValidatingAdmissionPolicy ან policy engine, რომელიც CREATE-ზე მოითხოვს საჭირო labels-ს; RBAC რჩება დამატებით შეზღუდვად namespace-ის შემქმნელთა წრისთვის.
 </details>
 
 > 🏭 საერთო chart/template და CI/admission-policy; გამონაკლისს აქვს scope, owner, მიზეზი, გადახედვის ვადა და evidence.

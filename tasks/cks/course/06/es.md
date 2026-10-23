@@ -831,7 +831,7 @@ el L7-proxy de Cilium rechazará entonces una solicitud que no coincida, normalm
 
 `toFQDNs` no resuelve un nombre al aplicar YAML: el DNS-proxy de Cilium observa una respuesta DNS
 permitida, llena una caché FQDN con TTL y permite una conexión a la IP obtenida. Por ello, permita
-por separado el DNS de un Pod hacia CoreDNS confiable; DoH/DoT no llena esta caché y una IP directa
+por separado el DNS de un Pod hacia CoreDNS confiable; DoH/DoT no llenan esta caché y una IP directa
 no crea una asociación FQDN.
 </details>
 

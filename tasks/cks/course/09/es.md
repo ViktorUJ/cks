@@ -201,7 +201,7 @@ importante no dejar el clúster sin API ni siquiera durante un error en el YAML 
 # 1. Crear un hidden candidate en el propio watched directory; kubelet ignora los archivos
 # cuyo nombre comienza con punto, por lo que el Pod no se recreará hasta el reemplazo atómico.
 # /etc/kubernetes/manifests puede ser un mount separado: si se crea el candidate en
-# /etc/kubernetes, mv entre filesystem diferentes se convierte en copy+unlink y deja de ser
+# /etc/kubernetes, mv entre filesystems diferentes se convierte en copy+unlink y deja de ser
 # un atomic rename.
 sudo install -d -m 700 /root/k8s-manifest-backup
 CANDIDATE=$(sudo mktemp /etc/kubernetes/manifests/.kube-apiserver.yaml.candidate.XXXXXX)
@@ -381,7 +381,7 @@ tlsMinVersion: VersionTLS12
 No restrinja TLS solo al server endpoint. etcd tiene client y peer traffic, y apiserver tiene
 clientes kubelet, controller-manager, scheduler, kubectl, webhooks y automation. Primero
 recopile los certificates/keys reales, direcciones de escucha y clientes; después aplique el
-cambio en un nodo de prueba o una sola HA-node. Al migrar a `VersionTLS13`, espere que un cliente
+cambio en un nodo de prueba o un solo HA-node. Al migrar a `VersionTLS13`, espere que un cliente
 TLS 1.2 antiguo sea rechazado: esto no prueba un error del servidor, pero exige un plan de
 migración del cliente.
 
@@ -445,7 +445,7 @@ check_tls11_rejected() {
 
   neg="$(mktemp)" || return 1
 
-  # @SECLEVEL=0 debilita solo este test-client de una vez, para que OpenSSL moderno pueda
+  # @SECLEVEL=0 debilita solo este test-client de un solo uso, para que OpenSSL moderno pueda
   # en lo posible formar un TLS 1.1 ClientHello; el server no cambia.
   if openssl s_client \
       -connect "$endpoint" \
@@ -601,8 +601,8 @@ kubectl get nodes
 | apiserver no inicia | errata en YAML, flag o cipher no admitido | `journalctl -u kubelet`, `crictl logs`; restaurar el último working manifest |
 | el cliente recibe protocol version | el client es más antiguo que el minimum establecido | actualizar el cliente o elegir temporalmente un mínimo acordado mediante excepción aprobada |
 | TLS handshake falla con TLS 1.2 | certificate key algorithm no es compatible con las cipher suites permitidas | comprobar `openssl x509 -text`, añadir suites ECDSA/RSA adecuadas |
-| etcd no está healthy | peer/client no puede negociar TLS o perdió acceso a la key | comprobar todos los endpoint de miembros con mTLS, logs de etcd, rollback de un nodo |
-| `openssl` muestra un cipher TLS 1.3 fuera de la lista | la biblioteca TLS controla los ciphers TLS 1.3 | comprobar minimum version y documentación de la versión, no considerarlo una omisión del flag |
+| etcd no está healthy | peer/client no puede negociar TLS o perdió acceso a la key | comprobar todos los endpoints de miembros con mTLS, logs de etcd, rollback de un nodo |
+| `openssl` muestra un cipher TLS 1.3 fuera de la lista | la biblioteca TLS controla los ciphers TLS 1.3 | comprobar minimum version y documentación de la versión, no considerarlo una forma de eludir el flag |
 
 ## 09.5. Verificación de Kubernetes platform binaries: firma y sha256
 
@@ -726,7 +726,7 @@ sudo cat "/proc/${APIPID}/cmdline" | tr '\0' '\n'
 sudo systemctl cat kubelet
 sudo ps -ef | grep '[k]ubelet'
 
-# 1d. KubeletConfiguration actuada final después de base config, --config-dir y overrides.
+# 1d. KubeletConfiguration final efectivamente aplicada después de base config, --config-dir y overrides.
 NODE="${NODE:?set target node name from kubectl get nodes}"
 kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" \
   | jq '.kubeletconfig | {

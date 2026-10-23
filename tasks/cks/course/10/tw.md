@@ -76,7 +76,7 @@ kubectl auth can-i list pods -n cks-104 \
 
 `--as=<user>` 不會自動恢復該使用者的真實 groups；請列出測試情境中的 impersonated groups。
 
-`--list` 適合概覽，但不保證是任何 authorizer chain 的完整 effective permissions。它依賴 `SelfSubjectRulesReview`，官方文件也警告返回清單可能因叢集 authorization mode 和 evaluation 錯誤而不完整。`--list` 不支援 `--all-namespaces`：`kubectl` 會拒絕此組合，因為 `SelfSubjectRulesReview` 只會列出單一 namespace 的規則，並不是 cluster-wide inventory。關鍵邊界應像上例，針對具體 identity 執行個別 positive/negative `kubectl auth can-i <verb> <resource>`。
+`--list` 適合概覽，但不保證是任何 authorizer chain 的完整 effective permissions。它依賴 `SelfSubjectRulesReview`，官方文件也警告回傳的清單可能因叢集 authorization mode 和 evaluation 錯誤而不完整。`--list` 不支援 `--all-namespaces`：`kubectl` 會拒絕此組合，因為 `SelfSubjectRulesReview` 只會列出單一 namespace 的規則，並不是 cluster-wide inventory。關鍵邊界應像上例，針對具體 identity 執行個別 positive/negative `kubectl auth can-i <verb> <resource>`。
 
 `--list` 適合 review，但不能取代關鍵權限檢查：輸出可能很長，而 wildcard 會隱藏具體風險。Acceptance test 總要檢查「需要的動作 = `yes`」和「相鄰危險動作 = `no`」。對 cluster-scoped resource 不要指定 namespace：
 
@@ -86,7 +86,7 @@ kubectl auth can-i create clusterrolebindings --as="$SA"
 kubectl auth can-i create pods/exec -n cks-104 --as="$SA"
 ```
 
-`--as` 使用 Kubernetes impersonation。在 Kubernetes 1.36，請求可能由寬廣的 legacy `impersonate` verb，或由 Constrained Impersonation 允許：後者分別授予 identity 權限和實際 API request 所需的 `impersonate-on:<mode>:<verb>`。若缺少 impersonation 權限，API 會在檢查被 impersonate identity 前返回 `forbidden`。
+`--as` 使用 Kubernetes impersonation。在 Kubernetes 1.36，請求可能由寬廣的 legacy `impersonate` verb，或由 Constrained Impersonation 允許：後者分別授予 identity 權限和實際 API request 所需的 `impersonate-on:<mode>:<verb>`。若缺少 impersonation 權限，API 會在檢查被 impersonate identity 前回傳 `forbidden`。
 
 安全稽核不要自動授予 legacy `impersonate`；應選擇符合 workflow 的模型並記錄其範圍。
 
@@ -99,7 +99,7 @@ kubectl auth can-i create pods/exec -n cks-104 --as="$SA"
 **Constrained Impersonation** 在 Kubernetes v1.36+ 為 Beta，且預設啟用。與普通 `impersonate` 不同，它不允許以目標身份執行目標所能做的一切。對一般使用者（`Impersonate-User` 不以 `system:serviceaccount:` 或 `system:node:` 開頭），API server 會進行兩項獨立檢查：
 
 1. **Identity permission** - 是否能冒用這個 identity。generic user 要在 `apiGroups: ["authentication.k8s.io"]`、resource `users` 中，以所需名稱的 `resourceNames` 和 verb `impersonate:user-info` 建立規則。user 沒有 namespace scope，因此要用 `ClusterRole` 和 `ClusterRoleBinding` 授予。
-2. **Action-at-scope permission** - 在該冒用身份下，是否能於其 scope 執行特定操作。列出 Pod 使用 `impersonate-on:user-info:list` on `pods`，watch 使用 `impersonate-on:user-info:watch`。只能在需要的 namespace 以 `Role`/`RoleBinding` 授予。只有 identity permission 不足以完成操作。
+2. **Action-at-scope permission** - 在該冒用身份下，是否能於其 scope 執行特定操作。列出 Pod 使用對 `pods` 的 `impersonate-on:user-info:list`，watch 使用 `impersonate-on:user-info:watch`。只能在需要的 namespace 以 `Role`/`RoleBinding` 授予。只有 identity permission 不足以完成操作。
 
 以下範例允許 ServiceAccount `audit-reader` 僅冒用 generic user `readonly@example.com`，並只在 `cks-104` list/watch Pod：
 
@@ -156,13 +156,13 @@ roleRef:
 
 Client 使用相同 headers 或 `kubectl --as=readonly@example.com`；改變的只是 API server 檢查。舊的 `impersonate` 仍可運作且是寬廣 fallback，因此除非有獨立理由，不要與 constrained 規則一併授予。
 
-重要的是，constrained permission 針對**真實 API request**，不是 client 在另一個 review object 內描述的動作。上面的 `impersonate-on:user-info:list/watch` on `pods` 允許以 `--as` 執行實際 `list/watch pods`，但本身不允許：
+重要的是，constrained permission 針對**真實 API request**，不是 client 在另一個 review object 內描述的動作。上面對 `pods` 的 `impersonate-on:user-info:list/watch` 允許以 `--as` 執行實際 `list/watch pods`，但本身不允許：
 
 ```bash
 kubectl auth can-i list pods --as=readonly@example.com -n cks-104
 ```
 
-`kubectl auth can-i` 會建立 `SelfSubjectAccessReview`，因此此 audit workflow 需要覆蓋 `create` on `selfsubjectaccessreviews.authorization.k8s.io` 的 constrained permission，或受控的 legacy impersonator。若能在安全的 read-only 情境直接檢查必要操作，不要只為了方便 `can-i` 而擴大 constrained role。
+`kubectl auth can-i` 會建立 `SelfSubjectAccessReview`，因此此 audit workflow 需要覆蓋對 `selfsubjectaccessreviews.authorization.k8s.io` 執行 `create` 的 constrained permission，或受控的 legacy impersonator。若能在安全的 read-only 情境直接檢查必要操作，不要只為了方便 `can-i` 而擴大 constrained role。
 
 若要盤點，先找出權限來源，再查看規則和 subjects。在理解使用者前，不要修改內建角色。
 
@@ -181,15 +181,15 @@ kubectl get clusterrole "$ROLE_NAME" -o yaml
 
 | Verb 或 resource | 危險原因 | 安全方法 |
 |---|---|---|
-| `escalate` on `roles`/`clusterroles` | 搭配 Role/ClusterRole 的 `create`/`update` 後，可繞過「自己必須擁有寫入角色的所有權限」要求。 | 不授予 workload 和普通 namespace 管理員；分別控制 RBAC 物件 CRUD 及 bypass verb。 |
-| `bind` on `roles`/`clusterroles` | 搭配 RoleBinding/ClusterRoleBinding 的 `create`/`update` 後，可繞過 referenced role 權限要求。 | 用 `resourceNames` 限制到具體角色，只在確實需要管理 binding 時授予。 |
-| `impersonate` on `users`、`groups`、`serviceaccounts`、`uids` 或 `userextras/<name>` | 能以另一 identity（包括更高權限者）執行請求。Extra fields 使用精確的 resource name，例如 `authentication.k8s.io` API group 中的 `userextras/scopes`。 | 僅必要時給稽核者，並限制 `resourceNames`。 |
+| 對 `roles`/`clusterroles` 的 `escalate` | 搭配 Role/ClusterRole 的 `create`/`update` 後，可繞過「自己必須擁有寫入角色的所有權限」要求。 | 不授予 workload 和普通 namespace 管理員；分別控制 RBAC 物件 CRUD 及 bypass verb。 |
+| 對 `roles`/`clusterroles` 的 `bind` | 搭配 RoleBinding/ClusterRoleBinding 的 `create`/`update` 後，可繞過 referenced role 權限要求。 | 用 `resourceNames` 限制到具體角色，只在確實需要管理 binding 時授予。 |
+| 對 `users`、`groups`、`serviceaccounts`、`uids` 或 `userextras/<name>` 的 `impersonate` | 能以另一 identity（包括更高權限者）執行請求。Extra fields 使用精確的 resource name，例如 `authentication.k8s.io` API group 中的 `userextras/scopes`。 | 僅必要時給稽核者，並限制 `resourceNames`。 |
 | `create`/`update`/`patch` RoleBinding 和 ClusterRoleBinding | 搭配可用角色可轉交權限；ClusterRoleBinding 影響整個叢集。 | 禁止給應用程式；將 access grant 與 workload 開發分離。 |
 | `get`/`list`/`watch` `secrets` | Secret 常含密碼、registry credential、key 或 bearer token；`list`/`watch` 暴露大量 Secret 值。 | 對 `get` 用 `resourceNames` 指定單一 Secret，或不給應用程式 API 存取。 |
 | `create` `serviceaccounts/token` | 可發行所選 ServiceAccount token，成為使用其權限的方式。 | 只給可信自動化，並限制到特定 ServiceAccount。 |
 | `create` `pods/exec` | 可在現有 Pod 互動執行命令，接觸網路、檔案系統和 mounted Secret。 | 不加入普通角色；使用短效 break-glass access 並稽核。 |
 | `create` `pods/portforward` | 建立通往 Pod port 的 tunnel，繞過一般網路暴露。 | 僅用於診斷，精確授予並在事件後撤銷。 |
-| `create` workload（`pods`、`deployments`、`jobs` 等） | 在 namespace 建立 Pod/workload 本身即能選任意 ServiceAccount，並從 Pod spec 引用 Secret、ConfigMap 和可用 storage，即使原 identity 沒有 `get secrets`。若 policy 允許 privileged/host-level Pod，後果可擴散到 node。 | 非必要不要授予不可信 tenant identity；視為 privileged 權限，限制 Pod Security、ServiceAccount、Secret/storage design 和 admission policy。 |
+| `create` workload（`pods`、`deployments`、`jobs` 等） | 在 namespace 建立 Pod/workload 本身就會帶來強大的間接存取：可以選擇該 namespace 的任意 ServiceAccount，並從 Pod spec 引用 Secret、ConfigMap 和可用 storage，即使原 identity 沒有 `get secrets`。這可以取得其他 workload 的資料或 API 權限。若 policy 允許 privileged/host-level Pod，後果可擴散到 node。 | 非必要不要授予不可信 tenant identity；視為 privileged 權限，限制 Pod Security、ServiceAccount、Secret/storage design 和 admission policy。 |
 | `nodes` | 讀取 node 物件會暴露基礎設施資訊；修改 node 是 cluster-wide 操作。 | 從 tenant role 排除，僅給獨立的 operation identity。 |
 | `get` `nodes/proxy` | 可透過 proxy 請求 kubelet；不是 read-only，可能繞過 admission 和 API server 的一般 audit。 | 不給 workload 或 tenant role，只給嚴格控制的 operation identity。 |
 
@@ -285,7 +285,7 @@ rules:
 ```mermaid
 flowchart TB
     need["需要 API 操作"] --> scope{"Resource 是 namespaced？"}
-    scope -->|"是"| reuse{"需要跨 namespace 重用？"}
+    scope -->|"是"| reuse{"需要跨 namespace<br/>重用？"}
     reuse -->|"否"| role["Role：精確<br/>apiGroups/verbs"]
     role --> rb["Namespace 中的<br/>RoleBinding"]
     reuse -->|"是"| crn["ClusterRole：<br/>namespaced 規則"]
@@ -414,7 +414,7 @@ Production 可在 RBAC 變更後將這組 `can-i` 納入 smoke test，並要求 
 ## 10.7. Production 中的應用方式
 
 - **預設使用 Role。** 團隊和應用程式取得 namespaced `Role`/`RoleBinding`；`ClusterRoleBinding` 必須有 owner、原因、期限和 security review。
-- **預設使用 ServiceAccount。** 不要給 `default` ServiceAccount 應用程式權限。若 workload 不呼叫 Kubernetes API，設定 `automountServiceAccountToken: false`；否則建立具最小權限的獨立 ServiceAccount。
+- **預設使用 ServiceAccount。** 不要給 `default` ServiceAccount 應用程式權限。若 workload 不呼叫 Kubernetes API，設定 `automountServiceAccountToken: false`；否則建立具最小權限的獨立 ServiceAccount。這樣稽核和撤銷存取都能精確到單一對象。
 - **RBAC as code。** 將自有角色存放 Git，在 CI 檢查規則 diff 和 aggregation labels；明確阻擋 wildcard、`escalate`、`bind`、`impersonate` 及未經批准的 Secret 存取。
 - **API server authorization 設定。** 先確認兩種互斥方式中使用哪一種。Command-line configuration 要確認 `--authorization-mode` 含必要 chain，例如 `Node,RBAC`。File-based configuration 使用 `--authorization-config` 時不要同時設定 `--authorization-mode`；直接在 `AuthorizationConfiguration` 檢查 `type: RBAC`、authorizers 的內容和順序。這個 chain 應列入 security review。
 - **定期稽核。** 盤點 `ClusterRoleBinding`、`system:serviceaccount` subjects、內建角色和 aggregators；用 `kubectl auth can-i` 檢查關鍵 contracts。
@@ -435,7 +435,7 @@ Production 可在 RBAC 變更後將這組 `can-i` 納入 smoke test，並要求 
 
 - RBAC 權限具有累加性：多餘 binding 不能由更窄角色補償，必須找到並刪除或縮小。
 - Least privilege 從特定 namespace 的 `Role` 和 `RoleBinding` 開始；叢集層級 access 和 `ClusterRoleBinding` 需要獨立理由。
-- `kubectl auth can-i --list` 是有用的規則概覽，但不保證完整 inventory。Security-critical boundary 要用 targeted `can-i` 證明：預期存取為 `yes`，禁止存取為 `no`。
+- `kubectl auth can-i --list` 在結果完整時是有用的規則概覽，但不保證是完整的 inventory。Security-critical boundary 要用 targeted `can-i` 證明：預期存取為 `yes`，禁止存取為 `no`。
 - 特別危險的是 `escalate`、`bind`、`impersonate`、修改 binding、`secrets`、`serviceaccounts/token`、`pods/exec`、`pods/portforward` 和 `get nodes/proxy`。
 - 除非有例外且有文件，不要使用 `*`：wildcard 包含現在和未來的 API、resource、subresource 和 verbs。
 - Aggregated ClusterRole 可能悄悄擴展 `view`、`edit` 和 `admin`；必須 review `aggregate-to-*` labels 及來源角色。
@@ -459,9 +459,9 @@ Production 可在 RBAC 變更後將這組 `can-i` 納入 smoke test，並要求 
 >
 > **Control:** API 不需要時設定 `automountServiceAccountToken: false`；需要時使用 projected short-lived token 和最小 RBAC。
 >
-> **Retest:** 允許的 API call 成功，禁止的 API call 返回 `403`。
+> **Retest:** 允許的 API call 成功，禁止的 API call 回傳 `403`。
 >
-> **ATT&CK:** [T1528 — Steal Application Access Token](https://attack.mitre.org/techniques/T1528/)。
+> **ATT&CK:** [T1528 - Steal Application Access Token](https://attack.mitre.org/techniques/T1528/)。
 
 ## 10.11. 自我檢查問題
 
@@ -474,13 +474,13 @@ Kubernetes RBAC 具有累加性：只要任一 RoleBinding 或 ClusterRoleBindin
 <details>
 <summary>2. 哪兩個 `can-i` 檢查能證明 `app-sa` 可讀 Pod 但不能刪除？</summary>
 
-執行 `kubectl auth can-i get pods -n cks-104 --as=system:serviceaccount:cks-104:app-sa` 並期待 `yes`；再執行相同 identity 的 `delete pods` 並期待 `no`。這對檢查的是 API server 的實際決策，而不只是角色 YAML。
+執行 `kubectl auth can-i get pods -n cks-104 --as=system:serviceaccount:cks-104:app-sa` 並期待 `yes`；再執行 `kubectl auth can-i delete pods -n cks-104 --as=system:serviceaccount:cks-104:app-sa` 並期待 `no`。這對檢查的是 API server 的實際決策，而不只是角色 YAML。
 </details>
 
 <details>
 <summary>3. 為什麼 `get`/`list` Secret 比讀取多數普通 resource 危險？</summary>
 
-Secret 常含密碼、registry credential、key 或 bearer token，讀取會揭露可直接使用的憑證。`list` 和 `watch` 可能一次暴露許多 Secret；若只需單一已知 Secret，使用帶 `resourceNames` 的精確 `get`，或不給應用程式 API 存取。
+Secret 常含密碼、registry credential、key 或 bearer token，讀取揭露的不只是 topology 或狀態，而是可直接使用的憑證。`list` 和 `watch` 可能一次暴露許多 Secret；若只需單一已知 Secret，使用帶 `resourceNames` 的精確 `get`，或不給應用程式 API 存取。
 </details>
 
 <details>
@@ -514,7 +514,7 @@ RBAC controller 會把帶此 label 的 ClusterRole 規則加入最終內建 `vie
 </details>
 
 <details>
-<summary>9. **回顧（第 04 章）。** NetworkPolicy 是 allow-list；RBAC 何處使用同樣的「先全部禁止，再明確允許」邏輯？何時 request 會取得 default-deny？</summary>
+<summary>9. **回顧（第 04 章）。** NetworkPolicy 是 allow-list：先 default-deny，再加入狹窄的允許規則；RBAC 何處使用同樣的「先全部禁止，再明確允許」邏輯？何時 request 會取得 default-deny？</summary>
 
 RBAC 從沒有必要 permissions 開始，只加入精確 `apiGroups`、`resources` 和 `verbs` 及最小 scope。若沒有任何適用 RoleBinding 或 ClusterRoleBinding 提供 Allow，request 就會被拒絕。除了直接指定 subject 的 binding，也要考慮 identity 從 groups 取得的權限（例如 ServiceAccount 的 `system:serviceaccounts`）。因此沒有直接 binding 不能單獨證明沒有 access，需以具體 identity 的 `kubectl auth can-i` 確認。與 NetworkPolicy 不同，決策由 API server 的 RBAC authorizer 作出，但結果同樣是明確 allow-list。
 </details>

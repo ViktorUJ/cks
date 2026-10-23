@@ -266,7 +266,7 @@ cloud レベルでは security group または firewall を使います。`2379`
 
 すでにある Dashboard は置き換えまたは廃止を計画してください。それまで UI を public `LoadBalancer` や Internet-facing Ingress で公開せず、日常的な identity として `cluster-admin` を使わないでください。UI は VPN または authenticated access proxy の背後に置き、TLS と最小の namespace-scoped RBAC を適用します。同じ要件は Kubernetes API 上の他のサポート対象 web または desktop UI にも適用されます。private exposure、strong authentication、短いセッション、audit、minimal-scope kubeconfig または ServiceAccount です。
 
-共有リソースの read-only role には `get/list/watch` が必要ですが、subresource `pods/log` には実質的に `get` だけが必要です。
+リソース一覧表示用の read-only role には `get/list/watch` が必要ですが、subresource `pods/log` には実質的に `get` だけが必要です。
 
 ```yaml
 rules:
@@ -394,7 +394,7 @@ timeout では `curl` が非ゼロ終了する場合があるため、自動化�
 >
 > **Retest:** metrics は動作し続け、management/exec path は認可されなくなる。
 >
-> **ATT&CK:** [T1609 — Container Administration Command](https://attack.mitre.org/techniques/T1609/) と [T1613 — Container and Resource Discovery](https://attack.mitre.org/techniques/T1613/)。
+> **ATT&CK:** [T1609 - Container Administration Command](https://attack.mitre.org/techniques/T1609/) と [T1613 - Container and Resource Discovery](https://attack.mitre.org/techniques/T1613/)。
 
 ## 05.10. 自己確認の質問
 

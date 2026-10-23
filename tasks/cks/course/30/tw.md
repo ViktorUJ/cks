@@ -8,7 +8,7 @@
 > 將 runtime、API、network 和 application correlation 起來。
 
 > **接下來。** [第 29 章](../29/tw.md) 的 Falco 會將 system events 轉成 alert。但 alert 本身無法回答「哪個 Pod？」、
-> 「哪個 process？」「之前和之後發生什麼？」以及「attack 停在哪個 phase？」。此處建立從 signal 到 workload
+> 「哪個 process？」、「之前和之後發生什麼？」以及「attack 停在哪個 phase？」。此處建立從 signal 到 workload
 > 及其 owner 的 evidence chain。這是 CKS 的 **Monitoring, Logging & Runtime Security (20%)** domain。
 
 > **需要的 CKA 知識。** Node architecture、container runtime 和 CNI 請見 [CKA 第 02 章](../../../cka/course/02/tw.md)，
@@ -73,10 +73,10 @@ Audit log 不會顯示 container 內每個 `openat(2)`；那是 Falco 或 host a
 - **Hardware root of trust 與 trusted/secure boot。** TPM（Trusted Platform Module）或 vTPM 提供 cryptographic root of trust，可用於驗證 node boot chain integrity：BIOS/UEFI → bootloader → kernel → container runtime。若該 chain 已被破壞（modified bootloader、unsigned kernel），沒有 Kubernetes-level control（RBAC、admission、NetworkPolicy）能防護 kubelet 啟動**之前**的 compromise。Managed cloud providers 常將其作為獨立 option 提供（例如 GCP Shielded VM/Confidential VM、AWS Nitro-based attestation） - 這不是 Kubernetes object，而是 VM/host property。
 - **Confidential computing / TEE（Trusted Execution Environment）。** 保證視 technology 及其 threat model 而定：Intel SGX 保護 enclave，AMD VM-based confidential computing 中，SEV-SNP 對 malicious host/hypervisor 提供最強 model。較早的 SEV/SEV-ES 有不同 threat model，不能自動說成防護 fully compromised host。對 privacy-sensitive workloads，要檢查 chosen technology 的 attestation、firmware/TCB 及其 limitations。Kubernetes 通常透過特別的 `RuntimeClass`（confidential containers、kata-CC）提供它，但 hardware guarantee 仍在 Kubernetes API 之外。
 - **Node bootstrapping trust。** 新 node 加入 cluster 時，問題是它是否於預期 physical/logical location 運行，及能否在獲得 cluster secrets 前 cryptographically prove identity。Self-managed (`kubeadm`) deployments 透過 node join 時的 TLS bootstrap token/CSR process 部分自動化；managed cloud providers 也可能使用 cloud instance identity document 或 provider-specific attestation。但完整 physical attestation（「此 VM 確實在 Y data center 具有 TPM X 的 hardware 上執行」）屬 cloud provider/infrastructure team，而非 cluster。
-- **用於 critical keys 的 HSM（Hardware Security Module）。** Production 中，建議將 kube-apiserver CA private key、etcd encryption key 或第 21 章 `EncryptionConfiguration` 的 KMS master key 存於 HSM，而非 disk file - HSM 是實體裝置，設計為不讓 software extract private key。AWS KMS default key store 是 HSM-backed service：key material 在 FIPS 140-3 HSM 內生成、使用，且不以 plaintext 離開。但 AWS KMS 也支援 custom key stores - AWS CloudHSM key store（dedicated customer-owned HSM cluster）及 external key store（XKS，key material 和部分 crypto operations 在 AWS 之外的 external key-management system 中，可為 physical/virtual HSM 或 software key manager）。因此「所有 keys 都 HSM-backed」對 default key store 成立，卻不是 custom/external key stores 的 universal guarantee。Google Cloud KMS 的 HSM 是與 `SOFTWARE`、`EXTERNAL`/`EXTERNAL_VPC` 並列的可選 `ProtectionLevel`（`HSM`/`HSM_SINGLE_TENANT`），所以並非每個 Cloud KMS key 都保證 HSM-backed，建立 key 時須明確檢查。這延續第 21 章 etcd encryption，但 HSM 本身是 Kubernetes API 外的 physical device。
+- **用於 critical keys 的 HSM（Hardware Security Module）。** Production 中，建議將 kube-apiserver CA private key、etcd encryption key 或第 21 章 `EncryptionConfiguration` 的 KMS master key 存於 HSM，而非 disk file - HSM 是實體裝置，設計為不讓 software extract private key。AWS KMS default key store 是 HSM-backed service：key material 在 FIPS 140-3 HSM 內生成、使用，且不以 plaintext 離開。但 AWS KMS 也支援 custom key stores - AWS CloudHSM key store（dedicated customer-owned HSM cluster）及 external key store（XKS，key material 和部分 crypto operations 在 AWS 之外的 external key-management system 中，可為 physical/virtual HSM 或 software key manager）。因此「所有 keys 都 HSM-backed」對 default key store 成立，卻不是 custom/external key stores 的 universal guarantee。Google Cloud KMS 的 HSM 是與 `SOFTWARE`（不使用實體 HSM 的軟體實作）、`EXTERNAL`/`EXTERNAL_VPC` 並列的可選 `ProtectionLevel`（`HSM`/`HSM_SINGLE_TENANT`），所以並非每個 Cloud KMS key 都保證 HSM-backed，建立 key 時須明確檢查。這延續第 21 章 etcd encryption，但 HSM 本身是 Kubernetes API 外的 physical device。
 - **Physical media secure erasure。** 將 physical-disk PersistentVolume 退役（例如 disk 故障送回 vendor）時，僅刪除 `PersistentVolumeClaim` 無法保證 data 的 physical erasure - 必須由 disk 支援 secure erase（SSD self-encryption、cryptographic erase）。這是 storage provider/infrastructure team 的責任。
 
-**哪些可透過 `kubectl`/`crictl` 驗證，哪些不可。** 上述項目沒有一個由 Kubernetes API 直接驗證 - 這是刻意的 architectural separation：Kubernetes 管理 workload 與其 admission，而不管理底層 hardware trust chain。從 API「外部」最多看見 `Node` labels/taints，provider 有時用它們標記 node hardware capabilities（例如由 Node Feature Discovery 提供，用於 confidential computing 或 TPM presence 的 `feature.node.kubernetes.io/`-style labels），但 integrity verification 在 cluster 外進行。Curriculum competence 並未排除 physical infrastructure；實際結論是無 physical data-center access 的 performance-based exam 不應期待直接 physical tasks，其 practical coverage 更可能透過 infrastructure/node signals 與正確 threat classification 呈現。若 task 需要完整 physical security program（access control、hardware supplier audits），那是本課程不再展開的 ISO 27001/SOC 2-style program；了解這些 terms 至少使你能正確分類 threat，而不會尋找不存在的 Kubernetes control。
+**哪些可透過 `kubectl`/`crictl` 驗證，哪些不可。** 上述項目沒有一個由 Kubernetes API 直接驗證 - 這是刻意的 architectural separation：Kubernetes 管理 workload 與其 admission，而不管理底層 hardware trust chain。從 API「外部」最多看見 `Node` labels/taints，provider 有時用它們標記 node hardware capabilities（例如由 Node Feature Discovery 提供，用於 confidential computing 或 TPM presence 的 labels with the prefix `feature.node.kubernetes.io/`），但 integrity verification 在 cluster 外進行。Curriculum competence 並未排除 physical infrastructure；實際結論是無 physical data-center access 的 performance-based exam 不應期待直接 physical tasks，其 practical coverage 更可能透過 infrastructure/node signals 與正確 threat classification 呈現。若 task 需要完整 physical security program（access control、hardware supplier audits），那是本課程不再展開的 ISO 27001/SOC 2-style program；了解這些 terms 至少使你能正確分類 threat，而不會尋找不存在的 Kubernetes control。
 
 > 🏭 Containment 前保留原始 alert 與 immutable identifiers：這種 evidence discipline 讓 attribution 可重新驗證，且不會在 Pod restart 後遺失 context。
 
@@ -176,7 +176,7 @@ sudo systemctl restart falco
 sudo systemctl is-active falco
 ```
 
-對 DaemonSet，取代 `systemctl` 的是套用更新的 `ConfigMap`/Helm release，並等待 rollout。接著檢查每個 needed
+對 DaemonSet，取代 `systemctl` 的是套用更新的 `ConfigMap`/Helm release，並等待 rollout。接著檢查每個所需的
 node pool，而不是一個隨機 Pod：
 
 ```bash
@@ -336,12 +336,12 @@ sudo crictl inspect "$CONTAINER_ID" > "$EVIDENCE/crictl-inspect.json"
 )
 ```
 
-> 🏭 Containment 是有可逆初始 steps、明確 decision owner 與 result evidence 的連續 workflow。選擇 quarantine、cordon 或停止 workload，取決於 scope 與保存的 evidence。
+> 🏭 Containment 是有可逆初始 steps、明確 decision owner 與 result evidence 的連續 workflow。選擇 quarantine、cordon 或刪除 workload，取決於 scope 與保存的 evidence。
 
 ## 30.5. Alert 後：containment，而不只是 evidence
 
 前節將 evidence chain 從 alert 建立至 workload，但 investigation 本身無法停止 attacker。
-當 Pod、node 和 identity 已識別，就需要具體、可驗證的 response step。這是通往
+當 Pod、node 和 identity 已識別，就需要具體的 response step - 不是抽象的「隔離」，而是下列可驗證機制之一。這是通往
 [第 32 章](../32/tw.md)的橋梁：其中討論 Kubernetes audit logs，而 containment actions
 本身也會產生必須保存作為 incident evidence 的 audit events。
 

@@ -18,7 +18,7 @@
 > **Qué debe saber de CKA.** En un clúster kubeadm self-managed, `kube-apiserver` es un static
 > Pod y su manifiesto está en `/etc/kubernetes/manifests/`; esto se explica en el
 > [capítulo 35 de CKA](../../../cka/course/35/es.md). Para practicar el trabajo seguro en el
-> nodo control plane es útil el [lab 112 de CKA](../../../cka/labs/112/README_ES.MD): trata sobre
+> nodo control plane es útil la [lab 112 de CKA](../../../cka/labs/112/README_ES.MD): trata sobre
 > etcd snapshot/restore, no sobre audit, pero utiliza el mismo acceso SSH, static Pod y
 > comprobación de salud de API.
 
@@ -108,7 +108,7 @@ flowchart TB
 
 | Etapa | Cuándo aparece | Significado práctico |
 |---|---|---|
-| `RequestReceived` | inmediatamente después de aceptar la solicitud, antes de procesarla | evidence temprano; para solicitudes normales a menudo es redundante |
+| `RequestReceived` | inmediatamente después de aceptar la solicitud, antes de procesarla | evidence temprana; para solicitudes normales a menudo es redundante |
 | `ResponseStarted` | API empezó a enviar response | normalmente es importante para `watch` de larga duración y streaming `exec`/`attach`/`port-forward`; para WebSocket puede ser la primera evidence útil de un upgrade correcto (`101 Switching Protocols`), mientras que `ResponseComplete` aparecerá solo tras cerrar stream |
 | `ResponseComplete` | el procesamiento terminó por completo | etapa principal para la investigación: hay status y outcome final |
 | `Panic` | el handler de API server terminó en panic | diagnóstico de emergencia importante |
@@ -368,8 +368,8 @@ sudo ls -l /var/log/kubernetes/audit/audit.log
 
 Si API server no vuelve, revise inmediatamente `journalctl -u kubelet`, el contenedor terminado
 mediante `crictl ps -a`/`crictl logs` y el YAML del manifiesto. Si es necesario, restaure el
-archivo guardado `.bak` **fuera** del directorio manifests: un backup dentro de
-`/etc/kubernetes/manifests/` kubelet puede interpretar como otro static Pod manifest.
+copia de `kube-apiserver.yaml` con marca de tiempo guardada en `/root/k8s-manifest-backup` **fuera** del directorio manifests: un backup dentro de
+`/etc/kubernetes/manifests/`, kubelet puede interpretarlo como otro static Pod manifest.
 
 ```bash
 sudo journalctl -u kubelet -n 120 --no-pager
@@ -471,7 +471,7 @@ flowchart TB
 ```
 
 Ejemplo de kubeconfig mínimo para collector. En production use un client
-certificate/key independiente u otro método de authentication compatible, un CA verificable y una
+certificate/key independiente u otro método de authentication compatible, una CA verificable y una
 key secreta con privilegios mínimos en el nodo.
 
 ```yaml
@@ -768,7 +768,7 @@ rotación de archivos y el retraso de entrega batch/webhook.
   reduce la duplicación sin eliminar el outcome. Para `exec`/`attach`/`port-forward` de streaming,
   `ResponseStarted` con `101 Switching Protocols` puede ser la primera evidence útil de upgrade.
 - `Metadata` es un default seguro; `Request`/`RequestResponse` deben aplicarse de forma acotada,
-  y nunca se debe registrar Secret body salvo por una razón excepcional.
+  y, sobre todo, nunca se debe registrar Secret body salvo por una razón excepcional.
 - Las rules de policy están ordenadas: gana la primera coincidencia, por lo que las exclusiones y los
   recursos sensitive deben estar por encima del catch-all `Metadata`.
 - En kubeadm, audit se activa con flags de API server, policy/log mounts y `hostPath` en el static

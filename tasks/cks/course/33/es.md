@@ -154,7 +154,7 @@ Según la página de producto LF, el simulador incluido ofrece **dos intentos**.
 
 **Segundo intento:** úselo después de cerrar la lista de errores, no de inmediato. Vuelva a respetar el temporizador de dos horas y no mire las soluciones durante la primera pasada. En las horas restantes de la ventana de 36 horas compare el resultado con el primer intento, repita solo los tipos de tareas fallidos y haga una comprobación final de su táctica: host asignado, context, verificación y vuelta a `base`.
 
-Regla de parada: si después de varios minutos intencionados no hay un siguiente paso verificable, anote lo que ya está hecho y lo que falta, ponga un flag y continúe. No elimine una configuración que funciona por una conjetura arriesgada. Tenga especial cuidado con operaciones en API server, etcd, firewall, CNI y `drain`.
+Regla de parada: si después de varios minutos de trabajo enfocado no hay un siguiente paso verificable, anote lo que ya está hecho y lo que falta, ponga un flag y continúe. No elimine una configuración que funciona por una conjetura arriesgada. Tenga especial cuidado con operaciones en API server, etcd, firewall, CNI y `drain`.
 
 ## 33.4. Técnicas rápidas para CKS: crear, modificar, comprobar
 
@@ -226,7 +226,7 @@ k get pod -n "$NAMESPACE" "$POD" -o wide
 
 ### Static Pod: modificar y comprobar en el host asignado
 
-`kube-apiserver`, scheduler y controller-manager en un cluster kubeadm suelen ser static Pod. Kubelet observa su manifest en el control-plane. Para tal tarea, el infobox debe asignar un host control-plane: desde `base`, entre precisamente en él, guarde una copia y luego cambie una sola configuración lógica. No haga SSH de un host a otro ni intente ejecutar `k` en `base`.
+`kube-apiserver`, scheduler y controller-manager en un clúster kubeadm suelen ser static Pod. Kubelet observa su manifest en el control-plane. Para tal tarea, el infobox debe asignar un host control-plane: desde `base`, entre precisamente en él, guarde una copia y luego cambie una sola configuración lógica. No haga SSH de un host a otro ni intente ejecutar `k` en `base`.
 
 ```bash
 # En base.
@@ -437,7 +437,7 @@ Aplique los mismos hábitos al trabajo de plataforma: no conceda wildcard RBAC p
 
 **En el examen (CKS).** Este capítulo conecta las habilidades de laboratorio con el límite de 120 minutos: SSH-host asignado, vuelta a `base`, context en el host, documentos permitidos, orden de tareas, dos intentos de simulador y verificación final. Repita la táctica del [capítulo 48 de CKA](../../../cka/course/48/es.md), la velocidad de `kubectl` del [capítulo 47 de CKA](../../../cka/course/47/es.md) y vim del [capítulo 0.8 de CKA](../../../cka/course/00-8-vim/es.md), después realice los labs con temporizador.
 
-**En el trabajo real.** Cambiar de context, la edición puntual, rollback, la comprobación de escenarios positivo y negativo y conservar evidence son disciplina básica de un ingeniero SRE y de security. Reduce el riesgo de aplicar la configuración correcta en el cluster equivocado o de resolver un alert al precio de la indisponibilidad del servicio.
+**En el trabajo real.** El cambio de context, la edición puntual, el rollback, la comprobación de escenarios positivo y negativo y la conservación de evidence son la disciplina básica de un ingeniero SRE y de security. Esta disciplina reduce el riesgo de aplicar la configuración correcta en el cluster equivocado o de resolver un alert al precio de la indisponibilidad del servicio.
 
 ## 33.11. Preguntas para autoevaluación
 

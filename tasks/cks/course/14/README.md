@@ -151,7 +151,7 @@ sudo apt autoremove
 
 On RPM systems, equivalents are `rpm -qa`, `dnf repoquery --installed`, and `dnf remove`. Do not mix system hardening with an uncontrolled mass upgrade: updates, image version, and rollback must follow the ordinary operations process.
 
-**A minimal OS image** is preferable to manually cleaning every already running node. Node image/configuration declares required packages and services, excludes desktops, compilers, test utilities, and unnecessary agents, then regularly rebuilds the image with patches. Minimality does not mean no recovery tools: an approved way to access, log, and diagnose must remain.
+**A minimal OS image** is preferable to manually cleaning every already running node. The node image/configuration declares the required packages and services and excludes desktops, compilers, test utilities, and unnecessary agents; the image is then rebuilt regularly with patches. Minimality does not mean no recovery tools: an approved way to access, log, and diagnose must remain.
 
 > 🏭 **Production.** A dedicated Kubernetes OS - for example, [Bottlerocket](https://bottlerocket.dev/) - can reduce mutable host footprint through an intentionally minimal immutable image and managed update workflow. This is an architectural choice: before production rollout, check in staging support for the target Kubernetes version, CNI/CSI, bootstrap, observability, debug access, and rollback. Do not transfer `apt`/`dpkg` commands or ordinary Linux distribution paths to such an OS without its official documentation.
 
@@ -229,7 +229,6 @@ sudo ss -lxnp | grep -E 'docker|containerd' || true
 | kube-apiserver `6443/tcp` | control plane; workers and administrators by architecture | allowlist/private endpoint, not `0.0.0.0/0` |
 | etcd `2379`, `2380/tcp` | only control-plane/etcd peers | do not expose on a worker or external network |
 | Docker TCP API (often `2375`/`2376`) | only for justified remote management | do not listen on `2375`; every TCP endpoint needs an explicit exception, mTLS, and precise firewall |
-
 | containerd/NRI Unix socket | locally on the node | `root` and a minimal set of authorized system consumers |
 
 Do not conclude from the port number without the process: for example, `6443` is expected on the control plane but can be an error on a worker; `10250` is required by kubelet but must not be public. Network filtering complements, but does not replace, disabling an unnecessary service. Chapter 15 covers detailed restriction of external access and SSH.
@@ -456,7 +455,7 @@ fi
 echo 'OK: no Docker TCP endpoint is configured or listening'
 ```
 
-In a typical systemd installation, Docker receives `-H fd://`: `docker.socket` normally creates a local Unix socket. Do not assume this without checking: effective systemd property `Listen` can define a TCP listener that exists before `dockerd` starts. The gate above parses only `Stream` entries: path `/…` and abstract Unix socket `@…` remain Unix, while a port, `host:port`, and `[IPv6]:port` are TCP. Do not add `hosts` in `daemon.json` and `-H` in a unit at the same time: Docker exits with conflicting configuration. Remove only the TCP endpoint from the active source, then verify configuration and restart one service at a time.
+In a typical systemd installation, Docker receives `-H fd://`: `docker.socket` normally creates a local Unix socket. Do not assume this without checking: the effective systemd property `Listen` can define a TCP listener that exists before `dockerd` starts. The gate above parses only `Stream` entries: path `/…` and abstract Unix socket `@…` remain Unix, while a port, `host:port`, and `[IPv6]:port` are TCP. Do not add `hosts` in `daemon.json` and `-H` in a unit at the same time: Docker exits with conflicting configuration. Remove only the TCP endpoint from the active source, then verify configuration and restart one service at a time.
 
 ```bash
 # For daemon.json, first check syntax and supported keys.
@@ -535,7 +534,7 @@ The following baseline applies to a **new** Docker installation after checking v
 |---|---|---|
 | `live-restore` | can keep containers running while the daemon is unavailable | update workflow, monitoring, and expected restart behavior; not a guarantee for every config/migration change |
 | `no-new-privileges` | prevents new container processes from escalating privilege via `setuid`/file capabilities | applications that mistakenly need privilege escalation; existing containers must be recreated |
-| `userns-remap` | maps the container root to an unprivileged host UID | volumes, ownership, images, and compatibility; do not enable without testing on a production-like node |
+| `userns-remap` | maps the container root to an unprivileged host UID | volumes, ownership, images, and compatibility; do not enable without testing on a production node |
 | `log-driver: local` | limits JSON log growth, with rotation managed by the driver | centralized log collection and retention; existing containers do not migrate automatically |
 
 #### Existing Docker host: separate migration
@@ -576,7 +575,7 @@ sudo systemctl --no-pager --full status docker.service
 sudo docker info --format '{{json .SecurityOptions}}'
 ```
 
-> 🎯 Prove the before/after minimization diff and with negative checks: the unnecessary service is not active/enabled, the listener and `2375` are absent, and an unprivileged user does not get runtime access.
+> 🎯 Prove the minimization with a before/after diff and with negative checks: the unnecessary service is not active/enabled, the listener and `2375` are absent, and an unprivileged user does not get runtime access.
 
 ## 14.7. Verifying the result: prove the node is minimal
 
@@ -633,7 +632,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 **DoD - minimal node:**
 
 - [ ] Every active service has a purpose, owner, and expected port/socket.
-- [ ] Unnecessary services are stopped with `systemctl disable --now`, and repeatedly dangerous ones are masked when needed; kubelet/containerd and required components are not broken.
+- [ ] Unnecessary services are stopped with `systemctl disable --now`, and those that would be dangerous if started again are masked when needed; kubelet/containerd and required components are not broken.
 - [ ] Confirmed unnecessary packages are removed; the node image has a package allowlist and an update process, not undocumented manual drift.
 - [ ] `ss -tulpn` contains no unexplained listeners; `10250`, `6443`, etcd, and SSH are accessible only where and to whom the architecture requires.
 - [ ] `2375` is not configured and not listening; the full gate examines the effective `ExecStart`/argv, `daemon.json hosts` or an explicitly reviewed custom config, the effective `docker.socket Listen`, and `ss -lntp`. There is no unauthorized Docker TCP endpoint on **any** port, including an endpoint that is not yet listening or is socket-activated. An allowed endpoint has a risk owner, effective `tlsverify=true`, a CA, server certificate/key, confirmed client-certificate authentication, and a firewall/security-group allowlist; `2376` alone does not prove mTLS.

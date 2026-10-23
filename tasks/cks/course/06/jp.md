@@ -226,7 +226,7 @@ kubectl -n cks-102 exec deploy/frontend -- curl -i http://backend/
 kubectl -n cks-102 exec deploy/frontend -- \
   curl -i -X POST http://backend/
 
-# 期待結果: GET は 200 を返す。一致しない L7 リクエストは Cilium proxy が拒否し、通常は 403 となる。
+# 期待結果: GET は 200 を返します。一致しない L7 リクエストは Cilium proxy が拒否し、通常は 403 となります。
 ```
 
 API では、広い `path: ".*"` を使うより、許可するメソッド、path、必要なら header を列挙する方が安全です。L7-policy はアプリケーションの authentication や authorization を置き換えません。到達可能な surface は減らしますが、API のユーザーや business rule を認識しないからです。
@@ -338,7 +338,7 @@ spec:
 kubectl -n kube-system get pod --show-labels | grep -E 'coredns|dns'
 ```
 
-次の例は説明目的の手動確認であり、決定的な acceptance test ではありません。IANA は、documentation domain（`example.com`、`example.org` など）の HTTP service は best-effort で提供され、software の testing endpoint を意図したものではないと明記しています: https://www.iana.org/news/2024/example-domain-http-methods 。環境で `example.com`/`www.google.com` に到達できない場合（network restriction、一時的な障害、特定 network での block）、それは policy の誤りを意味しません。policy を適用する**前に** DNS resolution と正常な HTTPS を独立して確認した FQDN に置き換えてください。
+次の例は説明目的の手動確認であり、決定的な acceptance test ではありません。IANA は、documentation domain（`example.com`、`example.org` など）の HTTP service は best-effort で提供され、software の testing endpoint を意図したものではないと明記しています: https://www.iana.org/news/2024/example-domain-http-methods 。環境で `example.com`/`www.google.com` に到達できない場合（network restriction、一時的な障害、特定 network での block）、それは policy の誤りを意味しません。policy を適用する前に DNS resolution と正常な HTTPS を独立して確認した FQDN に置き換えてください。
 
 ```bash
 kubectl -n cks-102 exec deploy/frontend -- \
@@ -417,10 +417,10 @@ spec:
 
 architecture 上、Hubble は四つの部分で構成されます。
 
-- **Hubble Server** — `cilium-agent` に組み込まれ、各 node で動作します。gRPC で flow events を提供します。
-- **Hubble Relay**（`hubble-relay`）— すべての node の Server に接続する独立 component で、node ごとではなく一つの cluster-wide view を提供します。
-- **Hubble CLI**（`hubble`）— command-line client です。cluster-wide view には Relay、一つの node には local Server に接続します。
-- **Hubble UI**（`hubble-ui`）— Relay の上にある、service connection map を備えた任意の graphical interface です。
+- **Hubble Server** - `cilium-agent` に組み込まれ、各 node で動作します。gRPC で flow events を提供します。
+- **Hubble Relay**（`hubble-relay`）- すべての node の Server に接続する独立 component で、node ごとではなく一つの cluster-wide view を提供します。
+- **Hubble CLI**（`hubble`）- command-line client です。cluster-wide view には Relay、一つの node には local Server に接続します。
+- **Hubble UI**（`hubble-ui`）- Relay の上にある、service connection map を備えた任意の graphical interface です。
 
 **有効化方法。** managed distribution と標準 Cilium installation では、通常 installation または update 時の Helm flag、たとえば `--set hubble.relay.enabled=true --set hubble.ui.enabled=true` により Hubble を有効にします。正確な flag は chart version に依存します。CKS とこの章では、一つだけ覚えれば十分です。クラスターですでに Hubble が有効なら、`cilium status` がその状態を示し、下のように Relay への port-forward で `hubble` CLI を接続できます。ラボ用に Hubble をゼロから有効化する必要はありません。これは CNP の一部ではなく、クラスター管理者の仕事です。
 
@@ -499,16 +499,16 @@ hubble observe flows -t policy-verdict --namespace cks-102
 
 ## 06.9. ミニ用語集
 
-- **Cilium** — Kubernetes 向けの eBPF ベースの CNI および security platform。
-- **CiliumNetworkPolicy (CNP)** — Cilium の namespace policy resource。
-- **CiliumClusterwideNetworkPolicy (CCNP)** — Cilium の cluster-wide policy。
-- **Identity** — Cilium が labels から構築する endpoint identifier。
-- **L3/L4** — network layer と transport protocol/port。
-- **L7** — HTTP method/path や DNS などの protocol layer。
-- **`toFQDNs`** — DNS names と観測された DNS responses による egress rule。
-- **Entity** — `world`、`cluster`、`host` など Cilium が定義する address group。
-- **Hubble** — Cilium network flows の observability。
-- **eBPF** — Cilium が datapath と policy enforcement を実装する Linux kernel mechanism。
+- **Cilium** - Kubernetes 向けの eBPF ベースの CNI および security platform。
+- **CiliumNetworkPolicy (CNP)** - Cilium の namespace policy resource。
+- **CiliumClusterwideNetworkPolicy (CCNP)** - Cilium の cluster-wide policy。
+- **Identity** - Cilium が labels から構築する endpoint identifier。
+- **L3/L4** - network layer と transport protocol/port。
+- **L7** - HTTP method/path や DNS などの protocol layer。
+- **`toFQDNs`** - DNS names と観測された DNS responses による egress rule。
+- **Entity** - `world`、`cluster`、`host` など Cilium が定義する address group。
+- **Hubble** - Cilium network flows の observability。
+- **eBPF** - Cilium が datapath と policy enforcement を実装する Linux kernel mechanism。
 
 ## 06.10. この章のまとめ
 

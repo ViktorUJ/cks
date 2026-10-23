@@ -31,6 +31,8 @@ flowchart TB
     style investigation fill:#db4437,color:#fff
 ```
 
+依已完成的 event，通常可取得：
+
 | Investigation 問題 | Event fields |
 |---|---|
 | **哪個 identity？** | `.user.username`、`.user.groups`、`.user.uid`；impersonation 時還有 `.impersonatedUser` |
@@ -44,9 +46,16 @@ flowchart TB
 
 Audit **不是** application log、network flow log 或 runtime detector（見[第 29 章](../29/tw.md)的 Falco）的替代品。它看得到 Kubernetes API access，卻看不到 Pod 內 SQL query 或未呼叫 API 的 shell command。「request 已 authorized」也不代表 action 合法；audit 提供 hunting evidence，RBAC、admission policy 與 hardening 則應預先阻擋不允許的 action。
 
-Audit logs 特別適合調查 Deployment、RoleBinding、NetworkPolicy 的刪除或 Secret 的變更；根據不尋常的 identity、time、scope 與 network context 尋找遭竊的 ServiceAccount identity；監控 privileged operations 與 security-sensitive resource changes；確認哪位 user 以哪個 response code 執行了 action；以及送到 SIEM 後與 cloud、node、application telemetry correlation。`sourceIPs` 的最後一個值是連線位址，先前的 `X-Forwarded-For`/`X-Real-IP` values 可被 client 偽造；`userAgent` 也由 client 提供。它們是有用的 pivot fields，仍應和 trusted ingress/proxy、identity、time、`.annotations`、外部 IdP/proxy/authentication logs corroborate。Kubernetes v1.36 的 `.authenticationMetadata` 只有 constrained impersonation 的 `impersonationConstraint`，不是 token/authentication 的通用描述；`.annotations` 也不是 object 的 `metadata.annotations`。
+Audit logs 特別適合用於：
 
-> **Confidentiality boundary。** Audit 可能記錄 request/response body，其中常有 Secret、token、kubeconfig 與 personal data。因此「全部使用 `RequestResponse`」通常比使用狹窄的 `Metadata` policy 與受控 audit-log access 更糟。
+- 調查 Deployment、RoleBinding、NetworkPolicy 的刪除或 Secret 的變更；
+- 根據不尋常的 identity、time、scope 與 network context 尋找遭竊的 ServiceAccount identity；`sourceIPs`/`userAgent` 應與 trusted proxy 及其他 telemetry 對照，而不能單獨視為證據；
+- 監控 privileged operations 與 security-sensitive resource changes；
+- 確認哪位 user 以哪個 response code 執行了 action；
+- 將 event 送到 SIEM，與 cloud、node、application telemetry 進行 correlation。
+`sourceIPs` 的最後一個值是連線位址，先前的 `X-Forwarded-For`/`X-Real-IP` values 可被 client 偽造；`userAgent` 也由 client 提供。它們是有用的 pivot fields，仍應和 trusted ingress/proxy、identity、time 對照驗證；如有可用，為取得更完整的 context，也請查看 audit event 的 `.annotations` 以及外部 IdP/proxy/authentication logs。Kubernetes v1.36 的 `.authenticationMetadata` 只有 constrained impersonation 的 `impersonationConstraint`，不是 token/authentication 的通用描述；`.annotations` 也不是 object 的 `metadata.annotations`。
+
+> **機密性邊界。** Audit 可能記錄 request/response body，其中常有 Secret、token、kubeconfig 與 personal data。因此「全部使用 `RequestResponse`」通常比使用狹窄的 `Metadata` policy 與受控 audit-log access 更糟。
 
 ## 32.2. Event 如何通過 audit pipeline
 
@@ -66,7 +75,7 @@ flowchart TB
 | Stage | 出現時機 | 實務意義 |
 |---|---|---|
 | `RequestReceived` | request 接收後、處理前 | 早期 evidence；一般 request 常屬重複資訊 |
-| `ResponseStarted` | API 開始傳送 response | 對 long-running `watch` 與 streaming `exec`/`attach`/`port-forward` 很重要；WebSocket 可是成功 upgrade（`101 Switching Protocols`）的第一個 useful evidence |
+| `ResponseStarted` | API 開始傳送 response | 對 long-running `watch` 與 streaming `exec`/`attach`/`port-forward` 很重要；WebSocket 可能是成功 upgrade（`101 Switching Protocols`）的第一個有用 evidence，而 `ResponseComplete` 要到 stream 關閉後才會出現 |
 | `ResponseComplete` | 處理完全結束 | investigation 的主要 stage：有 status 與最終 outcome |
 | `Panic` | API server handler 發生 panic | 重要的 fault diagnosis |
 
@@ -74,22 +83,29 @@ flowchart TB
 
 ## 32.3. Audit levels：精確度的代價與洩漏風險
 
+Kubernetes 支援四種 level。每條 rule 對符合的 request 恰好選擇其中一種。
+
 | Level | 記錄內容 | 使用時機 | 風險／成本 |
 |---|---|---|---|
 | `None` | 無 | health/readiness、過於 noisy 或明知無價值的 request | 排除過廣會留下 blind spot |
-| `Metadata` | identity、URI、verb、objectRef、timestamps、status；沒有 body | 大多數 API 的安全 default | 看不到被修改 object 的內容 |
+| `Metadata` | request 與 response 的 metadata：identity、URI、verb、objectRef、timestamps、status；沒有 body | 大多數 API 的安全 default | 看不到被修改 object 的內容 |
 | `Request` | `Metadata` + `.requestObject` | 狹窄的 sensitive-object create/patch，需要 intent 時 | request body 可能含 Secret/PII，且 volume 大 |
 | `RequestResponse` | `Request` + `.responseObject` | 僅短暫、明確需要的 forensic scenario | 最高 volume/risk；幾乎不適合 `watch` |
 
-Non-resource requests 即使使用 `Request`/`RequestResponse` 也不記錄 body；`list` 和 non-resource requests 沒有 `.objectRef`。此類 request 應依 `.requestURI`、`.verb`、identity、timestamps、status 與 annotations 判讀。`Metadata` 也不等於不含敏感資料：`.requestURI` 仍會被記錄。`pods/exec` 的 command/arguments 位於 query string，因此 CLI arguments 中的 password/token 即使沒有 body 也會進 audit log。不要透過 `kubectl exec ... -- command secret` 傳 secrets；使用 Secret volume/stdin procedure，限制 audit-log access，必要時 sanitize downstream pipeline。
+Non-resource requests 即使使用 `Request`/`RequestResponse` 也不記錄 body；`list` 和 non-resource requests 沒有 `.objectRef`。此類 request 應依 `.requestURI`、`.verb`、identity、timestamps、status 與 annotations 判讀，不要期待有 object name。`Metadata` 也不等於不含敏感資料：`.requestURI` 仍會被記錄。`pods/exec` 的 command/arguments 位於 query string，因此 CLI arguments 中的 password/token 即使沒有 body 也會進 audit log。不要透過 `kubectl exec ... -- command secret` 傳 secrets；使用 Secret volume/stdin procedure，限制 audit-log access，必要時 sanitize downstream pipeline。
 
-一般 `watch` 不要在沒有特殊 forensic 理由時使用 `RequestResponse`：long-running request 有 `ResponseStarted`，高 level 造成無謂的 storage/memory load。Routine watch 與 health requests 通常用 `Metadata` 或有意識地排除 noisy requests。實務 baseline：先排除 public health endpoints 與明確安全的 noise；對 Secret/security-sensitive actions 記錄 `Metadata`；只在有限 namespace/resource/verb 且有理由時啟用 `Request`；最後以 `Metadata` catch-all 收尾。
+一般 `watch` 不要在沒有特殊 forensic 理由時使用 `RequestResponse`：long-running request 有 `ResponseStarted`，高 level 造成無謂的 storage/memory load。Routine watch 與 health requests 通常用 `Metadata` 或有意識地排除 noisy requests；否則有大量 active controllers 的 cluster 很快就會產生昂貴又 noisy 的 log。實務 baseline：
+
+1. 排除公開的 health endpoints 與具體的安全 noise。
+2. 對 Secret 與 security-sensitive actions 記錄 `Metadata`：這樣能取得 identity 與 object，但不會洩漏 `data`。
+3. 只在有限的 namespace/resource/verb 且有理由時啟用 `Request`。
+4. 以 `Metadata` catch-all rule 結束 policy，以免遺漏未知的 API 呼叫。
 
 > 🎯 Policy 由上而下讀取，第一個 matching rule 生效。health exclusions 與 Secret 的 `Metadata` 必須放在寬鬆 `Request`/catch-all 前；驗證 YAML、namespace/resource/verb matching 和安全 request。檔案有效但沒有產生所需 level 的 event，並不能證明 policy 正確。
 
 ## 32.4. Audit Policy：順序、matching 與安全 policy file
 
-Policy file 的 API 為 `audit.k8s.io/v1`、kind 為 `Policy`。`rules` 由上而下比對，**第一個 matching rule** 生效；specific exclusions 與 sensitive resources 因此要在 broad catch-all 前。Rule 可依 `users`、`userGroups`、`verbs`、`namespaces`、`resources`（API Group/Resource/Subresource）、`nonResourceURLs`、`omitStages` 限縮；多個 filters 同時存在時 request 必須全部符合。`resources.resourceNames` 無法限制沒有 object name 的 `list`/`watch`，不能把它當成 broad read 的防護。
+Policy file 的 API 為 `audit.k8s.io/v1`、kind 為 `Policy`。`rules` 由上而下比對，**第一個 matching rule** 生效；specific exclusions 與 sensitive resources 因此要在 broad catch-all 前。不要指望後面的 rule 會把資料「補充」到前一條 rule 上。Rule 可依 `users`、`userGroups`、`verbs`、`namespaces`、`resources`（API Group/Resource/Subresource）、`nonResourceURLs`、`omitStages` 限縮；多個 filters 同時存在時 request 必須全部符合。`resources.resourceNames` 無法限制沒有 object name 的 `list`/`watch`，不能把它當成 broad read 的防護。
 
 以下 self-managed cluster 範例不寫 health probes、不保存 Secret body、以 request body 記錄 `payments` namespace 的 object changes，並對其餘 API 使用 `Metadata`。namespace/resource names 只是例子，應配合 data classification、retention 與 platform owner。
 
@@ -158,7 +174,7 @@ yq e '.' /etc/kubernetes/audit/audit-policy.yaml >/dev/null
 sudo sed -n '1,220p' /etc/kubernetes/audit/audit-policy.yaml
 ```
 
-`omitManagedFields: true` 可降低 `.requestObject`/`.responseObject` 的 `managedFields` volume；rule 可 override global value。它不隱藏其他 body fields，所以不能取代 Secret 的 `Metadata`。`Policy` 是 node 上的 API server configuration，不是 Kubernetes object，不能用 `kubectl apply`。能修改 policy 的人可關閉 evidence；能讀取 `Request` log 的人可取得 sensitive data。
+`omitManagedFields: true` 可降低 `.requestObject`/`.responseObject` 的 `managedFields` volume；rule 可 override global value。它不隱藏其他 body fields，所以不能取代 Secret 的 `Metadata`。`Policy` 是 node 上的 API server configuration，不是 Kubernetes object，不能用 `kubectl apply`。對這個 file 與 audit log 的存取必須受到限制：能修改 policy 的人可關閉 evidence；能讀取 `Request` log 的人可取得 sensitive data。
 
 ### 常見 policy 錯誤
 
@@ -176,6 +192,8 @@ sudo sed -n '1,220p' /etc/kubernetes/audit/audit-policy.yaml
 ## 32.5. 將 policy 接入 kube-apiserver static Pod
 
 在 kubeadm cluster，API server 是 static Pod。Kubelet 監看 `/etc/kubernetes/manifests/kube-apiserver.yaml`，有效 manifest 被修改後會重建 API server。在 control-plane node console 作業，先準備 rollback；HA cluster 不要同時修改多個 control-plane nodes。
+
+先保存備份，並確認設定的實際來源：
 
 ```bash
 sudo install -d -m 700 /root/k8s-manifest-backup
@@ -224,7 +242,7 @@ spec:
         type: DirectoryOrCreate
 ```
 
-先建立 log directory，以便及早發現 filesystem/permission 問題：
+在修改 manifest **之前**先建立 log directory，以便及早發現 filesystem/permission 問題：
 
 ```bash
 sudo install -d -o root -g root -m 0750 /var/log/kubernetes/audit
@@ -233,17 +251,21 @@ sudo stat -c '%A %a %U:%G %n' \
   /var/log/kubernetes/audit
 ```
 
+關鍵 flags：
+
 | Flag | 用途 |
 |---|---|
 | `--audit-policy-file` | API server startup 載入的 policy path |
 | `--audit-log-path` | local file audit backend；沒有它就不寫 local audit log |
 | `--audit-log-format=json` | 適合 `jq`/shipper 的 JSON Lines，是正常 production format |
-| `--audit-log-mode` | file backend default 是 `blocking`；`batch` buffer/async 寫入但不建議給 log backend；`blocking-strict` 在 `RequestReceived` audit error 時拒絕整個 request |
+| `--audit-log-mode` | file backend 的 default 是 `blocking`：每個 event 的處理都會阻塞 API server 的 response；`batch` 以 buffer 非同步寫入，但不建議用於 log backend；`blocking-strict` 另外會在 `RequestReceived` 階段的 audit 發生 error 時拒絕整個 request |
 | `--audit-log-maxage` | rotated files 最多保留 days；`0` 關閉 age limit |
 | `--audit-log-maxbackup` | old rotated files 最大數量；`0` 關閉 count limit |
 | `--audit-log-maxsize` | active file 達到 MiB 後 rotation；`0` 關閉 size limit |
 
-不要新增第二個 `--audit-log-path` 或任一 duplicate audit flag：flag 只有一個 active value，duplicate 可能 conflict、行為錯誤或使 API server 無法 startup。若 directory 尚不存在，也不要只以 `hostPath.type: File` mount policy file；directory mount 較易驗證，並可安全保存 versioned policy。
+不要新增第二個 `--audit-log-path` 或任一 duplicate audit flag：flag 只有一個 active value，duplicate 可能 conflict、行為錯誤或使 API server 無法 startup。若 directory 尚不存在，也不要只以 `hostPath.type: File` mount policy file；directory mount 較易驗證，並可保存權限可預期的 versioned policy。
+
+儲存 static Pod 後它會暫時重新啟動。驗證必須同時確認 active process 與 API health：
 
 ```bash
 # 在 control-plane node：kubelet 重建 static Pod。
@@ -259,7 +281,7 @@ sudo grep -nE -- '--audit-(policy-file|log-path|log-format|log-mode|max)' \
 sudo ls -l /var/log/kubernetes/audit/audit.log
 ```
 
-若 API server 未回復，立即檢查 `journalctl -u kubelet`、`crictl ps -a`/`crictl logs` 的 exited container，以及 manifest YAML。必要時還原 manifest directory **外**保存的 backup：放在 `/etc/kubernetes/manifests/` 內的 backup 可能被 kubelet 當成另一個 static Pod manifest。
+若 API server 未回復，立即檢查 `journalctl -u kubelet`、`crictl ps -a`/`crictl logs` 的 exited container，以及 manifest YAML。必要時還原 `/root/k8s-manifest-backup` 中帶時間戳的 `kube-apiserver.yaml` 備份：放在 `/etc/kubernetes/manifests/` 內的 backup 可能被 kubelet 當成另一個 static Pod manifest。
 
 ```bash
 sudo journalctl -u kubelet -n 120 --no-pager
@@ -275,7 +297,7 @@ sudo crictl logs "$CONTAINER_ID"
 
 完成一個 control-plane node 的 canary verification 後，對其餘 `kube-apiserver` instances 以 rolling 方式套用完全相同的 policy、flags、mounts：一次一個 node，等待 `/readyz`，經由該 instance 驗證 audit event，再處理下一個。否則落到尚未更新 API server 的 requests 會有不同或不存在的 audit coverage。不要同時更新所有 static-Pod manifests；每個 node 保留獨立 rollback 並記錄 policy version。Production rollout 前，按預期 API rate 和 peak bodies 做 load test：level、request/response size、file I/O、webhook queue 可能提高 latency/memory 或在 overflow 時遺失 batch events。量測 audit metrics、backend latency、loss/retry scenarios，不要照搬其他 cluster 的 tuning numbers。
 
-> 🏭 Rotation flags 只限制 local buffer。Evidence 仍需要受保護的 central delivery、retention、access 與 alerting。
+> 🏭 Rotation flags 只限制 local buffer。Evidence 仍需要受保護的 central delivery、retention、access，以及針對資料流中斷的 alerting。
 
 ## 32.6. Local rotation、retention 與 node 外 delivery
 
@@ -295,15 +317,21 @@ flowchart TB
     style immutable fill:#db4437,color:#fff
 ```
 
-請分開設計 storage 與 flags：local audit log 是 buffer、不是 source of truth（node 可能 compromise、移除或填滿），JSON 應送到 central controlled storage；在尚未協調與 API server 的整合前，不要為同一 active file 執行獨立 `logrotate`，否則會 race、loss、duplicate；directory/files 僅供 platform/security roles，collector 使用 TLS 與獨立 identity，workload 不可有 audit directory 的 `hostPath`；對無新 events、disk growth、backend error、collector failure 與 policy/static-Pod manifest change 設 alert，並對照 `apiserver_audit_event_total` 和 `apiserver_audit_error_total`；組織另行定義 retention、legal hold、encryption、read access 與 immutability，local 30 days 可能只是 operational window。
+請分開設計 storage 與 flags：
 
-File backend 應保留 default `blocking`：upstream 不建議此 backend 使用 `batch`。若 load test 後仍選擇 `batch`，events 在寫入前位於 memory，`--audit-log-batch-buffer-size` overflow 會 drop events；監控 audit metrics、backend backlog/errors。`blocking` 位於 response path，slow/unavailable storage/webhook 會增加 API latency、降低 availability；`blocking-strict` 更會在 `RequestReceived` audit failure 時拒絕 request。它提供 fail-closed evidence，但把 backend failure 轉成 client 的 API outage，只能在已驗證 capacity、HA 與 recovery 時選用。
+- **Local audit log 是 buffer，不是 source of truth。** Node 可能被 compromise、移除或填滿。請將 JSON 送到 central、受控的 storage。
+- **在尚未協調與 API server 的整合前，不要為同一 active file 執行獨立 `logrotate`。** 內建的 audit rotation flags 已經管理該 file；兩套 rotation 系統會造成 race，以及資料 loss/duplicate。
+- **限制存取。** Directory 與 files 僅供 platform/security roles；collector 使用 TLS 與獨立 identity。不要給 workload 指向 audit directory 的 `hostPath`。
+- **監控 audit 本身。** 對無新 events、disk growth、backend error、collector failure 以及 policy/static-Pod manifest change 設 alert。對照 `apiserver_audit_event_total`（已匯出的 events）和 `apiserver_audit_error_total`（匯出失敗而被丟棄的 events）。
+- **定義 retention 與 tamper resistance。** Retention 期間、legal hold、encryption、read access 與 immutability 由組織另行定義。Local 30 days 可能只是 operational window。
+
+File backend 應保留 default `blocking`：upstream 不建議此 backend 使用 `batch`。若 load test 後仍選擇 `batch`，events 在寫入前位於 memory，`--audit-log-batch-buffer-size` overflow 會 drop events；監控 audit metrics、backend backlog/errors。`blocking` 位於 response path，slow/unavailable storage/webhook 會增加 API latency、降低 availability；`blocking-strict` 更會在 `RequestReceived` audit failure 時拒絕 request。它提供 fail-closed evidence，但把 backend failure 轉成 client 的 API outage，只能在已驗證 capacity、HA 與 recovery 時選用，不要把它當作通用的「安全」模式。
 
 > 🏭 集中式 audit event 收集、webhook backend、SIEM 與 operational pipeline 都需要 TLS、queue、capacity 規劃，以及 event loss risk 與 API availability 之間的明確取捨。
 
 ## 32.7. Webhook backend：將 audit 傳至 central collector
 
-除了 `--audit-log-path`，API server 也可經 HTTPS webhook 發送 events。當 SIEM/collector 不應依賴 node agent 時很有用；batch mode 中 event 會成 lists 送至 kubeconfig endpoint。
+除了 `--audit-log-path`，API server 也可經 HTTPS webhook 發送 events。當 SIEM/collector 不應依賴 node agent 時很有用；batch mode 中 events 會以 list 形式送至 kubeconfig 指定的 endpoint。
 
 ```mermaid
 flowchart TB
@@ -318,7 +346,7 @@ flowchart TB
     style local fill:#0f9d58,color:#fff
 ```
 
-Production 使用獨立 client certificate/key 或其他 supported authentication、CA validation 與 node 上最小權限的 secret key：
+以下是 collector 的最小 kubeconfig 範例。Production 使用獨立 client certificate/key 或其他 supported authentication、CA validation 與 node 上最小權限的 secret key：
 
 ```yaml
 # /etc/kubernetes/audit/webhook.kubeconfig
@@ -354,7 +382,15 @@ current-context: audit-webhook
 
 Webhook 有 `--audit-webhook-batch-*`、`--audit-webhook-truncate-*` 用於 queue size、delay、event-size limits。兩個 backend 的 truncation default 都是 disabled；僅在理解後使用 `--audit-log-truncate-enabled` 或 `--audit-webhook-truncate-enabled`，並設定對應 `*-truncate-max-event-size` 與 `*-truncate-max-batch-size`。過大 event 先失去 request/response body，仍過大才被 drop。不要盲抄其他 cluster 的數字，請評估 audit rate、collector latency、restart 時可接受的 loss、API-server load。
 
-安全操作 webhook：使用 HTTPS、CA validation、client authentication，絕不關閉 TLS verification；將 collector 放在 HA、network-restricted zone，它接收 security telemetry 但不應擁有 Kubernetes API privilege；若要求允許，保留 short-lived local log fallback 並比較 central delivery/latency；webhook `batch` 雖是 default，buffer overflow 會 drop events，須監控 metrics；`blocking`/`blocking-strict` 需要獨立 capacity/DR design；測試 collector failure，並讓 monitoring 顯示 retry/backlog/loss risk。Webhook 不改變 policy：同一 policy 選擇 level/stage，log 與 webhook backends 都收到允許記錄的 events。
+安全操作 webhook：
+
+1. 使用 HTTPS、CA validation 與 client authentication；不要關閉 TLS verification。
+2. 將 collector 放在 HA、network-restricted zone。它接收 security telemetry，但不應擁有 Kubernetes API 權限。
+3. 若要求允許，保留 short-lived local audit log 作為 fallback；然後比較 central delivery 與 latency。
+4. Webhook 的 default 是 `batch`，但其 buffer overflow 會 drop events；請量測 rate、failure/latency 並監控 audit metrics。`blocking` 使 API request 的 availability 取決於 backend，`blocking-strict` 在 `RequestReceived` 的 audit error 時拒絕 request；兩者都需要獨立的 capacity/DR design。
+5. 測試 collector failure：所選 mode 的預期行為必須明確，monitoring 必須清楚顯示 retry/backlog/loss risk。
+
+Webhook 不改變 policy：同一 policy 選擇 level/stage，log 與 webhook backends 都收到允許記錄的 events。沒有正確的 policy，只接上 endpoint 並不會產生有用的 investigation 軌跡。
 
 > 🎯 不只檢查 flags：做安全 API request，以 `jq` 從 JSON Lines 按 `ResponseComplete`、identity、`objectRef`、status 搜尋，再證明 `Metadata` 沒有 Secret body。CKS triage 尋找 high-signal RBAC、`pods/exec`、`ephemeralcontainers`；streaming `exec` 要考量 `get`/`create`、`ResponseStarted`、WebSocket `101`。
 
@@ -407,7 +443,7 @@ sudo jq -r --arg name "$CM" '
 ' /var/log/kubernetes/audit/audit.log
 ```
 
-應看到 `Request` level、你的 username、`create`/`delete`、名稱為 `$CM` 的 object 和成功 `2xx` response code。具體 code 視 operation/API 而定；若 policy 的 namespace/resource 不同，test/filter 也要相符。建立或讀取 test Secret 後，`Metadata` event 不應含 `.requestObject` 或 `.responseObject`：
+應看到 `Request` level、你的 username、`create`/`delete`、名稱為 `$CM` 的 object 和成功 `2xx` response code。具體 code 視 operation/API 而定；若 policy 的 namespace/resource 不同，test/filter 也要相符。要驗證 Secret body 沒有洩漏到 local audit log，可建立或讀取 test Secret 並檢查 event：`Metadata` event 不應含 `.requestObject` 或 `.responseObject`。
 
 ```bash
 kubectl -n payments create secret generic "$SECRET" \
@@ -431,7 +467,9 @@ kubectl -n payments delete secret "$SECRET"
 
 ### 4. 在 investigation 中找 suspicious action
 
-先從 narrow、high-signal actions 開始：成功 RBAC changes、ClusterRoleBinding create、`pods/exec` access、`ephemeralcontainers` addition。不可僅依 `sourceIPs`/`userAgent` 判定來源；應和 identity、audit `.annotations`、trusted proxy/ingress/IdP logs 關聯。`.authenticationMetadata` 只作 constrained impersonation indicator。
+先從 narrow、high-signal actions 開始：成功 RBAC changes、ClusterRoleBinding create、`pods/exec` access、`ephemeralcontainers` addition。不可僅依 `sourceIPs`/`userAgent` 判定來源；應和 identity、audit `.annotations`、trusted proxy/ingress/IdP logs 關聯。`.authenticationMetadata` 只作 constrained impersonation 的 indicator，不可當作 authentication 方式的通用 evidence。
+
+例如，列出期間內已完成的 RBAC 變更，且不遺失 response status：
 
 ```bash
 sudo jq -r '
@@ -448,7 +486,7 @@ sudo jq -r '
 ' /var/log/kubernetes/audit/audit.log | column -t -s $'\t'
 ```
 
-Kubernetes v1.31 起，`kubectl exec` default 使用 WebSocket：HTTP upgrade 使用成功的 `GET`/`101 Switching Protocols`。`AuthorizePodWebsocketUpgradeCreatePermission` feature gate 自 v1.35 beta 且 default enabled；啟用時，`pods/exec`、`pods/attach`、`pods/portforward` 的 WebSocket `GET` 另外通過 `create` permission。若 administrator 關閉 gate，就沒有這項額外檢查。WebSocket request 的 audit verb 仍是 `get`，所以 detection 必須考慮實際 verb 與 gate configuration。Session 尚開啟時，`ResponseStarted` 是 upgrade 的第一個 useful evidence，不要等待 `ResponseComplete`。
+請另外單獨處理 streaming access 與透過 subresource 對 Pod 的變更。Kubernetes v1.31 起，`kubectl exec` default 使用 WebSocket：HTTP upgrade 使用成功的 `GET`/`101 Switching Protocols`。`AuthorizePodWebsocketUpgradeCreatePermission` feature gate 自 v1.35 beta 且 default enabled；啟用時，`pods/exec`、`pods/attach`、`pods/portforward` 的 WebSocket `GET` 另外通過 `create` permission。若 administrator 關閉 gate，就沒有這項額外檢查。WebSocket request 的 audit verb 仍是 `get`，所以 detection 必須考慮實際 verb 與 gate configuration。Session 尚開啟時，`ResponseStarted` 是 upgrade 的第一個 useful evidence，不要等待 `ResponseComplete`。
 
 ```bash
 # exec：WebSocket GET/101 與 legacy/create variants；保留 streaming stages。
@@ -492,20 +530,20 @@ sudo jq -r '
 
 ### 精簡 timed lab checklist（20 分鐘）
 
-1. **0–3 分：**備份 manifest，建立 policy/host directories，檢查 YAML。
-2. **3–8 分：**加入 policy/log mounts 與 audit flags，file backend 保持 default `blocking`；等候 restart 與 `/readyz`。
-3. **8–12 分：**在 `payments` 安全地 create/delete ConfigMap；以 `jq` 檢查 `ResponseComplete`、identity、objectRef、成功 `2xx`。
-4. **12–15 分：**建立 test Secret，證明 `Metadata` 沒有 request/response body。
-5. **15–18 分：**找一筆 high-signal RBAC 或 `pods/exec`/`ephemeralcontainers` event；`exec` 要考慮 `get`/`create`、`ResponseStarted`、WebSocket `101`，再查看 `auditID`、status、annotations，最後才看 network context。
-6. **18–20 分：**檢查 rotation、`apiserver_audit_event_total`/`apiserver_audit_error_total` freshness，記錄 rollback path。
+1. **0-3 分：**備份 manifest，建立 policy/host directories，檢查 YAML。
+2. **3-8 分：**加入 policy/log mounts 與 audit flags，file backend 保持 default `blocking`；等候 restart 與 `/readyz`。
+3. **8-12 分：**在 `payments` 安全地 create/delete ConfigMap；以 `jq` 檢查 `ResponseComplete`、identity、objectRef、成功 `2xx`。
+4. **12-15 分：**建立 test Secret，證明 `Metadata` 沒有 request/response body。
+5. **15-18 分：**找一筆 high-signal RBAC 或 `pods/exec`/`ephemeralcontainers` event；`exec` 要考慮 `get`/`create`、`ResponseStarted`、WebSocket `101`，再查看 `auditID`、status、annotations，最後才看 network context。
+6. **18-20 分：**檢查 rotation、`apiserver_audit_event_total`/`apiserver_audit_error_total` freshness，記錄 rollback path。
 
 > 🏭 Production 中的 audit policy 是持續性的流程：需要 versioning、review、central delivery、retention，並為每個 exception 指定 owner。
 
 ## 32.9. Production 的使用方式
 
-- **Policy as code。** Version policy，對 matching/order 作 review/test；audit-rule change 是 security-sensitive change，應保留 change record。
+- **Policy as code。** Version policy，在 rollout 前對 matching/order 作 review/test；audit-rule change 是 security-sensitive change，應保留 change record。
 - **只收集最低必要資料。** `Metadata` 提供大部分 identity/action/outcome 價值；`Request`，尤其 `RequestResponse`，只能是有 owner、期限、data classification 的 narrow/temporary exception。
-- **分離 control plane 與 observability。** Collector/SIEM 需要 HA、TLS、queue、monitoring、limited access；不經思考的 `blocking` 不應意外停止 API server。
+- **分離 control plane 與 observability。** Collector/SIEM 需要 HA、TLS、queue、monitoring、limited access；Collector/SIEM 不可用時，不應因不經思考的 `blocking` 而意外停止 API server。
 - **保護 evidence。** Read roles、encryption、retention、immutability、policy/static Pod change alert 和建立 log file 同樣重要。
 - **定期驗證 flow。** 具安全 marker 的 synthetic request 與「last received event」dashboard，比等待 incident 才發現 collector 壞掉更快。
 - **Managed Kubernetes 不同。** EKS/GKE/AKS customer 通常不編輯 `kube-apiserver` static Pod；啟用 provider control-plane audit logs 並採用其 levels/retention，不要嘗試 mount policy 到 provider-owned control plane。
@@ -587,15 +625,15 @@ sudo jq -r '
 
 <details><summary>8. 為何 `sourceIPs`/`userAgent` 不是獨立的來源證明？</summary>
 
-`sourceIPs` 含 client 可偽造的 `X-Forwarded-For`/`X-Real-IP` values 和 connection address，`userAgent` 也由 client 回報。它們是 pivot fields，須與 identity、time、audit `.annotations`、trusted proxy/ingress/IdP logs corroborate。`.authenticationMetadata` 僅在 constrained impersonation 作 indicator，並非 token/authentication 的一般資訊。
+`sourceIPs` 含 client 可偽造的 `X-Forwarded-For`/`X-Real-IP` values 和 connection address，`userAgent` 也由 client 回報。它們是 pivot fields，須與 identity、time、audit `.annotations`、trusted proxy/ingress/IdP logs corroborate。`.authenticationMetadata` 僅在 constrained impersonation 時納入考量：在目前的 API 中它包含 `impersonationConstraint`，而非 token 或 authentication 方式的一般資訊。
 </details>
 
 <details><summary>9. 如何用 `jq` 證明 policy 記錄了正確 identity/level，卻未洩漏 Secret body？</summary>
 
-在 JSON Lines filter `stage == "ResponseComplete"`、正確 `objectRef` namespace/resource/name，輸出 `level`、`.user.username`、verb、`.responseStatus.code`。對 test Secret 也輸出 `has("requestObject")`、`has("responseObject")`；`Metadata` rule 下兩者都必須 `false`。`grep token` 找不到一行並非證明。
+在 JSON Lines filter `stage == "ResponseComplete"`、正確 `objectRef` namespace/resource/name，輸出 `level`、`.user.username`、verb、`.responseStatus.code`。對 test Secret 也輸出 `has("requestObject")`、`has("responseObject")`；`Metadata` rule 下兩者都必須 `false`。用 `grep token` 找不到一行，並不能證明 level/policy 正確。
 </details>
 
-<details><summary>10. Flashback（第 12 章）：為何 audit log 不能單獨連續證明 `--anonymous-auth` 在任意歷史期間未變更？</summary>
+<details><summary>10. **Flashback（第 12 章）。**第 12 章停用 `--anonymous-auth`，並以 HTTP request 在當下驗證。為何 audit log **不能**單獨提供連續證明，證明在任意過去期間此 flag 未變更？它能對該期間的 anonymous API request 確認什麼？設定的 continuous assurance 還需要哪些額外 controls？</summary>
 
 Audit 記錄 API requests，不記錄 static Pod manifest 或 kube-apiserver flag 的連續 state。在可取得且保留的期間，它可顯示 anonymous requests、time、verb、object、response；沒有 records 不代表 flag 未被改過。Continuous assurance 需要 periodic config checks、file-integrity monitoring、GitOps drift detection，以及 policy/static-Pod manifest change alert。
 </details>
@@ -604,21 +642,21 @@ Audit 記錄 API requests，不記錄 static Pod manifest 或 kube-apiserver fla
 
 🌐 額外 interactive practice（killer.sh/killercoda，external resource）：[auditing-enable-audit-logs](https://killercoda.com/killer-shell-cks/scenario/auditing-enable-audit-logs)
 
-CKS lab 112 結合 Falco、audit 與 immutability；若環境中可用，請在第 29–32 章後完成。Control-plane practice 請使用 [CKA lab 112：etcd snapshots and restore](../../../cka/labs/112/README_TW.MD)，它訓練 control-plane node SSH、static Pod 與 risky operation 後的 API verification。
+CKS lab 112 結合 Falco、audit 與 immutability；若環境中可用，請在第 29-32 章後完成。Control-plane practice 請使用 [CKA lab 112：etcd snapshots and restore](../../../cka/labs/112/README_TW.MD)，它訓練 control-plane node SSH、static Pod 與 risky operation 後的 API verification。
 
 有用文件：[Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) · [Audit Policy](https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/) · [kube-apiserver flags](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/)
 
 ## 混合 checkpoint：Monitoring, Logging & Runtime Security 已完成
 
-這是六個 domains 的最後一個。請在沒有提示下花 15–20 分鐘驗證整個課程是一張圖，而非六個孤立 blocks：
+這是六個 domains 的最後一個。請在沒有提示下花 15-20 分鐘驗證整個課程是一張圖，而非六個孤立 blocks：
 
 1. 啟動 Falco（或閱讀現有 alert），將一個 alert 透過 output fields 關聯至 Kubernetes workload（第 29 章）。
 2. 說明 execution → persistence → exfiltration signals sequence，並指出你最先看到的 signal（第 30 章）。
 3. 對 test Pod 使用 `readOnlyRootFilesystem: true`，說明它限制的具體 post-exploitation technique（第 31 章）。
-4. **混合任務。**結合 API access restriction（第 12 章，Cluster Hardening domain）和 audit log（本章）：說明單次 `curl`/`401` check 僅證明**當下** state，而 audit log 記錄的是**API requests**（誰、何時、哪個 resource/verb/result），不是 static `kube-apiserver` configuration 的連續 state。為何兩次檢查間沒有 anonymous request 不能證明 `--anonymous-auth` 全程未改，以及 continuous assurance 所需的 periodic config check、file-integrity monitoring、GitOps drift detection。
+4. **混合任務。**結合 API access restriction（第 12 章，Cluster Hardening domain）和 audit log（本章）：說明單次 `curl`/`401` check 僅證明**當下** state，而 audit log 記錄的是**API requests**（誰、何時、哪個 resource/verb/result），不是 static `kube-apiserver` configuration 的連續 state。為何兩次檢查間沒有 anonymous request 不能證明 `--anonymous-auth` 全程未改，以及 continuous assurance 還需要哪些額外 controls（periodic config check、file-integrity monitoring、GitOps drift detection）？
 5. **最終整合任務。**模擬兩-domain chain：RBAC binding（第 10 章）給 subject 過多 `bind`/`escalate` permission；說明 (a) 如何透過 audit log 偵測 escalation（本章），(b) 在準備 permanent RBAC fix 時的 immediate containment action。
 
-若此整合任務困難，請一起複習第 10、12、30–32 章：這是 exam 常測的 Cluster Hardening 與 Runtime Security 連結核心。
+若此整合任務困難，請一起複習第 10、12、30-32 章：這是 Cluster Hardening 與 Runtime Security 之間的連結核心，exam 檢查它的頻率高於其他跨 domain 連結。
 
 ---
 [目錄](../README_TW.md) · [第 31 章](../31/tw.md) · [第 33 章](../33/tw.md)

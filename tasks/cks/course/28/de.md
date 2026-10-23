@@ -6,7 +6,7 @@
 > oder ein OS-Paket enthalten, für das gestern eine exploitable CVE veröffentlicht wurde. Ohne
 > Abgleich der Zusammensetzung des artifact mit einer aktuellen vulnerability database durchläuft
 > ein solcher digest die delivery und bleibt in production, obwohl bereits eine fixed version
-> existiert oder ein dringender triage nötig ist. Es braucht regelmäßige scans, die an den digest
+> existiert oder eine dringende triage nötig ist. Es braucht regelmäßige scans, die an den digest
 > gebunden sind, und ein CI gate für nicht akzeptable findings.
 
 > **Was folgt.** In [Kapitel 27](../27/de.md) haben wir unsichere Einstellungen von Dockerfile
@@ -48,7 +48,7 @@ flowchart TB
     style decision fill:#0f9d58,color:#fff
 ```
 
-Eine Schwachstelle wird nicht allein wegen hoher severity zum Risiko. Beim triage prüft man:
+Eine Schwachstelle wird nicht allein wegen hoher severity zum Risiko. Bei der triage prüft man:
 
 - ob der verwundbare Code für diesen Workload erreichbar ist und die gefährliche Funktion
   aktiviert ist;
@@ -108,7 +108,7 @@ CI wird sie meist gecached, aber nach Zeitplan aktualisiert. Basisdurchlauf:
 # Vollständiger menschenlesbarer Report zur Analyse.
 trivy image registry.example.com/payments/api:1.4.2
 
-# CVE gate: nur vulnerability scanner und priorisierte Findings mit veröffentlichtem fix.
+# CVE gate: nur vulnerability scanner und priorisierte findings mit veröffentlichtem fix.
 trivy image \
   --scanners vuln \
   --severity HIGH,CRITICAL \
@@ -364,7 +364,7 @@ flowchart TB
     style rescan fill:#673ab7,color:#fff
 ```
 
-Beispiel eines GitHub-Actions-artigen shell steps, der den job bei fixierbaren HIGH- oder
+Beispiel eines GitHub-Actions-style shell steps, der den job bei fixierbaren HIGH- oder
 CRITICAL-CVE stoppt:
 
 ```bash
@@ -422,12 +422,12 @@ Unten ein praktischer Ablauf für einen incident oder einen regelmäßigen Repor
 nur, die CVE zu finden, sondern sicherzustellen, dass das verwundbare artifact nicht mehr im
 cluster läuft.
 
-> 🏭 Automatisieren Sie inventory und scheduled rescan deployed images: Eine neue CVE kann für einen unveränderten digest auch nach dem release erscheinen.
+> 🏭 Automatisieren Sie inventory und scheduled rescan der deployed images: Eine neue CVE kann für einen unveränderten digest auch nach dem release erscheinen.
 
 1. **Inventarisieren.** Die runtime `imageID` aus allen Pod status abrufen, mit dem canonical
    digest abgleichen, nach namespace und owner gruppieren. Init- und ephemeral containers,
    DaemonSet und Jobs nicht vergessen; separat `spec.volumes[].image.reference` abrufen und auf
-   container-image-compatible image volume die CVE/SBOM-policy anwenden.
+   container-image-compatible image volumes die CVE/SBOM-policy anwenden.
 2. **Priorisieren.** Einen vulnerability scan nach platform-manifest-digest ausführen,
    `CRITICAL` auswählen, package, installed/fixed versions, exposure und den owner des Service
    prüfen.
@@ -557,9 +557,9 @@ einer inkompatiblen ABI schließen.
 ## 28.11. Nutzen auf der Prüfung und in der Praxis
 
 **Auf der Prüfung.** Üben Sie die Analyse von image scan, severity, das Speichern des Reports,
-die Inventarisierung von containern und die erneute Prüfung der Korrektur, bauen Sie die
+die Inventarisierung von Containern und die erneute Prüfung der Korrektur, bauen Sie die
 Strategie aber nicht auf der garantierten Verfügbarkeit von Trivy oder eines konkreten Befehls
-auf. CycloneDX/SPDX und `trivy sbom` sind production extension, keine prüfungsgarantierte
+auf. CycloneDX/SPDX und `trivy sbom` sind eine production extension, keine prüfungsgarantierte
 CLI-Aufgabe. Wichtig ist, den scan des image nicht mit `trivy fs` und `trivy config` zu
 verwechseln.
 
@@ -625,7 +625,7 @@ Die folgende Praxis verbindet die Minimierung des image, static analysis, Trivy,
 und allowlist des artifact. Darin werden scan-Report, SBOM und die Überprüfung des korrigierten
 workload zu prüfbaren Artefakten.
 
-🧪 Labor 111 (Supply chain: Trivy, SBOM, signing): [tasks/cks/labs/111](../../labs/111/README_DE.MD)
+🧪 Lab 111 (Supply chain: Trivy, SBOM, signing): [tasks/cks/labs/111](../../labs/111/README_DE.MD)
 🌐 Zusätzliche interaktive Praxis (killer.sh/killercoda, externe Ressource): [image-vulnerability-scanning-trivy](https://killercoda.com/killer-shell-cks/scenario/image-vulnerability-scanning-trivy)
 
 Nützliche Dokumentation: [Trivy image](https://trivy.dev/latest/docs/target/container_image/)

@@ -204,7 +204,7 @@ only in `/var/work/tests/artifacts/<number>/`.
 <details>
 <summary>💡 Hint for task 1c</summary>
 
-Get the image references with a command like `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jsonpath=...` - do not try to guess from the name of the Deployment which image is "newer" or "safer". The counting command: `trivy image --scanners vuln --severity CRITICAL --format json <ref>`, then `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length'`. For CycloneDX use exactly `trivy image --format cyclonedx --output <file> <ref>` - not Syft (Syft is already used in task 7 for a different image, here Trivy is explicitly required). Scaling is done via `kubectl scale deployment/<name> -n cks-111 --replicas=0` (or `--replicas=1` for the ones you keep).
+Get the image references with a command like `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jsonpath=...` - do not try to guess from the name of the Deployment which image is "newer" or "safer". The counting command: `trivy image --scanners vuln --severity CRITICAL --format json <ref>`, then `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length'`. For CycloneDX use exactly `trivy image --format cyclonedx --output <file> <ref>` - not Syft (Syft is already used in task 7 for a different image; here Trivy is explicitly required). Scaling is done via `kubectl scale deployment/<name> -n cks-111 --replicas=0` (or `--replicas=1` for the ones you keep).
 </details>
 
 ---
@@ -324,7 +324,7 @@ The command is `trivy sbom <path-to-the-sbom-file>`, and NOT `trivy image <path-
 <details>
 <summary>💡 Hint for task 9b</summary>
 
-Do not reuse the Deployment `catalog` from task 4 for this check - use a literally new `kubectl run` with a new Pod name, as stated in the task. Both timestamps (of the Pod and of the policy) are ISO8601 strings in UTC, they can be compared lexicographically as regular strings (`[[ "2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z" ]]` works correctly in bash for this format).
+Do not reuse the Deployment `catalog` from task 4 for this check - use a literally new `kubectl run` with a new Pod name, as stated in the task. Both timestamps (of the Pod and of the policy) are ISO8601 strings in UTC; they can be compared lexicographically as regular strings (`[[ "2026-09-06T10:05:00Z" > "2026-09-06T10:00:00Z" ]]` works correctly in bash for this format).
 </details>
 
 ---

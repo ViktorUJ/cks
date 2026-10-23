@@ -17,7 +17,7 @@
 > Security** (20%). Un root filesystem inmutable no corrige una vulnerabilidad, pero estrecha el camino de la
 > ejecución a la persistence y hace más visibles las escrituras anómalas.
 
-> **Qué necesitas de CKA.** Los campos de `SecurityContext` se tratan en el [capítulo 20 de CKA](../../../cka/course/20/es.md),
+> **Qué necesita de CKA.** Los campos de `SecurityContext` se tratan en el [capítulo 20 de CKA](../../../cka/course/20/es.md),
 > `emptyDir` y otros volumes se tratan en el [capítulo 24 de CKA](../../../cka/course/24/es.md), mientras que ConfigMap y
 > Secret se tratan en los [capítulos 18](../../../cka/course/18/es.md) y [19](../../../cka/course/19/es.md).
 > Aquí forman un contrato de runtime: la raíz de la image del contenedor es de solo lectura, las escrituras de la aplicación
@@ -76,7 +76,7 @@ seccomp, NetworkPolicy, un ServiceAccount mínimo y runtime detection.
 
 **Runtime mutation** es una señal, pero no siempre un ataque. Muchas aplicaciones legítimas escriben un PID,
 lock, cache, sesión TLS, plantilla compilada o log. El objetivo del hardening no es prohibir cada
-escritura, sino responder de antemano: *qué proceso escribe, dónde, cuánto y si sobrevive al Pod?*
+escritura, sino responder de antemano: *¿qué proceso escribe, dónde, cuánto y si sobrevive al Pod?*
 Si no hay respuesta, una raíz escribible convierte un error de desarrollo en una superficie de ataque
 permitida implícitamente.
 
@@ -382,7 +382,7 @@ estado efectivo en runtime es lo que debe verificarse.
 | distroless | runtime de producción mínimo, sin shell/package manager | el debug debe planificarse fuera de la image de producción |
 | scratch | la capa mínima posible | sirve principalmente para binary estáticos; pueden faltar certificados de CA o zona horaria |
 
-No vuelva a añadir `busybox`, `bash` ni `curl` a la image final "por comodidad". Manténgalos
+No vuelva a añadir `busybox`, `bash` ni `curl` a la image final «por comodidad». Manténgalos
 en la image de builder/debug. Para observabilidad, la aplicación debe escribir logs estructurados en stdout,
 exportar métricas y un health endpoint; el diagnóstico admitido debe ser un
 procedimiento independiente, no una shell backdoor oculta.
@@ -472,7 +472,7 @@ Este límite no protege el Secret frente a un privileged workload ni frente al c
 sujeto puede acceder a los datos del Pod o a kubelet/runtime. Un Secret volume limita el
 proceso normal en el Pod y el acceso por API/RBAC, pero no protege frente a un node-level compromise.
 
-Si la aplicación transforma un Secret en un formato de runtime (por ejemplo, una template para un
+Si la aplicación transforma un Secret en un formato de runtime (por ejemplo, un template para un
 proxy), un initContainer puede escribir el resultado en un `emptyDir` en memoria, y el main container
 puede recibirlo read-only, como en la sección 31.3. De este modo, el secret-derived output no se
 propaga por la image layer y queda limitado al lifecycle del Pod.
@@ -523,7 +523,7 @@ kubectl exec -n "$namespace" "$pod" -c api -- sh -c 'touch /tmp/write-test && rm
 ```
 
 Los últimos comandos presuponen una shell en la image. Para un distroless workload, use una de las
-siguientes opciones: comprobar las mount options en el nodo mediante un operador autorizado, un
+siguientes opciones: una comprobación de las mount options en el nodo mediante un operador autorizado, un
 test endpoint preparado de antemano, un compatibility Pod separado con el mismo securityContext o un
 controlled ephemeral container. No convierta la ausencia de shell en un failure del hardening: es
 precisamente el resultado esperado de un diseño distroless.
@@ -689,7 +689,7 @@ kubectl patch validatingadmissionpolicybinding require-readonly-rootfs-default \
 ```
 
 Compruébelo con un manifest positivo y otro negativo en el namespace objetivo. En la prueba negativa
-falta `readOnlyRootFilesystem`, por lo que tras `Deny` API debe rechazar el Pod.
+falta `readOnlyRootFilesystem`, por lo que tras `Deny` la API debe rechazar el Pod.
 
 **Default-enforce y exception.** Un Binding independiente y estrecho no anula el `Deny` original: si
 ambos Binding hacen match con la request, el rechazo sigue aplicándose. Por ello, el Deny-binding
@@ -767,7 +767,7 @@ También es obligatoria una prueba negativa de la semántica del controller: apl
 inseguro al que le falte `readOnlyRootFilesystem`. Con el Binding mostrado, que solo cubre Pod, el
 propio Deployment **se admitirá**, pero su Pod será rechazado; esto confirma el límite indicado.
 Después de añadir un VAP de nivel controller o el autogen de Kyverno, el comportamiento esperado
-cambia: API rechaza ya el propio Deployment.
+cambia: la API rechaza ya el propio Deployment.
 
 ```bash
 kubectl apply -n payments -f unsafe-deployment.yaml
@@ -826,7 +826,7 @@ native policy anterior.
 
 El orden de trabajo: PSA `restricted` con una pinned version protege el umbral común inferior del
 namespace; native VAP + Binding formaliza la raíz read-only; Kyverno se añade solo cuando se
-necesitan capacidades de production; CI/static checks proporcionan feedback antes de API; la runtime
+necesitan capacidades de production; CI/static checks proporcionan feedback antes de la API; la runtime
 tool (Falco en el [capítulo 29](../29/es.md)) observa lo que aun así ocurrió. Ningún nivel vuelve
 superfluos a los demás.
 
@@ -948,7 +948,7 @@ El capítulo presenta paths típicos `/tmp`, `/run` o `/var/run`, `/var/cache/<a
 <details>
 <summary>4. ¿Por qué no se puede aplicar `readOnlyRootFilesystem` solo al container principal de un Deployment, y por qué se comprueban por separado los `ephemeralcontainers`?</summary>
 
-Es un field a nivel de container, por lo que una app hardened no vuelve automáticamente read-only a un initContainer o sidecar. Todos los containers regular, init y sidecar requieren su propio `securityContext`. Un ephemeral container se añade más tarde mediante un subresource separado y, sin comprobación, puede convertirse en una debug-bypass del baseline; por ello se incluye en las reglas de audit y VAP.
+Es un field a nivel de container, por lo que una app hardened no vuelve automáticamente read-only a un initContainer o sidecar. Todos los containers regular, init y sidecar requieren su propio `securityContext`. Un ephemeral container se añade más tarde mediante un subresource separado y, sin comprobación, puede convertirse en un debug-bypass del baseline; por ello se incluye en las reglas de audit y VAP.
 </details>
 
 <details>

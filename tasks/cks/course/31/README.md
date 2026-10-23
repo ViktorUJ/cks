@@ -33,7 +33,7 @@ An image consists of read-only layers. After startup, the container runtime adds
 convenient working area inside the already running container instance: they can place a downloader
 in `/tmp`, replace a script in `/app`, change a configuration file to restart a process
 in the same container, or save a stolen token. The change usually does not reach the registry.
-An ordinary restart of a child process does not clear the layer, but kubelet-managed restart/recreation of a
+An ordinary restart of a child process does not clear the layer, but a kubelet-managed restart/recreation of a
 container creates a new instance with a new writable layer, even if the Pod as an API object
 remains the same. Preserving data between container restarts requires a volume or external
 storage.
@@ -69,7 +69,7 @@ seccomp, NetworkPolicy, a minimal ServiceAccount, and runtime detection.
 | Post-compromise scenario | Writable root | Read-only root + narrow volumes |
 |---|---|---|
 | Download and execute a new binary in `/tmp` | usually possible | requires a writable mount; an attempt in the root fails |
-| Replace `/app/start.sh` or `/etc/myapp/config` | possible in the current container instance | image-backed path is immutable; do not use `/etc/hosts` as such an example, it is a kubelet-managed mount |
+| Replace `/app/start.sh` or `/etc/myapp/config` | possible in the current container instance | image-backed path is immutable; do not use `/etc/hosts` as such an example; it is a kubelet-managed mount |
 | Create a log/cache | possible in the writable layer or any writable mount | image-backed path is unavailable for writes, but any writable mount remains accessible |
 | Persist across a kubelet container restart | the writable layer is lost with the previous container instance | requires a separate volume/external service, which is easier to control |
 | Fix a CVE or stop the network | does not solve it | does not solve it either |
@@ -468,7 +468,7 @@ process in the container with the relevant Unix permissions. Therefore:
 - separately restrict namespace access and encryption at rest; a read-only root does not replace
   these measures.
 
-This boundary does not protect a Secret from a privileged workload or from node compromise: such an
+This boundary does not protect a Secret from a privileged workload or from node compromise: such a
 subject can access Pod data or kubelet/runtime. A Secret volume restricts an ordinary
 process in the Pod and API/RBAC access, but is not protection against node-level compromise.
 
@@ -696,7 +696,7 @@ Bindings match a request, the denial still applies. Therefore, the primary Deny 
 matches every workload namespace, while exceptions are specified *before* rollout by an explicit non-overlapping
 `NotIn` list on the protected `kubernetes.io/metadata.name`. This is the label that the API server
 assigns to the namespace name, not an opt-in label whose absence or modification can become
-a bypass. Include only system namespaces and approved temporary scopes in the list, which the
+a bypass. Include in the list only system namespaces and approved temporary scopes that the
 platform team controls through RBAC: a developer must not be able to create a namespace
 with a reserved name, change the Binding, or expand this list. Keep the owner, ticket, and expiry of a
 temporary exception alongside the Binding change and review it regularly. Do not

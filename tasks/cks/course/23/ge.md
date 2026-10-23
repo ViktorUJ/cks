@@ -27,7 +27,7 @@
 
 ## 23.1. ორი ამოცანა, ორი დონე: encryption და mTLS
 
-სიტყვებს „Pod-to-Pod traffic-ის დაშიფვრა" ორი სხვადასხვა მნიშვნელობა აქვს. ისინი არ
+სიტყვებს „Pod-to-Pod traffic-ის დაშიფვრა“ ორი სხვადასხვა მნიშვნელობა აქვს. ისინი არ
 შეიძლება ჩაითვალოს ურთიერთშესატყვისად.
 
 - **Cilium WireGuard/IPsec** იცავს პაკეტს node-ებს შორის. ის დაშიფრავს და
@@ -35,7 +35,7 @@
   აპლიკაციისთვის: container არ იღებს certificate-ს, Service არ იცვლება, HTTP
   workload-ის შიგნით რჩება HTTP.
 - **Service mesh mTLS** ქმნის TLS-კავშირს workload-ის proxy-ებს შორის. ის ამოწმებს
-  გამომწვევი workload-ისა და server-ის identity-ს, არა მხოლოდ node-ებს. Istio და
+  გამომძახებელი workload-ისა და server-ის identity-ს, არა მხოლოდ node-ებს. Istio და
   Linkerd ჩვეულებრივ თავად გასცემენ ხანმოკლე certificate-ებს და ჩაჭერენ traffic-ს
   sidecar/proxy-ის მეშვეობით.
 - **NetworkPolicy** ცალკე პასუხობს: რომელი ნაკადი ზოგადად დასაშვებია. არც Cilium
@@ -94,7 +94,7 @@ outer packet-ს, რომლითაც შესაძლებელია 
 
 CNI encryption და service mesh - clusterwide ან namespacewide ცვლილებაა. არ ჩართოთ
 ის ბრმად production-ში: არასწორმა MTU-მ, ძველმა kernel-მა, firewall-მა ან legacy
-client-ისთვის მკაცრმა mTLS-მა შესძლებია traffic-ის შეჩერება. ჯერ დაფიქსირეთ
+client-ისთვის მკაცრმა mTLS-მა შეიძლება შეაჩეროს traffic. ჯერ დაფიქსირეთ
 მიმდინარე CNI, ვერსიები, ტესტური Pod-ების placement და პაკეტის გზა.
 
 ```bash
@@ -158,7 +158,7 @@ sequenceDiagram
     CA-->>A: response
 ```
 
-**Transparent** არ ნიშნავს „ყველგან და ყველასგან დაშიფრული". აპლიკაციის
+**Transparent** არ ნიშნავს „ყველგან და ყველასგან დაშიფრული“. აპლიკაციის
 interface-ზე ან namespace-ის შიგნით plaintext შესაძლებელია იყოს ხილული
 დაშიფვრამდე/გაშიფვრის შემდეგ. ასევე, დაშიფვრა არ ხდის უსაფრთხოს დაუცველ
 აპლიკაციას: ის არ ბლოკავს SQL injection-ს, არ იძლევა მომხმარებლის ავტორიზაციას
@@ -183,7 +183,7 @@ Cilium 1.20-ში დამატებით დოკუმენტირე
 არჩევენ **ერთ** backend-ს. WireGuard-ისა და IPsec-ის ერთდროული ჩართვა „ორმაგი
 დაცვის" სახით არ არის Cilium-ის ჩვეული კონფიგურაცია და მხოლოდ ართულებს debugging-ს.
 ზუსტი Helm values და მხარდაჭერილი კომბინაციები შეამოწმეთ კლასტერში დაინსტალირებული
-ვერსიის დოკუმენტაციასთან: ძველი სტატიის მნიშვნელობები შესძლებია არ ეხაზეს ახალ
+ვერსიის დოკუმენტაციასთან: ძველი სტატიის მნიშვნელობები შეიძლება არ ერგებოდეს ახალ
 Cilium-ს.
 
 > 🎯 შეამოწმეთ version-pinned values, Cilium agent-ების rollout და encryption status; peer key ადასტურებს node-ს, არა Pod identity-ს.
@@ -206,7 +206,7 @@ GitOps-ის ან დაფიქსირებული Helm release-ის
 კონკრეტული Cilium release-ის values-ის შემდეგ. `encryption.nodeEncryption=true`
 ავრცობს დაცვას node-to-node traffic-ზეც. WireGuard-ისთვის Cilium ნაგულისხმებად
 გამორიცხავს label-ის `node-role.kubernetes.io/control-plane` მქონე node-ებს
-node-to-node encryption-იდან: ეს prevents-ს bootstrap-პრობლემას public key-ის
+node-to-node encryption-იდან: ეს აღკვეთს bootstrap-პრობლემას public key-ის
 განახლებისას. არ ჩათვალოთ control-plane ავტომატურად დაფარულად ამ პარამეტრით;
 ჩართეთ ის მხოლოდ control-plane-ზე და host traffic-ზე ეფექტის გაცნობის შემდეგ.
 
@@ -250,7 +250,7 @@ kubectl -n kube-system get pods -l k8s-app=cilium -o name |
 ```
 
 მოსალოდნელია healthy agent-ები და encryption state peer/handshake-შეცდომების
-გარეშე ყოველ node-ზე. Cilium-ის ვერსიის მიხედვით ბრძანება შესძლებია აჩვენოს
+გარეშე ყოველ node-ზე. Cilium-ის ვერსიის მიხედვით ბრძანებამ შეიძლება აჩვენოს
 WireGuard-ის interface-ს, peer-ებს, public key-ებს ან counter-ებს. `cilium-dbg` -
 ლოკალური agent-ის CLI-ია: თუ subcommand არ არსებობს, შესრულეთ
 `cilium-dbg --help` **ამავე agent-ზე** და შემოწმეთ დაინსტალირებული Cilium-ვერსიის
@@ -259,14 +259,14 @@ WireGuard-ის interface-ს, peer-ებს, public key-ებს ან coun
 გამოიყენეთ მისთვის მხარდაჭერილი თანხვედრადი ვერსია და მისი compatibility table,
 არა release-ის იმავე ვერსიის ნომერი.
 
-> 🔬 Strict mode-ს ესმის პირველი plaintext packet-ის თავიდან აცილება, მაგრამ საჭიროებს ვერსია- და routing-სპეციფიკურ თანხვედრას.
+> 🔬 Strict mode ხელს უშლის პირველი plaintext packet-ის გაგზავნას, მაგრამ საჭიროებს ვერსია- და routing-სპეციფიკურ თანხვედრას.
 
 ### Strict mode: პირველი plaintext packet-ის თავიდან აცილება
 
 ჩვეულებრივი transparent WireGuard-ისას Pod-to-Pod traffic-ისთვის Cilium-ის
-მართული endpoint-ებს შორის სხვადასხვა node-ზე, ახალი remote endpoint შესძლებია
-ცნობილი არ გახდეს agent-ისთვის დაუყოვნებლივ; ამამდე პირველი egress-პაკეტები
-მისკენ პოტენციურად შესძლებია გაიგზავნოს tunnel-ის გარეშე. თუ threat model ამას
+მიერ მართულ endpoint-ებს შორის სხვადასხვა node-ზე, ახალი remote endpoint შეიძლება
+ცნობილი არ გახდეს agent-ისთვის დაუყოვნებლივ; მანამდე პირველი egress-პაკეტები
+მისკენ პოტენციურად შეიძლება გაიგზავნოს tunnel-ის გარეშე. თუ threat model ამას
 არ უშვებს, გამოიყენეთ strict mode ვერსიის თანხვედრის ცალკე შემოწმების შემდეგ:
 
 ```yaml
@@ -293,11 +293,11 @@ NetworkPolicy-ის, firewall-ისა და control-plane-ის ხელ�
 
 > 🏭 კომპრომეტირებული node-ისთვის: იზოლირება, evidence-ის შენარჩუნება, ძველი peer-ის ნდობიდან გამოტანა; private key არ ხვდება ticket-ში, Git-ში ან chat-ში.
 
-**რას ნიშნავს ეს პრაქტიკაში:** „კომპრომეტირებულია" - არსებობს საფუძველი
-ვიგონდოთ, რომ თავდამსხმელს შესწევდა უნარი ბრძანებების შესრულებისა node-ზე ან
-მისი მონაცემების წაკითხვისა. **იზოლირება** - არ დაუნიშნო მას ახალი Pod-ები და
-შეზღუდო მისი მონაწილეობა კლასტერში დამტკიცებული incident procedure-ის
-მიხედვით; ეს ავრცობს გავრცელების შეზღუდვას, მაგრამ არ ასწორებს კვალს.
+**რას ნიშნავს ეს პრაქტიკაში:** „კომპრომეტირებულია“ - არსებობს საფუძველი
+ვივარაუდოთ, რომ თავდამსხმელს შესწევდა უნარი ბრძანებების შესრულებისა node-ზე ან
+მისი მონაცემების წაკითხვისა. **იზოლირება** - არ დაუნიშნოთ მას ახალი Pod-ები და
+შეზღუდოთ მისი მონაწილეობა კლასტერში დამტკიცებული incident procedure-ის
+მიხედვით; ეს აკავებს გავრცელებას, მაგრამ კვალს არ შლის.
 **Evidence** - გამოძიებისთვის საჭირო metadata და logs (დრო, node-ის სახელი,
 Cilium-ის მდგომარეობა და event-ები), არა private key-ის კოპია. **ძველი peer-ის
 ნდობიდან გამოტანა** - key-ის რეგენერაციის ან node-ის ჩანაცვლების შემდეგ
@@ -369,7 +369,7 @@ kubectl -n kube-system get pods -l k8s-app=cilium -o name |
 ```
 
 Cilium ინახავს IPsec key material-ს Secret-ში `cilium-ipsec-keys` `kube-system`-ში.
-არ გამოიტანოთ ის terminal-ში, CI log-ში ან documentation-ში. დაშვებულია
+არ გამოიტანოთ ის terminal-ში, CI log-ში ან დოკუმენტაციაში. დაშვებულია
 არსებობისა და metadata-ს შემოწმება data-ს decode-ის გარეშე.
 
 ბრუნვისთვის გამოიყენეთ მხოლოდ მხარდაჭერილი **თანხვედრადი** Cilium CLI-ის
@@ -386,13 +386,13 @@ cilium encryption status
 cilium encryption rotate-key
 ```
 
-რამდენიმე კლასტერის ან სტანდარტული არაარსებული release-ის შემთხვევაში
+რამდენიმე კლასტერის ან არასტანდარტული release-ის შემთხვევაში
 დაამატეთ ბრძანებებს საჭირო პარამეტრები `--context`, `--namespace kube-system`
 და `--helm-release-name`. არ შესრულოთ ბრუნვა Cilium Pod-იდან. შემოწმეთ
 subcommand-ის ხელმისაწვდომობა `cilium encryption --help`-ის და CLI-ის
 compatibility table-ის მეშვეობით. `encryption.ipsec.keyWatcher=true`-ის
 შემთხვევაში (default) agent-ები იჭერენ Secret-ის განახლებას DaemonSet-ის
-restart-ის გარეშე; ჩვეულებრივ ყველა agent მას იტანება დაახლოებით წუთის
+restart-ის გარეშე; ჩვეულებრივ ყველა agent მას იყენებს დაახლოებით წუთის
 განმავლობაში, ხოლო ძველი და ახალი key თანაარსებობს rotation window-ში.
 Restart/rollout DaemonSet-ისთვის საჭიროა მხოლოდ გამორთული watcher-ისას ან
 თუ ეს პირდაპირ მოითხოვს დაინსტალირებული ვერსიის დოკუმენტაცია.
@@ -409,21 +409,21 @@ request-ისთვის პრაქტიკული მინიმუმ�
   **ყველა** agent-ზე key-overlap window-ის დასრულებამდე;
 - არსებობს დანაკარგების/შეცდომების გაზომვა და rollback ძველი key-ის
   წაშლამდე;
-- ბრუნვის შემდეგ მოწმდება აპლიკაცია და physical capture საჭირო node-პარზე.
+- ბრუნვის შემდეგ მოწმდება აპლიკაცია და physical capture საჭირო node-წყვილზე.
 
-**არ ჩააგდოთ IPsec key mTLS CA-ში.** IPsec key იცავს transport peer-ებს, ხოლო
+**არ აურიოთ IPsec key mTLS CA-სთან.** IPsec key იცავს transport peer-ებს, ხოლო
 mesh-ის certificate ადასტურებს workload identity-ს. მათი owner, rotation
-interval, audit და blast radius შესძლებია სხვადასხვა იყოს.
+interval, audit და blast radius შეიძლება სხვადასხვა იყოს.
 
 აქ სრულდება Cilium transport encryption-ის მოწყობა. Istio განხილულია
 პირდაპირ მის შემდეგ განზრახ: ეს **არ** არის Cilium-ის შემდეგი პარამეტრი და
 არც IPsec-ის prerequisite, არამედ დამოუკიდებელი დამატებითი შრე. Cross-node
 მოთხოვნისთვის Cilium იცავს outer packet-ს node-ებს შორის, ხოლო Istio mTLS
-საშუალებას აძლევს proxy-ს დაამტკიცოს კონკრეტული workload-ის identity.
+საშუალებას აძლევს proxy-ს შეამოწმოს კონკრეტული workload-ის identity.
 ამიტომ healthy Cilium encryption ჯერ არ ადასტურებს injection-ს, certificate-ს
 ან Istio-ს mTLS policy-ს - ეს შემოწმებები ცალკე შესრულდება შემდეგ ქვეთავში.
 
-> 🎯 Istio mTLS აკავშირებს certificate-ს workload identity-სთან; გავარჩიეთ `PeerAuthentication: STRICT` `DestinationRule`-ისგან `ISTIO_MUTUAL`-ით და შემოწმეთ proxy/injection.
+> 🎯 Istio mTLS აკავშირებს certificate-ს workload identity-სთან; გაარჩიეთ `PeerAuthentication: STRICT` `DestinationRule`-ისგან `ISTIO_MUTUAL`-ით და შემოწმეთ proxy/injection.
 
 > 🔬 **Upstream identity primitive.** Kubernetes v1.37-მა სტაბილიზაცია გაუკეთა Pod Certificates-სა და ClusterTrustBundles-ს. ისინი იძლევა X.509 primitives-ს Kubernetes-ის დონეზე, მაგრამ არ ხდის Istio/SPIFFE identity plane-ს ავტომატურად ზედმეტად: signer, trust model და mesh enforcement - ცალკეული architecture-გადაწყვეტილებებია. იხილეთ [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
@@ -453,7 +453,7 @@ Cilium დამატებით იცავს პაკეტს არა�
 | ღირებულება/შეზღუდვა | საჭიროა თანხვედრადი CNI/kernel, firewall და MTU; გასაღებები ეკუთვნის node-ებს | საჭიროა control plane, certificate-ები და proxy/ambient dataplane; sidecar mode ამატებს container-ს და overhead-ს |
 | რის დამტკიცება საჭიროა | Cilium agent-ის status და outer WireGuard/ESP physical NIC-ზე | Injection/enrollment, proxy/certificate status და mTLS/`STRICT` ტესტები |
 
-ეს არ არის სავალდებულო „ორმაგი დაშიფვრა". თუ **ორივე** workload უკვე mesh-შია,
+ეს არ არის სავალდებულო „ორმაგი დაშიფვრა“. თუ **ორივე** workload უკვე mesh-შია,
 trust შემოწმებულია და `PeerAuthentication: STRICT` ნამდვილად გამოიყენება, mTLS
 უკვე შიფრავს application payload-ს proxy-ებს შორის. ამავე payload-ის ხელახლა
 დაშიფვრისთვის Cilium-ის node encryption-ის ჩართვა სავალდებულო არ არის.
@@ -482,7 +482,7 @@ authentication-ის ჩათვლით, აპლიკაციას TLS-
 
 `HBONE` (**HTTP-Based Overlay Network Environment**) - Istio-ს დაცული
 tunnel-ია mesh-ის კომპონენტებს შორის. ის ატარებს რამდენიმე TCP stream-ს ერთი
-mTLS connection-ის მეშვეობით; ამიტომ workload traffic შესძლებია იყოს დაცული,
+mTLS connection-ის მეშვეობით; ამიტომ workload traffic შეიძლება იყოს დაცული,
 თუმცა Pod-ის container-ების სიაში არ არსებობს `istio-proxy`. `istio-proxy`-ის
 არარსებობა ambient mode-ში არ ნიშნავს plaintext client-ს. ორივე მოდელში
 `PeerAuthentication` `STRICT`-ით არ უშვებს plaintext inbound traffic-ს: ambient
@@ -526,7 +526,7 @@ kubectl -n mesh-demo get pod -l app=server \
 
 Container-ების სიაში უნდა იყოს `istio-proxy` `server`-თან ერთად. Sidecar-ის
 არარსებობა - არა კოსმეტიკური ხარვეზი: plaintext client არ ხდება mTLS
-client-ად, ხოლო `STRICT` კანონზომიერად უარს ეთქვის მას. უკვე არსებული
+client-ად, ხოლო `STRICT` კანონზომიერად უარს ეტყვის მას. უკვე არსებული
 Deployment-ისთვის გააკეთეთ controlled rollout label-ის შემდეგ:
 
 ```bash
@@ -587,7 +587,7 @@ namespace -> დროებითი გამონაკლისის მ�
 
 `PERMISSIVE` სასარგებლოა მხოლოდ როგორც დროებითი თანხვედრა: proxy იღებს
 mTLS-ს და plaintext-ს, ამიტომ წარმატებული `curl` ჯერ არ ადასტურებს mTLS-ს.
-`DISABLE` ჩვეულებრივი TCP workload-ისთვის ქმნის გამონაკლისს, რომელი უნდა
+`DISABLE` ჩვეულებრივი TCP workload-ისთვის ქმნის გამონაკლისს, რომელიც უნდა
 მინიმიზირდეს, დაადოკუმენტირდეს owner-ითა და ვადით.
 
 ### `DestinationRule`: client-მა არ უნდა გამორთოს TLS
@@ -783,7 +783,7 @@ kubectl -n legacy-demo exec outside-client -- \
 ჩაჭერის წერტილზე: შესაძლებელია `connection reset`, TLS handshake error ან
 timeout. უსაფრთხოების კრიტერიუმი არა შეცდომის სტრიქონია, არამედ plaintext
 success-ის არარსებობა: ბრძანება არ აბრუნებს HTTP `200`-ს, ხოლო server proxy
-არ იღებს არასაავტორიზებულ stream-ს. მკაცრი ავტომატური შემოწმებისთვის
+არ იღებს authentication-ის არმქონე stream-ს. მკაცრი ავტომატური შემოწმებისთვის
 დაფიქსირეთ ორივე ნიშანი:
 
 ```bash
@@ -813,7 +813,7 @@ Linkerd - სრულფასოვანი production-ვარიანტ�
 encryption-ისთვის პირდაპირ დასახელებულია Cilium და Istio, არა Linkerd. Linkerd
 იყენებს საკუთარ მსუბუქ proxy-სა და identity model-ს. Injection-ის შემდეგ Pod
 იღებს `linkerd-proxy`-ს; meshed traffic Linkerd-workload-ებს შორის ავტომატურად
-შიფრავს და authentication-ს უტარებს mTLS-ს. Identity ჩვეულებრივ ეკავშირება
+იშიფრება და მისი authentication ხდება mTLS-ით. Identity ჩვეულებრივ ეკავშირება
 Kubernetes ServiceAccount-ს და აქვს DNS-ის მსგავსი ხედი:
 
 ```text
@@ -821,7 +821,7 @@ Kubernetes ServiceAccount-ს და აქვს DNS-ის მსგავს�
 ```
 
 არ დააყენოთ Istio-ს და Linkerd-ის sidecar ერთსა და იმავე workload-ში
-„გაძლიერებისთვის". ორივეს სურს ჩაჭერა traffic-ის, certificate-ების გაცემა
+„გაძლიერებისთვის“. ორივეს სურს ჩაჭერა traffic-ის, certificate-ების გაცემა
 და policy-ის მართვა; შედეგი - iptables/ports-ის კონფლიქტი, განუსაზღვრელი
 observability და რთული incident response. აირჩიეთ ერთი mesh namespace-ისთვის
 ან გაატარეთ დაადოკუმენტირებული მიგრაცია.
@@ -867,7 +867,7 @@ linkerd -n linkerd-demo viz stat deploy
 წარმატებული მოთხოვნა meshed Pod-ებს შორის. მნიშვნელოვანია გავარჩიოთ
 automatic mTLS და strict inbound: Linkerd ავტომატურად იყენებს mTLS-ს meshed
 workload-ებს შორის, მაგრამ inbound authorization-ის გარეშე ნაგულისხმებად
-იღებს plaintext-ს non-meshed source-იდან (`all-unauthenticated`). automatic
+იღებს plaintext-ს non-meshed source-იდან (`all-unauthenticated`). Automatic
 mTLS-ის თავისთავადი არსებობა არ ნიშნავს, რომ server იღებს მხოლოდ mTLS-ს.
 
 მინიმალური strict inbound policy-სთვის დააყენეთ `all-authenticated`
@@ -891,32 +891,32 @@ injection-ის გარეშე და შემოწმეთ, რომ �
 policy API და unauthorized traffic-ის ქცევა შეცვლილა ვერსიებს შორის: სანამ
 ავაშენებდეთ default-deny-ს, შემოწმეთ დაინსტალირებული release-ის CRD და
 policy mode. mTLS ადასტურებს identity-ს და იცავს არხს, მაგრამ სავალდებულოდ
-არ ნიშნავს „ყოველ identity-ს შესწევს ყოველი endpoint-ის გამოძახების უნარი" -
+არ ნიშნავს „ყოველ identity-ს შესწევს ყოველი endpoint-ის გამოძახების უნარი“ -
 authorization ცალკე უნდა დაკონფიგურირდეს.
 
 > 🔬 Capture ხედავს inner plaintext/TLS-ს termination-ის წინ და outer encrypted packet-ს physical NIC-ზე.
 
 ## 23.9. WireGuard/IPsec და mesh ერთად: სად ხდება plaintext ხილული
 
-შემოწმება „`curl` მუშაობს" არ ადასტურებს encryption-ს. `curl` ამოწმებს
+შემოწმება „`curl` მუშაობს“ არ ადასტურებს encryption-ს. `curl` ამოწმებს
 ხელმისაწვდომობასა და application response-ს, მაგრამ არ განასხვავებს
 plaintext HTTP-ს დაშიფრული traffic-ისგან. ანალოგიურად, tcpdump `any`-ზე
-შესძლებია ერთდროულად დაინახოს inner plaintext პაკეტი virtual
+შეიძლება ერთდროულად დაინახოს inner plaintext პაკეტი virtual
 interface-ზე და outer encrypted packet physical NIC-ზე. დამტკიცებისთვის
 ჯერ ფორმულირება გავუკეთოთ, *სად* უნდა იყოს ხილული ყოველი შრე.
 
 | Capture-წერტილი | მხოლოდ Cilium encryption-ისას | Cilium + Istio/Linkerd-ისას |
 |---|---|---|
-| app container / loopback proxy-სთან | ხშირად plaintext HTTP | app↔local proxy შესძლებია იყოს plaintext |
-| veth/CNI node encryption-ის წინ | საწყისი inner flow შესძლებია იყოს წაკითხვადი | mTLS ciphertext mesh proxy-ებს შორის |
+| app container / loopback proxy-სთან | ხშირად plaintext HTTP | app↔local proxy შეიძლება იყოს plaintext |
+| veth/CNI node encryption-ის წინ | საწყისი inner flow შეიძლება იყოს წაკითხვადი | mTLS ciphertext mesh proxy-ებს შორის |
 | physical NIC node-a/node-b | WireGuard UDP ან IPsec ESP, HTTP-ის გარეშე | outer WireGuard/IPsec; HTTP და TLS payload არ იკითხება |
 | server app proxy-ის შემდეგ | plaintext, რადგან proxy-მ უკვე გაშიფრა | plaintext local proxy-დან app-მდე |
 
 ეს ჩვეული architecture-ია termination points-ისთვის. Cilium-ის მიზანია
 readable payload-ის მოცილება არასანდო physical network path-იდან. Mesh-ის
 მიზანია workload-to-workload segment-ის TLS-protected გახდომა და მისი
-identity-სთან დაკავშირება. არ განაცხადოთ „tcpdump არსად აჩვენებს HTTP-ს":
-node-ზე და Pod-ში ის შესძლებია იყოს ხილული დაშიფვრამდე/გაშიფვრის შემდეგ,
+identity-სთან დაკავშირება. არ განაცხადოთ „tcpdump არსად აჩვენებს HTTP-ს“:
+node-ზე და Pod-ში ის შეიძლება იყოს ხილული დაშიფვრამდე/გაშიფვრის შემდეგ,
 თუ თავდამსხმელს აქვს root ამ node-ზე.
 
 > 🎯 დაადასტურეთ cross-node placement, კონკრეტული physical NIC, გამეორებადი flow-ის დრო და Cilium status.
@@ -924,8 +924,8 @@ node-ზე და Pod-ში ის შესძლებია იყოს �
 ## 23.10. `tcpdump`-შემოწმება: outer encrypted traffic-ის დამტკიცება
 
 Packet-level დამტკიცებისთვის საჭირო არის Pod-ები **სხვადასხვა** node-ზე,
-ორივე node-ის IP და physical interface, რომელი მიდის cluster network-ში. არ
-გამოიყენოთ ავტომატურად `eth0`: cloud-node-ზე interface-ს შესძლებია ეწოდოს
+ორივე node-ის IP და physical interface, რომელიც მიდის cluster network-ში. არ
+გამოიყენოთ ავტომატურად `eth0`: cloud-node-ზე interface-ს შეიძლება ეწოდოს
 `ens5`, `ens192` ან სხვაგვარად.
 
 ```bash
@@ -951,7 +951,7 @@ sudo tcpdump -ni ens5 -vv 'udp port 51871 and host <NODE_B_IP>'
 ```
 
 სხვა terminal-ში შექმენით გამეორებადი cross-node flow. მოსახერხებელია
-შესრულდეს რამდენიმე მოთხოვნა client Pod-იდან, რომელი `kubectl get pod -o
+შესრულდეს რამდენიმე მოთხოვნა client Pod-იდან, რომელიც `kubectl get pod -o
 wide`-ის მიხედვით მდებარეობს `node-a`-ზე, server Pod-ში/Service-ში
 `node-b`-ზე:
 
@@ -1008,7 +1008,7 @@ NIC-ზე. Payload-ის შედარებისთვის გამო�
 
 ### უარყოფითი შემოწმება და ხშირი მახეები
 
-- **Capture `-i any`-ზე აჩვენებს HTTP-ს.** ეს შესძლებია იყოს inner packet
+- **Capture `-i any`-ზე აჩვენებს HTTP-ს.** ეს შეიძლება იყოს inner packet
   დაშიფვრამდე, ლოკალური მიწოდება ან traffic Pod-ებს შორის ერთსა და იმავე
   node-ზე. გაიმეორეთ physical NIC-ზე და შემოწმეთ placement.
 - **არ არსებობს UDP/51871, მაგრამ curl მუშაობს.** შესაძლებელია Pod-ები
@@ -1022,14 +1022,14 @@ NIC-ზე. Payload-ის შედარებისთვის გამო�
   inner გზაზე, მაგრამ არ ადასტურებს Cilium-ს. Physical NIC-ზე ორივე შრის
   ჩართვისას მოსალოდნელია outer WireGuard/IPsec.
 - **დიდი response ჩამოკიდულია, პატარა მუშაობს.** ეჭვმიტანილია MTU/MSS.
-  არ გამორთოთ encryption როგორც „გამოსწორება"; გაზომეთ path MTU და
-  მოწესრიგდეთ CNI/underlay პლატფორმის პროცედურის მიხედვით.
+  არ გამორთოთ encryption როგორც „გამოსწორება“; გაზომეთ path MTU და
+  მოაწესრიგეთ CNI/underlay პლატფორმის პროცედურის მიხედვით.
 
 > 🎯 დიაგნოსტიკა Cilium/underlay → DNS/Service → mesh identity/policy → NetworkPolicy; არ დატოვოთ `STRICT`-ის ან encryption-ის bypass.
 
 ## 23.11. დიაგნოსტიკა: ჯერ განისაზღვროს ხარვეზის შრე
 
-ერთი სიმპტომი `connection reset` შესძლებია წარმოშვდეს რამდენიმე დონეზე.
+ერთი სიმპტომი `connection reset` შეიძლება წარმოიშვას რამდენიმე დონეზე.
 დიაგნოსტიკა გააკეთეთ ქვემოდან ზემოთ, `STRICT`-ის ან encryption-ის დროებითი
 გამორთვის მუდმივ bypass-ად გადაქცევის გარეშე.
 
@@ -1039,7 +1039,7 @@ NIC-ზე. Payload-ის შედარებისთვის გამო�
 | DNS Service არ resolve-ირდება | CoreDNS/Service, არა mTLS | `nslookup`, Endpoints, CKA-ს 31-ე თავი | DNS/Service-ის გამოსწორება TLS-ის ანალიზამდე |
 | Meshed client არ იღებს 200-ს | Istio/Linkerd ან NetworkPolicy | sidecar/proxy, cert/identity, endpoints, policy | injection/identity/rule-ის გამოსწორება, არა გლობალური `DISABLE` |
 | Outside client იღებს reset-ს | Istio `STRICT` | sidecar-ის არარსებობა, effective PeerAuthentication | ეს მოსალოდნელი დამტკიცებაა; client-ის მიგრაცია mesh-ში |
-| Outside client იღებს 200-ს `STRICT`-ისას | policy არ მოხდა server-ზე | selector, namespace, Pod labels, უფრო კონკრეტული policy | policy-ის დავიწროვება/გამოსწორება და უარყოფითი ტესტის გამეორება |
+| Outside client იღებს 200-ს `STRICT`-ისას | policy არ მოხვდა server-ზე | selector, namespace, Pod labels, უფრო კონკრეტული policy | policy-ის დავიწროვება/გამოსწორება და უარყოფითი ტესტის გამეორება |
 | IPsec-ის rotation-ის შემდეგ intermittent loss | key rollout | Secret-ის ვერსია, agent-ები, peer encryption state | Cilium-ვერსიის overlap/rollback-პროცედურის დაცვა |
 | Linkerd proxy არ არის Ready | mesh install/identity | `linkerd check`, proxy logs, clock/DNS | trust/identity-prerequisites-ის გამოსწორება, mTLS-ის გამორთვის გარეშე |
 
@@ -1059,7 +1059,7 @@ linkerd check 2>/dev/null || true
 ```
 
 არ გამოიტანოთ `Secret` `-o yaml`-ით, private key, bearer token ან სრული
-packet capture საერთო incident-არხში. Capture შესძლებია შეიცავდეს
+packet capture საერთო incident-არხში. Capture შეიძლება შეიცავდეს
 metadata-ს, URL-ს, cookie-ს ან plaintext-ს internal წერტილში. შეინახეთ
 მხოლოდ მინიმალურად საჭირო evidence დამტკიცებულ საცავში ვადით.
 
@@ -1068,7 +1068,7 @@ metadata-ს, URL-ს, cookie-ს ან plaintext-ს internal წერტი�
 ## 23.12. უსაფრთხო rollout და ექსპლუატაციური წესები
 
 Encryption არ არის ერთჯერადი ინსტალაციის ბრძანება. მას ჰყავს owners, updates,
-rotation, alerting და უნდა ამტკიცებდეს, რომ მოსალოდნელი policy ისევ
+rotation, alerting და მტკიცებულებები, რომ მოსალოდნელი policy ისევ
 მუშაობს Kubernetes/Cilium/mesh-ის upgrade-ის შემდეგ.
 
 1. **ინვენტარიზაცია.** მოინახეთ workload-ი sidecar-ის გარეშე, external
@@ -1081,7 +1081,7 @@ rotation, alerting და უნდა ამტკიცებდეს, რო
 3. **Observe before enforce.** შეაგროვეთ latency, connection errors,
    packet drops, proxy certificate expiry და Cilium health. `PERMISSIVE`
    დასაშვებია მხოლოდ როგორც გაზომვადი მიგრაციის ეტაპი წაშლის თარიღით.
-4. **დავიწროვეთ გამონაკლისები.** `PeerAuthentication` selector, ცალკე
+4. **დაავიწროვეთ გამონაკლისები.** `PeerAuthentication` selector, ცალკე
    namespace ან დაადოკუმენტირებული legacy port უკეთესია გლობალურ
    `DISABLE`-ზე. გამონაკლისს ჰყავს owner, მიზეზი, ვადა და უარყოფითი
    ტესტი.
@@ -1097,14 +1097,14 @@ rotation, alerting და უნდა ამტკიცებდეს, რო
 Production-ისთვის კარგი layered policy ასე გამოიყურება: NetworkPolicy
 უშვებს მხოლოდ საჭირო service flow-ს; mesh `STRICT` მოითხოვს
 authentication-გავლილ mTLS peer-ს; Cilium შიფრავს cross-node underlay-ს;
-application-ს ავტორიზაცია უტარებს user/request-ს. ყოველი შრე ამცირებს
+application ავტორიზაციას უტარებს user/request-ს. ყოველი შრე ამცირებს
 სხვის შეცდომის შედეგებს, მაგრამ არც ერთი არ ათავისუფლებს updates-ისა და
 monitoring-ისგან.
 
 ## 23.13. მინი-გლოსარი
 
 - **Transparent encryption** - datapath-ის დაშიფვრა აპლიკაციის, Service-ის
-  ან URL-ის შეცვლის გარეშე; Cilium მას იძახებს node-ებზე.
+  ან URL-ის შეცვლის გარეშე; Cilium მას ახორციელებს node-ებზე.
 - **WireGuard** - VPN-protocol key pair-ით peer-ებისთვის; public key
   განსაზღვრავს დაშვებულ peer-ს.
 - **IPsec ESP** - IP-დონის protected payload კონფიდენციალურობითა და
@@ -1116,7 +1116,7 @@ monitoring-ისგან.
 - **Workload identity** - workload-ის კრიპტოგრაფიულად შესამოწმებელი
   იდენტობა, ჩვეულებრივ დაკავშირებული ServiceAccount-თან/namespace-თან
   mesh-ში.
-- **Sidecar** - proxy container აპლიკაციის გვერდით, რომელი ჩაჭერს traffic-ს.
+- **Sidecar** - proxy container აპლიკაციის გვერდით, რომელიც ჩაჭერს traffic-ს.
 - **`PeerAuthentication`** - Istio-ს policy inbound mTLS-ისთვის; `STRICT`
   უკუიგდებს plaintext-ს.
 - **`DestinationRule`** - Istio-ს policy outbound traffic-ისთვის;
@@ -1143,9 +1143,9 @@ monitoring-ისგან.
   injection ამატებს `istio-proxy`-ს, ხოლო `DestinationRule` `ISTIO_MUTUAL`-ით
   ცალსახად აკონფიგურირებს client-ის მხარეს.
 - Linkerd ავტომატურად იძლევა mTLS-ს workload-ებისთვის mesh-ში და
-  ეკავშირება identity-ს ServiceAccount-თან; არ შეურიოთ მისი sidecar
+  აკავშირებს identity-ს ServiceAccount-თან; არ შეურიოთ მისი sidecar
   Istio-ს ერთსა და იმავე Pod-ში.
-- ხასიათებადი დამტკიცება შეიცავს meshed `200`-ს, plaintext outside
+- დამარწმუნებელი დამტკიცება შეიცავს meshed `200`-ს, plaintext outside
   reset/failure-ს, `cilium-dbg encrypt status`-ს და tcpdump outer
   WireGuard/IPsec-ის physical NIC-ზე HTTP payload-ის გარეშე.
 
@@ -1161,10 +1161,10 @@ events და წარმატებული mTLS-მოთხოვნებ
 
 ## 23.16. როგორ დაგვეხმარება ეს: გამოცდაზე და ნამდვილ სამუშაოში
 
-**CKS-ის გამოცდაზე.** უნდა შესწევდეთ უნარი გავარჩიოთ CNI encryption
-mTLS-ისგან, მოვინახოთ Cilium-ის encryption status და cross-node
-failure-ის მიზეზები, წავიკითხოთ `PeerAuthentication`/`DestinationRule` და
-დავამტკიცოთ, რომ plain client `STRICT`-ს ვერ გაივლის. არ დაპირდეთ, რომ
+**CKS-ის გამოცდაზე.** უნდა შესწევდეთ უნარი გაარჩიოთ CNI encryption
+mTLS-ისგან, მოინახოთ Cilium-ის encryption status და cross-node
+failure-ის მიზეზები, წაიკითხოთ `PeerAuthentication`/`DestinationRule` და
+დაამტკიცოთ, რომ plain client `STRICT`-ს ვერ გაივლის. არ დაპირდეთ, რომ
 NetworkPolicy შიფრავს პაკეტებს: ეს ტიპური მახეა. სწრაფად შემოწმეთ
 container list, Service endpoints, node placement და effective policy,
 შემდეგ გააკეთეთ მინიმალური უსაფრთხო ცვლილება.
@@ -1191,7 +1191,7 @@ Cilium-ის node encryption დიზაინით არ შიფრავ
 </details>
 
 <details>
-<summary>2. რას ზუსტად ატარებს authentication-ს WireGuard peer და რატომ არ არის ეს ServiceAccount-ის identity?</summary>
+<summary>2. რას ზუსტად უტარებს authentication-ს WireGuard peer და რატომ არ არის ეს ServiceAccount-ის identity?</summary>
 
 WireGuard იღებს პაკეტს მხოლოდ ცნობილი public key-ის/allowed peer-ის
 კრიპტოგრაფიული შემოწმების შემდეგ, ამიტომ ადასტურებს სანდო node-ს. Cilium
@@ -1202,11 +1202,11 @@ ServiceAccount peer key-იდან.
 </details>
 
 <details>
-<summary>3. რომელი firewall-protocol-ები უნდა დაშვდეს node-ებს შორის: UDP/51871 Cilium WireGuard-ისთვის და ESP (IP protocol 50) Cilium IPsec-ისთვის?</summary>
+<summary>3. რომელი firewall-protocol-ები უნდა დაიშვას node-ებს შორის: UDP/51871 Cilium WireGuard-ისთვის და ESP (IP protocol 50) Cilium IPsec-ისთვის?</summary>
 
-WireGuard-ისთვის worker node-ებს შორის დაშვდება Cilium-ის UDP port,
+WireGuard-ისთვის worker node-ებს შორის დაიშვება Cilium-ის UDP port,
 ნაგულისხმევად `51871`, მაგრამ ფაქტური მნიშვნელობა მოწმდება
-დაინსტალირებულ კონფიგურაციაში. Cilium IPsec-ისთვის დაშვდება ESP - IP
+დაინსტალირებულ კონფიგურაციაში. Cilium IPsec-ისთვის დაიშვება ESP - IP
 protocol 50. ტიპური IKE/NAT-T UDP/4500 არ ეხება აღწერილ Cilium IPsec
 მექანიზმს.
 </details>
@@ -1214,7 +1214,7 @@ protocol 50. ტიპური IKE/NAT-T UDP/4500 არ ეხება აღ
 <details>
 <summary>4. რითი არის საშიში IPsec Secret-ის ხელით ჩანაცვლება key-overlap rollout-ის გარეშე?</summary>
 
-Peer-ები შესძლებია დაბოლოვდნენ სხვადასხვა key-ებით, რაც იწვევს packet
+Peer-ები შეიძლება დაბოლოვდნენ სხვადასხვა key-ებით, რაც იწვევს packet
 loss-ს და cross-node connectivity-ის დაკარგვას. თანხვედრადი
 version-specific rotation-პროცედურა დროებით ანიჭებს agent-ებს ძველისა და
 ახალი key-ის მიღების უნარს; ჩართული key watcher-ისას განახლებული Secret
@@ -1247,9 +1247,9 @@ outside client ნამდვილად არ შეიცავს `istio-p
 </details>
 
 <details>
-<summary>7. რატომ შესძლებია tcpdump `any`-ზე აჩვენოს HTTP, თუნდაც ჩართული იყოს Cilium encryption?</summary>
+<summary>7. რატომ შეიძლება tcpdump `any`-ზე აჩვენოს HTTP, თუნდაც ჩართული იყოს Cilium encryption?</summary>
 
-`-i any` შესძლებია ჩაწეროს inner packet node encryption-ის წინ,
+`-i any` შეიძლება ჩაწეროს inner packet node encryption-ის წინ,
 ლოკალური მიწოდება ან same-node flow, რომლისთვისაც outer packet არ
 არსებობს. Cilium იცავს არასანდო physical node-to-node path-ს, ხოლო
 plaintext დასაშვებია დაშიფვრამდე და გაშიფვრის შემდეგ. დამტკიცება
@@ -1262,7 +1262,7 @@ placement-ისას.
 
 ჯერ ფიქსირდება, რომ client და server Pod მდებარეობს სხვადასხვა
 node-ზე, ხოლო node-ის IP და ფაქტური physical interface განისაზღვრება
-`ip route get`-ის მეშვეობით. შემდეგ tcpdump ილუზდება node-ის IP-ის
+`ip route get`-ის მეშვეობით. შემდეგ tcpdump იზღუდება node-ის IP-ის
 წყვილითა და WireGuard UDP/ESP-ით, ქმნება მოკლე გამეორებადი მოთხოვნების
 სერია და შედარდება capture-ის დრო. Evidence ივსება წარმატებული intended
 flow-ითა და Cilium-ის encryption status-ის ზრდით/healthy მდგომარეობით.
@@ -1290,12 +1290,12 @@ WireGuard UDP ან IPsec ESP physical NIC-ზე HTTP payload-ის გარ
 </details>
 
 <details>
-<summary>11. **Flashback (06-ე თავი).** 06-ე თავის Cilium ახორციელებს `NetworkPolicy`-ს (allow/deny identity-ის, L3/L4/L7-ის მიხედვით). ეს იგივე თავი იყენებს Cilium-ს transparent encryption-ისთვის (WireGuard/IPsec). ეს ერთი და იმავე ამოცანაა სხვადასხვა სახელით, თუ ერთი და იმავე CNI-ის ორი დამოუკიდებელი შესაძლებლობა? შესწევს `NetworkPolicy`-ს უნარი დაუშვას traffic, რომელი ამავე დროს არ დაშიფრავს transparent encryption-მა, და პირიქით?</summary>
+<summary>11. **Flashback (06-ე თავი).** 06-ე თავის Cilium ახორციელებს `NetworkPolicy`-ს (allow/deny identity-ის, L3/L4/L7-ის მიხედვით). ეს იგივე თავი იყენებს Cilium-ს transparent encryption-ისთვის (WireGuard/IPsec). ეს ერთი და იმავე ამოცანაა სხვადასხვა სახელით, თუ ერთი და იმავე CNI-ის ორი დამოუკიდებელი შესაძლებლობა? შესწევს `NetworkPolicy`-ს უნარი დაუშვას traffic, რომელსაც ამავე დროს არ შიფრავს transparent encryption, და პირიქით?</summary>
 
 ეს ერთი და იმავე CNI-ის ორი დამოუკიდებელი შესაძლებლობაა: NetworkPolicy
 წყვეტს, რომელი ingress/egress flow დასაშვებია, ხოლო WireGuard/IPsec
 იცავს transport-ს node-to-node. Policy-ს შესწევს დაუშვას same-node flow,
-რომელი transparent encryption-ს არ შიფრავს, ან cross-node flow
+რომელსაც transparent encryption არ შიფრავს, ან cross-node flow
 გამორთული encryption-ისას. და პირიქით, encryption-ს შესწევს პაკეტის
 დაცვა underlay-ზე, მაგრამ არ ჩაანაცვლებს allow/deny policy-ს და flow-ს
 არ ხდის დაშვებულს.
@@ -1340,10 +1340,10 @@ Supply Chain Security-ზე გადასვლამდე შემოწ�
 (18-23 თავები) გამტკიცდა:
 
 1. გამოიყენეთ `enforce=restricted` PSA label ტესტურ namespace-ზე და
-   ჩვენეთ, რომ ცალსახად privileged Pod იღებს admission rejection-ს, ხოლო
+   აჩვენეთ, რომ ცალსახად privileged Pod იღებს admission rejection-ს, ხოლო
    უსაფრთხო - იქმნება (18-19 თავები).
 2. დაწერეთ ან გამოიყენეთ ერთი admission policy (native VAP ან Kyverno),
-   რომელი ბლოკავს `privileged: true`, და ახსენით განსხვავება `Audit`-ს
+   რომელიც ბლოკავს `privileged: true`, და ახსენით განსხვავება `Audit`-ს
    და `Enforce`-ს შორის (20-ე თავი).
 3. შექმენით `Secret`, დააყენეთ volume-ად Pod-ში და ახსენით, რატომ არის
    ეს უფრო უსაფრთხო environment-ცვლადზე (21-ე თავი).

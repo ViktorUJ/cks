@@ -58,7 +58,7 @@ Configurar una allow-list mínima de ingress/egress, fijar el image digest, demo
 
 | Componente | Finalidad |
 | ------------------ | ---------------------------------------------------------------------------------------------------- |
-| `cks-101`        | namespace de la aplicación y de sus `NetworkPolicy` |
+| `cks-101`        | namespace de la aplicación y de tus `NetworkPolicy` |
 | `cks-101-legacy` | namespace del escenario del cliente legacy |
 | `imds-control`   | namespace independiente sin policy para el baseline y para el control probe repetido |
 | worker EC2       | instancia EC2 gestionada por Terraform con IMDS `http://169.254.169.254/` |

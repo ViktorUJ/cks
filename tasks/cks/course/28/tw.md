@@ -9,7 +9,7 @@
 > **接下來。** 在 [第 27 章](../27/tw.md) 中，我們在啟動前發現 Dockerfile 和 Kubernetes manifests 的不安全
 > settings。但 linter 不知道正確寫入 image 的 library 昨天獲得 CVE。現在依已知 vulnerabilities databases
 > 檢查 image composition，選擇 fixed artifact，並阻止它進入 delivery。這是 CKS 的 **Supply Chain Security (20%)**
-> domain 一部分。
+> domain 的一部分。
 
 > **需要的 CKA 知識。** Image、tag、digest、pull policy 和 Pod 中的 containers 請見
 > [CKA 第 23 章](../../../cka/course/23/tw.md)。此處不重複它們，而是將 image 視為交付的 artifact：
@@ -351,7 +351,7 @@ cluster 中執行。
    CVE/SBOM policy 套用到 container-image-compatible image volume。
 2. **Prioritize。** 依 platform-manifest digest 執行 vulnerability scan，選取 `CRITICAL`，研究 package、
    installed/fixed versions、exposure 和 service owner。
-3. **Fix source。** 將 base image 或 dependency 更新到有 fix 的 version。若 upstream 尚未發布 fix，建立有 expiry
+3. **Fix source。** 將 base image 或 dependency 更新到有 fix 的 version。若 upstream 尚未發布 fix，建立有 expiry 的
    exception 並減少 exposure，但不可宣稱 CVE 已修復。
 4. **Rebuild。** 新 tag 本身不足：image build 和 SBOM 必須屬於新 digest。
 5. **Verify before rollout。** 使用同一 severity/policy 重複 image 和 SBOM scan，比較舊與新 report。
@@ -417,7 +417,7 @@ smoke-test，例如從 test job `curl` health endpoint。否則可能以破壞 T
 - **不要僅靠 scanner。** Minimal image、non-root、read-only filesystem、signing、registry allowlist、admission policy
   和 runtime detection 能降低 CVE 被 exploit 時的損害。
 
-## 28.9. Mini-glossary
+## 28.9. 迷你詞彙表
 
 - **CVE** - public known vulnerability 的 identifier。
 - **severity** - finding 嚴重度分類（`LOW`、`MEDIUM`、`HIGH`、`CRITICAL`）。
@@ -455,7 +455,7 @@ exam-guaranteed CLI task。重要的是不要混淆 image scan、`trivy fs` 與 
 和 scheduled rescan 時，才將 CVE feed 轉為可管理 process。真正目標不是「report 的零行」，而是迅速發現 vulnerable
 artifact，安全替換它，並證明 production 使用 fixed digest。
 
-## 28.12. Self-check questions
+## 28.12. 自我檢查問題
 
 <details>
 <summary>1. 為何昨天成功的 scan 不證明今日沒有 CVE？</summary>
@@ -513,11 +513,11 @@ Falco 可偵測 process 的 runtime action：例如 container 中的 interactive
 🧪 Lab 111（Supply chain：Trivy、SBOM、signing）：[tasks/cks/labs/111](../../labs/111/README_TW.MD)
 🌐 額外 interactive practice（killer.sh/killercoda，external resource）：[image-vulnerability-scanning-trivy](https://killercoda.com/killer-shell-cks/scenario/image-vulnerability-scanning-trivy)
 
-Useful documentation：[Trivy image](https://trivy.dev/latest/docs/target/container_image/)
+有用文件：[Trivy image](https://trivy.dev/latest/docs/target/container_image/)
 · [Trivy SBOM](https://trivy.dev/latest/docs/target/sbom/) · [Trivy databases](https://trivy.dev/latest/docs/configuration/db/)
 · [Trivy VEX](https://trivy.dev/latest/docs/supply-chain/vex/) · [Trivy Operator reports](https://aquasecurity.github.io/trivy-operator/latest/docs/vulnerability-scanning/)
 
-## Mixed checkpoint：Supply Chain Security 完成
+## 混合 checkpoint：Supply Chain Security 完成
 
 進入 Monitoring, Logging & Runtime Security 前，請在無提示下花 15-20 分鐘確認 Supply Chain Security domain
 （第 24-28 章）已掌握：
@@ -525,7 +525,7 @@ Useful documentation：[Trivy image](https://trivy.dev/latest/docs/target/contai
 1. 使用 `distroless` 而非 fully featured base build image，並說明這對具有 RCE 的 attacker 移除了哪項具體 post-exploitation technique（第 24 章）。
 2. 透過 `syft` 或 `trivy image --format spdx-json` / `trivy image --format cyclonedx` 建立 SBOM（SPDX 或 CycloneDX），並在其中找出一個具體的 package 及 version（第 25 章）。
 3. 透過 `cosign` 簽署 test image，並說明沒有 admission control 時，為何 CI 的 `cosign verify` 不會阻止直接對 unsigned image 執行 `kubectl apply`（第 26 章）。
-4. **Mixed task。** 取用 admission policy（第 20 章，Minimize Microservice Vulnerabilities domain）和 signature verification（第 26 章，本 domain）：描述 admission policy 如何成為 image signature verification 的 enforcement point，以及為何沒有它時 signature 只是無人必須檢查的 metadata。
+4. **混合任務。** 取用 admission policy（第 20 章，Minimize Microservice Vulnerabilities domain）和 signature verification（第 26 章，本 domain）：描述 admission policy 如何成為 image signature verification 的 enforcement point，以及為何沒有它時 signature 只是無人必須檢查的 metadata。
 5. 對 test image 使用 `--severity HIGH,CRITICAL` flags 執行 `trivy image`，並說明為何昨天成功的 scan 不證明今日沒有 CVE（第 28 章）。
 
 若第 4 項造成困難，請一起回到第 20 和第 26 章。

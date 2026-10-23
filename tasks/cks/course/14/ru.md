@@ -291,7 +291,6 @@ sudo ss -lxnp | grep -E 'docker|containerd' || true
 | kube-apiserver `6443/tcp` | control-plane; worker и администраторы по архитектуре | allowlist/private endpoint, не `0.0.0.0/0` |
 | etcd `2379`, `2380/tcp` | только control-plane/etcd peers | не публиковать на worker или внешнюю сеть |
 | Docker TCP API (часто `2375`/`2376`) | только при обоснованном удалённом управлении | `2375` не слушать; любой TCP endpoint требует явного исключения, mTLS и точного firewall |
-
 | containerd/NRI Unix socket | локально на ноде | `root` и минимальный набор разрешённых системных потребителей |
 
 Не делайте вывод из номера порта без процесса: например, `6443` на control-plane ожидаем,

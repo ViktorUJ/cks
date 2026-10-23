@@ -450,10 +450,10 @@ sudo journalctl -k --since '15 minutes ago' | grep -Ei 'seccomp|SECCOMP|audit' |
 
 | symptom | 考えられる原因 | 証拠と安全な修正 |
 |---|---|---|
-| `CreateContainerError` after `Localhost` | profile が選択された node にない、または path が誤っている | `describe`、`-o wide` の node、正確な relative name、kubelet seccomp root 配下の file |
+| `Localhost` 指定後の `CreateContainerError` | profile が選択された node にない、または path が誤っている | `describe`、`-o wide` の node、正確な relative name、kubelet seccomp root 配下の file |
 | Pod が誤った場所に scheduled される | profile が pool 全体に配布されていない | node label、automation delivery、placement を確認する。profile を弱めない |
 | running container で `Seccomp: 0` | profile が割り当てられていない、`Unconfined` が指定された、container が privileged、または node default が無効 | Pod/container の `securityContext` と `privileged`、次に node 上の actual kubelet flags/config を比較する |
-| `Seccomp: 2` だが application が `EPERM` を返す | seccomp denial、capability/MAC/DAC denial、またはすべての可能性 | kernel audit、AppArmor/SELinux log、capabilities、正確な syscall |
+| `Seccomp: 2` だが application が `EPERM` を返す | seccomp denial、capability/MAC/DAC denial、またはそれらすべてが同時に | kernel audit、AppArmor/SELinux log、capabilities、正確な syscall |
 | `SIGSYS` または process killed | profile が `TRAP`/`KILL` を使っている | JSON、exit code、runtime log を確認し、test node で再現する |
 | JSON は `jq` で読めるが container が start しない | schema、ABI、runtime version、または seccomp support が incompatible | kubelet/runtime event と isolated compatibility test |
 | rollout が一部 replica だけで失敗する | node pool の profile/runtime/architecture が異なる | 各 pool を inventory し、compatible pool に pin するか統一した managed delivery を行う |
@@ -483,9 +483,9 @@ kubectl exec -n demo localhost-seccomp -- grep '^Seccomp:' /proc/1/status
 
 ```mermaid
 flowchart TB
-    app["compromise された<br/>process"] --> seccomp["seccomp: `mount(2)` は<br/>許可されるか？"]
+    app["compromise された<br/>process"] --> seccomp["seccomp: mount(2) は<br/>許可されるか？"]
     seccomp -->|"いいえ"| denied1["EPERM / KILL<br/>+ audit"]
-    seccomp -->|"はい"| cap["capabilities: `CAP_SYS_ADMIN` は<br/>あるか？"]
+    seccomp -->|"はい"| cap["capabilities: CAP_SYS_ADMIN は<br/>あるか？"]
     cap -->|"いいえ"| denied2["EPERM"]
     cap -->|"はい"| mac["AppArmor / SELinux:<br/>policy は mount を許可するか？"]
     mac -->|"いいえ"| denied3["MAC denial<br/>+ audit"]
@@ -525,24 +525,24 @@ capability がないことだけで seccomp を証明しようとしないでく
 
 通常の production workload では、多くの場合 `RuntimeDefault`、non-root、`allowPrivilegeEscalation: false`、dropped capabilities、MAC policy の組み合わせで十分です。custom profile が正当化されるのは、risk と contract がよく分かっている場合です。profile の複雑さも operational risk になります。
 
-custom seccomp/AppArmor/SELinux profile を cluster scale で配布・record する必要がある場合は、production path として **Security Profiles Operator（SPO）**を検討してください。各 node の kubelet directory に JSON を手動 copy する代わりに、profile の lifecycle と recording workflow を管理します。これにより test、versioning、placement control が不要になるわけではありませんが、profile delivery を platform-managed にできます。
+custom seccomp/AppArmor/SELinux profile を cluster scale で配布・record する必要がある場合は、production path として **Security Profiles Operator（SPO）** を検討してください。各 node の kubelet directory に JSON を手動 copy する代わりに、profile の lifecycle と recording workflow を管理します。これにより test、versioning、placement control が不要になるわけではありませんが、profile delivery を platform-managed にできます。
 
 `restricted` level の Pod Security Standards は seccomp `RuntimeDefault` または `Localhost` を要求します。`Unconfined` はこの baseline を満たしません。admission policy は、chart の omission により seccomp のない workload が現れないようにするのに有用です。ただし admission は custom JSON が node に存在することを確認しません。これは引き続き node lifecycle と rollout の task です。
 
 ## 17.9. ミニ glossary
 
-- **syscall** — process が kernel に operation を要求する system call。
-- **seccomp** — process の syscall を filter する Linux mechanism。
-- **BPF filter** — filter mode で kernel が syscall ごとに実行する filter program。
-- **`RuntimeDefault`** — 選択した container runtime が提供する seccomp profile。
-- **`Localhost`** — node で local に利用可能な JSON profile 用の Kubernetes type。
-- **`localhostProfile`** — kubelet seccomp root relative の JSON profile path。
-- **`Unconfined`** — container に seccomp filter がないこと。baseline でなく temporary exception。
-- **allow-list** — default action が deny で、許可する syscall を明示的に列挙する policy。
-- **deny-list** — default action が allow で、個別の syscall を deny する policy。
-- **`SCMP_ACT_LOG`** — syscall を許可し、kernel に logging を要求する action。
-- **`SCMP_ACT_ERRNO`** — syscall を実行せず error を返す action。
-- **`SECCOMP` audit record** — seccomp に関連する event の kernel/audit record。
+- **syscall** - process が kernel に operation を要求する system call。
+- **seccomp** - process の syscall を filter する Linux mechanism。
+- **BPF filter** - filter mode で kernel が syscall ごとに実行する filter program。
+- **`RuntimeDefault`** - 選択した container runtime が提供する seccomp profile。
+- **`Localhost`** - node で local に利用可能な JSON profile 用の Kubernetes type。
+- **`localhostProfile`** - kubelet seccomp root relative の JSON profile path。
+- **`Unconfined`** - container に seccomp filter がないこと。baseline でなく temporary exception。
+- **allow-list** - default action が deny で、許可する syscall を明示的に列挙する policy。
+- **deny-list** - default action が allow で、個別の syscall を deny する policy。
+- **`SCMP_ACT_LOG`** - syscall を許可し、kernel に logging を要求する action。
+- **`SCMP_ACT_ERRNO`** - syscall を実行せず error を返す action。
+- **`SECCOMP` audit record** - seccomp に関連する event の kernel/audit record。
 
 ## 17.10. chapter のまとめ
 

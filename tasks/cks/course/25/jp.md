@@ -59,7 +59,7 @@ Chain of trust はその最も弱い部分の強さしか持ちません。CI �
 
 Supply chain への典型的な攻撃:
 
-- 依存関係の compromise、または似た名前の package の公開（typosquatting)。これにより
+- 依存関係の compromise、または似た名前の package の公開（typosquatting）。これにより
   通常の package manager で悪意あるコードがインストールされる;
 - maintainer のアカウントや CI token の乗っ取りと、project の名前での image 公開;
 - build script、runner、cache、base image の変更。これによりartifactがreviewされた
@@ -249,7 +249,7 @@ jq '.packages | length' out.spdx.json
 
 これはsanity checkであり、SPDXの完全なschema/conformance validationではありません。
 
-`bom`がローカルimageを見えない場合、そのcommandを実行するruntime/registryから利用可能な
+`bom`にローカルimageが見えない場合、そのcommandを実行するruntime/registryから利用可能な
 referenceを指定し、environmentにインストールされたversionのために`bom generate --help`
 を確認してください。access errorを人工的に作ったJSONで置き換えてはいけません。それは
 credentialの問題やartifact名の誤りを隠します。
@@ -319,7 +319,7 @@ jq -r '
 advisory/CVEを記録してください。そうすれば別のengineerが結果を再現でき、別のrebuildで
 「だいたい似たpackage」を探す必要がなくなります。
 
-componentを見つけた後、SBOMをclusterに結び付けてください。PodがActually使うimage
+componentを見つけた後、SBOMをclusterに結び付けてください。Podが実際に使うimage
 referenceは以下のように確認できます。
 
 ```bash
@@ -420,7 +420,7 @@ docker buildx build --sbom=true --provenance=mode=max,version=v1 --push \
 ```
 
 ここでの`version=v1`は期待されるformatを明示的に固定します。現在のupstream BuildKitの
-defaultはSLSA provenance `v1`です。古いBuildKit/Buildxのversionは`v0.2`を出力していまし
+defaultはSLSA provenance `v1`です。古いBuildKit/Buildxのversionは`v0.2`を出力していた可能性がありまし
 た。したがってこのparameterでは`https://slsa.dev/provenance/v1`を持つ`Statement/v1`を確認
 してください。push後は immutable digestを保管し、multi-arch releaseについては起動される
 platform manifestを判定してください。これらのbuild-nativeなattestationはoutputをbuild
@@ -518,12 +518,12 @@ indexを保管してください。すると新しいCVEはすべてのimageの�
 inventoryへのqueryを起動します。まずSBOMによって潜在的にaffectedなrelease/platform-
 manifest digestを判定し、その後digestで固定されたspec、platform node、runtime
 `imageID`を追加のhintとしてrunning workloadを確認します。tagだけでは不十分です。それは
-mutableで、すでに起動しているPodがどのbytesを使っているかを証明しません。
+mutableである可能性があり、すでに起動しているPodがどのbytesを使っているかを証明しません。
 
 ```mermaid
 flowchart TB
     cve["Advisory: package<br/>+ affected version"] --> sbom["digestによる<br/>SBOM検索"]
-    sbom --> affected["AffectedなimageとrunningPod"]
+    sbom --> affected["Affectedなimage<br/>とrunning Pod"]
     affected --> fixed["修正された依存関係<br/>またはbase image"]
     fixed --> rebuild["Rebuild: 新しいdigest<br/>新しいSBOM"]
     rebuild --> rescan["Scan + verify<br/>versionがもうない"]
@@ -665,7 +665,7 @@ jq -e '
   relationshipのためのもの; そのJSONモデルをSPDX 3.0と混同しないこと。
 - **CycloneDX** - component inventoryとsecurity analysisのためのOWASPのformat。
 - **Syft** - image、filesystem、archiveからSBOMを生成するtool。
-- **bom** - SPDX SBOMを生成し作業するための`kubernetes-sigs/bom`のtool。
+- **bom** - SPDX SBOMを生成・操作するための`kubernetes-sigs/bom`のtool。
 - **Provenance** - artifactのsource、input、builder、作成processに関するmetadata。
 - **SLSA** - 独立したBuild TrackとSource Trackを持つsupply chain保護の要件モデル。
 - **VEX** - productに対する特定のCVEの適用可能性またはexploitabilityに関するstatement。
@@ -710,7 +710,7 @@ jq -e '
 <details>
 <summary>1. commitからPodまでのcontainer workloadのsupply chainにはどの参加者が含まれ、artifactの差し替えはどこで起こり得ますか？</summary>
 
-chainにはsourceとlock file、package registry、CI runner、container registry、CD/GitOps、admission policy、そしてimageをdownloadするkubeletが含まれます。差し替えは、例えば依存関係、build scriptやrunner、base image、registry tag、またはCI/CD credentialで起こり得ます。したがってdigest/SBOM、provenance、artifactへのaccessの制御が同時に必要です。
+chainにはsourceとlock file、package registry、CI runner、container registry、CD/GitOps、admission policy、そしてimageをdownloadするkubeletが含まれます。差し替えは、例えば依存関係、build scriptやrunner、base image、registry tag、またはCI/CD credentialで起こり得ます。したがってdigest/SBOM、provenance、artifactのadmission controlが同時に必要です。
 </details>
 
 <details>

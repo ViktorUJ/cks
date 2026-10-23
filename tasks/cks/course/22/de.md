@@ -26,7 +26,7 @@
 ## 22.1. Warum ein gewöhnlicher Container für Multi-Tenancy nicht ausreicht
 
 Ein Container isoliert PID-, Mount-, Network- und weitere Namespaces, während cgroups die
-Ressourcen begrenzen. Doch der Prozess eines Containers ruft gewöhnlich **denselben Linux-Kernel** systemweit auf wie
+Ressourcen begrenzen. Doch der Prozess eines Containers greift über System Calls gewöhnlich auf **denselben Linux-Kernel** zu wie
 die Prozesse des Nodes und benachbarter Pods. Eine Schwachstelle im Kernel, in der Container-Runtime oder eine falsch gewährte
 Capability kann Codeausführung in einen Container Escape verwandeln.
 
@@ -150,7 +150,7 @@ kubectl get runtimeclass gvisor -o yaml
 `RuntimeClass` ist kein Namespace und gewährt kein Recht, eine Runtime zu verwenden. Beschränken Sie
 das Erstellen und Ändern von RuntimeClass auf Platform-Administratoren. Soll nicht jeder Namespace
 eine isolierte oder kostspielige Runtime starten dürfen, beschränken Sie `runtimeClassName` über
-eine Admission-Policy und weisen Sie sie mit einem Plattform-Template zu.
+eine Admission-Policy und weisen Sie ihn mit einem Plattform-Template zu.
 
 Beispielsweise erlaubt diese `ValidatingAdmissionPolicy` `gvisor` nur in `tenant-a`.
 Die Namespace-Einschränkung ist nur ein Beispiel: In Production wird sie mit genehmigten Namespaces
@@ -202,7 +202,7 @@ sind die erforderlichen Binärdateien/Shims, geprüfte Konfiguration, Capacity u
 Workloads dürfen diesen Pool nicht versehentlich belegen, und ein Sandbox-Workload darf nicht auf einem Node
 ohne erforderlichen Handler landen.
 
-RuntimeClass kann `scheduling` enthalten. Kubernetes fügt dessen `nodeSelector` und
+RuntimeClass kann `scheduling` enthalten. Kubernetes fügt deren `nodeSelector` und
 `tolerations` dem Pod hinzu, der sich auf diese Klasse bezieht. Der Selector der RuntimeClass und der Pod-Selector
 werden bei Admission zusammengeführt: Kollidierende Werte führen zur Ablehnung durch den API Server,
 nicht zu einem akzeptierten Pod im Zustand `Pending`/`Unschedulable`. Suchen Sie bei einem solchen Fehler daher nach einem
@@ -372,7 +372,7 @@ version = 2
   runtime_type = "io.containerd.runsc.v1"
 ```
 
-Lautet der aktuelle Header `version = 3` **oder** `version = 4`, verwenden Sie den neuen Runtime-
+Lautet der aktuelle Header `version = 3` **oder** `version = 4`, verwenden Sie den neuen Runtime-Plugin-Pfad
 Plugin-Pfad (ändern Sie den Header in der bestehenden Datei nicht):
 
 ```toml
@@ -418,12 +418,12 @@ keine Binärdatei von einem Laptop auf einen Production-Worker.
 Dies ist eine **Node**-Einstellung, keine Pod-Einstellung: Bevor Kubernetes einen Pod in Kata starten kann,
 muss auf jedem Ziel-Node eine ganze Kette vorhanden sein:
 
-`RuntimeClass.spec.handler` → CRI-Handler in `containerd` → Kata-Shim → ausgewähltes Virtualisierungs-
+`RuntimeClass.spec.handler` → CRI-Handler in `containerd` → Kata-Shim → ausgewähltes Virtualisierungs-Backend
 Backend → Lightweight-VM mit Guest-Kernel.
 
-- **Kata-Runtime / Shim** - Komponenten auf dem Node, mit denen `containerd` eine Sandbox-
+- **Kata-Runtime / Shim** - Komponenten auf dem Node, mit denen `containerd` eine Sandbox-VM
   VM erstellt; `containerd-shim-kata-v2` muss für den Service `containerd` verfügbar sein.
-- **Backend (Hypervisor)** - der VM-Mechanismus: gewöhnlich QEMU/KVM, für einige Azure/Microsoft-
+- **Backend (Hypervisor)** - der VM-Mechanismus: gewöhnlich QEMU/KVM, für einige Azure/Microsoft-Hypervisor-Konfigurationen
   Hypervisor-Konfigurationen Cloud Hypervisor mit `mshv`.
 - **CRI-Handler** - ein benannter Eintrag in `config.toml`, beispielsweise `kata` oder `kata-qemu`;
   er teilt `containerd` mit, welche Kata-Runtime aufgerufen werden soll. Dies ist nicht der Name eines Pods oder einer Binärdatei.
@@ -536,14 +536,14 @@ repräsentativen Workload.
 
 1. **Node prüfen.** Binärdatei, Shim, Containerd-Handler, Label und Taint müssen auf
    jedem Node des Ziel-Pools vorhanden sein.
-2. **RuntimeClass erstellen.** Handler und Scheduling müssen die bereits funktionierende Node-
+2. **RuntimeClass erstellen.** Handler und Scheduling müssen die bereits funktionierende Node-Konfiguration
    Konfiguration abbilden.
 3. **Positiven Test starten.** Ein nicht privilegierter Pod mit `runtimeClassName` muss auf einem
    Sandbox-Node `Running` werden.
 4. **Negativen Test prüfen.** Ein Pod mit einem Selector, der mit RuntimeClass kollidiert, muss
    bei Admission abgelehnt werden. Ein Pod auf einem Node ohne Handler darf nicht stillschweigend auf eine gewöhnliche Runtime wechseln:
    Erwartet wird ein expliziter `FailedCreatePodSandBox`, kein Fallback auf `runc`.
-5. **Anwendung prüfen.** Readiness, Egress, DNS, Volumes, Latenz, Shutdown und Metrics
+5. **Anwendung prüfen.** Readiness, Egress, DNS, Volumes, Latenz, Shutdown und Metriken
    müssen dem SLO entsprechen.
 6. **Scope erweitern.** Deployment/Job wird als Canary umgestellt; eine Admission-Policy verbietet
    unsichere Kombinationen und die Verwendung der Klasse außerhalb erlaubter Namespaces.
@@ -618,8 +618,8 @@ Staging zusammen mit Resource Requests/Limits und Autoscaler-Verhalten geprüft.
 
 Die Prüfung von `spec.runtimeClassName` allein reicht nicht: Das Feld zeigt Intent, nicht den
 Erfolg des Starts mit der gewünschten Runtime. Sammeln Sie Nachweise auf drei Ebenen: Kubernetes,
-CRI/containerd und innerhalb des Workloads. Bewahren Sie zur Diagnose vorübergehend Node-Name, Runtime-
-Handler, Pod-UID und Zeit auf; das verbindet API-Objekt mit den Node-Logs.
+CRI/containerd und innerhalb des Workloads. Bewahren Sie zur Diagnose vorübergehend Node-Name, Runtime-Handler,
+Handler, Pod-UID und Zeit auf; das verbindet das API-Objekt mit den Node-Logs.
 
 ```bash
 NS=tenant-a
@@ -704,12 +704,12 @@ ist die Kombination aus RuntimeClass, Placement, CRI-Handler-/Shim-Logs und Appl
 | Pod `Pending`, Taint nicht tolerated | Pod hat keine oder eine nicht passende Toleration der RuntimeClass erhalten | `kubectl get runtimeclass -o yaml`, `kubectl describe node` prüfen |
 | `FailedCreatePodSandBox`, unbekannter Runtime-Handler | kein Handler-Block, falscher Name oder containerd nicht neu eingelesen | `RuntimeClass.handler`, config.toml, `crictl info` abgleichen; korrigieren und gemäß Runbook restarten |
 | `executable file not found` für Shim | Shim ist nicht installiert oder außerhalb von `PATH` des containerd-Service | `command -v`, Permissions und systemd-Environment prüfen |
-| gVisor-Pod startet, Anwendung bricht | Syscall-, Mount- oder Network-Feature nicht unterstützt/anders implementiert | minimaler Reproducer, Runtime-Dokumentation, Anwendung korrigieren oder andere genehmigte Runtime wählen |
+| gVisor-Pod startet, Anwendung bricht ab | Syscall-, Mount- oder Network-Feature nicht unterstützt/anders implementiert | minimaler Reproducer, Runtime-Dokumentation, Anwendung korrigieren oder andere genehmigte Runtime wählen |
 | Kata startet nicht | Backend der ausgewählten RuntimeClass, Nested Virtualization, Hypervisor-/Kernel-Konfiguration oder Capacity nicht verfügbar | `kata-runtime check`, für QEMU/KVM `/dev/kvm`, für Microsoft Hypervisor `/dev/mshv` und mshv-fähiger VMM, Cloud-Instance-Capabilities, Shim-Logs |
 | Pod landete auf einem gewöhnlichen Node | RuntimeClass ohne `scheduling`, Pool nicht getaintet oder andere Klasse angegeben | Klasse, Node-Name, Labels/Taints prüfen; dies nicht als Sandbox-Rollout betrachten |
 
 „Beheben“ Sie `FailedCreatePodSandBox` nicht durch Entfernen von `runtimeClassName`: Das verwandelt
-einen Security Failure in einen unbemerkten Downgrade. Halten Sie den Workload angehalten, bis das Platform-
+einen Security Failure in einen unbemerkten Downgrade. Halten Sie den Workload angehalten, bis das Platform-Team
 Team eine andere zulässige RuntimeClass oder eine separate Risikoakzeptanz bestätigt.
 
 > 🏭 Dedizierter Pool, Kompatibilitätsmatrix, gemessener Overhead, Alerting und kontrollierte Upgrades für Sandbox-Runtimes.
@@ -719,20 +719,20 @@ Team eine andere zulässige RuntimeClass oder eine separate Risikoakzeptanz best
 - **Pool nach Vertrauen trennen.** gVisor-/Kata-Nodes erhalten nur Sandbox-Workloads über
   RuntimeClass-Scheduling, Label und `NoSchedule`-Taint; System-Agents und vertrauenswürdige Workloads
   befinden sich getrennt.
-- **Default `runc` beibehalten.** Die Umstellung der gesamten Plattform auf eine neue Runtime ohne Kompatibilitäts-
+- **Default `runc` beibehalten.** Die Umstellung der gesamten Plattform auf eine neue Runtime ohne Kompatibilitätsmatrix
   Matrix erhöht den Blast Radius. Die Sandbox wird je Klasse und als Canary aktiviert.
 - **Handler als Vertrag behandeln.** Versionen von Binärdateien, Shim, containerd-Config und
   RuntimeClass ändern sich in einem Review-Change. Zufällige Namensunterschiede bei `runsc`, `kata` und
   `kata-qemu` sind eine Ursache für Outages.
-- **Gefährliche Kombinationen verbieten.** PSA/Admission-Policy darf in Tenant-
+- **Gefährliche Kombinationen verbieten.** PSA/Admission-Policy darf in Tenant-Namespaces
   Namespaces unabhängig von RuntimeClass weder `privileged`, Host-Namespaces, hostPath-/Socket-Mounts noch
   breite Ausnahmen zulassen.
-- **Capacity berechnen.** Messen Sie Runtime-Overhead, Startup-Latenz, Dichte, Node-
+- **Capacity berechnen.** Messen Sie Runtime-Overhead, Startup-Latenz, Dichte, Node-Pressure
   Pressure und Cold Start. Der Kata-Pool erfordert häufig ein separates Autoscaling-Profil.
 - **Die Grenze überwachen.** Alert auf `FailedCreatePodSandBox`, containerd-/Shim-Fehler,
   Sandbox-Node NotReady, steigende Startup-Latenz und unerwartetes Placement außerhalb des Pools.
 - **Updates planen.** Updates von Host-Kernel, containerd, gVisor/Kata und Kubernetes werden als eine
-  Kompatibilitätsmatrix getestet. Prüfen Sie vor Drain PDB und nehmen Sie den Node aus dem
+  Kompatibilitätsmatrix getestet. Prüfen Sie vor dem Drain die PDB und nehmen Sie den Node aus dem
   Scheduling, statt die Runtime blind unter aktiven Tenant-Pods zu aktualisieren.
 
 ## 22.11. Nutzen auf der Prüfung und in der Praxis
@@ -749,7 +749,7 @@ Team eine andere zulässige RuntimeClass oder eine separate Risikoakzeptanz best
 - **Container-Runtime-Sandbox** - Runtime, die eine Grenze zwischen Workload und Host-Kernel hinzufügt.
 - **gVisor** - Sandbox-Runtime mit Userspace-Kernel; der CRI-Handler heißt oft `runsc`.
 - **`runsc`** - OCI-Runtime von gVisor und in diesem Beispiel der Name des Handlers.
-- **Kata Containers** - Runtime, die den Pod-Sandbox in einer Lightweight-VM mit Guest-Kernel ausführt.
+- **Kata Containers** - Runtime, die die Pod-Sandbox in einer Lightweight-VM mit Guest-Kernel ausführt.
 - **RuntimeClass** - Cluster-scoped Kubernetes-Ressource, die einen CRI-Handler und optionale
   Overhead-/Scheduling-Constraints auswählt.
 - **Handler** - Name der Runtime in der CRI-Konfiguration, der mit
@@ -761,7 +761,7 @@ Team eine andere zulässige RuntimeClass oder eine separate Risikoakzeptanz best
 
 ## 22.13. Zusammenfassung des Kapitels
 
-- Gewöhnliche Container teilen sich den Kernel des Nodes; für nicht vertrauenswürdige Multi-Tenant-
+- Gewöhnliche Container teilen sich den Kernel des Nodes; für nicht vertrauenswürdige Multi-Tenant-Workloads
   Workloads fügen gVisor oder Kata eine wesentliche zusätzliche Grenze hinzu, ersetzen jedoch nicht
   RBAC, PSA, `securityContext` und NetworkPolicy.
 - gVisor (`runsc`) fängt Systemaufrufe über einen Userspace-Kernel ab; Kata nutzt eine
@@ -771,7 +771,7 @@ Team eine andere zulässige RuntimeClass oder eine separate Risikoakzeptanz best
   Namensebenen. Der Handler muss exakt mit der CRI-Konfiguration jedes Ziel-Nodes übereinstimmen.
 - `RuntimeClass.scheduling` mit `nodeSelector` und Tolerations schränkt zusammen mit
   Labels/Taints den Sandbox-Workload auf einen vorbereiteten Node-Pool ein.
-- Für containerd werden passende Binärdatei und Shim, der Handler in config.toml sowie ein
+- Für containerd werden eine passende Binärdatei und ein Shim, der Handler in config.toml sowie ein
   kontrollierter Restart/Verifikation des Daemons benötigt. Das Default `runc` wird nicht ohne
   Grund geändert.
 - Die Überprüfung muss Pod-Class und Node mit Handler/Shim in CRI-/containerd-Logs verknüpfen und
@@ -791,7 +791,7 @@ Ein gewöhnlicher Container isoliert Namespaces und begrenzt Ressourcen über cg
 <details>
 <summary>2. Was ist der Kernunterschied zwischen dem Userspace-Kernel von gVisor und dem Guest-Kernel von Kata?</summary>
 
-gVisor `runsc` fängt den Großteil der Syscalls ab und implementiert sie im Userspace-Kernel Sentry oberhalb des Host-Kernels. Kata führt den Pod-Sandbox in einer Lightweight-VM aus, in der der Workload einen eigenen Guest-Kernel und eine Hypervisor-Grenze sieht. Kata bietet in der Regel eine stärkere, VM-nähere Isolation, benötigt aber Virtualisierung und ist teurer bezüglich Memory und Startup.
+gVisor `runsc` fängt den Großteil der Syscalls ab und implementiert sie im Userspace-Kernel Sentry oberhalb des Host-Kernels. Kata führt die Pod-Sandbox in einer Lightweight-VM aus, in der der Workload einen eigenen Guest-Kernel und eine Hypervisor-Grenze sieht. Kata bietet in der Regel eine stärkere, VM-nähere Isolation, benötigt aber Virtualisierung und ist teurer bezüglich Memory und Startup.
 </details>
 
 <details>
@@ -803,7 +803,7 @@ gVisor `runsc` fängt den Großteil der Syscalls ab und implementiert sie im Use
 <details>
 <summary>4. Warum kann der API-Server nicht garantieren, dass der Handler auf dem gewählten Node verfügbar ist?</summary>
 
-Der API-Server speichert die RuntimeClass, prüft aber nicht Binärdatei, Shim und CRI-Handler auf jedem Node. Der Fehler zeigt sich, wenn das kubelet versucht, eine Sandbox zu erstellen, etwa als `FailedCreatePodSandBox` oder unknown runtime handler. Deshalb werden Handler und kompatibler Pool vor der Erstellung des Workloads vorbereitet und geprüft.
+Der API-Server speichert die RuntimeClass, prüft aber nicht die Binärdatei, den Shim und den CRI-Handler auf jedem Node. Der Fehler zeigt sich, wenn das kubelet versucht, eine Sandbox zu erstellen, etwa als `FailedCreatePodSandBox` oder unknown runtime handler. Deshalb werden Handler und kompatibler Pool vor der Erstellung des Workloads vorbereitet und geprüft.
 </details>
 
 <details>
@@ -833,7 +833,7 @@ Das Feld zeigt die Absicht, und `Running` beweist, dass Scheduler und kubelet de
 <details>
 <summary>9. Was bedeutet es, wenn sich `uname` innerhalb eines Kata-Pods vom `uname` des Hosts unterscheidet, und warum reicht das allein als Beweis nicht aus?</summary>
 
-Das ist ein nützliches Zeichen dafür, dass der Workload einen vom Kernel des Nodes getrennten Guest-Kernel sieht. Der Output hängt jedoch von der Runtime-Version ab und verknüpft für sich genommen keinen konkreten Pod mit dem erforderlichen CRI-Handler. Belastbare Evidenz kombiniert RuntimeClass, Node, containerd-/Shim-Logs und eine funktionale Prüfung der Anwendung.
+Das ist ein nützliches Zeichen dafür, dass der Workload einen vom Kernel des Nodes getrennten Guest-Kernel sieht. Der Output hängt jedoch von der Runtime-Version ab und verknüpft für sich genommen keinen konkreten Pod mit dem erforderlichen CRI-Handler. Belastbare Evidence kombiniert RuntimeClass, Node, containerd-/Shim-Logs und eine funktionale Prüfung der Anwendung.
 </details>
 
 <details>

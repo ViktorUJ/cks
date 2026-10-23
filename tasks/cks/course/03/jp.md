@@ -268,7 +268,7 @@ spec:
 
 ### Pod-Level Resources: Pod 全体の境界
 
-**Pod-Level Resources** は Kubernetes v1.34 から Beta で、デフォルトで有効です。`spec.resources` により、CPU、memory、hugepages について Pod 全体の `requests` と `limits` を設定できます。これはすべての Pod に対する aggregate budget であり、明示的なコンテナリソースの置き換えではありません。Aggregate Pod limit は Pod のコンテナに対する実際の共通境界です。container-level limits は各コンテナの個別の制限として残ります。
+**Pod-Level Resources** は Kubernetes v1.34 から Beta で、デフォルトで有効です。`spec.resources` により、CPU、memory、hugepages について Pod 全体の `requests` と `limits` を設定できます。これは Pod 全体の aggregate budget であり、明示的なコンテナリソースの置き換えではありません。Aggregate Pod limit は Pod のコンテナに対する実際の共通境界です。container-level limits は各コンテナの個別の制限として残ります。
 
 ```yaml
 apiVersion: v1

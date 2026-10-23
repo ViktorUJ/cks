@@ -28,7 +28,7 @@ seccomp in tasks 4–6 restricts the available system call: first the baseline i
 <details>
 <summary>1. How does `complain` differ from `enforce` in AppArmor, and why can `complain` not be shown as proof of protection?</summary>
 
-In `complain` mode AppArmor only logs profile violations but does NOT block them - an operation that should be forbidden will still be executed, there will just be an entry in the log. In `enforce` the operation is actually blocked. Task 2 explicitly requires switching the profile to `enforce`, because a demonstration of "here is the violation in the log" under `complain` does not prove protection - the process was still able to perform the action.
+In `complain` mode AppArmor only logs profile violations but does NOT block them - an operation that should be forbidden will still be executed; there will just be an entry in the log. In `enforce` the operation is actually blocked. Task 2 explicitly requires switching the profile to `enforce`, because a demonstration of "here is the violation in the log" under `complain` does not prove protection - the process was still able to perform the action.
 </details>
 
 <details>
@@ -120,7 +120,7 @@ step the file on disk gives no protection at all and will not appear in
 ---
 | **2** | **Switch the AppArmor profile to enforce** |
 | :---: | :--- |
-| What to do | On the node `control-plane` switch the profile `k8s-106-deny-write` loaded in task 1 to `enforce` mode. The original `complain` mode records violations, but does not constitute protection. Do not delete the profile and do not change its name. |
+| What to do | On the node `control-plane`, switch the profile `k8s-106-deny-write` loaded in task 1 to `enforce` mode. The original `complain` mode records violations, but does not constitute protection. Do not delete the profile and do not change its name. |
 | Acceptance criteria | A node with the label `security.cks.io/localhost-profiles-106=true` exists; `/etc/apparmor.d/k8s-106-deny-write` is available; `/sys/kernel/security/apparmor/profiles` contains the line `k8s-106-deny-write (enforce)`. The checker-owned bootstrap baseline (recorded BEFORE the lab was handed out, on a transient copy of this same profile while it was still in `complain`) confirms that a write matching the `/work/**` pattern of this profile really did pass back then - without this it cannot be proven that it was the switch to `enforce` that caused the later denial. |
 
 <details>
@@ -139,7 +139,7 @@ this binary, unlike `aa-enforce`, parses only the file passed to it.
 ---
 | **3** | **A Localhost AppArmor Pod and write blocking** |
 | :---: | :--- |
-| What to do | Create the namespace `security-106` and the Pod `apparmor-writer`. The Pod must select the node label from the infrastructure, disable the automount of the ServiceAccount token, and at the Pod level set `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Use `busybox:1.36`, the container `app`, the sleep command `sleep 3600`, and an `emptyDir` mounted at `/work`. After the start confirm the effective profile with the command `cat /proc/1/attr/current` (if the interface is available), perform an allowed read operation, for example `cat /etc/hostname >/dev/null`, and then try to write a file to `/work`; the operation must end with a denial. On the node record the AppArmor denial for the profile/process from `journalctl -k \| grep -i apparmor` or `dmesg \| grep -i apparmor`. |
+| What to do | Create the namespace `security-106` and the Pod `apparmor-writer`. The Pod must select the node label from the infrastructure, disable the automount of the ServiceAccount token, and at the Pod level set `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Use `busybox:1.36`, the container `app`, the sleep command `sleep 3600`, and an `emptyDir` mounted at `/work`. After the start, confirm the effective profile with the command `cat /proc/1/attr/current` (if the interface is available), perform an allowed read operation, for example `cat /etc/hostname >/dev/null`, and then try to write a file to `/work`; the operation must end with a denial. On the node record the AppArmor denial for the profile/process from `journalctl -k \| grep -i apparmor` or `dmesg \| grep -i apparmor`. |
 | Acceptance criteria | The Pod is running, uses exactly the Localhost profile and the right nodeSelector; the effective profile of the process shows `k8s-106-deny-write` in enforce mode (when `/proc/.../attr/current` is available); the allowed read operation (for example, `cat /etc/hostname` or `ls /work`) passes, while the checker independently writes its own unique (per-run) file to `/work` and gets an AppArmor denial. In the kernel journal/audit log there is an `apparmor="DENIED"` event with this profile that relates specifically to THIS attempt (by the unique file name) - this rules out a false pass from a stale denial event in the journal. |
 
 <details>
@@ -175,7 +175,7 @@ The path `profiles/cks-106-deny-unshare.json` is relative to the kubelet seccomp
 ---
 | **6** | **Prove the denial of the syscall `unshare(2)`** |
 | :---: | :--- |
-| What to do | In the command of the container `localhost-seccomp` run `unshare -n true`, save the successful confirmation of the expected denial in `/tmp/unshare-result` as the line `unshare denied by seccomp`, then keep the container alive with `sleep 3600`. A repeated command `kubectl exec ... -- unshare -n true` must return a non-zero code. For an attack-minded negative control create a Pod `sysadmin-control` on the same node with `seccompProfile.type: Unconfined` and the same single capability `SYS_ADMIN`; its `unshare -n true` must succeed. Delete the control Pod after the check. |
+| What to do | In the command of the container `localhost-seccomp`, run `unshare -n true`, save the successful confirmation of the expected denial in `/tmp/unshare-result` as the line `unshare denied by seccomp`, then keep the container alive with `sleep 3600`. A repeated command `kubectl exec ... -- unshare -n true` must return a non-zero code. For an attack-minded negative control create a Pod `sysadmin-control` on the same node with `seccompProfile.type: Unconfined` and the same single capability `SYS_ADMIN`; its `unshare -n true` must succeed. Delete the control Pod after the check. |
 | Acceptance criteria | The Localhost Pod is running; `Seccomp: 2`; `unshare` is blocked by the custom profile. In the control Pod the same syscall with the same capability and without a seccomp filter passes. This proves kernel behavior, and not just the presence of YAML. |
 
 <details>

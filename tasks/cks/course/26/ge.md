@@ -208,7 +208,7 @@ spec:
 kubectl apply -f allowed-pod.yaml
 kubectl apply -f forbidden-pod.yaml  # მოსალოდნელია admission denial
 kubectl debug allowed-pod --image=registry.example.com/other-team/debug:1.0 --target=app
-# მოსალოდნელია: admission denial — ჩვეულებრივი ValidatingPolicy ამოწმებს
+# მოსალოდნელია: admission denial - ჩვეულებრივი ValidatingPolicy ამოწმებს
 # pods/ephemeralcontainers-ს და უარყოფს არასწორ repository prefix-ს.
 kubectl get policyreport -A          # თუ კლასტერში ჩართულია Policy Reports
 ```
@@ -217,7 +217,7 @@ kubectl get policyreport -A          # თუ კლასტერში ჩა
 `registry.example.com/platform/*`-ს, ამიტომ თავად policy-ის შესამოწმებლად საჭიროა
 image შესაბამისი registry-დან არასწორი გზით მასში, და არა ნებისმიერი სხვა registry.
 
-ნუ დაამატებთ `docker.io`-ს მთლიანად „დროებით": ეს allowlist-ს allow-all-ად აქცევს.
+ნუ დაამატებთ `docker.io`-ს მთლიანად „დროებით“: ეს allowlist-ს allow-all-ად აქცევს.
 სისტემური კომპონენტებისთვის დააფიქსირეთ ვიწრო ცალკეული prefix-ები, მაგალითად
 `registry.k8s.io/*`, და დააფიქსირეთ გამონაკლისი ცვლილების შემოწმებისას.
 
@@ -326,7 +326,7 @@ controller-ის ავარიის დროს.
 
 Kyverno მოსახერხებელია, როცა policy ასევე უნდა ამუტირებდეს manifest-ებს ან
 ნატიურად ამოწმებდეს ხელმოწერებს. Gatekeeper მოსახერხებელია, როცა ორგანიზაციამ
-სტანდარტიზა Rego და Constraints. ნუ დააინსტალირებთ ორივე ძრავას ერთი და იმავე
+სტანდარტად აქცია Rego და Constraints. ნუ დააინსტალირებთ ორივე ძრავას ერთი და იმავე
 სავალდებულო შემოწმებისთვის ცალსახა owner-ისა და შეთანხმებული მიგრაციის თანმიმდევრობის
 გარეშე: ორმაგი denial-შეტყობინებები ართულებს დიაგნოსტიკას, ხოლო ორი განსხვავებული
 allowlist ერთმანეთისგან შორდება.
@@ -481,7 +481,7 @@ status:
 verification-ის მხარდაჭერით ჩვეულებრივ უფრო მარტივია შესანარჩუნებლად.
 
 > 🧪 **პრაქტიკა: CKS Lab 108, დავალებები 2 და 6.** [ლაბა 108](../../labs/108/README_GE.MD)
-> ცალკე ავარჯიშებს ცხადი და implicit `latest`-ის აკრძალვას, ხოლო დავალება 6 —
+> ცალკე ავარჯიშებს ცხადი და implicit `latest`-ის აკრძალვას, ხოლო დავალება 6 -
 > `ImagePolicyWebhook`-ის სრულ wiring-ს: `defaultAllow: false`, backend `ImageReview`,
 > plugin-ის დამატება kube-apiserver-ს, denial `nginx:latest`-ისთვის და allow
 > `nginx:1.27.3`-ისთვის. ეს მექანიზმის მოსახერხებელი საგამოცდო შემოწმებაა; production-ში
@@ -526,7 +526,7 @@ environment-ისა და პროექტისთვის აქცე�
 
 Sigstore-ის keyless flow იღებს ხანმოკლე სერტიფიკატს CI-ის OIDC-აუთენტიფიკაციის შემდეგ
 და წერს proof-ს transparency log-ში. ლოკალური private key არ არის საჭირო შექმნა ან
-დეველოპერებზე გავრცელება, მაგრამ ნდობა უნდა ჰქონდეს არა „ნებისმიერ სერტიფიკატს",
+დეველოპერებზე გავრცელება, მაგრამ უნდა ვენდოთ არა „ნებისმიერ სერტიფიკატს“,
 არამედ release workflow-ის ზუსტ OIDC identity-ს.
 
 ```bash
@@ -637,7 +637,7 @@ kubectl debug allowed-pod --image=registry.example.com/platform/debug:unsigned -
 ```
 
 ცალკე შეამოწმეთ image სხვისი registry-დან (`registry.example.com/other-team/debug:1.0`
-ან მსგავსი) — ასეთ მოთხოვნას უარყოფს წინა განყოფილების allowlist VAP, სანამ ის
+ან მსგავსი) - ასეთ მოთხოვნას უარყოფს წინა განყოფილების allowlist VAP, სანამ ის
 ხელმოწერის შემოწმებამდე მიაღწევდეს; ამ ImageValidatingPolicy-სთვის ის არ შედის
 `matchImageReferences`-ში და არ ამოწმებს მის CEL-წესებს.
 `validationConfigurations` ჯერ აძლევს Kyverno-ს უფლებას, დაამატოს digest, შემდეგ
@@ -663,7 +663,7 @@ notation verify "$IMAGE"
 
 Notary თავისთავად არ არის Kubernetes-ის admission controller. მისი trust policy
 უნდა გარდაიქმნას policy controller-ის ან webhook backend-ის შემოწმებად, რომელიც
-API-სერვერს აბრუნებს allow/deny-ს. ნუ მოითხოვთ, რომ ერთმა verifier-მა „ავტომატურად
+API-სერვერს უბრუნებს allow/deny-ს. ნუ მოითხოვთ, რომ ერთმა verifier-მა „ავტომატურად
 გაიგოს" ყველაფერი: Cosign/Sigstore და Notary/Notation იყენებენ ნდობის სხვადასხვა
 მოდელს. აირჩიეთ სტანდარტი კონკრეტული repository-სთვის, დააფიქსირეთ trust root,
 დაშვებული identity-ები და rotation-ის პროცედურა, ხოლო მიგრაცია აწარმოეთ ორმაგი
@@ -701,7 +701,7 @@ kubectl logs -n kyverno deploy/kyverno-admission-controller
 ```
 
 controller-ის მიერ მართული Pod-ისთვის შეამოწმეთ Events და `FailedCreate`
-ReplicaSet/Job-ზე, ხოლო სრული trace-ისთვის — API-სერვერის audit და შესაბამისი
+ReplicaSet/Job-ზე, ხოლო სრული trace-ისთვის - API-სერვერის audit და შესაბამისი
 admission controller-ის ლოგები.
 
 თუ ლეგიტიმური deployment უარყოფილია, შეამოწმეთ მისი digest, repository prefix,
@@ -727,7 +727,7 @@ namespace- და digest-ზე შეზღუდული გადაწყ�
 - Registry-ების allowlist და ხელმოწერის შემოწმება წყვეტს სხვადასხვა ამოცანას და უნდა მუშაობდეს ერთად.
 - Kyverno-ს და Gatekeeper-ს შეუძლიათ დაუშვებელი container image reference-ების აკრძალვა; შემოწმება
   უნდა ითვალისწინებდეს ჩვეულ, init- და ephemeral-კონტეინერებს, ხოლო `spec.volumes[].image.reference`
-  — ცალსახად უნდა ამოწმებდეს ცალკე verifier ან fail-closed კრძალავდეს.
+  - ცალსახად უნდა ამოწმებდეს ცალკე verifier ან fail-closed კრძალავდეს.
 - `ImagePolicyWebhook` მოითხოვს დაცულ, ხელმისაწვდომ backend-ს, API-სერვერის
   კონფიგურაციას და fail-closed `defaultAllow: false`-ს; mTLS მაგალითში - backend-ის
   აუთენტიფიკაციის არჩეული ვარიანტია.
@@ -756,7 +756,7 @@ registry-სთან და audit log-ებთან ერთად, ეს �
 > ### 🔴 შემტევის თვალსაზრისი
 > **Asset:** production workload-ის reference image-ზე.
 > **Starting foothold:** registry-ში push-ის შესრულების შესაძლებლობა ან კომპრომეტირებული CI.
-> **Attacker objective:** registry allowlist/admission-შემოწმების გვერდის ავლა, ბოროტმოქმედი image-ის ჩანაცვლებით mutable tag-ის გადამისამართებით, უკვე გაშლილი workload-ების digest-ის შეცვლის გარეშე.
+> **Attacker objective:** registry allowlist/admission-შემოწმების გვერდის ავლა, მავნე image-ის ჩანაცვლებით mutable tag-ის გადამისამართებით, უკვე გაშლილი workload-ების digest-ის შეცვლის გარეშე.
 > **Abuse path:** tag-ის გადამისამართება სხვა image-ზე. Digest pinning-ის გარეშე იგივე
 > სტრიქონი `registry/app:stable` არ იძლევა იმავე ბაიტების გარანტიას: `imagePullPolicy: Always`-ის
 > დროს kubelet ხელახლა წყვეტს tag-ს ყოველ გაშვებაზე; `IfNotPresent`-ის დროს დაქეშილმა
@@ -764,7 +764,7 @@ registry-სთან და audit log-ებთან ერთად, ეს �
 > პირველ pull-ზე მიიღებს ახალ digest-ს; `Never` გამორიცხავს pull-ს, მაგრამ არ არის
 > supply chain-verification კონტროლი. `imagePullPolicy` არ ანაცვლებს digest pinning-სა
 > და signature/provenance verification-ს.
-> **Expected evidence:** შენახული admission denial-ის პასუხი ან audit log; controller-ის მიერ მართული Pod-ისთვის — ასევე `FailedCreate` event owner-ზე.
+> **Expected evidence:** შენახული admission denial-ის პასუხი ან audit log; controller-ის მიერ მართული Pod-ისთვის - ასევე `FailedCreate` event owner-ზე.
 > **Control:** digest pinning, registry allowlist და admission-ის signature verification ImagePolicyWebhook-ის ან Kyverno-ს მეშვეობით.
 > **Retest:** workload digest-ის მიხედვით არ იცვლება tag-ის retarget-ის შემდეგ, ხოლო ხელმოუწერელი image უარყოფილია admission-ის მიერ.
 
@@ -791,7 +791,7 @@ Policy-მ უნდა შეამოწმოს `containers`, `initContainer
 <details>
 <summary>4. რომელი TLS-ფაილები და fail-closed პარამეტრები სჭირდება `ImagePolicyWebhook` backend-ს?</summary>
 
-Backend-ის kubeconfig-ში საჭიროა CA `certificate-authority`-ში, ხოლო არჩეული mTLS-სქემის დროს — `client-certificate` და `client-key` API სერვერისთვის; შესაბამისი გზები უნდა იყოს მონტირებული static Pod-ში. `AdmissionConfiguration`-ში დაყენებულია `defaultAllow: false`, რათა backend-ის შეცდომამ ან მიუწვდომლობამ არ დაუშვას image. ასევე ინარჩუნებენ არსებულ admission plugin-ებს და ჩართავენ API `imagepolicy.k8s.io/v1alpha1`-ს `ImageReview`-სთვის.
+Backend-ის kubeconfig-ში საჭიროა CA `certificate-authority`-ში, ხოლო არჩეული mTLS-სქემის დროს - `client-certificate` და `client-key` API სერვერისთვის; შესაბამისი გზები უნდა იყოს მონტირებული static Pod-ში. `AdmissionConfiguration`-ში დაყენებულია `defaultAllow: false`, რათა backend-ის შეცდომამ ან მიუწვდომლობამ არ დაუშვას image. ასევე ინარჩუნებენ არსებულ admission plugin-ებს და ჩართავენ API `imagepolicy.k8s.io/v1alpha1`-ს `ImageReview`-სთვის.
 </details>
 
 <details>
@@ -801,7 +801,7 @@ Keyless flow იღებს ხანმოკლე სერტიფიკ�
 </details>
 
 <details>
-<summary>6. რატომ არ ხელს უშლის `cosign verify` CI-ში პირდაპირ `kubectl apply`-ს?</summary>
+<summary>6. რატომ არ უშლის ხელს `cosign verify` CI-ში პირდაპირ `kubectl apply`-ს?</summary>
 
 CI-შემოწმება მოქმედებს მხოლოდ იმ გზაზე, სადაც ის ფაქტობრივად გაშვებულია. მომხმარებელს ან სხვა pipeline-ს შეუძლია პირდაპირ მიმართოს Kubernetes API-ს და შექმნას Pod ხელმოუწერელი image-ით. სავალდებულო შემოწმება უნდა მდებარეობდეს admission გზაზე და აბრუნებდეს deny-ს Pod-ის შენახვამდე.
 </details>
@@ -809,7 +809,7 @@ CI-შემოწმება მოქმედებს მხოლოდ �
 <details>
 <summary>7. რა არის საჭირო, რომ Notary/Notation გახდეს Kubernetes-ის enforcement point?</summary>
 
-`notation verify` სასარგებლოა CI-ში, მაგრამ თავად Notary არ არის Kubernetes-ის admission controller. მისი trust policy, X.509 trust root-ები და დაშვებული identity-ები უნდა იყოს ინტეგრირებული policy controller-ში ან webhook backend-ში, რომელიც kube-apiserver-ს აბრუნებს allow/deny-გადაწყვეტილებას. ასევე საჭიროა დოკუმენტირებული rotation და, მიგრაციისას, ორმაგი ხელმოწერისა და შემოწმების პერიოდი.
+`notation verify` სასარგებლოა CI-ში, მაგრამ თავად Notary არ არის Kubernetes-ის admission controller. მისი trust policy, X.509 trust root-ები და დაშვებული identity-ები უნდა იყოს ინტეგრირებული policy controller-ში ან webhook backend-ში, რომელიც kube-apiserver-ს უბრუნებს allow/deny-გადაწყვეტილებას. ასევე საჭიროა დოკუმენტირებული rotation და, მიგრაციისას, ორმაგი ხელმოწერისა და შემოწმების პერიოდი.
 </details>
 
 <details>

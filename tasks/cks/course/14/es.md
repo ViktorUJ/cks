@@ -1,6 +1,6 @@
 [Русская версия](ru.md) · [Eng version](README.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
-# Capítulo 14. Minimización del footprint de la OS host y seguridad del runtime daemon
+# Capítulo 14. Minimización del footprint del OS host y seguridad del runtime daemon
 
 > **El problema.** Un paquete, service, listener o socket sobrante en un nodo Kubernetes añade
 > un binary separado con CVE y una ruta de entrada local o de red. Comprometer tal componente
@@ -85,7 +85,7 @@ fi
 
 ## 14.2. Inventory y deshabilitación de servicios innecesarios
 
-Primero distinga tres estados. `systemctl list-units` muestra los unit cargados, `is-active` si
+Primero distinga tres estados. `systemctl list-units` muestra los units cargados, `is-active` si
 el proceso funciona ahora y `is-enabled` si se iniciará al arrancar. Un unit deshabilitado puede
 seguir activo hasta detenerlo explícitamente.
 
@@ -195,7 +195,7 @@ desktop, compilers, utilidades de prueba y agentes innecesarios, y después se r
 regularmente con patches. Minimalidad no significa ausencia de medios de recuperación: debe quedar
 un método acordado de acceso, logging y diagnóstico.
 
-> 🏭 **Producción.** Una Kubernetes-OS especializada, por ejemplo [Bottlerocket](https://bottlerocket.dev/), puede reducir el mutable host footprint mediante una immutable image deliberadamente mínima y un update workflow gestionado. Es una elección arquitectónica: antes del rollout en producción, compruebe en stage el soporte de la versión Kubernetes objetivo, CNI/CSI, bootstrap, observability, acceso de debug y rollback. No traslade a esta OS comandos `apt`/`dpkg` o rutas de una distribución Linux ordinaria sin su documentación oficial.
+> 🏭 **Producción.** Un Kubernetes-OS especializado, por ejemplo [Bottlerocket](https://bottlerocket.dev/), puede reducir el mutable host footprint mediante una immutable image deliberadamente mínima y un update workflow gestionado. Es una elección arquitectónica: antes del rollout en producción, compruebe en stage el soporte de la versión Kubernetes objetivo, CNI/CSI, bootstrap, observability, acceso de debug y rollback. No traslade a este OS comandos `apt`/`dpkg` o rutas de una distribución Linux ordinaria sin su documentación oficial.
 
 | Enfoque | Ventaja | Riesgo y control |
 |---|---|---|
@@ -285,7 +285,6 @@ sudo ss -lxnp | grep -E 'docker|containerd' || true
 | kube-apiserver `6443/tcp` | control-plane; worker y administradores según arquitectura | allowlist/private endpoint, no `0.0.0.0/0` |
 | etcd `2379`, `2380/tcp` | solo control-plane/etcd peers | no publicar en worker ni red externa |
 | Docker TCP API (a menudo `2375`/`2376`) | solo con gestión remota justificada | no escuchar `2375`; cualquier TCP endpoint exige excepción explícita, mTLS y firewall exacto |
-
 | containerd/NRI Unix socket | localmente en el nodo | `root` y conjunto mínimo de consumidores de sistema permitidos |
 
 No concluya por el número de puerto sin el proceso: por ejemplo, `6443` se espera en control-plane,
@@ -341,7 +340,7 @@ flowchart TB
 
 > 🔬 Docker se aplica solo a un Docker-host; NRI/debug/metrics requieren comprobación específica de versión y runtime.
 
-### Docker: ningún TCP API no autenticado
+### Docker: ninguna TCP API no autenticada
 
 `dockerd -H tcp://0.0.0.0:2375` abre Docker API a cualquiera que alcance el puerto. En `2375`
 no hay TLS ni authentication: es prácticamente root remoto. No debe aparecer ni en `ExecStart`
@@ -528,7 +527,7 @@ socket local. No lo suponga sin comprobar: la effective systemd property `Listen
 TCP listener que existe antes de iniciar `dockerd`. El gate anterior analiza solo las entries
 `Stream`: la ruta `/…` y el abstract Unix socket `@…` siguen siendo Unix, mientras que port,
 `host:port` y `[IPv6]:port` se consideran TCP. No añada simultáneamente `hosts` en `daemon.json`
-y `-H` en el unit: Docker termina ante configuraciones en conflicto. Elimine solo TCP endpoint de
+y `-H` en el unit: Docker termina ante configuraciones en conflicto. Elimine solo el TCP endpoint de
 la fuente activa, después compruebe la configuración y reinicie un service cada vez.
 
 ```bash
@@ -540,7 +539,7 @@ sudo systemctl --no-pager --full status docker.service
 sudo journalctl -u docker.service -n 50 --no-pager
 ```
 
-Si Docker API remoto es realmente un requisito acordado, el número de puerto no demuestra TLS ni
+Si la Docker API remota es realmente un requisito acordado, el número de puerto no demuestra TLS ni
 mTLS: incluso `2376` no es una prueba. Para **cada** TCP endpoint permitido, confirme
 `tlsverify=true` efectivo, CA, server certificate y key, además de authentication real de client
 certificate; restrinja las fuentes mediante firewall/security group y una management network
@@ -577,7 +576,7 @@ sudo grep -Rns -- '--container-runtime-endpoint\|containerRuntimeEndpoint' \
 No proteja solo el socket. `/run/containerd` contiene runtime-state y sockets, y
 `/var/lib/containerd`, content y metadata persistentes. Para containerd, la referencia es `0700`
 para `/var/lib/containerd` y `0711` para la raíz de `/run/containerd`: el segundo modo permite
-traversal, que puede necesitar user-namespaced workload, pero no revela el contenido del directorio.
+traversal, que puede necesitar un user-namespaced workload, pero no revela el contenido del directorio.
 Los subdirectorios sensibles deben ser `0700`, sockets `0660` con un grupo de sistema sin usuarios
 no privilegiados; ninguna ruta debe ser writable por usuarios ordinarios ni contenedores.
 Configuración, plugins y CNI también deben ser root-owned y estar protegidos contra escritura de
@@ -606,7 +605,7 @@ parámetros admitidos con su versión de containerd y compruebe listeners con `s
 ### Docker: solo si realmente se necesita
 
 Si se conserva Docker para una tarea separada, su socket y grupo `docker` también son
-root-equivalent. No conceda membresía a usuarios ordinarios, no monte el socket en workload no
+root-equivalent. No conceda membresía a usuarios ordinarios, no monte el socket en un workload no
 privilegiado y no suponga un owner/mode único para todas las instalaciones: siga la unit/package
 policy y compruebe acceso como una cuenta no permitida.
 
@@ -773,7 +772,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
   confirmada y firewall/security-group allowlist; `2376` por sí solo no demuestra mTLS.
 - [ ] `/run/containerd/containerd.sock` y, si existe, `/run/nri/nri.sock` no son accesibles a
   usuarios ordinarios, no se montan en un workload no privilegiado y `sudo crictl` sigue
-  funcionando; los grupos permitidos contienen solo sujetos de sistema autorizados.
+  funcionando; los grupos permitidos contienen solo sujetos de sistema.
 - [ ] `/run/containerd`, `/var/lib/containerd`, configuración/plugins/CNI son root-owned y no
   writable por sujetos no autorizados; no hay TCP debug endpoint público y las metrics sin TLS/auth
   se restringen a loopback o management interface.
@@ -817,7 +816,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
   check de `kubelet`/`containerd`, y solo después rollout. Para control-plane se mantiene una
   out-of-band console y rollback probado.
 
-> **Para quien quiera profundizar, material no de examen.** Este capítulo y los capítulos 16-17 explican namespaces, capabilities, cgroups y MAC justo en la medida necesaria para CKS: reconocer el riesgo, aplicar el campo o policy `securityContext` adecuado y comprobar el efecto. Si necesita un análisis más profundo del mecanismo mismo - cómo el kernel implementa syscall interception, qué ocurre en el nivel del cgroup v2 controller o cómo funciona namespace isolation en el nivel de kernel structures - ese es precisamente el tema de un libro aparte: Liz Rice, *Container Security*, 2nd edition (O'Reilly, 2025). El curso no intenta competir con él en profundidad de Linux internals; este es un límite de alcance deliberado, no una señal de que el tema se agote con los capítulos 14-17.
+> **Para quien quiera profundizar, material no de examen.** Este capítulo y los capítulos 16-17 explican namespaces, capabilities, cgroups y MAC justo en la medida necesaria para CKS: reconocer el riesgo, aplicar el campo `securityContext` o la policy adecuados y comprobar el efecto. Si necesita un análisis más profundo del mecanismo mismo - cómo el kernel implementa syscall interception, qué ocurre en el nivel del cgroup v2 controller o cómo funciona namespace isolation en el nivel de kernel structures - ese es precisamente el tema de un libro aparte: Liz Rice, *Container Security*, 2nd edition (O'Reilly, 2025). El curso no intenta competir con él en profundidad de Linux internals; este es un límite de alcance deliberado, no una señal de que el tema se agote con los capítulos 14-17.
 
 ## 14.10. Mini-glosario
 
@@ -872,7 +871,7 @@ autorizado, `stat` muestra owner/mode requerido y un usuario sin permisos recibe
 deshabilite kubelet/containerd solo porque su puerto o proceso parezca desconocido.
 
 **En el trabajo real.** La mayor parte de los compromisos de nodo comienza con un error ordinario:
-un paquete sin parchear, un management service olvidado, daemon API público o un grupo Unix
+un paquete sin parchear, un management service olvidado, una daemon API pública o un grupo Unix
 demasiado amplio. Una minimal image auditable, role-specific node pools, allowlist de fuentes de
 red y comprobación de drift continua reducen la posibilidad de tal error y el blast radius si de
 todos modos sucede.

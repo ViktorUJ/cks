@@ -99,7 +99,7 @@ de manifests Kubernetes pour ce lab.
 <details>
 <summary>💡 Indice pour la tâche 1</summary>
 
-Ordre des commandes : `sudo systemctl stop cks-lab105-unused.service && sudo systemctl disable cks-lab105-unused.service` - les deux étapes sont nécessaires, aucune ne remplace l'autre (voir la question 1 de la section d'auto-vérification ci-dessus). L'artefact doit contenir précisément la ligne « disabled inactive » (dans cet ordre, séparées par un espace) - vérifiez le format avant d'enregistrer.
+Ordre des commandes : `sudo systemctl stop cks-lab105-unused.service && sudo systemctl disable cks-lab105-unused.service` - les deux étapes sont nécessaires, aucune ne remplace l'autre (voir la question 1 de la section d'auto-vérification ci-dessus). L'artefact doit contenir précisément la ligne « disabled inactive » (dans cet ordre, les deux mots séparés par un espace) - vérifiez le format avant d'enregistrer.
 </details>
 
 ---

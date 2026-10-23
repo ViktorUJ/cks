@@ -63,19 +63,19 @@ flowchart TB
     style impact fill:#db4437,color:#fff
 ```
 
-Hardening არ არის სტრიქონების ნაკრები „CIS-ისთვის". ცვლილებამდე უპასუხეთ
+Hardening არ არის სტრიქონების ნაკრები „CIS-ისთვის“. ცვლილებამდე უპასუხეთ
 ოთხ კითხვას: რომელი პროცესი იყენებს რეალურად პარამეტრს, ვინ არის მისი client, თავსებადია
 თუ არა სერტიფიკატები და cipher suites, როგორ გადამოწმდეს ხელმისაწვდომობა და როგორ მოხდეს
 rollback. managed Kubernetes-ში control plane-ის ნაწილი ეკუთვნის პროვაიდერს: ნუ
 შეეცდებით მის host files-ის რედაქტირებას, არამედ შეამოწმეთ ხელმისაწვდომი
 security-პარამეტრების დოკუმენტაცია.
 
-> 🎯 შეამოწმეთ active config და process args, გაასწორეთ ერთადერთი effective source, გადატვირთეთ კომპონენტი და დაადასტურეთ active state, ქცევა და health; binary-სთვის — provenance და SHA-256.
+> 🎯 შეამოწმეთ active config და process args, გაასწორეთ ერთადერთი effective source, გადატვირთეთ კომპონენტი და დაადასტურეთ active state, ქცევა და health; binary-სთვის - provenance და SHA-256.
 
 ## 09.2. საშიში არგუმენტები: რა ვეძებოთ და რატომ
 
 ყველა ფლაგი ერთნაირად საშიში არ არის ნებისმიერ ტოპოლოგიაში. მნიშვნელობა,
-მისმენის მისამართი, firewall, TLS და RBAC ერთობლივად ქმნიან ერთ კონტროლს. მაგრამ შემდეგი
+მოსმენის მისამართი, firewall, TLS და RBAC ერთობლივად ქმნიან ერთ კონტროლს. მაგრამ შემდეგი
 პარამეტრები საჭიროებენ აშკარა დასაბუთებას ან გასწორებას.
 
 | კომპონენტი | საშიში პარამეტრი | რისკი | უსაფრთხო ორიენტირი |
@@ -181,7 +181,7 @@ scheduler-ის `--profiling` deprecated არის; component config-ში 
 
 `kube-controller-manager`-ისთვის Kubernetes 1.36-ში scheduler-ის
 ეკვივალენტური საერთო ოფცია `--config` არ არსებობს: მისი სამუშაო პარამეტრები კვლავ
-ინაცვლება CLI flags-ით active manifest-ში / process args-ში.
+მიეთითება CLI flags-ით active manifest-ში / process args-ში.
 `KubeControllerManagerConfiguration` არსებობს როგორც component configuration API და
 შიდა/configz-წარმოდგენა, მაგრამ არ არის `kube-controller-manager`-ის საერთო გარე
 `--config`-ფაილი.
@@ -211,7 +211,7 @@ backup+edit იქ, სადაც მნიშვნელოვანია �
 
 ```bash
 # 1. შევქმნათ hidden candidate უშუალოდ watched directory-ში; kubelet იგნორირებს
-# ფაილებს, რომელთა სახელი წერტილით იწყება, ამიტომ Pod არ ხელახლა შეიქმნება ატომური
+# ფაილებს, რომელთა სახელი წერტილით იწყება, ამიტომ Pod ხელახლა არ შეიქმნება ატომური
 # ჩანაცვლების მომენტამდე.
 # /etc/kubernetes/manifests შეიძლება იყოს ცალკე mount: თუ candidate შეიქმნება
 # /etc/kubernetes-ში, mv სხვადასხვა filesystem-ს შორის იქცევა copy+unlink-ად და
@@ -306,7 +306,7 @@ Kubernetes-client-ებთან; `TLS 1.3` უფრო მკაცრად 
 control plane-ის, automation-ისა და monitoring-ის ცალკე შემოწმებას.
 
 Go-ისა და Kubernetes-ის თანამედროვე defaults უკვე გამორიცხავს მოძველებულ
-პროტოკოლებსა და დაუცველ suites-ს; უნივერსალური „მოკლე უსაფრთხო სია" არ არსებობს. ნუ
+პროტოკოლებსა და დაუცველ suites-ს; უნივერსალური „მოკლე უსაფრთხო სია“ არ არსებობს. ნუ
 გადაიტანთ შემთხვევით მოკლე სიას კომპონენტებს ან ვერსიებს შორის. თუ ორგანიზაციის policy
 ან კონკრეტული CIS profile მოითხოვს დამტკიცებულ სიას, გამოიყენეთ ზუსტად ის სერტიფიკატებისა
 და client-ების inventory-ის შემდეგ და არ დაუპირისპიროთ სია hardening baseline-ს.
@@ -371,7 +371,7 @@ fi
 და ვერსია, რომელიც რეალურად მუშაობს კლასტერში, ამიტომ სხვა release-ის დოკუმენტაციასთან
 შეუსაბამობა არ წარმოიქმნება და დრო არ იხარჯება ბრაუზერზე გადართვაზე.
 
-benchmark-ის მოთხოვნის „etcd იღებს არანაკლებ TLS 1.2-ს" მტკიცებულებაა
+benchmark-ის მოთხოვნის „etcd იღებს არანაკლებ TLS 1.2-ს“ მტკიცებულებაა
 აქტიური `--tls-min-version` და შემოწმებული handshake და არა თვითნებური RSA-only
 cipher list; შეადარეთ გამოყენებული benchmark-ის ზუსტი ფორმულირება და ვერსია.
 
@@ -426,7 +426,7 @@ etcd-ისთვის `etcdctl endpoint health` ამტკიცებს �
 protocol handshake ცალკე შეამოწმეთ `openssl s_client`-ის მეშვეობით. ნუ გამოიტანთ
 private key-ს ტერმინალში და ნუ დააკოპირებთ PKI-ს ნოდიდან.
 
-negative test-ის წინ დარწმუნდით, რომ გამოყენებული TLS-client ნამდვილად
+negative test-ის წინ დარწმუნდით, რომ გამოყენებულ TLS-client-ს ნამდვილად
 შეუძლია შესთავაზოს ტესტირებადი legacy-პროტოკოლის ვერსია. თანამედროვე OpenSSL ან
 სისტემური crypto policy შეიძლება თავად კრძალავდეს TLS 1.1-ს. თუ client ლოკალურად
 უარყოფს TLS 1.1-ს, ასეთი შედეგი არ ამტკიცებს server-side `tls-min-version`-ს.
@@ -636,7 +636,7 @@ kubectl get nodes
 |---|---|---|
 | apiserver არ იწყება | YAML-ის შეცდომა, მხარდაუჭერელი ფლაგი ან cipher | `journalctl -u kubelet`, `crictl logs`; აღვადგინოთ ბოლო working manifest |
 | client იღებს protocol version-ს | client უფრო ძველია, ვიდრე დაყენებული minimum | განვაახლოთ client ან დროებით ავირჩიოთ შეთანხმებული minimum დამტკიცებული გამონაკლისით |
-| TLS handshake ცდება TLS 1.2-ზე | certificate key algorithm თავსებადი არ არის დაშვებულ cipher suites-თან | შევამოწმოთ `openssl x509 -text`, დავამატოთ შესაბამისი ECDSA/RSA suites |
+| TLS handshake ვერ სრულდება TLS 1.2-ზე | certificate key algorithm თავსებადი არ არის დაშვებულ cipher suites-თან | შევამოწმოთ `openssl x509 -text`, დავამატოთ შესაბამისი ECDSA/RSA suites |
 | etcd არ არის healthy | peer/client ვერ თანხმდება TLS-ზე ან დაკარგა წვდომა key-ზე | ყველა წევრი endpoint-ის შემოწმება mTLS-ით, etcd-ის logs, ერთი ნოდის rollback |
 | `openssl` აჩვენებს TLS 1.3 cipher-ს სიის გარეთ | TLS 1.3 ciphers-ს აკონტროლებს TLS-ბიბლიოთეკა | შევამოწმოთ minimum version და ვერსიის დოკუმენტაცია, ეს არ ჩავთვალოთ ფლაგის გვერდის ავლად |
 
@@ -690,8 +690,8 @@ sha256sum /usr/bin/kubelet
 ამრიგად, signature/certificate მოსალოდნელი identity/issuer-ით იძლევა
 provenance-ს, ხოლო checksum იძლევა integrity-ს სანდო release digest-თან მიმართებაში.
 Kubernetes ასევე აქვეყნებს ხელმოწერილ SBOM-ს (SPDX), მაგრამ image digest pinning,
-container image-ის ხელმოწერა, SBOM და admission policy ეკუთვნის დომენს Supply Chain
-Security (20%) და არა ამ თავის Cluster Setup-ს. ამ კონტროლების პრაქტიკა იხილეთ
+container image-ის ხელმოწერა, SBOM და admission policy ეკუთვნის დომენს **Supply Chain
+Security (20%)** და არა ამ თავის Cluster Setup-ს. ამ კონტროლების პრაქტიკა იხილეთ
 [24-28-ე თავებში](../24/ge.md); აქ ვამოწმებთ მხოლოდ release artifacts-ს და თავად
 Kubernetes-პლატფორმის binaries-ს.
 
@@ -707,7 +707,7 @@ container image-ის დეტალური შემოწმებებ�
 
 ჯერ შეინახეთ დაკვირვებული hashes, შეადარეთ ისინი დამტკიცებულ release
 manifest-ს და ჩაატარეთ evidence/provenance/baseline/authorized-change triage
-containment-ის არჩევამდე. ნუ „გაასწორებთ" mismatch-ს ეტალონური hash-ის შეცვლით:
+containment-ის არჩევამდე. ნუ „გაასწორებთ“ mismatch-ს ეტალონური hash-ის შეცვლით:
 დაუდასტურებელი ცვლილების ან ჩანაცვლების სხვა ნიშნების შემთხვევაში ესკალაცია
 გაატარეთ incident runbook-ის მიხედვით.
 
@@ -728,14 +728,14 @@ sudo sha256sum --check /root/approved-kubelet.sha256
 ```
 
 `sha256sum --check`-ის შედეგი `FAILED`-ით - სიგნალია გამოძიებისთვის, მაგრამ
-თავისთავად არ ამტკიცებს კომპრომეტაციას და არ ადგენს ერთადერთ პასუხს „იზოლირება".
+თავისთავად არ ამტკიცებს კომპრომეტაციას და არ ადგენს ერთადერთ პასუხს „იზოლირება“.
 ჯერ შეინახეთ evidence და ჩაატარეთ triage: (1) დაადასტურეთ path, ვერსია და
 მოსალოდნელი approved baseline, გამორიცხავთ inventory-ის შეცდომას ან არასწორი
 ფაილის განახლებას; (2) შეამოწმეთ release-ის provenance `cosign verify-blob`-ის
 მეშვეობით მოსალოდნელი certificate identity/issuer-ით და შეადარეთ package/release
 metadata; (3) მოძებნეთ authorized change - change record, rollout, package-manager-ისა
 და CI-ის logs - და შეადარეთ დრო, owner და digest; (4) შეადარეთ წინა ცნობილ კარგ
-baseline-ს და scope-ს სხვა ნოდებზე. ნუ „გაასწორებთ" mismatch-ს ეტალონური hash-ის
+baseline-ს და scope-ს სხვა ნოდებზე. ნუ „გაასწორებთ“ mismatch-ს ეტალონური hash-ის
 შეცვლით.
 
 თუ evidence არ ადასტურებს authorised change-ს, provenance/baseline არ
@@ -882,7 +882,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 - **გადამოწმებადი მიწოდება.** pipeline ამოწმებს binary-ის keyless
   signature/certificate-ს მოსალოდნელი identity/issuer-ით და SHA-256-ს, როგორც
   integrity check-ს, ინახავს დამტკიცებულ platform baseline-ს ცალკე. Image signing,
-  SBOM, registry და admission controls — 24-28-ე თავების supply-chain თემაა.
+  SBOM, registry და admission controls - 24-28-ე თავების supply-chain თემაა.
 - **უსაფრთხო rollback.** backup manifest ინახება static Pod directory-ის
   გარეთ, ხოლო rollback შემოწმებულია non-production-ში. ჩანაცვლებაზე ეჭვის
   შემთხვევაში სასურველია ნოდის ხელახლა დაყენება სანდო image-იდან, ვიდრე
@@ -913,7 +913,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 - ჯერ განისაზღვრება პარამეტრის აქტიური წყარო. kubeadm-ის control-plane
   კომპონენტები ჩვეულებრივ არის static Pod `/etc/kubernetes/manifests/`-იდან,
   kubelet - systemd service config API-ითა და/ან არგუმენტებით.
-- static Pod იცვლება ერთ-ერთი, backup-ით watched directory-ის გარეთ,
+- static Pod იცვლება სათითაოდ, backup-ით watched directory-ის გარეთ,
   kubelet/CRI-ის დაკვირვებით და `/readyz`-ის დაუყოვნებელი შემოწმებით.
 - apiserver-ისა და kubelet-ისთვის დგინდება TLS minimum version, ხოლო
   etcd-ისთვის - შესაბამისი `--tls-min-version`, ზუსტი მნიშვნელობების etcd-ის
@@ -924,7 +924,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 - `cosign verify-blob` მოსალოდნელი certificate identity/issuer-ით
   ამოწმებს Kubernetes binary-ის წარმომავლობას; `sha256sum --check` დამატებით
   ადარებს ბაიტებს trusted checksum-თან. Image digest, signing და SBOM ეხება Supply
-  Chain Security-ს — 24-28-ე თავებს.
+  Chain Security-ს - 24-28-ე თავებს.
 - hardening-ის მტკიცებულება მოიცავს აქტიურ arguments-ს, საშიში ქცევის
   უარყოფით შემოწმებას, TLS handshake-ს, control plane-ის health-ს და განმეორებით
   `kube-bench`-ს.
@@ -940,8 +940,8 @@ node-ზე და მოითხოვოს დაუცველი flag-ი
 `OK`/`FAIL`.
 
 ასეთი დავალების ხშირი კონკრეტული ვარიანტია TLS-ის მინიმალური ვერსიის
-დაყენება `kube-apiserver`-სა და `etcd`-ზე (მაგალითად, „არანაკლებ TLS 1.2" ან
-„მხოლოდ TLS 1.3"). apiserver-ისთვის ეს არის
+დაყენება `kube-apiserver`-სა და `etcd`-ზე (მაგალითად, „არანაკლებ TLS 1.2“ ან
+„მხოლოდ TLS 1.3“). apiserver-ისთვის ეს არის
 `--tls-min-version=VersionTLS12`/`VersionTLS13` manifest-ში
 `/etc/kubernetes/manifests/kube-apiserver.yaml`, etcd-ისთვის -
 `--tls-min-version=TLS1.2`/`TLS1.3` `/etc/kubernetes/manifests/etcd.yaml`-ში:
@@ -969,7 +969,7 @@ inventory-ს, IaC source of truth-ს, rolling დანერგვას დ�
 `--anonymous-auth=true` გარდაქმნის credential-ის გარეშე მოთხოვნას
 სუბიექტად `system:anonymous`, მაგრამ თავისთავად ჯერ არ გასცემს მას API-უფლებებს.
 binding `system:anonymous`-ისთვის ან `system:unauthenticated`-ისთვის იძლევა
-ნებართვებს, ხოლო ერთად ეს პარამეტრები საშუალებას აძლევს მათ მიღებას სერტიფიკატის
+ნებართვებს, ხოლო ერთად ეს პარამეტრები მათი მიღების საშუალებას იძლევა სერტიფიკატის
 ან token-ის გარეშე. ამიტომ საჭიროა როგორც authentication-გზის, ისე არსებული
 bindings-ის შემოწმება.
 </details>
@@ -1027,7 +1027,7 @@ pinning-ისას საჭიროა თავსებადი ECDSA დ
 positive TLS 1.2 test-ისთვის ამოწმებენ თავად `openssl s_client`-ის
 exit status-ს, იყენებენ `-verify_return_error`-ს certificate verification-ის
 დროს და რწმუნდებიან, რომ ნამდვილად შეთანხმებულია არაცარიელი cipher; ერთი
-grep-ი `Protocol`/`Verify return code`-ზე არასაკმარისია. negative test-ისთვის
+`grep`-ი `Protocol`/`Verify return code`-ზე არასაკმარისია. negative test-ისთვის
 არასაკმარისია სიტყვა `protocol`-ის ან ნებისმიერი handshake error-ის დანახვა:
 საჭიროა დამტკიცდეს, რომ client-მა **გაგზავნა** TLS 1.1 `ClientHello`, ხოლო
 შემოწმებულმა peer-მა **დააბრუნა** fatal `protocol_version` alert. `openssl
@@ -1045,7 +1045,7 @@ tag არის ცვლადი ბმული და განმეორ
 მიუთითებდეს სხვა ბაიტებზე, ამიტომ ის არ აიდენტიფიცირებს image-ის კონკრეტულ
 შემცველობას. digest აკავშირებს image-ს კონკრეტულ კრიპტოგრაფიულ შემცველობასთან:
 მიღებული image უნდა შეესაბამებოდეს ამ digest-ს. ხელმოწერის, SBOM-ისა და
-admission policy-ის შემოწმება — ცალკეული supply-chain კონტროლებია და არა
+admission policy-ის შემოწმება - ცალკეული supply-chain კონტროლებია და არა
 tag-ის თვისება.
 </details>
 

@@ -88,7 +88,7 @@ check_result
 <details>
 <summary>💡 任務 1 的提示</summary>
 
-這個任務必須「最先」完成，在任務 2 之前 - 一旦你啟用 EncryptionConfiguration 並重寫 Secret,plaintext 的證明就消失了，你無法事後再記錄它。帶有 `--cacert/--cert/--key` 旗標的 `etcdctl` 指令取自 Kubernetes 官方文件(Encrypting Confidential Data at Rest 頁面的 「Verify that newly written data is encrypted」一節);kubeadm 的憑證路徑：`/etc/kubernetes/pki/etcd/ca.crt`、`server.crt`、`server.key`。確切的連結 - 在參考解答的「在文件中哪裡可以找到範例」一節中。
+這個任務必須「最先」完成，在任務 2 之前 - 一旦你啟用 EncryptionConfiguration 並重寫 Secret,plaintext 的證明就消失了，你無法事後再記錄它。帶有 `--cacert/--cert/--key` 旗標的 `etcdctl` 指令取自 Kubernetes 官方文件(Encrypting Confidential Data at Rest 頁面的「Verify that newly written data is encrypted」一節);kubeadm 的憑證路徑：`/etc/kubernetes/pki/etcd/ca.crt`、`server.crt`、`server.key`。確切的連結 - 在參考解答的「在文件中哪裡可以找到範例」一節中。
 </details>
 
 ---

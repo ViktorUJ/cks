@@ -443,9 +443,9 @@ kubectl get imagevalidatingpolicy require-signed-catalog-images -o yaml
 ## 9b. Fresh signed ALLOW : un nouveau Pod après la création de la policy
 
 Un nouveau `kubectl apply` du Deployment déjà existant `catalog` **ne démontre pas**
-le post-policy admission : si le template n'a pas changé, Kubernetes ne crée pas de nouveau
+la post-policy admission : si le template n'a pas changé, Kubernetes ne crée pas de nouveau
 ReplicaSet/Pod, et le `Running` observé peut être le même Pod qui existait déjà avant
-`require-signed-catalog-images`. Pour démontrer précisément un fresh admission, nous créons un **nouvel** objet
+`require-signed-catalog-images`. Pour démontrer précisément une fresh admission, nous créons un **nouvel** objet
 qui n'existait pas jusqu'à ce moment :
 
 ```bash

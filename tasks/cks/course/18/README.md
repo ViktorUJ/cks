@@ -137,7 +137,7 @@ normally retain the default filesystem and set a `sizeLimit`.
   application to 8080 and leaving the set empty is preferable.
 - **`allowPrivilegeEscalation: false`** sets Linux `no_new_privs`: exec cannot obtain
   additional privileges through a setuid/setgid binary or file capabilities. It does not remove privileges
-  already granted to the container and does not replace `drop: ALL`. Kubernetes makes this value effective
+  already granted to the container and does not replace `drop: ALL`. Kubernetes makes this value effectively
   `true` if the container is `privileged` or has `CAP_SYS_ADMIN`.
 - **`readOnlyRootFilesystem: true`** makes the container's writable root filesystem unavailable
   for writes; image layers are immutable already. It does not restrict explicitly mounted volumes:
@@ -211,7 +211,7 @@ will not be created. Do not judge by only one `spec.securityContext`: inspect ev
 ### `supplementalGroupsPolicy: Strict`: without implicit image groups
 
 By default, `Merge` adds membership of the primary user from the image `/etc/group` to supplementary groups.
-`Strict` does not merge this: only GID from `fsGroup`, `supplementalGroups`,
+`Strict` does not merge this: only GIDs from `fsGroup`, `supplementalGroups`,
 and `runAsGroup` remain. This is useful when a group declared in an image must not give the process
 unexpected access to a volume.
 
@@ -298,11 +298,11 @@ by an ordinary API, worker, or batch job. "The process is not root" does not mak
 |---|---|---|---|
 | `privileged: true` | almost all capabilities, devices, and weakened runtime isolation | container compromise is close to node compromise | an ordinary container with `drop: ALL`; add one capability only when the need is proven |
 | `hostPID: true` | node processes in the PID namespace | host processes can be viewed/signaled and sensitive `/proc` data collected | metrics API, kubelet summary API, or a separate trusted node agent |
-| `hostNetwork: true` | node network namespace, host ports, and its IP | bypasses Pod-network isolation, port conflicts, access to node localhost services | Service, Ingress, NetworkPolicy, and ordinary Pod networking |
+| `hostNetwork: true` | node network namespace, host ports, and its IP | bypass of Pod-network isolation, port conflicts, access to node localhost services | Service, Ingress, NetworkPolicy, and ordinary Pod networking |
 | `hostIPC: true` | node IPC namespace | access to shared memory and IPC of host processes | volume, Service, or message queue with auth |
 | `hostPath` volume | selected node filesystem path | reading kubelet credentials, container sockets, runtime state, or writing to host | PVC, ConfigMap, Secret, `emptyDir`; a narrow read-only path only for a trusted daemon |
 
-`privileged: true` forcibly makes `allowPrivilegeEscalation` effective `true` and conflicts
+`privileged: true` forcibly makes `allowPrivilegeEscalation` effectively `true` and conflicts
 with the hardened-workload goal. Such a container also gets seccomp `Unconfined`, ignores AppArmor,
 and its SELinux context becomes `unconfined_t`. Do not try to "fix" this with a neighboring
 `allowPrivilegeEscalation: false`: the container remains privileged. The same effective rule for
@@ -381,7 +381,7 @@ spec:
         drop: ["ALL"]
 ```
 
-This is Linux-only mode. By default, it cannot be combined with `hostNetwork`, `hostPID`, or
+This is a Linux-only mode. By default, it cannot be combined with `hostNetwork`, `hostPID`, or
 `hostIPC`, and raw block volumes through `volumeDevices` are also prohibited. In v1.36, the
 `UserNamespacesHostNetworkSupport` alpha gate (default `false`) separately permits `hostNetwork: true`
 with `hostUsers: false`; `hostPID` and `hostIPC` remain prohibited. A hardened baseline must not rely
@@ -486,7 +486,7 @@ kubectl get pod hardened-web -o yaml
 
 If the application needs a shell tool, do not add it to the production image "for debugging" and do
 not make the root filesystem writable. Prefer logs, metrics, traces, a temporary hardened debug
-Pod with explicit NetworkPolicy, or an agreed ephemeral-container procedure. After diagnosis, delete the
+Pod with an explicit NetworkPolicy, or an agreed ephemeral-container procedure. After diagnosis, delete the
 debug artifact and add a minimal `emptyDir` mount to the template if the write is really part of the contract.
 
 > 🎯 Use `RuntimeDefault` and prove its effect through `/proc/1/status`; `Localhost` requires profile delivery to every eligible node.
@@ -593,7 +593,7 @@ through node/runtime tools with access control.
 
 | Check | Expected result | If the result differs |
 |---|---|---|
-| `id -u` in app | not `0` | image/override starts root; check Pod and container contexts |
+| `id -u` in app | not `0` | image/override starts the process as root; check Pod and container contexts |
 | write to `/` | `Read-only file system` | root filesystem is not read-only or write reached a broad mount |
 | write to `/tmp` | succeeds in the dedicated `emptyDir` | no mount, wrong UID/GID, or `fsGroup` unsupported by volume driver |
 | setuid-escalation attempt | no new privileges, `NoNewPrivs: 1` | `allowPrivilegeEscalation` absent/true, container privileged, has `CAP_SYS_ADMIN`, or wrong runtime policy |
@@ -800,7 +800,7 @@ use `emptyDir` as explicitly described ephemeral writable storage and check the 
 `check_result`. Then, on a separate test workload, add the baseline from this chapter: a non-root UID,
 `drop: ["ALL"]`, `allowPrivilegeEscalation: false`, a read-only root filesystem, `emptyDir`
 for `/tmp`, and `RuntimeDefault`. Prove `id`, `NoNewPrivs`, `Seccomp`, mount points, and
-the expected write denial in root. For detailed syscall-policy diagnostics, return to
+the expected write denial on the root filesystem. For detailed syscall-policy diagnostics, return to
 [chapter 17](../17/README.md).
 
 🧪 Lab 107 (multi-container Pod, `emptyDir`, and writable-path debugging):

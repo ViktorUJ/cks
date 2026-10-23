@@ -5,8 +5,8 @@
 > **პრობლემა.** დეველოპერს, კომპრომეტირებულ CI-ს ან Helm chart-ს, რომელსაც აქვს უფლება
 > `create pods`, შეუძლია გაგზავნოს RBAC-ის მიერ ნებადართული manifest `privileged: true`-ით,
 > `hostPath: /`-ით ან host namespace-ით. ასეთი Pod-ი პროცესს აძლევს გზას node-ის მონაცემებთან
-> და ბირთვთან, თუნდაც ცალკეულ workload-ს ჰქონდეს კარგი `SecurityContext`. საჭირო არ არის
-> ცალკე workload-ის შემოწმება, არამედ ერთი საერთო admission-საზღვარი, რომელიც გაშვებამდე
+> და ბირთვთან, თუნდაც ცალკეულ workload-ს ჰქონდეს კარგი `SecurityContext`. საჭიროა
+> ერთი საერთო admission-საზღვარი, რომელიც გაშვებამდე
 > ყველა Pod-ს namespace-ში აიძულებს დაცულ baseline-ს.
 
 > **რა არის შემდეგ.** `securityContext` აღწერს, რა უფლებებით *უნდა* მუშაობდეს კონკრეტული
@@ -86,8 +86,8 @@ Namespace PSA-ლეიბლების გარეშე ეფექტუ�
 ან `restricted` და მათი ვერსია, ამიტომ effective policy ყოველთვის მოწმდება namespace-ისა
 და admission controller-ის კონფიგურაციის მიხედვით და არა ლეიბლის არარსებობის მიხედვით.
 
-სისტემური namespace-ისთვისაც არ გადასცემთ `privileged`-ს აპლიკაციურ გუნდს „გასასწორებლად“.
-ჯერ დაამტკიცეთ საჭირო capability, volume ან syscall; სხვა შემთხვევაში დროებითი debugging
+სისტემური namespace-ისთვისაც არ გადასცეთ `privileged`-ს აპლიკაციურ გუნდს „გასასწორებლად“.
+ჯერ გაარკვიეთ საჭირო capability, volume ან syscall; სხვა შემთხვევაში დროებითი debugging
 გადაიქცევა უსაფრთხოების საზღვრის მუდმივ შემოვლად.
 
 ### `baseline`: აშკარა breakout-ის მოცილება
@@ -130,7 +130,7 @@ spec:
         drop: ["ALL"]
 ```
 
-ქვემოთ მოცემულია კომპაქტური მატრიცა **PSS `restricted` v1.36**-ისთვის. ის შედის
+ქვემოთ მოცემულია კომპაქტური მატრიცა **PSS `restricted` v1.36**-ისთვის. ის მოიცავს
 `baseline`-ს; წესი ყოველი container-ისთვის ვრცელდება ასევე `initContainers`-სა და
 `ephemeralContainers`-ზე, თუ სხვა რამ არ არის ნათქვამი.
 
@@ -143,7 +143,7 @@ spec:
 |---|---|
 | Host namespaces და Windows HostProcess | `hostNetwork`, `hostPID`, `hostIPC` - მხოლოდ `false`/არ არის დაყენებული; `windowsOptions.hostProcess` - `false`/არ არის დაყენებული |
 | Privileged | `securityContext.privileged` - `false`/არ არის დაყენებული |
-| Capabilities | დამატება შესაძლებელია მხოლოდ `NET_BIND_SERVICE`-ისთვის; ვალდებულია `capabilities.drop: ["ALL"]` |
+| Capabilities | დამატება შესაძლებელია მხოლოდ `NET_BIND_SERVICE`-ისთვის; სავალდებულოა `capabilities.drop: ["ALL"]` |
 | Host storage და ports | `hostPath` აკრძალულია; ყოველი `hostPort` - არ არის დაყენებული/`0` ან წინასწარ განსაზღვრული allowlist (ჩაშენებული PSA უჭერს მხარს მხოლოდ არ არის დაყენებული/`0`-ს) |
 | AppArmor | `appArmorProfile.type` - არ არის დაყენებული, `RuntimeDefault` ან `Localhost`; legacy annotation - მხოლოდ `runtime/default` ან `localhost/*` |
 | SELinux | `type`: არ არის დაყენებული/ცარიელი, `container_t`, `container_init_t`, `container_kvm_t` ან `container_engine_t`; `user` და `role` არ დაყენდება |
@@ -182,7 +182,7 @@ UID-თან. ეს არ აუქმებს მატრიცის დ�
 | რეჟიმი | შედეგი დარღვევის შემთხვევაში | სად ვეძებოთ სიგნალი |
 |---|---|---|
 | `enforce` | API server უარყოფს დარღვევის შემცველ create-სა და policy-checked update-ს: create არ ქმნის ახალ Pod-ს, update არ ინახავს ცვლილებას | `kubectl`-ის პასუხი, CI/CD, Event/API audit |
-| `audit` | Pod ეშვება; PSA დაუმატებს annotation-ს შესაბამის audit event-ს | control plane-ის audit log, თუ ის ჩართული არ |
+| `audit` | Pod ეშვება; PSA დაუმატებს annotation-ს შესაბამის audit event-ს | control plane-ის audit log, თუ ის ჩართულია |
 | `warn` | Pod ეშვება, client იღებს გაფრთხილებას | `kubectl`-ის stderr/პასუხი, CI-ის log |
 
 `warn` და `audit` **არ იცავს**: დამრღვევი Pod მაინც გაშვებული რჩება. მათი მიზანია
@@ -195,7 +195,7 @@ API audit backend-ს და არ იძლევა გარანტია�
 წინასწარ დარწმუნდით, რომ API auditing ჩართულია, policy იწერს საჭირო requests/stages-ს და
 ოპერატორს აქვს წვდომა არჩეულ audit sink-ზე; სხვა შემთხვევაში გამოიყენეთ `warn`,
 server-side dry run და PSA-ის metrics, როგორც დამატებითი სიგნალები. არა ყოველი update
-უკვე არსებული Pod-ისთვის კვლავ გადადის policy check-ს: გამორიცხულია metadata-only
+უკვე არსებული Pod-ისთვის კვლავ გადის policy check-ს: გამორიცხულია metadata-only
 updates (deprecated seccomp/AppArmor annotations-ის გარდა), ასევე `.spec.activeDeadlineSeconds`-ისა
 და `.spec.tolerations`-ის ვალიდური ცვლილებები.
 
@@ -256,7 +256,7 @@ signal-ია და არა ავტომატური წაშლა. �
 `latest` მოსახერხებელია პატარა test-კლასტერისთვის, მაგრამ production-ში ქმნის რისკს:
 Kubernetes-ის განახლების შემდეგ სტანდარტის შემცველობა შესაძლოა უფრო მკაცრი გახდეს, და
 ადრე მომუშავე rollout უარყოფილი იქნება. ამიტომ ამ თავის სასწავლო მაგალითებში ვერსია
-დაფიქსირებულია `v1.36`-ზე — კურსის და core labs-ის **training baseline**. თქვენი
+დაფიქსირებულია `v1.36`-ზე - კურსის და core labs-ის **training baseline**. თქვენი
 production-კლასტერისთვის აირჩიეთ PSS pin, რომელიც შეესატყვისება მისი API server-ის
 ფაქტობრივ ვერსიას; არ გამოიყენოთ ვერსია მასზე მაღალი.
 
@@ -301,7 +301,7 @@ kubectl get namespace -L pod-security.kubernetes.io/enforce \
    დაარღვევს policy-ს.
 2. **დაიწყეთ `warn=restricted`-ითა და `audit=restricted`-ით.** არსებული traffic და CI
    გაჩვენებთ დამრღვევებს, მაგრამ არაფერს დაბლოკავენ. სანამ audit-ჩანაწერებზე
-   დაანდობდეთ, შეამოწმეთ API audit logging-ისა და არჩეული sink-ის ხელმისაწვდომობა;
+   დაეყრდნობოდეთ, შეამოწმეთ API audit logging-ისა და არჩეული sink-ის ხელმისაწვდომობა;
    შეინახეთ ხელმისაწვდომი warnings/audit-ჩანაწერები, როგორც სამუშაოთა სია.
 3. **გამოასწორეთ დარღვევები template-ებში.** დაამატეთ `runAsNonRoot`, seccomp,
    ესკალაციის აკრძალვა, capabilities-ის მოცილება; შეცვალეთ `hostPath` დასაშვები
@@ -336,8 +336,8 @@ spec:
 თუ image-ს რეალურად სჭირდება root, არ გამორთოთ PSA პირველ ნაბიჯად. შეამოწმეთ `USER`
 Dockerfile-ში, ფაილების ownership, აპლიკაციის პორტი და writable დირექტორიები; ჩვეულებრივ
 image-ის non-root UID-თან ადაპტირება შესაძლებელია და `/tmp`-ისთვის ან cache-ისთვის
-გამოყოფილია `emptyDir`. გამონაკლისი უნდა გამომდინარეობდეს დამტკიცებული ტექნიკური
-საჭიროებისგან და არა იქცეს მიგრაციის შემოვლის მოკლე გზად.
+შეიძლება გამოიყოს `emptyDir`. გამონაკლისი უნდა გამომდინარეობდეს დამტკიცებული ტექნიკური
+საჭიროებისგან და არ უნდა იქცეს მიგრაციის შემოვლის მოკლე გზად.
 
 ## 19.6. Rejection: როგორ წავიკითხოთ და ხელახლა გამოვიწვიოთ უარყოფა
 
@@ -378,7 +378,7 @@ kubectl get deployment -n payments api -o yaml
 
 `--dry-run=server` ატარებს admission-შემოწმებას, მაგრამ არ ინახავს ობიექტს. Workload
 resources-ისთვის PSA დააყენებს Pod template-ზე `warn`-ს და `audit`-ს, ხოლო `enforce`
-Pod-ს შემოწმდება მხოლოდ მოგვიანებით, როცა მას ქმნის controller. ამიტომ Deployment-ის
+Pod-ს შეამოწმებს მხოლოდ მოგვიანებით, როცა მას ქმნის controller. ამიტომ Deployment-ის
 წარმატებული dry-run არ ამტკიცებს, რომ controller-created Pod გაივლის `enforce`-ს:
 შემოწმეთ ცალკე Pod იმავე template-იდან ან ჩაატარეთ რეალური rollout იზოლირებულ
 test-namespace-ში იდენტური PSA label-ებით და გააკონტროლეთ `kubectl rollout status` და
@@ -398,7 +398,7 @@ plugin, device plugin ან დიაგნოსტიკური agent. ა�
 **სასურველი ვარიანტი - ცალკე namespace და ყველაზე სუსტი საკმარისი დონე.** მაგალითად,
 სისტემური DaemonSet რჩება `kube-system`-ში ან გამოყოფილ `platform-system`-ში
 `enforce=baseline`-ით ან, დამტკიცებული საჭიროებისას, `privileged`-ით; აპლიკაციური
-namespaces რჩება `restricted`. Namespace არ უნდა ერეოდეს სანდო node agent-ს
+namespaces რჩება `restricted`. Namespace-ში არ უნდა იყოს შერეული სანდო node agent-ი
 მომხმარებლის workload-ებთან.
 
 **სისტემური PSA exemptions** დაყენებულია admission controller-ის კონფიგურაციით, და არა
@@ -406,7 +406,7 @@ namespace-ის label-ით. `AdmissionConfiguration`-ში `PodSecurity`-ი
 სიები `usernames`, `runtimeClasses` და `namespaces`; გამონაკლისი ვრცელდება PSA-ის ყველა
 რეჟიმზე. ეს dimensions დამოუკიდებელია: **ნებისმიერის** დამთხვევა (`namespace` **ან**
 `runtimeClass` **ან** `username`) სავსებით უვლის გვერდს PSA-ს. ამიტომ ერთ გამონაკლისში
-არ გააერთიანოთ რამდენიმე dimension იმ მოლოდინით, რომ ეს დაუზუსტებს არეალს.
+არ გააერთიანოთ რამდენიმე dimension იმ მოლოდინით, რომ ეს შეამცირებს არეალს.
 
 ქვემოთ ჩვენებულია მხოლოდ namespace exemption. `defaults` მოცემულია სავსებით; რეალური
 კონფიგურაციის ცვლილებისას შეინახეთ ყველა მოქმედი მნიშვნელობა და დაამატეთ მხოლოდ საჭირო
@@ -434,7 +434,7 @@ plugins:
       - platform-system
 ```
 
-არ დააკოპიროთ ეს მაგალითი წვდომაში ნაცნობი managed კლასტერზე ჩაუფიქრებლად: admission
+არ დააკოპიროთ ეს მაგალითი managed კლასტერში ბრმად: admission
 configuration-ის მითითების ხერხი დამოკიდებულია იმაზე, ვინ მართავს kube-apiserver-ს.
 გამონაკლისის დამატებამდე დააფიქსირეთ მიზეზი, identity/namespace, owner, კომპენსირებადი
 controls და წაშლის თარიღი. არ დაამატოთ ფართო მომხმარებელთა ჯგუფი და არ ჩაწეროთ
@@ -477,7 +477,7 @@ API-ის წაშლის შემდეგ ასეთი ობიექ
 - წესები, რომლებსაც PSA არ გამოხატავს (სანდო registry, სავალდებულო labels, resource
   limits, კონკრეტული StorageClass), გადაიტანეთ Kyverno-ში, Gatekeeper-ში ან
   `ValidatingAdmissionPolicy`-ში;
-- ჯერ გაუშვათ PSA `warn`/`audit`-ში, რადგან PSP-სა და PSA-ს semantics-ითა და
+- ჯერ გაუშვათ PSA `warn`/`audit`-ში, რადგან PSP PSA-სგან semantics-ითა და
   მოქმედების არეალით განსხვავდება;
 - cutover-ის შემდეგ შეამოწმეთ, რომ admission controller ჩართულია, label-ები
   მინიჭებულია და ძველი cluster-wide bypass-ები არ დარჩენილა.
@@ -524,7 +524,7 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 | დაკვირვება | სავარაუდო მიზეზი | ქმედება |
 |---|---|---|
 | `privileged` Pod გავიდა თითქოსდა restricted namespace-ში | `enforce`-ლეიბლი არ არსებობს/შეცდომითია, Pod exempt-ია, ან მოწმდება სხვა namespace | გვიჩვენეთ namespace-ის label-ები, creator და admission configuration |
-| CI ხედავს warning-ს, მაგრამ deployment მაინც შეიქმნა | მოქმედებს `warn` ან `audit`, და არა `enforce` | ეს მოსალოდნელი migration-ის ეტაპია; არ დაარქმევთ მას დაცვას |
+| CI ხედავს warning-ს, მაგრამ deployment მაინც შეიქმნა | მოქმედებს `warn` ან `audit`, და არა `enforce` | ეს მოსალოდნელი migration-ის ეტაპია; არ დაარქვათ მას დაცვას |
 | ახალი rollout უარყოფილია, ძველი Pods მუშაობს | PSA არ შლის არსებულ Pods-ს, მაგრამ ამოწმებს ახლებს | გაასწორეთ controller-ის template და გაიმეორეთ rollout |
 | `kubectl apply` პასუხობს Forbidden-ით, Pod არ შეიქმნა | PSA ან RBAC უარყო persistence-მდე | შეადარეთ შეცდომის ტექსტი `auth can-i`-სთან და namespace-ის label-ებთან |
 | სისტემური კომპონენტი გატყდა restricted-ის შემდეგ | კომპონენტს სჭირდება დასაშვები ცალკე namespace ან ვიწრო exemption | არ შეასუსტოთ აპლიკაციური namespace; დააფიქსირეთ გამონაკლისი |
@@ -537,7 +537,7 @@ control/admission policy-ით.
 
 Observability-ისთვის შეაგროვეთ API audit logs და PSA-ის metrics
 `pod_security_evaluations_total`, `pod_security_errors_total` და
-`pod_security_exemptions_total`, თუ ისინი ხელმისაწვდომია თქვენ დისტრიბუციაში. Label-ების
+`pod_security_exemptions_total`, თუ ისინი ხელმისაწვდომია თქვენს დისტრიბუციაში. Label-ების
 ნაკრებები განსხვავდება: evaluations-ს აქვს `decision`, `mode`, `policy_level`,
 `policy_version`, `request_operation`, `resource`, `subresource`; errors-ს - `fatal`,
 `request_operation`, `resource`, `subresource`; exemptions-ს - მხოლოდ request/resource
@@ -617,7 +617,7 @@ delivery-ის შეჩერების გარეშე: ჯერ შე
   მოგვიანებით შექმნის controller.
 - PSP წაშლილია 1.25-ში. მისი დაბრუნება manifest-ით შეუძლებელია: სტანდარტული წესები
   გადადის PSA-ში, ხოლო ორგანიზაციული - policy engine-ში.
-- გამონაკლისები უნდა იყოს ვიწრო, აპლიკაციური namespaces-გან ცალკე, დოკუმენტირებული და
+- გამონაკლისები უნდა იყოს ვიწრო, აპლიკაციური namespace-ებისგან ცალკე, დოკუმენტირებული და
   დროებითი.
 
 ## 19.14. კითხვები თვითშემოწმებისთვის
@@ -671,7 +671,7 @@ API server-ის ფაქტობრივი ვერსიის მიხ
 </details>
 
 <details>
-<summary>6. რატომ არჩევანი Kubernetes-ის განახლებამდე PSS-ის ვერსია დავაფიქსიროთ, და არ დავტოვოთ `latest`?</summary>
+<summary>6. რატომ ჯობია Kubernetes-ის განახლებამდე PSS-ის ვერსიის დაფიქსირება, და არა `latest`-ის დატოვება?</summary>
 
 PSS დროთა განმავლობაში მკაცრდება: თავი მოგვითხრობს v1.34-ში დამატებულ probes-ის და
 lifecycle hooks-ის host-ველების შეზღუდვებზე. `latest`-ის დროს upgrade-ს შეუძლია
@@ -716,7 +716,7 @@ Kyverno-ით, Gatekeeper-ით ან ValidatingAdmissionPolicy-ით.
 </details>
 
 <details>
-<summary>11. **Flashback (თავი 30).** PSA გადაწყვეტილებას იღებს ერთხელ - admission-ის დროს, Pod-ის შექმნისას. თუ Pod-მა `enforce=restricted` პატიოსნად გავიდა, მაგრამ პროცესი კონტეინერის შიგნით მოგვიანებით შეეცადება რაღაც საეჭვოს შესრულებას (მაგალითად, ჩამოტვირთული binary), შეძლებს თუ არა PSA ეს შეაჩეროს? რომელი შრე 30-ე თავიდან მოიცავს ზუსტად ამ - runtime, და არა admission-time - მომენტს?</summary>
+<summary>11. **Flashback (თავი 30).** PSA გადაწყვეტილებას იღებს ერთხელ - admission-ის დროს, Pod-ის შექმნისას. თუ Pod-მა `enforce=restricted` პატიოსნად გაიარა, მაგრამ პროცესი კონტეინერის შიგნით მოგვიანებით შეეცადება რაღაც საეჭვოს შესრულებას (მაგალითად, ჩამოტვირთული binary), შეძლებს თუ არა PSA ეს შეაჩეროს? რომელი შრე 30-ე თავიდან მოიცავს ზუსტად ამ - runtime, და არა admission-time - მომენტს?</summary>
 
 არა: PSA გადაწყვეტილებას იღებს მხოლოდ admission-ის დროს და არ აკვირდება პროცესის
 შემდგომ შესრულებას. Runtime-მომენტს მოიცავს 30-ე თავის runtime security-ის საშუალებები,

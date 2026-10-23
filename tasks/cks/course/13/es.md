@@ -205,7 +205,7 @@ precisamente a la release target, no al ejemplo de unos apuntes.
    restart de kubelet, comprobación del node y los componentes de control plane, y `uncordon`.
 3. En HA, actualiza los demás nodos de control plane de uno en uno mediante `kubeadm upgrade
    node`, y después repite para **cada uno** el mismo lifecycle `drain` → kubelet/kubectl →
-   restart → comprobación → `uncordon`. Asegúrate de que API siga disponible y no pases a un
+   restart → comprobación → `uncordon`. Asegúrate de que la API siga disponible y no pases a un
    worker hasta que control plane esté healthy.
 4. Para cada nodo worker, abre el Linux-node guide y hazlo en orden: actualizar `kubeadm` →
    `kubeadm upgrade node` → `drain` → actualizar `kubelet`/`kubectl` → restart de kubelet →
@@ -483,7 +483,7 @@ configuration se trata en el capítulo 19, no en esta práctica de upgrade.
 
 ```bash
 set -euo pipefail
-# Esta evidencia es solo del backend de API server seleccionado; en HA usa la agregación descrita arriba.
+# Esto es evidence solo del backend de API server seleccionado; en HA usa la agregación descrita arriba.
 kubectl get --raw /metrics \
   | awk '/^apiserver_requested_deprecated_apis/ && $NF > 0' \
   | tee "$UPGRADE_EVIDENCE/before/deprecated-apis.txt"
@@ -524,7 +524,7 @@ proyecto, no intentando declararlos seguros mediante un YAML diff general.
 <summary>1. ¿Por qué un CVE en kubelet o `runc` puede ser crítico aunque API server no sea accesible
    desde Internet?</summary>
 
-Kubelet puede ser alcanzable para un atacante desde un Pod ya comprometido o un nodo vecino, y una vulnerabilidad en `runc` puede explotarse desde un contenedor que ya se está ejecutando. Por tanto, la ausencia de API pública no elimina los prerequisite internos del ataque. La prioridad se determina por la disponibilidad de la función vulnerable, los permisos requeridos, el exploit y el valor del nodo, no solo por la exposición externa.
+Kubelet puede ser alcanzable para un atacante desde un Pod ya comprometido o un nodo vecino, y una vulnerabilidad en `runc` puede explotarse desde un contenedor que ya se está ejecutando. Por tanto, la ausencia de API pública no elimina los prerequisites internos del ataque. La prioridad se determina por la disponibilidad de la función vulnerable, los permisos requeridos, el exploit y el valor del nodo, no solo por la exposición externa.
 </details>
 
 <details>
@@ -575,7 +575,7 @@ Los paquetes de Kubernetes no actualizan runtime independientes, kernel ni paque
 
 <details>
 <summary>9. **Flashback (capítulo 26).** Version skew (este capítulo) e image digest pinning (capítulo 26) son
-   mecanismos sobre que «qué versión exacta se ejecuta ahora» debe ser un hecho comprobable,
+   mecanismos que se basan en que «qué versión exacta se ejecuta ahora» debe ser un hecho comprobable,
    no una suposición. ¿Cuál es la diferencia entre «versión compatible» (version skew) y
    «versión idéntica» (digest), y por qué basta la primera para kubelet/API server, pero para
    una container image en production se necesita obligatoriamente la segunda?</summary>

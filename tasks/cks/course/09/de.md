@@ -39,10 +39,10 @@ read-only kubelet port, `AlwaysAllow` oder profiling; er liest Daten oder führt
 fremden Rechten aus. Ein alternativer Weg besteht darin, ein Artefakt vor der Ausführung zu
 manipulieren. Ein manipuliertes kubelet oder control-plane binary läuft mit den Rechten des
 entsprechenden service/host process; ein manipuliertes `kubectl` mit den Rechten des lokalen
-Benutzers und dessen verfügbaren Kubernetes credentials; eine container image mit den Rechten
-ihres workload security context. Deshalb wird die provenance vor der Ausführung geprüft, und die
+Benutzers und dessen verfügbaren Kubernetes credentials; ein container image mit den Rechten
+seines workload security context. Deshalb wird die provenance vor der Ausführung geprüft, und die
 Folgen werden anhand des tatsächlichen execution context bewertet, nicht anhand der allgemeinen
-Formel „Rechte der Komponente".
+Formel „Rechte der Komponente“.
 
 ```mermaid
 flowchart TB
@@ -64,7 +64,7 @@ flowchart TB
     style impact fill:#db4437,color:#fff
 ```
 
-Hardening ist keine Sammlung von Zeilen „für CIS". Beantworten Sie vor einer Änderung vier
+Hardening ist keine Sammlung von Zeilen „für CIS“. Beantworten Sie vor einer Änderung vier
 Fragen: welcher Prozess den Parameter tatsächlich verwendet, wer sein Client ist, ob Zertifikate
 und cipher suites kompatibel sind, wie die Verfügbarkeit geprüft wird und wie ein Rollback
 erfolgt. Bei Managed Kubernetes gehört ein Teil des control plane dem Anbieter: Versuchen Sie
@@ -189,7 +189,7 @@ ihr unterstützte active source.
 ```mermaid
 flowchart TB
     inspect["Aktive Datei<br/>bestimmen und<br/>Zustand sichern"] --> edit["Eine minimale<br/>Änderung"]
-    edit --> reload["kubelet erstellt den<br/>static Pod bei Änderung<br/>des Manifest neu"]
+    edit --> reload["kubelet erstellt den<br/>static Pod bei Änderung<br/>des Manifests neu"]
     reload --> health["logs, Ready,<br/>/readyz prüfen"]
     health --> test["Verbot und TLS<br/>prüfen"]
     test --> pass["Ergebnis<br/>festhalten oder<br/>zurückrollen"]
@@ -211,7 +211,7 @@ ohne API zu lassen:
 # deren Name mit einem Punkt beginnt, sodass der Pod nicht neu erstellt wird, bis der atomare
 # Austausch erfolgt.
 # /etc/kubernetes/manifests kann ein separater Mount sein: Wird der candidate in
-# /etc/kubernetes erstellt, wird mv zwischen verschiedenen filesystem zu copy+unlink und
+# /etc/kubernetes erstellt, wird mv zwischen verschiedenen Dateisystemen zu copy+unlink und
 # ist kein atomic rename mehr.
 sudo install -d -m 700 /root/k8s-manifest-backup
 CANDIDATE=$(sudo mktemp /etc/kubernetes/manifests/.kube-apiserver.yaml.candidate.XXXXXX)
@@ -240,7 +240,7 @@ sudo crictl logs "$(sudo crictl ps -aq --name kube-apiserver | head -n1)"
 ```
 
 Bewahren Sie dauerhafte backup-Dateien trotzdem außerhalb von `/etc/kubernetes/manifests/` auf
-(wie in Schritt 1 oben): der hidden candidate wird nur für die Dauer des Austauschs selbst benötigt,
+(wie in Schritt 1 oben): Der hidden candidate wird nur für die Dauer des Austauschs selbst benötigt,
 nicht als langfristige Kopie.
 
 Prüfen Sie bei kubelet zuerst die sysctl-Werte und die Konfiguration, und starten Sie danach nur
@@ -301,7 +301,7 @@ Clients stärker ein und erfordert eine separate Prüfung des gesamten control p
 und des monitoring.
 
 Moderne Go- und Kubernetes-Defaults schließen veraltete Protokolle und unsichere suites bereits
-aus; eine universelle „kurze sichere Liste" gibt es nicht. Übertragen Sie keine zufällige kurze
+aus; eine universelle „kurze sichere Liste“ gibt es nicht. Übertragen Sie keine zufällige kurze
 Liste zwischen Komponenten oder Versionen. Verlangt die Policy der Organisation oder ein konkretes
 CIS profile eine genehmigte Liste, wenden Sie genau diese nach dem inventory von Zertifikaten und
 Clients an, statt die Liste dem hardening baseline entgegenzustellen. Eine RSA-only-Liste ist kein
@@ -362,7 +362,7 @@ kurze Beschreibung mit den zulässigen Werten neben dem Flag. Es ist dasselbe bi
 Version, die tatsächlich im Cluster läuft, daher entstehen keine Abweichungen zur Dokumentation
 eines anderen Release, und es geht keine Zeit für den Wechsel in den Browser verloren.
 
-Der Nachweis für die benchmark-Anforderung „etcd akzeptiert nicht weniger als TLS 1.2" sind der
+Der Nachweis für die benchmark-Anforderung „etcd akzeptiert nicht weniger als TLS 1.2“ sind der
 aktive `--tls-min-version` und ein geprüfter handshake, nicht eine beliebige RSA-only cipher-Liste;
 prüfen Sie die exakte Formulierung und Version des angewendeten benchmark.
 
@@ -628,7 +628,7 @@ durch den gewählten digest beschrieben werden. Das ist kein Beweis für provena
 zusammen mit der Datei aus derselben nicht vertrauenswürdigen Quelle bezogen wird, oder ein nicht
 genehmigtes baseline schafft kein Vertrauen.
 
-Beziehen Sie für Kubernetes den versionsspezifischen offiziellen release artifact. Kubernetes
+Beziehen Sie für Kubernetes das versionsspezifische offizielle release artifact. Kubernetes
 veröffentlicht eine keyless cosign signature und ein certificate neben dem binary; `verify-blob`
 prüft die Signatur und die Bindung des certificate an die erwarteten identity und den OIDC issuer,
 also die Herkunft des release. Prüfen Sie identity und issuer ausdrücklich, statt ein beliebiges
@@ -647,7 +647,7 @@ for FILE in "${BIN}" "${BIN}.sig" "${BIN}.cert" "${BIN}.sha256"; do
 done
 
 # Offizielle Werte der Kubernetes Release Engineering für binary artifacts.
-# cosign 2+ verlangt beide Einschränkungen; entfernen Sie diese nicht, um eine „erfolgreiche" Prüfung zu erreichen.
+# cosign 2+ verlangt beide Einschränkungen; entfernen Sie diese nicht, um eine „erfolgreiche“ Prüfung zu erreichen.
 cosign verify-blob "${BIN}" \
   --signature "${BIN}.sig" \
   --certificate "${BIN}.cert" \
@@ -682,7 +682,7 @@ binary kann die erwartete Version zurückgeben.
 
 Sichern Sie zuerst die beobachteten Hashes, gleichen Sie sie mit dem genehmigten release manifest
 ab und führen Sie evidence/provenance/baseline/authorized-change triage durch, bevor Sie ein
-containment wählen. „Korrigieren" Sie einen mismatch nicht, indem Sie den Referenz-Hash ändern: Bei
+containment wählen. „Korrigieren“ Sie einen mismatch nicht, indem Sie den Referenz-Hash ändern: Bei
 einer unbestätigten Änderung oder anderen Anzeichen einer Manipulation eskalieren Sie gemäß dem
 incident runbook.
 
@@ -700,17 +700,17 @@ sudo sha256sum --check /root/approved-kubelet.sha256
 ```
 
 Ein `sha256sum --check` mit `FAILED` ist ein Signal zum Untersuchen, beweist aber für sich genommen
-keine Kompromittierung und gibt nicht die einzige Antwort „isolieren" vor. Sichern Sie zuerst
+keine Kompromittierung und gibt nicht die einzige Antwort „isolieren“ vor. Sichern Sie zuerst
 evidence und führen Sie triage durch: (1) bestätigen Sie Pfad, Version und das erwartete approved
 baseline und schließen Sie einen Fehler im inventory oder die Aktualisierung der falschen Datei
 aus; (2) prüfen Sie die provenance des release über `cosign verify-blob` mit den erwarteten
 certificate identity/issuer und gleichen Sie package/release metadata ab; (3) finden Sie den
 authorized change - change record, rollout, package-manager- und CI-logs - und gleichen Sie Zeit,
 Eigentümer und digest ab; (4) vergleichen Sie mit dem vorherigen bekannten guten baseline und dem
-scope auf anderen Nodes. „Korrigieren" Sie einen mismatch nicht, indem Sie den Referenz-Hash
+scope auf anderen Nodes. „Korrigieren“ Sie einen mismatch nicht, indem Sie den Referenz-Hash
 ändern.
 
-Bestätigt die evidence keinen authorised change, stimmen provenance/baseline nicht überein, oder
+Bestätigt die evidence keinen authorized change, stimmen provenance/baseline nicht überein, oder
 gibt es andere Anzeichen einer Manipulation, eskalieren Sie gemäß dem incident runbook: Stoppen Sie
 die weitere Ausbreitung, wenden Sie ein angemessenes containment an (bis hin zu cordon/drain oder
 Isolierung der Node), sichern Sie logs und ersetzen Sie die Node oder das binary kontrolliert. Ein
@@ -812,7 +812,7 @@ sudo crictl ps | grep -E 'kube-apiserver|kube-controller-manager|kube-scheduler|
 | `kubectl` antwortet nach einer static-Pod-Bearbeitung nicht | `journalctl -u kubelet`, `crictl ps -a`, container-logs | fehlerhaftes YAML, Flag oder Mount |
 | Flag ist sichtbar, aber `kube-bench` weist weiterhin FAIL aus | process args und eine Quelle des Werts | die Vorlage wurde geändert, nicht das active manifest; es gibt ein Duplikat |
 | Port `10255` lauscht weiterhin | systemd drop-in und `ps` von kubelet | die falsche config-Datei wurde bearbeitet oder ein altes Flag überschreibt YAML |
-| ein TLS-1.2-Client kann nicht mehr verbinden | certificate algorithm, cipher list, client TLS | zu enger Satz von suites oder inkompatibler Client |
+| ein TLS-1.2-Client kann keine Verbindung mehr herstellen | certificate algorithm, cipher list, client TLS | zu enger Satz von suites oder inkompatibler Client |
 | `sha256sum --check` liefert FAIL | approved manifest, Pfad und Version | falsches binary, beschädigter Download oder Manipulation |
 
 `kube-bench` ist als Regressionskontrolle nützlich, aber sein Profil muss mit der Kubernetes-
@@ -900,8 +900,8 @@ checksum nicht mit bloßem Auge: erstellen Sie einen Eintrag für `sha256sum --c
 Sie dessen `OK`/`FAIL` auf.
 
 Eine häufige konkrete Variante einer solchen Aufgabe ist, die minimale TLS-Version auf
-`kube-apiserver` und `etcd` festzulegen (zum Beispiel „nicht niedriger als TLS 1.2" oder „nur
-TLS 1.3"). Bei apiserver ist das `--tls-min-version=VersionTLS12`/`VersionTLS13` im manifest
+`kube-apiserver` und `etcd` festzulegen (zum Beispiel „nicht niedriger als TLS 1.2“ oder „nur
+TLS 1.3“). Bei apiserver ist das `--tls-min-version=VersionTLS12`/`VersionTLS13` im manifest
 `/etc/kubernetes/manifests/kube-apiserver.yaml`, bei etcd `--tls-min-version=TLS1.2`/`TLS1.3` in
 `/etc/kubernetes/manifests/etcd.yaml`: Der Name des Werts unterscheidet sich bei etcd von apiserver,
 und unter Zeitdruck wird leicht das falsche Format aus dem Gedächtnis übertragen. Zweifeln Sie am
@@ -981,7 +981,7 @@ Für den positive TLS-1.2-test wird der exit status von `openssl s_client` selbs
 tatsächlich eine nicht leere cipher ausgehandelt wurde; ein bloßes grep nach
 `Protocol`/`Verify return code` genügt nicht. Für den negative test genügt es nicht, das Wort
 `protocol` oder irgendeinen handshake-Fehler zu sehen: Es muss bewiesen werden, dass der Client
-TLS-1.1-`ClientHello` **gesendet** hat und der geprüfte peer eine fatale `protocol_version`-Alert
+ein TLS-1.1-`ClientHello` **gesendet** hat und der geprüfte peer eine fatale `protocol_version`-Alert
 **zurückgegeben** hat. `openssl s_client -msg -state` erlaubt es, eine server-seitige Ablehnung von
 einem lokalen Verbot durch OpenSSL/crypto policy zu unterscheiden; wurde kein ClientHello gesendet,
 gilt das Ergebnis als `INCONCLUSIVE`, nicht als PASS. Nach den protocol tests wird die health von
@@ -989,7 +989,7 @@ apiserver über `/readyz` und `kubectl get nodes` bestätigt.
 </details>
 
 <details>
-<summary>7. Warum beweist der tag einer container image nicht ihren Inhalt, und was beweist ein image digest?</summary>
+<summary>7. Warum beweist der tag eines container images nicht seinen Inhalt, und was beweist ein image digest?</summary>
 
 Ein tag ist eine veränderliche Referenz und kann nach einer erneuten Veröffentlichung auf andere
 Bytes verweisen, daher identifiziert er keinen konkreten Image-Inhalt. Ein digest bindet ein Image

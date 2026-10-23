@@ -216,7 +216,7 @@ done
 
 Dans un heterogeneous cluster, faites correspondre l'architecture de la node et le runtime
 workload au digest platform-manifest ; scanner le root index pour une seule platform par défaut
-ne constitue pas une preuve pour les autres.
+ne constitue pas une evidence pour les autres.
 
 Pour un gate SBOM, appliquez les mêmes seuils, mais séparez clairement audit et block :
 
@@ -282,7 +282,7 @@ Erreurs fréquentes :
 ## 28.5. Grype, Clair et scan lors de l'admission
 
 Trivy n'est pas le seul scanner. Le choix de l'outil n'annule pas les exigences : une source de
-CVEs database comprise, un scan répétable par digest, une policy de severity, de l'evidence et un
+CVE database comprise, un scan répétable par digest, une policy de severity, de l'evidence et un
 processus de remediation.
 
 | Outil | Modèle | Quand il est utile | Limitation |
@@ -306,13 +306,13 @@ crée un `VulnerabilityReport` pour leur controller revision. C'est une continuo
 detection : un workload nouveau ou mis à jour reçoit un report, mais l'Operator n'est pas lui-même
 l'admission enforcement. Ne téléchargez ni ne scannez synchroniquement chaque image dans un
 admission webhook : cela rend l'API server dépendant du registry, de la base et d'un scan long,
-crée des timeout et peut bloquer le cluster lorsque le scanner est indisponible. L'enforcement
+crée des timeouts et peut bloquer le cluster lorsque le scanner est indisponible. L'enforcement
 nécessite une admission policy distincte qui vérifie un scan/signature/attestation créé au préalable.
 
 Le modèle fiable est le suivant : CI scanne un **digest précis**, conserve une attestation signée
 ou le résultat, l'admission policy autorise uniquement un digest dont l'evidence réussie est
 actuelle, et un scanner périodique continue de chercher de nouvelles CVE dans les images déjà
-deployed. Les registry allowlists et la verification des signatures sont traitées dans le
+deployed. Les registry allowlists et la vérification des signatures sont traitées dans le
 [chapitre 26](../26/fr.md) ; elles complètent le vulnerability scan sans le remplacer.
 
 > 🏭 Placez les gates sur le chemin de delivery : source checks avant build, scan/SBOM/signature par digest avant promotion, admission pour l'evidence et rescan planifié après deploy.
@@ -378,12 +378,12 @@ trivy image --format cyclonedx --output sbom.cdx.json "$immutable_image"
 
 Le digest doit venir directement du résultat build/push (par exemple des métadonnées Buildx ou de
 l'output CI équivalent), et non d'un lookup de tag séparé après le push : ceci évite le TOCTOU
-lors d'une réaffectation parallèle du tag. Le scan, SBOM, signature et deploy utilisent ensuite
+lors d'une réaffectation parallèle du tag. Le scan, le SBOM, la signature et le deploy utilisent ensuite
 uniquement le digest enregistré. Conservez `trivy-db-update.log`, le timestamp du scan et
 l'identifiant ou la version de la base du log avec `trivy.json` : c'est une evidence de fraîcheur
 de la base, et non seulement d'un job réussi. Si un gate est temporairement assoupli, l'exception
 doit être étroite : CVE ID, package, justification, owner, date d'expiration et lien vers un
-ticket. Ignorer globalement tous les findings `CRITICAL` ou un ignorefile sans fin détruit le but d'un gate.
+ticket. Un ignore global de tous les findings `CRITICAL` ou un ignorefile sans date d'expiration détruit l'intérêt d'un gate.
 
 Deux contrôles indépendants sont utiles dans un cluster :
 
@@ -442,7 +442,7 @@ test "$deployment_arch" = "$required_arch" || {
   exit 1
 }
 
-# Contrat : IMAGE_DIGEST est un canonical OCI digest de la forme sha256:<64-hex>,
+# Contrat : IMAGE_DIGEST est un canonical OCI digest de la forme sha256 :<64-hex>,
 # par exemple la valeur containerimage.digest renvoyée par Buildx après push.
 image_digest="${IMAGE_DIGEST:?set verified image digest (sha256:<64-hex>)}"
 new_image="registry.example.com/payments/api:1.4.3@${image_digest}"
@@ -468,7 +468,7 @@ trivy sbom --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
 
 Un test de remediation comprend au minimum trois parties : le scan répété ne contient plus la
 CVE cible ou affiche la fixed version attendue ; `rollout status` réussit ; et les status de tous
-les nouveaux Pod du workload sélectionné affichent un runtime `imageID` associé au digest
+les nouveaux Pod du workload sélectionné affichent le runtime `imageID` attendu, associé au digest
 platform-manifest vérifié. Pour un artifact multi-platform, le platform scan/SBOM doit correspondre
 à l'architecture de la node où le workload s'exécute. Ajoutez un application smoke test, par
 exemple un `curl` vers un health endpoint depuis un test job. Sinon, il est possible de corriger
@@ -541,7 +541,7 @@ important de ne pas confondre un image scan avec `trivy fs` et `trivy config`.
 **Dans le travail réel.** Un scanner ne transforme un CVE feed en processus gérable qu'avec un
 inventory, la digest provenance, une CI policy, un exception SLA, l'admission control et un
 rescan régulier. Le véritable objectif n'est pas « zéro ligne dans un report », mais de découvrir
-rapidement un artifact vulnérable, le remplacer sans risque et prouver que production utilise le digest corrigé.
+rapidement un artifact vulnérable, le remplacer sans risque et prouver que la production utilise le digest corrigé.
 
 ## 28.12. Questions d'auto-évaluation
 
@@ -570,7 +570,7 @@ qu'un finding correspondant provoque un exit code non nul et permet de transform
 Exportez d'abord `.status.initContainerStatuses`, `.status.containerStatuses` et
 `.status.ephemeralContainerStatuses` de tous les Pod, obtenez le `imageID` réel et associez-le à
 un canonical registry digest ; inventoriez séparément `spec.volumes[].image.reference`. Ensuite,
-pour chaque container-image reference confirmé, lancez `trivy image --scanners vuln --quiet --format
+pour chaque container-image reference confirmée, lancez `trivy image --scanners vuln --quiet --format
 json --severity CRITICAL`, comptez les findings avec `jq` et triez les nombres. Chaque type de
 conteneur et image volume peut livrer un OCI artifact distinct, donc exclure un chemin laisse une zone aveugle.
 </details>
@@ -595,7 +595,7 @@ Pour une image single-platform, utilisez `trivy image --platform linux/amd64 --f
 
 Un tel webhook rend l'API server dépendant d'un registry, de la CVE database et d'un scan long.
 L'indisponibilité ou le délai du scanner peut créer des timeout ou bloquer le cluster. Pour
-l'enforcement, admission doit plutôt vérifier un scan/signature/attestation précréé pour un digest
+l'enforcement, admission doit plutôt vérifier un scan, une signature ou une attestation créés au préalable pour un digest
 précis, tandis qu'un scanner continu fonctionne après admission.
 </details>
 

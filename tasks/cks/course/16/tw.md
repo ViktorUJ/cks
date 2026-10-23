@@ -101,8 +101,8 @@ execution transitions 開始。
 
 ## 16.3. Node：parser、`aa-status` 與 profile lifecycle
 
-對 Kubernetes `Localhost` 而言，kubelet 不會傳遞 profile text，也不會在 nodes 間複製它。
-精確名稱的 named `Localhost` profile 必須事先載入 kernel 的每個允許 workload 執行的 node。
+對 `Localhost` 而言，Kubernetes 不會將 profile text 傳給 kubelet，也不會在 nodes 間複製它。
+精確名稱的 named `Localhost` profile 必須事先載入到每個允許 workload 執行的 node 的 kernel 中。
 `RuntimeDefault` 由 container runtime 提供：使用者無需將 named `Localhost` profile 事先交付
 到 `/etc/apparmor.d`。
 
@@ -207,7 +207,7 @@ metadata:
   name: apparmor-localhost
   namespace: demo
 spec:
-  # 若 profile 並非存在所有 nodes，placement restriction 是 contract 的一部分。
+  # 若 profile 並非存在於所有 nodes，placement restriction 是 contract 的一部分。
   nodeSelector:
     kubernetes.io/hostname: worker-1
   securityContext:
@@ -535,7 +535,7 @@ operation 通常會執行並被記錄，以收集 application 的實際需求；
 <summary>3. `aa-status` 與 `apparmor_parser -r` 如何證明 profile state 的不同部分？</summary>
 
 `aa-status` 顯示 node 上 AppArmor 的 state：啟用的 module、已載入 profiles、其 modes 與
-processes。`apparmor_parser -r -W <file>` 會從 syntax 讀取 policy，並將其載入版本加入或替換到
+processes。`apparmor_parser -r -W <file>` 會解析 policy 的 syntax，並將其載入版本加入或替換到
 kernel。檔案存在本身不證明任何事；parser 後，需以 `aa-status` 確認 name 與 mode。
 </details>
 

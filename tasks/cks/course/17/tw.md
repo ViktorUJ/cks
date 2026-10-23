@@ -586,7 +586,7 @@ flowchart TB
     style kernel fill:#0f9d58,color:#fff
 ```
 
-Kernel checks 的順序與 errno 取決於 syscall/kernel version，但 defence-in-depth 不變：通過一層不會取消另一層。
+Kernel checks 的順序與 errno 取決於 syscall/kernel version，但 defence-in-depth 不變：通過一層不會取消另一層。由此得出以下實務規則：
 
 - **Capabilities 縮小 privileges。** `drop: ["ALL"]` 移除不必要 kernel privileges；若 application 需要 privileged port，只加回 `NET_BIND_SERVICE`，而非 `SYS_ADMIN`。
 - **seccomp 縮小 API surface。** 它可不論 process privileges 而禁止 syscall。`RuntimeDefault` 是 baseline；`Localhost` 需要測量 contract 與 node delivery。
@@ -597,7 +597,7 @@ Kernel checks 的順序與 errno 取決於 syscall/kernel version，但 defence-
 
 > 🏭 `Localhost` profile：具有 owner、runtime/ABI tests、delivery、canary 與 rollback 的 versioned artifact。
 
-## 17.8. 操作：profile 是程式碼，而不是 node 上的檔案
+## 17.8. 維運：profile 是程式碼，而不是 node 上的檔案
 
 `Localhost` profile 是 platform contract。Scheduler 不會讀取 `/var/lib/kubelet/seccomp` 或將 JSON 移到 node。可靠 operations 需要受管理 lifecycle。
 
@@ -611,7 +611,7 @@ Kernel checks 的順序與 errno 取決於 syscall/kernel version，但 defence-
 
 一般 production workload 常以 `RuntimeDefault`、non-root、`allowPrivilegeEscalation: false`、drop capabilities 與 MAC policy 即足夠。Custom profile 僅在風險和 contract 明確時合理，且 complexity 也是 operational risk。
 
-需要在 cluster 規模交付與 recording custom seccomp/AppArmor/SELinux profiles 時，可考慮 **Security Profiles Operator（SPO）**：它管理 profile lifecycle/recording，而非每個 node 手動複製 JSON。它不取消 tests、versioning 或 placement control，但使 delivery 由 platform 管理。
+需要在 cluster 規模交付與 recording custom seccomp/AppArmor/SELinux profiles 時，可考慮將 **Security Profiles Operator（SPO）** 作為 production 路徑：它管理 profile lifecycle/recording，而非在每個 node 手動複製 JSON 到 kubelet 目錄。它不取消 tests、versioning 或 placement control，但使 delivery 由 platform 管理。
 
 `restricted` Pod Security Standards 要求 `RuntimeDefault` 或 `Localhost`；`Unconfined` 不符合 baseline。Admission policy 可防止 chart 遺漏 seccomp，但不驗證 node custom JSON 的存在，這仍是 node lifecycle/rollout 工作。
 
@@ -633,8 +633,8 @@ Kernel checks 的順序與 errno 取決於 syscall/kernel version，但 defence-
 ## 17.10. 本章總結
 
 - seccomp 在 process/kernel 邊界過濾 syscalls，補足而非取代 capabilities、AppArmor/SELinux、DAC、RBAC 與 SecurityContext。
-- 一般 workload 明確設定 `seccompProfile.type: RuntimeDefault`，搭配 non-root、`allowPrivilegeEscalation: false` 與最小 capabilities。v1.27 的 `seccompDefault` 不取代 manifest 明確 intent。
-- `Localhost` 是 node JSON；`localhostProfile` 相對 kubelet seccomp root：`/var/lib/kubelet/seccomp/profiles/audit.json` 寫為 `profiles/audit.json`。
+- 一般 workload 明確設定 `seccompProfile.type: RuntimeDefault`，搭配 non-root、`allowPrivilegeEscalation: false` 與最小 capabilities。`seccompDefault` 自 v1.27 起為 stable，但 node 的預設值不取代 manifest 中的明確 intent。
+- `Localhost` 是 node JSON；`localhostProfile` 永遠相對 kubelet seccomp root：對預設 root，`/var/lib/kubelet/seccomp/profiles/audit.json` 寫為 `profiles/audit.json`。
 - Custom profile 需要 versioning、architecture/runtime testing、managed delivery 至所有允許 nodes 與相連 scheduling；scheduler 不交付 JSON。
 - `SCMP_ACT_LOG` 僅暫時觀察，`ERRNO`/`KILL` 封鎖並對 availability/debugging 有不同後果。
 - 驗證包括 Pod/container context、`privileged`、node/events、kubelet flags/config、正確 container 的 `Seccomp: 2`、application result 與關聯 audit/log；單一 `EPERM` 不足 attribution。
@@ -680,7 +680,7 @@ Absolute path 不符合 API contract，kubelet 預期相對 root。Scheduler 不
 <details>
 <summary>6. 如何分辨 seccomp denial、缺少 capability 或 AppArmor denial？</summary>
 
-需要 Pod/container context、正確 container effective `Seccomp`、精確 syscall、kernel audit/log。`EPERM` 可來自 capabilities、AppArmor、SELinux、一般 permissions；也關聯 node、PID/container ID、time、`SECCOMP` records。
+需要 Pod/container context、正確 container effective `Seccomp`、精確 syscall、kernel audit/log。`EPERM` 可來自 capabilities、AppArmor、SELinux、一般 permissions；也應關聯 node、PID/container ID、time 與 `SECCOMP` records。
 </details>
 
 <details>
@@ -692,26 +692,26 @@ Absolute path 不符合 API contract，kubelet 預期相對 root。Scheduler 不
 <details>
 <summary>8. 為何不能根據一次 application run 建 allow-list？</summary>
 
-一次 `curl` 不涵蓋 startup、probes、DNS/TLS、periodic tasks、shutdown、error paths。Allow-list 需在 target runtime/architecture 測量、測試；observed syscalls 不可未經 threat review 機械轉 policy。
+一次 `curl` 不涵蓋 startup、probes、DNS/TLS、periodic tasks、shutdown、error paths。Allow-list 需在 target runtime/architecture 測量、測試；observation 與 `strace` 有助於收集資料，但 observed syscalls 不可未經 threat review 機械轉 policy。
 </details>
 
 <details>
 <summary>9. **Flashback（第 20 章）。** 為何要求 `seccompProfile.type` 的 `ValidatingAdmissionPolicy` 通過後，仍不保證實際 protection？node/kubelet 要符合什麼？</summary>
 
-Admission 僅於寫入前檢查 YAML。實際 node 需有 seccomp runtime/kubelet support、考慮 container override 後的 effective context；`Localhost` 需在 kubelet root 有相容 JSON；container 不可 privileged。用 events 與正確 process 的 `Seccomp: 2` 驗證。
+Admission policy 僅於物件寫入前檢查 YAML，並不確認 node 能否套用 profile。實際 node 需有 seccomp runtime/kubelet support、考慮 container override 後的 effective context；`Localhost` 需在 kubelet root 有相容 JSON；container 不可為 privileged，因為 Kubernetes 會以 `Unconfined` 執行它。用 events 與正確 process 的 `Seccomp: 2` 驗證。
 </details>
 
 > 🏭 template/admission 採 `RuntimeDefault`；custom `Localhost` 是有相容 pool、observability、rollback 的 versioned profile。
 
 ## 17.13. 如何在 production 套用
 
-Platform team 為 stateless workload 在 chart/base manifest 固定 `seccompProfile.type: RuntimeDefault`，並以 admission policy 禁止 `Unconfined`。這不依賴 service owner 是否記得 field，且結合 non-root、`allowPrivilegeEscalation: false`、drop capabilities、AppArmor/SELinux 降低 vulnerability exploitation 後果。
+Platform team 為 stateless workload 在 chart/base manifest 固定 `seccompProfile.type: RuntimeDefault`，並以 admission policy 禁止 `Unconfined`。這樣防護不依賴 service owner 是否記得加入 field，而 manifest 仍明確記載預期 baseline。結合 non-root、`allowPrivilegeEscalation: false`、drop capabilities、AppArmor/SELinux 降低 vulnerability exploitation 後果。
 
-Custom `Localhost` 僅給 syscall contract 明確的 workload。Profile 在 repository versioned、每 architecture/runtime 驗證，automation 在 rollout 前交付允許 pool；manifest 以 relative profile version 引用，scheduling 限制 trusted pool。變更經 test node、representative traffic、canary、startup/probes/error rate/`SECCOMP` events 觀察；denial 時關聯 spec、node、`Seccomp: 2`、syscall/audit，再做狹窄 change。永久 `Unconfined`、加 `CAP_SYS_ADMIN`、編輯 live node JSON 都會隱藏原因、造成 replica drift、削弱防護。
+Custom `Localhost` 僅給 syscall contract 明確的 workload，例如隔離的 batch worker 或敏感 service。Profile 在 repository versioned、每 architecture/runtime 驗證，automation 在 rollout 前交付允許 pool；manifest 以 relative profile version 引用，scheduling 限制 trusted pool。變更經 test node、representative traffic、canary、startup/probes/error rate/`SECCOMP` events 觀察；denial 時關聯 spec、node、`Seccomp: 2`、syscall/audit，再做狹窄 change。不可永久切換為 `Unconfined`、新增 `CAP_SYS_ADMIN` 或編輯 live node 上的 JSON：這些做法會隱藏原因、造成 replica drift 並削弱防護。
 
 ## 練習
 
-先完成[CKA Lab 106](../../../cka/labs/106/README_TW.MD)，它鞏固 `SecurityContext`、non-root、capabilities。再於 test node 建 `profiles/audit.json`，以 `Localhost` 套用 Pod、找 `SECCOMP`/kernel record，再以驗證的 narrow enforce profile 取代 audit profile。複習[第 16 章](../16/tw.md)：AppArmor 限制 objects/operations，seccomp 限制 syscall 集合。
+先完成[CKA Lab 106](../../../cka/labs/106/README_TW.MD)，它鞏固 `SecurityContext`、non-root 與 capabilities，這些是正確解讀 seccomp 拒絕所必需的。再於 test node 建 `profiles/audit.json`，以 `Localhost` 套用 Pod、找 `SECCOMP`/kernel record，再以已驗證的狹窄 enforce profile 取代 audit profile。複習[第 16 章](../16/tw.md)：AppArmor 限制 objects/operations，seccomp 限制 syscall 集合。
 
 ## 連結
 
@@ -723,12 +723,12 @@ Custom `Localhost` 僅給 syscall contract 明確的 workload。Profile 在 repo
 
 ## 混合檢查點：System Hardening 已完成
 
-進入 Minimize Microservice Vulnerabilities 前，用 15-20 分鐘無提示確認第 14-17 章：
+進入 Minimize Microservice Vulnerabilities 前，用 15-20 分鐘無提示確認 System Hardening 領域（第 14-17 章）是否已鞏固：
 
 1. 在 test node 找一個多餘 listening port/service，說明如何決定能否關閉（第 14 章）。
 2. 說出 host Linux user 與 Kubernetes API 兩個 least privilege levels，各舉一例（第 15 章）。
 3. 將 Pod AppArmor profile 從 `enforce` 切至 `complain`，說明為何不能在考試中當作 protection 證明（第 16 章）。
-4. **混合任務。** user 有 RBAC `create pods`、admission 不限制 `securityContext` 時，為何 RBAC 不控制 Linux syscalls？是否能以 `Unconfined`/`privileged` 繞過 seccomp/AppArmor？PSA `restricted`、ValidatingAdmissionPolicy、Gatekeeper、Kyverno 或 platform equivalent 等哪種 admission enforcement 可避免 manifest 停用 hardening？
+4. **混合任務。** 結合 RBAC（第 10 章，Cluster Hardening 領域）與 AppArmor/seccomp（第 16-17 章，本領域）：user 有 RBAC `create pods`、admission 不限制 `securityContext` 時，為何 RBAC 不控制 Linux syscalls？是否能以 `Unconfined`/`privileged` 繞過 seccomp/AppArmor？PSA `restricted`、ValidatingAdmissionPolicy、Gatekeeper、Kyverno 或 platform equivalent 等哪種 admission enforcement 可避免 manifest 停用 hardening？
 5. 對 test Pod 設定 `seccompProfile.type: RuntimeDefault`，以 allow-list/deny-list 解釋與 `Unconfined` 的不同（第 17 章）。
 
 第 4 題困難時，回到第 10 與第 16-17 章。

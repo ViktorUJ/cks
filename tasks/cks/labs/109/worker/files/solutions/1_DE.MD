@@ -38,7 +38,7 @@ kubectl config use-context "$CTX"
 canary vor dem Erscheinen der EncryptionConfiguration erstellt. Zuerst sehen wir uns den rohen Eintrag von etcd mit dem Befehl aus der
 Dokumentation an, dann speichern wir den String-Nachweis in einer Datei auf der control-plane
 (`/tmp/plaintext-proof.txt`) und kopieren ihn dann auf die Arbeitsmaschine nach
-`/var/work/109/plaintext-proof.txt` (das Verzeichnis wurde vom bootstrap erstellt): Die Prüfung liest die Datei auf der Arbeitsmaschine.
+`/var/work/109/plaintext-proof.txt` (das Verzeichnis wurde vom Bootstrap erstellt): Die Prüfung liest die Datei auf der Arbeitsmaschine.
 
 Melde dich auf der control-plane an und führe dort aus (in diesem Befehl stammt alles aus der Dokumentation, außer dem Schlüssel in
 etcd: `/registry/secrets/<namespace>/<name>`):

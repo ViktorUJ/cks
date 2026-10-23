@@ -306,7 +306,7 @@ output: >
 Do not add every field "just in case." `proc.cmdline`, environment, and request body can disclose
 passwords, bearer tokens, and PII. Define a redaction policy, restrict access to SIEM and the Falco
 journal, retention, and the evidence-transfer procedure. At the same time, do not remove a
-container ID, Pod UID, node, UTC time, or, when runtime provides it, image digest: without them,
+container ID, Pod UID, node, UTC time, or, when the runtime provides it, image digest: without them,
 an alert is almost impossible to link reliably to other sources. If a digest or `container_full_id`
 is empty, preserve the original alert and supplement it with the results of `kubectl get pod` and
 `crictl inspect`; do not substitute a guess. For attribution, first match Pod UID, exact container
@@ -460,7 +460,7 @@ The usual order is to first check CNI capabilities and every policy selecting th
 NetworkPolicy as a reversible restriction on new connections if needed. Use `cordon` only as a
 scheduling freeze. When host/node compromise is suspected, perform real containment through the
 infrastructure runbook: remove the node from LB/service paths, apply cloud firewall/security
-group/NAC/EDR host isolation, restrict node and workload credentials, then controlledly
+group/NAC/EDR host isolation, restrict node and workload credentials, then, in a controlled manner,
 replace/rebuild the node. After preserving evidence, stop the owning workload, not just one Pod.
 Automatically **evicting** a node (`kubectl drain`) also recreates a workload on another node if
 the controller is not stopped.
@@ -632,7 +632,7 @@ CONTAINER_ID="${CONTAINER_ID:?set CONTAINER_ID to the exact CRI container ID}"
 sudo crictl --runtime-endpoint "$CRI_ENDPOINT" inspect "$CONTAINER_ID" | \
   jq '{status: .status, info: .info}'
 
-# This form applies only if inspection above confirmed a numeric .info.pid.
+# This form applies only if the inspection above confirmed a numeric .info.pid.
 PID=$(sudo crictl --runtime-endpoint "$CRI_ENDPOINT" inspect "$CONTAINER_ID" | \
   jq -er '.info.pid | select(type == "number" and . > 0)')
 sudo test -d "/proc/$PID" || { echo 'container is not running or PID is unavailable'; exit 1; }
@@ -665,7 +665,7 @@ Falco evidence already retained.
 # Attach to the exact host PID (%proc.pid) from the preserved Falco alert, not container PID 1.
 SUSPICIOUS_HOST_PID="${SUSPICIOUS_HOST_PID:?set SUSPICIOUS_HOST_PID to the host PID from the Falco alert}"
 sudo test -d "/proc/$SUSPICIOUS_HOST_PID" || { echo 'suspicious process has exited'; exit 1; }
-# In a containerd + systemd cgroup scope, the application contains CONTAINER_ID, not SANDBOX_ID:
+# In containerd + systemd, the cgroup scope of the application contains CONTAINER_ID, not SANDBOX_ID:
 # a sandbox links to a Pod but is a separate cgroup from an application container.
 sudo grep -F "$CONTAINER_ID" "/proc/$SUSPICIOUS_HOST_PID/cgroup" || {
   echo 'cgroup does not confirm CONTAINER_ID; re-check the mapping between the Pod UID, container identity, and host PID before attaching'
@@ -727,7 +727,7 @@ Typical investigation mistakes:
 Verification has two parts: Falco must load a rule, and a controlled action must generate an alert
 with sufficient fields. Do not use a `/dev/mem` test on a production node: device access depends on
 privileges and can create additional risk. For a safe reproducible demonstration, use a marker file
-in writable `emptyDir`; the rule is scoped to the `runtime-lab` namespace. Generate the event only
+in a writable `emptyDir`; the rule is scoped to the `runtime-lab` namespace. Generate the event only
 after Ready so runtime enrichment has time to link the container to Kubernetes metadata.
 
 ### Rule for the test
@@ -759,7 +759,7 @@ path without writing to the image root filesystem.
 ```bash
 set -euo pipefail
 sudo falco -c /etc/falco/falco.yaml --dry-run
-# With watch_config_files: true, check the hot reload in the journal; restart is only fallback.
+# With watch_config_files: true, check the hot reload in the journal; restart is only a fallback.
 sudo journalctl -u falco --since '2 minutes ago' --no-pager
 
 # Fail closed: do not continue or delete the namespace if it already existed.
@@ -967,7 +967,7 @@ exfiltration hypothesis; establish a phase from sequence, identity, and objectiv
 <details>
 <summary>6. How do you match `%container.id` from an alert to a host PID, and what do you check in `/proc/<pid>`?</summary>
 
-On the node, find the sandbox by namespace and Pod UID with `crictl pods`, then the container with
+On the node from the alert, find the sandbox by namespace and Pod UID with `crictl pods`, then the container with
 `crictl ps -a --pod`, and verify the exact/prefix container ID. Runtime-specific `crictl inspect`
 can provide a PID; for the particular suspicious action, use the host PID `%proc.pid` from the
 alert and confirm its cgroup. In `/proc/<pid>`, inspect the executable, cmdline, credentials,

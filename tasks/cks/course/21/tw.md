@@ -63,7 +63,7 @@ etcd encryption 無法修正最後一項，但前四項會顯著困難：databas
 ## 21.2. API data encryption 的運作方式
 
 `kube-apiserver` 套用 `EncryptionConfiguration` 中描述的 provider chain。**寫入**時使用第一個符合 resource 的
-provider。**讀取**時按順序嘗試 providers，直到有一個能解密 existing value。HA 中輪換 local key 時，先在
+provider。**讀取**時按順序嘗試 providers，直到有一個能解密 existing value。HA 中輪替 local key 時，先在
 所有 API servers 將 new key 加為第二個，只有在新 configuration 已套用至所有節點後才把它移到第一個；舊 key
 保留到 re-encryption 完成。
 
@@ -363,7 +363,7 @@ External KMS 不表示 Secret 不再出現於 Kubernetes。若 application 取�
 3. 將 `key-new` 改為**第一個**，保留 `key-old` 為第二個，再次將 configuration 套用至所有 API servers。只有現在，
    new records 才會以 `key-new` 建立。
 
-Phase 1 — 所有 API servers 上的 new key 為第二個：
+Phase 1 - 所有 API servers 上的 new key 為第二個：
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -381,7 +381,7 @@ resources:
   - identity: {}
 ```
 
-Phase 2 — 在所有 API servers 套用 phase 1 後，將 new key 改為第一個：
+Phase 2 - 在所有 API servers 套用 phase 1 後，將 new key 改為第一個：
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -598,13 +598,13 @@ Encryption at rest 是其中一層。有效防護由數個獨立 barriers 建立
   restore。將 secret key 或 KMS access 與 snapshot 分開保存。
 
 External Secrets Operator、Vault、cloud Secrets Manager 與 Secrets Store CSI Driver 解決不同問題。前者經常將
-external value 同步至 Kubernetes Secret——很方便，但副本仍在 etcd，且必須 encrypted。CSI/Vault Agent 可將 secret
-作為 file 發給 Pod，而不建立持久 Kubernetes Secret——etcd 中的副本較少，但 node plugin、Pod identity 與 external
+external value 同步至 Kubernetes Secret-很方便，但副本仍在 etcd，且必須 encrypted。CSI/Vault Agent 可將 secret
+作為 file 發給 Pod，而不建立持久 Kubernetes Secret-etcd 中的副本較少，但 node plugin、Pod identity 與 external
 backend 會形成 trust boundaries。請在完成 threat model 後選擇 pattern，而非只因某個 tool「加密 secrets」。
 
 ## 21.9. 常見錯誤與診斷
 
-| Symptom | 可能原因 | 安全的處置 |
+| 症狀 | 可能原因 | 安全的處置 |
 |---|---|---|
 | 編輯後 API server 不 Ready | YAML 不正確、config/mount/socket 無法存取、key 無效 | 透過 console 還原已驗證的 manifest，讀取 local kubelet/API log |
 | 可透過 `kubectl` 讀取 Secret | 這是正常的 | API 會為授權 client 解密；僅在 lab 中檢查 raw etcd |
@@ -623,18 +623,18 @@ backend 會形成 trust boundaries。請在完成 threat model 後選擇 pattern
 
 ## 21.10. 迷你詞彙表
 
-- **Encryption at rest** — 在寫入 etcd 前加密選定 API data；不是 disk、snapshot 或 backup 整體加密。
-- **EncryptionConfiguration** — kube-apiserver 讀取的 configuration，其中包含所選 API resources 的 providers。
-- **provider** — 用於特定 API resources 的 encryption/decryption mechanism。
-- **`aescbc`** — 使用 PKCS#7 padding 與 configuration 中 key 的 local AES-CBC provider；沒有 built-in
+- **Encryption at rest** - 在寫入 etcd 前加密選定 API data；不是 disk、snapshot 或 backup 整體加密。
+- **EncryptionConfiguration** - kube-apiserver 讀取的 configuration，其中包含所選 API resources 的 providers。
+- **provider** - 用於特定 API resources 的 encryption/decryption mechanism。
+- **`aescbc`** - 使用 PKCS#7 padding 與 configuration 中 key 的 local AES-CBC provider；沒有 built-in
   authentication/MAC，因此較弱。
-- **`aesgcm`** — AEAD provider AES-GCM；keys 必須考慮 write limit 進行 rotation。
-- **`secretbox`** — 使用 32-byte key 的 AEAD provider XSalsa20 + Poly1305。
-- **`kms`** — 將 cryptographic operations 交給 external KMS plugin 的 provider。
-- **envelope encryption** — 以 DEK 加密 object，再以 external KEK 保護 DEK。
-- **KEK/DEK** — key encryption key / data encryption key。
-- **re-encryption** — 透過 new provider/key 重寫 old API objects。
-- **`identity`** — 不加密的 provider；只可作為有意識的 temporary fallback。
+- **`aesgcm`** - AEAD provider AES-GCM；keys 必須考慮 write limit 進行 rotation。
+- **`secretbox`** - 使用 32-byte key 的 AEAD provider XSalsa20 + Poly1305。
+- **`kms`** - 將 cryptographic operations 交給 external KMS plugin 的 provider。
+- **envelope encryption** - 以 DEK 加密 object，再以 external KEK 保護 DEK。
+- **KEK/DEK** - key encryption key / data encryption key。
+- **re-encryption** - 透過 new provider/key 重寫 old API objects。
+- **`identity`** - 不加密的 provider；只可作為有意識的 temporary fallback。
 
 ## 21.11. 本章摘要
 
@@ -654,7 +654,7 @@ backend 會形成 trust boundaries。請在完成 threat model 後選擇 pattern
 **在 CKS。** 題目可能要求找出未加密的 Secrets、啟用 encryption at rest、判定正確的
 `--encryption-provider-config`、解釋 provider order，或在 rotation 時不破壞 Secret。快速 algorithm：找到 API server
 manifest、建立安全的 config 與 mount、加入 flag、等待 health、重寫 objects，並檢查 etcd。不要回答「Secret 以 base64
-加密」——這是錯的。
+加密」-這是錯的。
 
 **在 production。** 將 encryption at rest 視為 standard control-plane baseline，而非最後一道防線。將 keys 與 etcd
 backups 分開管理、自動化 rotation、監控 KMS、測試 restore，並減少能看見 plaintext 的 people、identities 與 Pods。
@@ -735,7 +735,7 @@ backup。
 </details>
 
 <details>
-<summary>10. **Flashback（第 14 章）。** Encryption at rest 僅保護 etcd 中的 Secret。mount Secret 後，kubelet 會透過 **tmpfs-backed volume** 將它提供給 Pod：這排除了通常的 durable-disk copy，卻不保證「永遠不會寫入 disk」。啟用 swap 時，若 kernel 支援 `noswap` option（官方支援 Linux 6.3 起或 backport），Kubernetes v1.36 會以 `noswap` mount memory-backed volumes；否則 kubelet 會警告這類 volume（包括 Secret）可能被 swap out。對這類 nodes，應停用 swap，或加密它並檢查 kubelet warning。第 14 章的哪些措施（host footprint、least-privilege host）可在此階段限制 secret risk——也就是它已解密並透過 tmpfs 提供給 node 上的 authorized process 時——以及為什麼即使沒有 persistent-disk copy，host compromise 或同一 node 上的 privileged workload 仍是嚴重 threat？</summary>
+<summary>10. **Flashback（第 14 章）。** Encryption at rest 僅保護 etcd 中的 Secret。mount Secret 後，kubelet 會透過 **tmpfs-backed volume** 將它提供給 Pod：這排除了通常的 durable-disk copy，卻不保證「永遠不會寫入 disk」。啟用 swap 時，若 kernel 支援 `noswap` option（官方支援 Linux 6.3 起或 backport），Kubernetes v1.36 會以 `noswap` mount memory-backed volumes；否則 kubelet 會警告這類 volume（包括 Secret）可能被 swap out。對這類 nodes，應停用 swap，或加密它並檢查 kubelet warning。第 14 章的哪些措施（host footprint、least-privilege host）可在此階段限制 secret risk-也就是它已解密並透過 tmpfs 提供給 node 上的 authorized process 時-以及為什麼即使沒有 persistent-disk copy，host compromise 或同一 node 上的 privileged workload 仍是嚴重 threat？</summary>
 
 應縮小 host footprint：停用多餘 services 與 packages、關閉不必要的 listening ports，並及時更新 node，以減少通往 host
 compromise 的 paths。Least-privilege host 限制誰能取得 SSH/sudo 及 kubelet/runtime access，且 workload 不應取得
@@ -754,8 +754,8 @@ manifest 的錯誤可能暫時讓 cluster 無法提供 API。
 
 🌐 額外 interactive practice（killer.sh/killercoda，external resources）：[secret-pod-access](https://killercoda.com/killer-shell-cks/scenario/secret-pod-access) · [secret-read-secrets](https://killercoda.com/killer-shell-cks/scenario/secret-read-secrets) · [secret-serviceaccount-pod](https://killercoda.com/killer-shell-cks/scenario/secret-serviceaccount-pod) · [secret-etcd-encryption](https://killercoda.com/killer-shell-cks/scenario/secret-etcd-encryption)
 
-📘 相關材料：[CKA 第 19 章 — Secret](../../../cka/course/19/tw.md) ·
-[CKA 第 37 章 — etcd backup 與 restore](../../../cka/course/37/tw.md)
+📘 相關材料：[CKA 第 19 章 - Secret](../../../cka/course/19/tw.md) ·
+[CKA 第 37 章 - etcd backup 與 restore](../../../cka/course/37/tw.md)
 
 ---
 [目錄](../README_TW.md) · [第 20 章](../20/tw.md) · [第 22 章](../22/tw.md)

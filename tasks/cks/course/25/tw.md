@@ -452,7 +452,7 @@ jq -e --arg digest "${PLATFORM_MANIFEST_DIGEST#sha256:}" \
 出現 CVE 或 vendor advisory 時，SBOM 可將 incident 問題從「我們數千個 images 中有哪些？」
 縮小為「哪些 digest 含有 affected package/version？」。它也適用於 **late discovery**：
 在 build 時 scanner 可能找不到問題，因為 CVE 或 affected versions 的資料尚未發布。
-Scan result 反映檢查時的 knowledge base，而不保證已在執行 image 未來不會出現 advisory。
+Scan result 反映檢查時的 knowledge base，而不保證正在執行的 image 未來不會出現 advisory。
 
 因此，在 build pipeline **之外，也要定期將已保存的 SBOM 與已更新的 CVE database
 重新比對**：依 schedule 執行，並在發布重要的新 CVE 或 vendor advisory 時臨時執行。
@@ -479,7 +479,7 @@ affected releases 的 triage。
 如此新的 CVE 會觸發 inventory query，而非手動重新 scan 所有 images：先透過 SBOM 確定
 可能 affected release/platform-manifest digest，再透過 digest-pinned spec、platform node
 與作為額外 hint 的 runtime `imageID` 確認 running workload。只有 tag 不足：它可能
-mutable，且不能證明已執行 Pod 使用哪些 bytes。
+mutable，且不能證明已在執行的 Pod 使用哪些 bytes。
 
 ```mermaid
 flowchart TB
@@ -583,7 +583,7 @@ Verification 的 readiness criteria：有一個非空 SPDX 2.3 JSON，通過 san
 
 ## 25.8. 在 production 中的做法
 
-- **在 release build 生成 SBOM。** CI 會為每個可發布 digest 自動 generation，而不是在
+- **在 release build 生成 SBOM。** CI 會為每個可發布 digest 自動生成，而不是在
   incident 後手動進行。SBOM 可以是獨立 SPDX/CycloneDX file，或綁定 image digest 的
   OCI artifact/referrer。Signed attestation 是對帶有 predicate 的 `subject` 的獨立聲明：
   它可攜帶 SBOM 或 provenance，但不是每個 SBOM 都是 attestation。實務 model：

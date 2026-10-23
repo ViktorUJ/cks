@@ -848,7 +848,7 @@ Authentication.
 </details>
 
 <details>
-<summary>8. **Flashback (глава 32).** Разовый `curl`/`401` из задания 7 этой главы доказывает
+<summary>8. **Flashback (глава 32).** Разовый `curl`/`401` из вопроса 7 этой главы доказывает
    отсутствие anonymous-доступа только **в момент проверки**. Kubernetes audit log
    фиксирует **API requests** (кто, когда, какой resource, какой verb, какой result) - он
    не является непрерывным монитором состояния файла

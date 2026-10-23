@@ -265,7 +265,7 @@ ENTRYPOINT ["/api"]
 
 ## 27.5. OPA `conftest`: comprobación de policy-as-code para manifests
 
-Los generic linters conocen best practices comunes. Las organizaciones suelen añadir reglas que dependen de su threat model: solo se permiten internal registries, el production namespace requiere limits, todos los workload deben tener owner label y una exception solo se permite con ticket y expiry. `conftest` ejecuta OPA Rego policies sobre YAML, JSON, HCL y otros structured files y devuelve un non-zero exit code cuando una rule produce `deny`.
+Los generic linters conocen best practices comunes. Las organizaciones suelen añadir reglas que dependen de su threat model: solo se permiten internal registries, el production namespace requiere limits, todos los workloads deben tener owner label y una exception solo se permite con ticket y expiry. `conftest` ejecuta OPA Rego policies sobre YAML, JSON, HCL y otros structured files y devuelve un non-zero exit code cuando una rule produce `deny`.
 
 La estructura del repository puede ser la siguiente:
 
@@ -298,7 +298,7 @@ init_containers := object.get(pod_spec, "initContainers", [])
 all_containers := array.concat(containers, init_containers)
 
 # Kubernetes v1.36 image volume entrega un OCI artifact no mediante containers[].image,
-# sino mediante spec.volumes[].image.reference; aplique la misma intención registry/digest.
+# sino mediante spec.volumes[].image.reference; aplicamos a él la misma intención registry/digest.
 image_volumes := [volume |
   volume := object.get(pod_spec, "volumes", [])[_]
   object.get(volume, "image", null) != null
@@ -562,7 +562,7 @@ flowchart TB
     style admission fill:#326ce5,color:#fff
 ```
 
-Para la práctica de este capítulo, el gate puede ejecutar `kubesec` y `kube-linter`; es útil añadir `hadolint` para Dockerfile y `conftest` con unit tests para una comprobación local completa. El GitHub Actions job siguiente muestra una secuencia ampliada, no prescribe un único CI provider. En el examen use la herramienta y el entorno indicados en la tarea concreta. En un pipeline real, reemplace los floating `curl` downloads por una tool image interna comprobada o un action/image digest fijado; use lockfile/verified checksums para los binary. Añada `helm template` o `kustomize build` antes de los linters si el production deploy usa templates.
+Para la práctica de este capítulo, el gate puede ejecutar `kubesec` y `kube-linter`; es útil añadir `hadolint` para Dockerfile y `conftest` con unit tests para una comprobación local completa. El GitHub Actions job siguiente muestra una secuencia ampliada, no prescribe un único CI provider. En el examen use la herramienta y el entorno indicados en la tarea concreta. En un pipeline real, reemplace los floating `curl` downloads por una tool image interna comprobada o un action/image digest fijado; use lockfile/verified checksums para los binaries. Añada `helm template` o `kustomize build` antes de los linters si el production deploy usa templates.
 
 ```yaml
 # .github/workflows/static-analysis.yaml
@@ -688,12 +688,12 @@ Errores habituales y diagnóstico:
 
 ## 27.7. Cómo se aplica en production
 
-- **Lint se ejecuta antes de build.** El desarrollador recibe feedback en pre-commit/editor o en un CI job separado antes de gastar recursos en build, push e integration environment. No se puede hacer merge de un PR hasta corregir los finding obligatorios o aprobar una excepción estrecha.
-- **Las herramientas y rules están fijadas.** Las versiones de `kube-linter`, `kubesec`, `hadolint`, `conftest` y OPA se fijan en una trusted CI image o lockfile. La actualización de rules pasa por review: una nueva versión puede añadir finding legítimos, pero no debe debilitar el gate sin que se note.
+- **Lint se ejecuta antes de build.** El desarrollador recibe feedback en pre-commit/editor o en un CI job separado antes de gastar recursos en build, push e integration environment. No se puede hacer merge de un PR hasta corregir los findings obligatorios o aprobar una excepción estrecha.
+- **Las herramientas y rules están fijadas.** Las versiones de `kube-linter`, `kubesec`, `hadolint`, `conftest` y OPA se fijan en una trusted CI image o lockfile. La actualización de rules pasa por review: una nueva versión puede añadir findings legítimos, pero no debe debilitar el gate sin que se note.
 - **Se comprueba el YAML final.** Helm/Kustomize/GitOps pueden cambiar values, image y securityContext. CI hace lint del rendered artifact que se firmará/aplicará, no solo del template source.
 - **Policy-as-code vive junto a la application y platform policy.** Las reglas del equipo se prueban con `opa test`; los cluster-wide controls obligatorios se duplican o centralizan en admission. La exception tiene owner, motivo y fecha de expiración.
 - **El análisis estático es parte de la cadena.** Después siguen SBOM, vulnerability scan, firma y registry promotion; antes de la ejecución actúa admission. Los runtime controls detectan aquello que es imposible ver en los fuentes.
-- **Los informes sirven para audit.** CI guarda la version del scanner, los resultados y un enlace al commit. Los reports no deben contener credentials, private keys ni production Secret data.
+- **Los informes sirven para audit.** CI guarda la versión del scanner, los resultados y un enlace al commit. Los reports no deben contener credentials, private keys ni production Secret data.
 
 ## 27.8. Mini-glosario
 
@@ -738,7 +738,7 @@ API comprueba sintaxis y schema, pero no considera un error un proceso root, un 
 </details>
 
 <details>
-<summary>3. ¿Qué finding típicos muestra `kube-linter` para un application container normal?</summary>
+<summary>3. ¿Qué findings típicos muestra `kube-linter` para un application container normal?</summary>
 
 Para un ejemplo sin hardening son típicos los checks `run-as-non-root`, `no-read-only-root-fs` y `latest-tag`. También son útiles checks para `allowPrivilegeEscalation`, `privileged`, capabilities, sensitive host mounts y docker socket. El conjunto exacto depende de la versión fijada y los checks enabled, por lo que se comprueba con `kube-linter checks list`.
 </details>

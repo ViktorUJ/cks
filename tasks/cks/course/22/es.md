@@ -25,7 +25,7 @@
 
 ## 22.1. Por qué un contenedor ordinario no basta para multi-tenancy
 
-Un container aísla PID, mount, network y otros namespaces, mientras que cgroups limita los
+Un container aísla PID, mount, network y otros namespaces, mientras que cgroups limitan los
 recursos. Pero el proceso del container normalmente hace llamadas al sistema al **mismo kernel Linux**
 que los procesos de la node y los Pod vecinos. Una vulnerabilidad del kernel, container runtime o una
 capability concedida incorrectamente puede convertir la ejecución de código en un container escape.
@@ -98,7 +98,7 @@ network tools, nested containers, device plugins, huge pages, GPU y host mounts 
 incompatibles o requerir un diseño separado. No puede haber fallback silencioso del sandbox a
 `runc`: entonces el límite declarado desaparece precisamente cuando se necesita.
 
-> 🎯 El Pod elige RuntimeClass, y su CRI `handler` debe existir exactamente en la configuration de la node de destino.
+> 🎯 El Pod elige `RuntimeClass`, y su CRI `handler` debe existir exactamente en la configuration de la node de destino.
 
 ## 22.3. Cómo elige Kubernetes el runtime: `RuntimeClass` y handler
 
@@ -643,7 +643,7 @@ sandbox con el handler `runsc` o `kata` sin fallback.
 
 ### Observación desde dentro del Pod y en el host
 
-En un container ordinario, `uname -a` normalmente muestra el kernel de la node. En gVisor, los syscall results
+En un contenedor ordinario, `uname -a` normalmente muestra el kernel de la node. En gVisor, los syscall results
 se virtualizan: `uname`, `/proc` y otros datos pueden mostrar una vista específica de gVisor o limitada.
 En Kata, el proceso verá un guest kernel separado del host. Estas señales
 son útiles, pero no se pueden considerar la única security proof: el output puede cambiar entre
@@ -846,7 +846,7 @@ Eliminar el campo traslada el workload desde el sandbox boundary declarado a un 
 
 Practique RuntimeClass, `runsc`, scheduling y la comprobación del sandbox en
 el [lab 110: gVisor, Cilium e Istio](../../labs/110/README_ES.MD). Instale `runsc` en una
-node preparada, cree RuntimeClass `gvisor` con handler `runsc`, aísle la node mediante
+node preparada, cree `RuntimeClass` `gvisor` con handler `runsc`, aísle la node mediante
 label/taint, migre un workload del namespace `team-purple` a esta class y confirme
 el placement. Para el escenario formativo, conserve `dmesg` de un Pod iniciado correctamente en el
 artefacto requerido y compárelo con los datos del host/containerd.

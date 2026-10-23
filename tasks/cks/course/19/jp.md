@@ -138,7 +138,7 @@ flowchart TB
     base -->|"violation"| rejected["rejected"]
     base -->|"passes"| strict["warn/audit=restricted"]
     strict -->|"violation"| admitted["created + warning<br/>+ audit annotation*"]
-    strict -->|"passes"| clean["created without violation"]
+    strict -->|"passes"| clean["違反なしで作成"]
     style rejected fill:#db4437,color:#fff
     style admitted fill:#f4b400,color:#000
     style clean fill:#0f9d58,color:#fff
@@ -155,7 +155,7 @@ pod-security.kubernetes.io/<mode>=<level>
 pod-security.kubernetes.io/<mode>-version=<version>
 ```
 
-`<mode>` は `enforce`、`audit`、`warn`、`<level>` は `privileged`、`baseline`、`restricted` です。version value は `v1.36` のような Kubernetes minor version または `latest` です。mode ごとに version を別々に設定できます。
+`<mode>` は `enforce`、`audit`、`warn` のいずれかで、`<level>` は `privileged`、`baseline`、`restricted` です。version value は `v1.36` のような Kubernetes minor version または `latest` です。mode ごとに version を別々に設定できます。
 
 PSA label は security boundary の一部です。application namespace に workload を作成できる identity が、`Namespace` に対する `create`、`patch`、`update` も自動的に得てはいけません。PSA label を change または delete すれば、適用される policy を変えられるためです。
 

@@ -177,7 +177,7 @@ kubectl exec -n cks-105-health deploy/health-probe -- curl -ks -o /dev/null -w '
 # 不應有的 worker -> kubelet flow 不得得到 HTTP response。
 curl -ksS -o /dev/null -w 'kubelet_http=%{http_code}\n' --connect-timeout 2 --max-time 3 \
   "https://${NODE_IP}:10250/healthz"
-# kubelet_http=000 - transport deny
+# kubelet_http=000 - 傳輸層 deny
 ```
 
 在 `ufw reload`「之後」必須進行完整的 E2E retest - 證明 ruleset 能撐過
