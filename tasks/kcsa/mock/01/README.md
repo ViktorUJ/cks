@@ -868,5 +868,3 @@ SOC 2 is an assurance/reporting context for service-organization controls agains
 
 Reproducibility means the specified artifact can be independently recreated bit-for-bit from the same source code, defined build environment, and build instructions. This property can strengthen verification, but by itself it does not establish a trusted signer, authenticated provenance, or a SLSA track/level. See [chapter 19](../../course/19/ru.md).
 </details>
-
-
