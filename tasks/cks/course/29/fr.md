@@ -145,7 +145,7 @@ actuelles et la clé de dépôt dans la [documentation Falco](https://falco.org/
 l'architecture et le kernel pris en charge. En production, épinglez une version de package vérifiée dans le
 système de gestion de configuration au lieu de mettre l'agent à jour vers un latest non vérifié.
 
-Le nom du engine unit, et même l'existence de systemd, dépendent de la distribution et de la méthode d'installation. Après
+Le nom de l'engine unit, et même l'existence de systemd, dépendent de la distribution et de la méthode d'installation. Après
 la configuration du package, Falco crée `falco.service` comme alias du véritable engine unit spécifique au driver.
 L'alias est pratique pour les commandes runtime, mais pas pour `enable` : `systemctl enable
 falco.service` peut échouer avec `Refusing to operate on alias name or linked unit
@@ -237,7 +237,7 @@ kubectl -n falco describe daemonset falco
 
 Pour une installation par package, une règle personnalisée se trouve sur le nœud lui-même. Pour un DaemonSet, la règle est normalement
 fournie par les valeurs du chart/ConfigMap ou montée comme fichier séparé. Ne modifiez pas un
-fichier dans un Falco Pod actif : la modification disparaît après un restart/rollout et ne passe pas en revue.
+fichier dans un Falco Pod actif : la modification disparaît après un restart/rollout et n'est pas soumise à une revue.
 
 Stockez la règle dans Git et appliquez-la déclarativement. Lorsque `watch_config_files` est activé,
 Falco recharge à chaud les fichiers de configuration/règles modifiés ; un restart ou rollout restart est une solution de repli si
@@ -277,7 +277,7 @@ sudo falco --list | grep -E '^(proc\.name|proc\.cmdline|fd\.name|container|k8s\.
 
 La commande `falco --list` et les champs particuliers disponibles dépendent de la version. Les champs utiles pour le contexte
 Kubernetes sont `k8s.ns.name`, `k8s.pod.name`, `k8s.pod.uid` ; pour un processus,
-ce sont `proc.name`, `proc.cmdline`, `proc.exepath` ; pour un file event, `fd.name` ; et pour un
+ce sont `proc.name`, `proc.cmdline`, `proc.exepath` ; pour un événement de fichier, `fd.name` ; et pour un
 conteneur, `container.id`, `container.name`, `container.image`. Si un champ est indisponible,
 Falco peut afficher `<NA>` : ce n'est pas une raison de remplacer une investigation par une supposition.
 
@@ -367,7 +367,7 @@ valider un seul fichier local avec `--validate` peut ne pas voir une macro upstr
 ```bash
 sudo grep -n '^watch_config_files:' /etc/falco/falco.yaml
 sudo falco -c /etc/falco/falco.yaml --dry-run
-# Lorsque watch_config_files: true, attendez puis vérifiez un rechargement réussi dans le journal.
+# Lorsque watch_config_files : true, attendez puis vérifiez un rechargement réussi dans le journal.
 sudo journalctl -u "$falco_unit" -n 80 --no-pager
 # Si la surveillance est désactivée ou si le rechargement a échoué, utilisez seulement alors le unit trouvé plus haut :
 sudo systemctl restart "$falco_unit"
@@ -513,7 +513,7 @@ est absent, si `READY < DESIRED` ou si un Pod n'est pas prêt, il s'agit d'un n�
 kubectl -n falco describe daemonset falco
 ```
 
-> 🏭 Les règles, suppressions, versions de Falco/chart et la livraison des outputs sont gérées comme des artifacts versionnés : revue, test, progressive rollout, responsable et expiration. La livraison centralisée vers un SIEM et la couverture complète des nœuds comptent davantage qu'une alerte locale ; la détection complète, mais ne remplace pas, un runbook de confinement et les contrôles préventifs.
+> 🏭 Les règles, suppressions, versions de Falco/chart et la livraison des outputs sont gérées comme des artifacts versionnés : revue, test, progressive rollout, responsable et expiration. La livraison centralisée vers un SIEM et la couverture complète des nœuds comptent davantage qu'une alerte locale ; la détection complète le runbook de confinement et les contrôles préventifs, mais ne les remplace pas.
 
 ## 29.8. Comment cela s'utilise en production
 
@@ -561,7 +561,7 @@ remplacent pas la vérification d'une alerte locale sur chaque nœud.
 - **Conservez le contexte et les preuves.** Envoyez une alerte structurée vers la journalisation/SIEM
   centralisée, en conservant l'heure de l'événement, le nœud, l'ID du conteneur, le digest d'image, le Pod,
   le namespace, le processus et la version de règle.
-- **Ajustez sans désactiver l'observation.** Mesurez d'abord les faux positifs ; affinez une
+- **Ajustez sans désactiver l'observabilité.** Mesurez d'abord les faux positifs ; affinez une
   condition par image, commande ou namespace. Une suppression temporaire doit avoir un responsable et une
   date d'expiration.
 - **Combinez les contrôles.** Falco détecte une action, mais ne corrige pas à lui seul une CVE et
@@ -677,8 +677,8 @@ chargé. Effectuez les deux vérifications avec un
 
 ### Extension production : un workflow minimal de detection engineering
 
-1. Épinglez Falco, `falco-rules` et, le cas échéant, les versions de plugins ; désactivez l'
-   auto-follow non contrôlé des artifacts de règles.
+1. Épinglez Falco, `falco-rules` et, le cas échéant, les versions de plugins ; désactivez
+   l'auto-follow non contrôlé des artifacts de règles.
 2. Définissez menace → événement observable → source → condition → champs de contexte requis.
 3. Validez le ruleset complet et la compatibilité ; déployez-le d'abord en staging.
 4. Générez un événement suspect contrôlé, confirmez l'alerte, les métadonnées Pod/namespace et
@@ -777,7 +777,7 @@ Une analyse d'image compare le contenu d'un artifact à des CVE connues avant ou
 <details>
 <summary>2. Quelles données système Falco voit-il par un kernel module/eBPF, et pourquoi a-t-il besoin des métadonnées du container runtime ?</summary>
 
-Falco voit les événements syscall au niveau du nœud tels que `execve`, `openat`, `connect` et `unlink`, parce que les processus de conteneur utilisent le kernel du nœud. Le driver `kmod` ou `modern_ebpf` les transmet au engine userspace, qui utilise les champs de processus, fichiers et réseau. Les métadonnées CRI/Kubernetes lient un événement à `container.id`, l'image, le Pod et le namespace, transformant un syscall en alerte exploitable pour l'investigation.
+Falco voit les événements syscall au niveau du nœud tels que `execve`, `openat`, `connect` et `unlink`, parce que les processus de conteneur utilisent le kernel du nœud. Le driver `kmod` ou `modern_ebpf` les transmet à l'engine userspace, qui utilise les champs de processus, fichiers et réseau. Les métadonnées CRI/Kubernetes lient un événement à `container.id`, l'image, le Pod et le namespace, transformant un syscall en alerte exploitable pour l'investigation.
 </details>
 
 <details>
@@ -793,7 +793,7 @@ Une `rule` est un détecteur nommé ; sa `condition` est une expression booléen
 </details>
 
 <details>
-<summary>5. Pourquoi une règle personnalisée doit-elle être placée dans `falco_rules.local.yaml` plutôt que modifier `falco_rules.yaml` ?</summary>
+<summary>5. Pourquoi une règle personnalisée doit-elle être placée dans `falco_rules.local.yaml` plutôt que de modifier `falco_rules.yaml` ?</summary>
 
 `falco_rules.yaml` est un ruleset upstream/vendor qu'une mise à jour de package peut écraser. Le fichier local conserve un override personnalisé séparé, convient à Git/la revue et est chargé dans l'ordre spécifié par `rules_files`. Après une modification, vérifiez la configuration complète avec `falco -c /etc/falco/falco.yaml --dry-run` pour ne pas perdre une macro upstream telle que `open_read`.
 </details>

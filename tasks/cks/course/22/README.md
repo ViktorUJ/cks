@@ -33,7 +33,7 @@ flowchart TB
     style host fill:#9e9e9e,color:#fff
 ```
 
-A sandbox adds a layer between workload and host. It is defence in depth, not permission to weaken other controls:
+A sandbox adds a layer between workload and host. It is defense in depth, not permission to weaken other controls:
 
 | Control | What it governs | A sandbox does not replace it |
 |---|---|---|
@@ -217,7 +217,7 @@ kubectl -n tenant-a describe pod untrusted-web
 
 For Kubernetes, the recommended Kata installation path is the `kata-deploy` Helm chart: it deploys the runtime on a node and creates RuntimeClass for actual shims. In modern releases, runtime-rs class/handler names can look like `kata-qemu-runtime-rs`; use the name created by the chart, not an old example from another distribution. Before rollout, check `kubectl get runtimeclass` and `crictl info` on the target node.
 
-The manual configuration below is a simplified option for an already prepared dedicated pool. The Kata class works the same way, but its handler must match containerd. Do not name a class `kata` when the node handler is `kata-qemu`, otherwise the configuration becomes unclear. One understandable option is the same short name:
+The manual configuration below is a simplified option for an already prepared dedicated pool. The Kata class works the same way, but its handler must match containerd. Do not name a class `kata` when the node handler is `kata-qemu`; otherwise, the configuration becomes unclear. One understandable option is the same short name:
 
 ```yaml
 apiVersion: node.k8s.io/v1

@@ -1,7 +1,9 @@
-# Лаба 107 - эталонное решение: Pod Security Admission и immutable root filesystem
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 107 - эталонное решение: Pod Security Admission и read-only root filesystem
 
 > Выполняйте команды на рабочей машине. Контекст `cluster1-admin@cluster1` уже
-> настроен. Namespace `psa-restricted-107` и `psa-observe-107` созданы стартовым
+> настроен. Namespace `psa-restricted-107`, `psa-observe-107` и `psa-controller-107` созданы стартовым
 > скриптом, но намеренно не имеют PSA labels.
 
 ## 1. Enforce restricted и проверка отказа
@@ -93,7 +95,8 @@ kubectl exec -n psa-restricted-107 restricted-app -- sh -c 'echo probe > /tmp/te
 ```
 
 Если `restricted-app` уже создан без read-only filesystem, поле Pod изменять нельзя;
-удалите и создайте его повторно:
+удалите и создайте его повторно (если вы делаете это уже после задания 6, добавьте в `spec`
+поле `automountServiceAccountToken: false` - иначе политика из задания 6 отклонит Pod):
 
 ```bash
 kubectl delete pod restricted-app -n psa-restricted-107
@@ -198,7 +201,9 @@ kubectl apply -f require-no-automount-token.yaml
 kubectl get validatingadmissionpolicy,validatingadmissionpolicybinding
 ```
 
-Докажите оба исхода через server-side dry-run, не сохраняя постоянный Pod. Первый Pod
+Докажите все три состояния через server-side dry-run, не сохраняя постоянный Pod. Pod без
+поля должен получить DENY от точной пары policy + binding, `false` должен пройти, а
+`true` должен получить DENY от той же пары. Первый Pod
 полностью соответствует PSA `restricted` (non-root, seccomp, `allowPrivilegeEscalation:
 false`, `capabilities.drop: ["ALL"]`) - PSA сам его принял бы, поэтому отказ должен
 прийти именно от новой policy, а не от `violates PodSecurity`:
@@ -228,7 +233,8 @@ spec:
       seccompProfile:
         type: RuntimeDefault
 YAML
-# Error from server: ... require-no-automount-token: spec.automountServiceAccountToken must be explicitly set to false
+# Error from server: ... ValidatingAdmissionPolicy 'require-no-automount-token'
+# with binding 'require-no-automount-token-binding' denied request: ...
 ```
 
 Тот же Pod с добавленным `automountServiceAccountToken: false` должен пройти:
@@ -261,6 +267,38 @@ spec:
 YAML
 ```
 
+Явное значение `true` тоже должно быть отклонено той же policy и binding:
+
+```bash
+kubectl apply --dry-run=server -f - <<'YAML'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vap-explicit-true-check
+  namespace: psa-restricted-107
+spec:
+  automountServiceAccountToken: true
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+YAML
+# Error from server: ... ValidatingAdmissionPolicy 'require-no-automount-token'
+# with binding 'require-no-automount-token-binding' denied request: ...
+```
+
 `Binding.matchResources.namespaceSelector` ограничивает policy только `psa-restricted-107`:
 Pod в других namespace (например `psa-observe-107`) не проверяется этим правилом и не
 получает лишний Deny.
@@ -291,16 +329,36 @@ kubectl -n psa-controller-107 delete pod -l app=controller-app
 kubectl -n psa-controller-107 get events --sort-by=.lastTimestamp | tail -5
 # ... FailedCreate ... violates PodSecurity "restricted:v1.36": ...
 kubectl -n psa-controller-107 get deploy controller-app
-# controller-app   1/1     1            0           ...   <- READY 0, AVAILABLE 0
+# controller-app   0/1     1            0           ...   <- READY 0/1, AVAILABLE 0
 ```
 
 Чиним template - добавляем те же hardening поля, что в задании 2:
 
 ```bash
-kubectl -n psa-controller-107 patch deployment controller-app --type=json -p '[
-  {"op":"add","path":"/spec/template/spec/securityContext","value":{"runAsNonRoot":true,"runAsUser":1000,"seccompProfile":{"type":"RuntimeDefault"}}},
-  {"op":"add","path":"/spec/template/spec/containers/0/securityContext","value":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}
-]'
+kubectl -n psa-controller-107 edit deployment controller-app
+```
+
+В `spec.template.spec` замените строку `securityContext: {}` на блок ниже, а в контейнер `busybox`
+(имя контейнера - `busybox`, создано `kubectl create deployment`) добавьте свой `securityContext`:
+
+```yaml
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: busybox
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+```
+
+Сохраните и дождитесь rollout:
+
+```bash
 kubectl -n psa-controller-107 rollout status deployment/controller-app
 ```
 

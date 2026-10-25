@@ -1,39 +1,74 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
 # Лаба 112 - эталонное решение: Falco, audit-логи и иммутабельность
 
-Все команды Kubernetes выполняются на рабочей машине. Команды с `ssh control-plane`
-меняют единственный узел control plane, на котором также запускаются рабочие нагрузки. Контекст:
+Работаем как на экзамене. Откройте **два терминала** и оставьте оба открытыми до конца лабы:
+
+- **Терминал 1 - control-plane:** `ssh control-plane`, затем `sudo -i` (дальше все команды на узле
+  выполняются от root, без `sudo`). Единственный узел control plane также запускает рабочие нагрузки.
+- **Терминал 2 - рабочая машина:** здесь `kubectl`, `scp` и проверки.
+
+Артефакты, которые получены на узле, сохраняются в `/tmp/art/<номер задания>/` на control-plane и
+копируются на рабочую машину командой `scp` в `/var/work/tests/artifacts/<номер>/`.
+
+## Где взять примеры в документации
+
+| Что нужно | Страница и раздел |
+| :--- | :--- |
+| Установка Falco из apt (ключ, репозиторий, `apt-get install -y falco`), переменные `FALCO_DRIVER_CHOICE` / `FALCO_FRONTEND`, `systemctl enable falco-modern-bpf.service` | [Falco - Install: apt (Debian/Ubuntu), Environment variables, Systemd setup](https://falco.org/docs/setup/packages/#install-with-apt) |
+| Переопределение правил и макросов Falco (`override: condition/output: replace/append`) | [Falco - Overriding rules: Examples of using the override section](https://falco.org/docs/concepts/rules/overriding/#examples-of-using-the-override-section) |
+| Audit Policy (уровни `None`/`Metadata`/`Request`/`RequestResponse`, `omitStages`, `rules`), флаги `--audit-policy-file`, `--audit-log-path`, `--audit-log-maxage/-maxbackup/-maxsize`, монтирование `hostPath`, webhook backend | [Kubernetes - Auditing: Audit policy, Log backend, Webhook backend](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy) |
+| `readOnlyRootFilesystem` и `emptyDir` | [Kubernetes - Configure a Security Context for a Pod or Container](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) |
+| Deny-all `NetworkPolicy` | [Kubernetes - Network Policies: Default deny all ingress and all egress traffic](https://kubernetes.io/docs/concepts/services-networking/network-policies/#default-deny-all-ingress-and-all-egress-traffic) |
+| Kyverno `ValidatingPolicy` | [Kyverno - Validating Policies](https://kyverno.io/docs/policy-types/validating-policy/) |
+
+Первый запуск на рабочей машине (терминал 2):
 
 ```bash
 kubectl config use-context cluster1-admin@cluster1
 export NS=runtime-112
-mkdir -p /var/work/tests/artifacts/{2,3,4,5,6}
+mkdir -p /var/work/tests/artifacts/{2,3,4,5,6,9,10}
+```
+
+Первый запуск на узле (терминал 1):
+
+```bash
+ssh control-plane
+sudo -i
+mkdir -p /tmp/art/{2,3,4,6,9,10}
 ```
 
 ## 1. Установка Falco с modern eBPF
 
-Установим Falco из официального APT-репозитория. Modern eBPF не требует вручную собирать
-или загружать kernel module.
+Устанавливаем Falco из официального APT-репозитория (команды со страницы Install в документации
+Falco). Modern eBPF не требует вручную собирать или загружать kernel module.
 
 ```bash
-ssh control-plane 'sudo bash -s' <<'EOF'
-set -euo pipefail
-curl -fsSL https://falco.org/repo/falcosecurity-packages.asc |
-  gpg --dearmor | sudo tee /usr/share/keyrings/falco-archive-keyring.gpg >/dev/null
-echo "deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main" |
-  sudo tee /etc/apt/sources.list.d/falcosecurity.list >/dev/null
-sudo apt-get update
-sudo env FALCO_FRONTEND=noninteractive FALCOCTL_ENABLED='' \
-  FALCO_DRIVER_CHOICE=modern_ebpf apt-get install -y falco
-sudo install -d -m 0755 /etc/falco/config.d
-sudo tee /etc/falco/config.d/engine-kind.yaml >/dev/null <<'YAML'
+# терминал 1 (control-plane, root)
+curl -fsSL https://falco.org/repo/falcosecurity-packages.asc | gpg --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main" >> /etc/apt/sources.list.d/falcosecurity.list
+apt-get update -y
+```
+
+**Установку выполняйте отдельной командой:** `apt-get` сбрасывает буфер ввода терминала, поэтому
+строки, вставленные сразу за ней, пропадают.
+
+```bash
+# терминал 1 (control-plane, root)
+FALCO_FRONTEND=noninteractive FALCOCTL_ENABLED='' FALCO_DRIVER_CHOICE=modern_ebpf apt-get install -y falco
+```
+
+```bash
+# терминал 1 (control-plane, root)
+mkdir -p /etc/falco/config.d
+cat > /etc/falco/config.d/engine-kind.yaml <<EOF
 engine:
   kind: modern_ebpf
-YAML
+EOF
 # Пакет ставит unit falco-modern-bpf.service, а falco.service - лишь alias на него;
 # `systemctl enable falco` по alias-у завершается ошибкой, поэтому включаем реальный unit.
-sudo systemctl enable --now falco-modern-bpf
-EOF
-ssh control-plane 'falco --version; systemctl is-active falco; sudo grep -R modern_ebpf /etc/falco'
+systemctl enable --now falco-modern-bpf
+falco --version; systemctl is-active falco; grep -R modern_ebpf /etc/falco
 sleep 20
 ```
 
@@ -42,13 +77,14 @@ sleep 20
 открыт, Falco не фиксирует события, и shell из задания 2 может остаться незамеченным. Если
 алерта нет, повторите `exec` спустя несколько секунд.
 
-Если сервис не запускается, сначала посмотрите `sudo journalctl -u falco-modern-bpf -b --no-pager`.
+Если сервис не запускается, сначала посмотрите `journalctl -u falco-modern-bpf -b --no-pager`.
 Не заменяйте engine на kernel module: в этой лабе требуется именно `modern_ebpf`.
 
 ## 2. Стандартное правило для shell в контейнере
 
 ```bash
-cat <<'EOF' | kubectl apply -f -
+# терминал 2 (рабочая машина)
+kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Pod
 metadata:
@@ -68,16 +104,19 @@ kubectl exec -it -n "$NS" falco-shell -- /bin/sh
 # Внутри shell: exit
 ```
 
-Сохраните настоящее событие Falco на рабочей машине. При необходимости увеличьте
-количество строк `-n`, но не создавайте артефакт вручную.
-
-Falco пишет событие в journal с небольшой задержкой, поэтому подождите пару секунд после выхода из shell:
+Сохраните настоящее событие Falco: оно берётся из journal на control-plane. Falco пишет событие с
+небольшой задержкой, поэтому подождите пару секунд после выхода из shell. Не создавайте артефакт
+вручную:
 
 ```bash
-sleep 3
-ssh control-plane "sudo journalctl -u falco-modern-bpf -b --no-pager -n 500 | grep -F 'A shell was spawned in a container with an attached terminal' | tail -1" \
-  | tee /var/work/tests/artifacts/2/falco-shell.log
-cat /var/work/tests/artifacts/2/falco-shell.log
+# терминал 1 (control-plane, root)
+journalctl -u falco-modern-bpf -b --no-pager -n 500 | grep -F 'A shell was spawned in a container with an attached terminal' | tail -1 > /tmp/art/2/falco-shell.log
+cat /tmp/art/2/falco-shell.log
+```
+
+```bash
+# терминал 2
+scp control-plane:/tmp/art/2/falco-shell.log /var/work/tests/artifacts/2/
 ```
 
 ## 3. Локальное правило и контролируемый marker
@@ -87,40 +126,49 @@ Falco уже загружает `/etc/falco/falco_rules.local.yaml`; добав�
 матчить тот же marker, запущенный на хосте.
 
 ```bash
-ssh control-plane 'sudo tee /etc/falco/falco_rules.local.yaml >/dev/null' <<'YAML'
+# терминал 1 (control-plane, root)
+cat > /etc/falco/falco_rules.local.yaml <<EOF
 - rule: CKS112 Custom Shell Marker
   desc: Detect the controlled CKS lab marker in a container process command line
   condition: spawned_process and container and proc.cmdline contains "CKS112_CUSTOM_EVENT"
   output: "CKS112 custom shell marker container=%container.id pid=%proc.pid ppid=%proc.ppid user=%user.name command=%proc.cmdline"
   priority: WARNING
-YAML
-ssh control-plane 'sudo systemctl restart falco && sudo systemctl is-active falco && sleep 10'
+EOF
+systemctl restart falco && systemctl is-active falco && sleep 10
+```
 
+```bash
+# терминал 2
 kubectl exec -n "$NS" falco-shell -- sh -c 'echo CKS112_CUSTOM_EVENT >/dev/null'
+```
+
+```bash
+# терминал 1
 sleep 2
-ssh control-plane "sudo journalctl -u falco-modern-bpf -b --no-pager -n 500 | grep -F 'CKS112 custom shell marker' | tail -1" \
-  | tee /var/work/tests/artifacts/3/falco-custom.log
+journalctl -u falco-modern-bpf -b --no-pager -n 500 | grep -F 'CKS112 custom shell marker' | tail -1 > /tmp/art/3/falco-custom.log
+cat /tmp/art/3/falco-custom.log
+```
+
+```bash
+# терминал 2
+scp control-plane:/tmp/art/3/falco-custom.log /var/work/tests/artifacts/3/
 ```
 
 После каждого `restart falco` в решении стоит `sleep 10`: Falco загружает правила и метаданные
 контейнеров около 5 секунд, и события, произошедшие раньше, он не запишет в journal.
-
-Проверка синтаксиса и результата:
-
-```bash
-ssh control-plane 'sudo grep -nE "CKS112 Custom Shell Marker|CKS112_CUSTOM_EVENT|CKS112 custom shell marker" /etc/falco/falco_rules.local.yaml'
-cat /var/work/tests/artifacts/3/falco-custom.log
-```
 
 ## 4. Audit: RequestResponse для ConfigMap, Metadata для Secret
 
 Создадим policy по правилу главы 32: полный request/response пишем только для
 нечувствительного `configmaps` в `runtime-112`; для `secrets` берём `Metadata`, чтобы тело Secret
 (токены, пароли) не попало в журнал. `None` и `omitStages` действительно сокращают high-volume
-noise; финальный catch-all `Metadata` - fallback logging, а не шумоподавление. Порядок правил важен: специфичные правила идут до catch-all.
+noise; финальный catch-all `Metadata` - fallback logging, а не шумоподавление. Порядок правил важен:
+специфичные правила идут до catch-all. Структура файла - из примера в документации (раздел Audit
+policy).
 
 ```bash
-ssh control-plane 'sudo tee /etc/kubernetes/audit/policy.yaml >/dev/null' <<'YAML'
+# терминал 1 (control-plane, root)
+cat > /etc/kubernetes/audit/policy.yaml <<EOF
 apiVersion: audit.k8s.io/v1
 kind: Policy
 omitStages: ["RequestReceived"]
@@ -145,11 +193,10 @@ rules:
     resources: ["secrets"]
 # 4. Fallback logging for the rest of the API (not noise reduction).
 - level: Metadata
-YAML
-ssh control-plane 'sudo install -d -m 0750 /var/log/kubernetes/audit'
+EOF
 ```
 
-Отредактируйте `/etc/kubernetes/manifests/kube-apiserver.yaml` на control-plane. В `command`
+Отредактируйте `/etc/kubernetes/manifests/kube-apiserver.yaml` на control-plane (`vim`). В `command`
 контейнера `kube-apiserver` добавьте:
 
 ```yaml
@@ -183,36 +230,53 @@ ssh control-plane 'sudo install -d -m 0750 /var/log/kubernetes/audit'
     type: DirectoryOrCreate
 ```
 
-Например, откройте manifest с `ssh control-plane 'sudo vim /etc/kubernetes/manifests/kube-apiserver.yaml'`.
-Это static Pod: kubelet автоматически пересоздаст API server. Дождитесь его готовности:
-
 ```bash
-until kubectl get --raw=/readyz 2>/dev/null | grep -qx ok; do sleep 2; done
-ssh control-plane "sudo grep -E -- '--audit-(policy-file|log-path|log-max)' /etc/kubernetes/manifests/kube-apiserver.yaml"
+# терминал 1 (control-plane, root)
+vim /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
-Создайте ConfigMap и сгенерируйте оба запроса, затем сохраните по одному подходящему JSON
-event как артефакты:
+Это static Pod: kubelet автоматически пересоздаст API server (около минуты, до этого
+`kubectl` отвечает `connection refused`). Дождитесь его готовности:
 
 ```bash
+# терминал 2: повторяйте, пока команда не вернёт "ok"
+kubectl get --raw=/readyz
+```
+
+```bash
+# терминал 1: флаги попали в рабочий manifest
+grep -E -- '--audit-(policy-file|log-path|log-max)' /etc/kubernetes/manifests/kube-apiserver.yaml
+```
+
+Создайте ConfigMap и сгенерируйте оба запроса, затем сохраните по одному подходящему JSON event
+как артефакты:
+
+```bash
+# терминал 2
 kubectl create configmap audit-config -n "$NS" --from-literal=note=cks112 --dry-run=client -o yaml | kubectl apply -f -
 kubectl get configmap audit-config -n "$NS" -o json >/dev/null
 kubectl get secret audit-secret -n "$NS" -o json >/dev/null
-sleep 2
+```
 
+```bash
+# терминал 1 (control-plane, root)
 # ConfigMap: полный RequestResponse event (нечувствительные данные).
-ssh control-plane "sudo jq -c 'select(.level == \"RequestResponse\" and .objectRef.resource == \"configmaps\" and .objectRef.namespace == \"runtime-112\" and .objectRef.name == \"audit-config\")' /var/log/kubernetes/audit/audit.log | tail -1" \
-  | tee /var/work/tests/artifacts/4/configmap-request-response.json
+jq -c 'select(.level == "RequestResponse" and .objectRef.resource == "configmaps" and .objectRef.namespace == "runtime-112" and .objectRef.name == "audit-config")' /var/log/kubernetes/audit/audit.log | tail -1 > /tmp/art/4/configmap-request-response.json
 
 # Secret: только Metadata, без тела.
-ssh control-plane "sudo jq -c 'select(.objectRef.resource == \"secrets\" and .objectRef.namespace == \"runtime-112\" and .objectRef.name == \"audit-secret\")' /var/log/kubernetes/audit/audit.log | tail -1" \
-  | tee /var/work/tests/artifacts/4/secret-metadata.json
+jq -c 'select(.objectRef.resource == "secrets" and .objectRef.namespace == "runtime-112" and .objectRef.name == "audit-secret")' /var/log/kubernetes/audit/audit.log | tail -1 > /tmp/art/4/secret-metadata.json
+```
+
+```bash
+# терминал 2
+scp control-plane:/tmp/art/4/*.json /var/work/tests/artifacts/4/
 ```
 
 Проверьте, что ConfigMap залогирован с телом, а Secret - только на уровне `Metadata` и
 **без** `requestObject`/`responseObject`:
 
 ```bash
+# терминал 2
 jq '{level, verb, objectRef, hasBody: (has("requestObject") or has("responseObject"))}' \
   /var/work/tests/artifacts/4/configmap-request-response.json
 jq '{level, verb, objectRef, hasRequestObject: has("requestObject"), hasResponseObject: has("responseObject")}' \
@@ -222,10 +286,11 @@ jq '{level, verb, objectRef, hasRequestObject: has("requestObject"), hasResponse
 ## 5. Неизменяемый root filesystem
 
 `emptyDir` даёт приложению контролируемое место для runtime-файлов; root filesystem
-остается read-only. `hostPath` не нужен и не допускается.
+остаётся read-only. `hostPath` не нужен и не допускается.
 
 ```bash
-cat <<'EOF' | kubectl apply -f -
+# терминал 2
+kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Pod
 metadata:
@@ -252,12 +317,10 @@ kubectl wait -n "$NS" --for=condition=Ready pod/immutable-app --timeout=120s
 Докажем оба свойства и сохраним сообщение об отказе:
 
 ```bash
-set +e
-kubectl exec -n "$NS" immutable-app -- sh -c 'touch /cks-112-write-denied' \
-  2>&1 | tee /var/work/tests/artifacts/5/rootfs-write-denied.log
-rootfs_status=${PIPESTATUS[0]}
-set -e
-[ "$rootfs_status" -ne 0 ]
+# терминал 2
+kubectl exec -n "$NS" immutable-app -- sh -c 'touch /cks-112-write-denied' > /var/work/tests/artifacts/5/rootfs-write-denied.log 2>&1
+cat /var/work/tests/artifacts/5/rootfs-write-denied.log
+# touch: /cks-112-write-denied: Read-only file system
 kubectl exec -n "$NS" immutable-app -- sh -c 'touch /tmp/allowed && test -f /tmp/allowed'
 ```
 
@@ -269,54 +332,65 @@ Audit backend уже работает, поэтому новый `kubectl exec` 
 безопасная planted evidence одноразовой лабы.
 
 ```bash
+# терминал 1 (control-plane, root): момент начала прогона (время берём с control-plane,
+# где потом читаем journal)
+START=$(date '+%Y-%m-%d %H:%M:%S')
+```
+
+```bash
+# терминал 2
 DIR=/var/work/tests/artifacts/6
-mkdir -p "$DIR"
-START=$(date -u '+%Y-%m-%d %H:%M:%S')
 kubectl exec -n "$NS" falco-shell -- \
   sh -c 'sleep 600; echo completed' CKS112_CUSTOM_EVENT >/tmp/cks112-incident-exec.log 2>&1 &
 INCIDENT_EXEC_PID=$!
-sleep 4
+```
 
-ssh control-plane \
-  "sudo journalctl -u falco-modern-bpf -b --since '$START' --no-pager | grep -F 'CKS112 custom shell marker' | tail -1" \
-  | tee "$DIR/falco-alert.log"
-test -s "$DIR/falco-alert.log"
+Дальше всё делаем на control-plane, пока процесс жив: берём alert, а из него - container id и
+host pid (начинаем с alert, а не угадываем):
+
+```bash
+# терминал 1 (control-plane, root)
+cd /tmp/art/6
+journalctl -u falco-modern-bpf -b --since "$START" --no-pager | grep -F 'CKS112 custom shell marker' | tail -1 > falco-alert.log
+cat falco-alert.log
+
+SHORT_ID=$(sed -n 's/.*container=\([^ ]*\).*/\1/p' falco-alert.log | tail -1)
+HOST_PID=$(sed -n 's/.* pid=\([0-9][0-9]*\) .*/\1/p' falco-alert.log | tail -1)
+echo "SHORT_ID=$SHORT_ID HOST_PID=$HOST_PID"
+
+CONTAINER_ID=$(crictl ps -a -q | grep "^$SHORT_ID" | head -1)
+crictl inspect $CONTAINER_ID > cri-container.json
+SANDBOX_ID=$(jq -r '.status.sandboxId // .status.sandboxID // .info.sandboxID // empty' cri-container.json)
+crictl inspectp $SANDBOX_ID > cri-sandbox.json
+printf 'container_init_pid=%s\n' "$(jq -r '.info.pid // empty' cri-container.json)" > cri-mapping.txt
+
+cat /proc/$HOST_PID/status > proc-status.txt
+tr '\0' ' ' < /proc/$HOST_PID/cmdline > proc-cmdline.txt; echo >> proc-cmdline.txt
+cat /proc/$HOST_PID/cgroup > proc-cgroup.txt
+ps -eo pid,ppid,user,lstart,args --forest > process-tree.txt
+```
+
+Теперь коррелируем API event. Современный `kubectl exec` работает поверх WebSocket, поэтому в audit он
+виден как `get` (при SPDY-fallback - `create`), оба варианта подходят. Для `pods/exec` достаточно
+`Metadata`: command из request body может содержать секрет, поэтому `RequestResponse` здесь не нужен.
+
+```bash
+# терминал 1 (control-plane, root)
+jq -c 'select(.level == "Metadata" and (.verb == "create" or .verb == "get") and .objectRef.resource == "pods" and .objectRef.subresource == "exec" and .objectRef.namespace == "runtime-112" and .objectRef.name == "falco-shell")' /var/log/kubernetes/audit/audit.log | tail -1 > audit-exec.json
+jq '{verb, level, hasRequestObject: has("requestObject")}' audit-exec.json
+```
+
+```bash
+# терминал 2: забрать все файлы цепочки и собрать итоговый summary
+scp 'control-plane:/tmp/art/6/*' /var/work/tests/artifacts/6/
 
 SHORT_ID=$(sed -n 's/.*container=\([^ ]*\).*/\1/p' "$DIR/falco-alert.log" | tail -1)
 HOST_PID=$(sed -n 's/.* pid=\([0-9][0-9]*\) .*/\1/p' "$DIR/falco-alert.log" | tail -1)
-test -n "$SHORT_ID"
-ssh control-plane "sudo test -r /proc/$HOST_PID/status"
-
-CONTAINER_ID=$(ssh control-plane \
-  "sudo crictl ps -a -q | awk '/^${SHORT_ID}/ {print; exit}'")
-test -n "$CONTAINER_ID"
-ssh control-plane "sudo crictl inspect '$CONTAINER_ID'" > "$DIR/cri-container.json"
-SANDBOX_ID=$(jq -r '.status.sandboxId // .status.sandboxID // .info.sandboxID // empty' \
-  "$DIR/cri-container.json")
-ssh control-plane "sudo crictl inspectp '$SANDBOX_ID'" > "$DIR/cri-sandbox.json"
-
+CONTAINER_ID=$(jq -r '.status.id' "$DIR/cri-container.json")
 POD=$(jq -r '.status.metadata.name' "$DIR/cri-sandbox.json")
 NAMESPACE=$(jq -r '.status.metadata.namespace' "$DIR/cri-sandbox.json")
 NODE=$(kubectl get pod "$POD" -n "$NAMESPACE" -o jsonpath='{.spec.nodeName}')
 CONTAINER_INIT_PID=$(jq -r '.info.pid // empty' "$DIR/cri-container.json")
-printf 'container_init_pid=%s\n' "$CONTAINER_INIT_PID" > "$DIR/cri-mapping.txt"
-
-ssh control-plane "sudo cat /proc/$HOST_PID/status" > "$DIR/proc-status.txt"
-ssh control-plane "sudo tr '\\0' ' ' </proc/$HOST_PID/cmdline; echo" > "$DIR/proc-cmdline.txt"
-ssh control-plane "sudo cat /proc/$HOST_PID/cgroup" > "$DIR/proc-cgroup.txt"
-ssh control-plane "sudo ps -eo pid,ppid,user,lstart,args --forest" > "$DIR/process-tree.txt"
-```
-
-Теперь коррелируем API event. Современный `kubectl exec` работает поверх WebSocket, поэтому в audit он
-виден как `get` (при SPDY-fallback - `create`), оба варианта подходят. Для `pods/exec` достаточно `Metadata`: command из request body
-может содержать секрет, поэтому `RequestResponse` здесь не нужен.
-
-```bash
-sleep 3
-ssh control-plane \
-  "sudo jq -c 'select(.level == \"Metadata\" and (.verb == \"create\" or .verb == \"get\") and .objectRef.resource == \"pods\" and .objectRef.subresource == \"exec\" and .objectRef.namespace == \"runtime-112\" and .objectRef.name == \"falco-shell\")' /var/log/kubernetes/audit/audit.log | tail -1" \
-  > "$DIR/audit-exec.json"
-jq -e 'has("requestObject") | not' "$DIR/audit-exec.json"
 
 cat > "$DIR/evidence-summary.txt" <<EOF
 alert_rule=CKS112 Custom Shell Marker
@@ -333,14 +407,18 @@ attack_phase=Execution
 technique=Container Administration Command
 containment=quarantine-and-delete
 EOF
+cat "$DIR/evidence-summary.txt"
 ```
 
 Сначала сохраняем evidence, затем изолируем namespace на сетевом уровне и удаляем
 скомпрометированный Pod. Это минимальная containment-цепочка, а не полное расследование:
-credential revocation/rotation, поиск других workload и восстановление owner/controller выполняются отдельным IR-процессом. Последняя команда доказывает отрицательный outcome, а не ищет конкретный текст ошибки.
+credential revocation/rotation, поиск других workload и восстановление owner/controller выполняются
+отдельным IR-процессом. Последняя команда доказывает отрицательный outcome, а не ищет конкретный
+текст ошибки.
 
 ```bash
-cat <<'EOF' | kubectl apply -f -
+# терминал 2
+kubectl apply -f - <<EOF
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -354,18 +432,14 @@ spec:
 EOF
 
 kubectl delete pod falco-shell -n "$NS" --wait=true
-wait "$INCIDENT_EXEC_PID" 2>/dev/null || true
-set +e
-kubectl exec -n "$NS" falco-shell -- sh -c 'echo CKS112_CUSTOM_EVENT' \
-  >"$DIR/post-containment-exec.log" 2>&1
-EXEC_EXIT=$?
-set -e
-printf 'pod=deleted\nnetworkpolicy=incident-quarantine\nexec_exit=%s\n' "$EXEC_EXIT" \
-  > "$DIR/containment.txt"
-test "$EXEC_EXIT" -ne 0
+wait "$INCIDENT_EXEC_PID" 2>/dev/null
+kubectl exec -n "$NS" falco-shell -- sh -c 'echo CKS112_CUSTOM_EVENT' > "$DIR/post-containment-exec.log" 2>&1
+printf 'pod=deleted\nnetworkpolicy=incident-quarantine\nexec_exit=%s\n' "$?" > "$DIR/containment.txt"
+cat "$DIR/containment.txt"
+# exec_exit=1 (не 0)
 ```
 
-## Задание 7. Override upstream-макроса и вывод в JSON/файл
+## 7. Override upstream-макроса и вывод в JSON/файл
 
 Стандартное правило **Terminal shell in container** сработает и на легитимный
 инструмент. Правильное место для environment-specific исключения - не редактирование
@@ -379,20 +453,22 @@ binary") и не влияет на **Terminal shell in container**. Исполь
 широкий allowlist.
 
 ```bash
-ssh control-plane 'sudo tee -a /etc/falco/falco_rules.local.yaml >/dev/null' <<'YAML'
+# терминал 1 (control-plane, root)
+cat >> /etc/falco/falco_rules.local.yaml <<EOF
 
 - macro: user_expected_terminal_shell_in_container_conditions
   condition: (k8s.ns.name = "runtime-112" and k8s.pod.name = "ci-runner")
   override:
     condition: replace
-YAML
-ssh control-plane 'sudo systemctl restart falco && sleep 10'
+EOF
+systemctl restart falco && sleep 10
 ```
 
 Создайте Pod с интерактивным shell под именем, которое теперь исключено:
 
 ```bash
-kubectl apply -n runtime-112 -f - <<'YAML'
+# терминал 2
+kubectl apply -n runtime-112 -f - <<EOF
 apiVersion: v1
 kind: Pod
 metadata:
@@ -406,7 +482,7 @@ spec:
     command: ["sleep", "3600"]
     stdin: true
     tty: true
-YAML
+EOF
 kubectl wait -n runtime-112 --for=condition=Ready pod/ci-runner --timeout=60s
 kubectl exec -n runtime-112 -it ci-runner -- sh -c 'echo shell-open; sleep 2'
 ```
@@ -415,72 +491,84 @@ kubectl exec -n runtime-112 -it ci-runner -- sh -c 'echo shell-open; sleep 2'
 не должен тихо погасить правило целиком:
 
 ```bash
+# терминал 2
 kubectl exec -n runtime-112 -it immutable-app -- sh -c 'echo shell-open; sleep 2'
-ssh control-plane "sudo journalctl -u falco-modern-bpf -b --no-pager -n 200 | grep -F 'A shell was spawned in a container with an attached terminal'"
+```
+
+```bash
+# терминал 1
+journalctl -u falco-modern-bpf -b --no-pager -n 200 | grep -F 'A shell was spawned in a container with an attached terminal'
 ```
 
 Стандартный output правила **Terminal shell in container** не содержит `k8s.pod.name`/
-`k8s.ns.name` (можно убедиться самостоятельно: `sudo grep -A3 "rule: Terminal shell in container" /etc/falco/falco_rules.yaml`
-на control-plane покажет `output` без этих полей). Без Pod/namespace evidence в самом
-alert надёжная correlation конкретного срабатывания с конкретным Pod невозможна - текстовый
-`grep` по имени Pod в journal просто не найдёт совпадения. Добавляем эти поля через тот же
-`override` механизм, но с `output: append` вместо `condition: replace`:
+`k8s.ns.name` (можно убедиться на control-plane: `grep -A3 "rule: Terminal shell in container" /etc/falco/falco_rules.yaml`
+покажет `output` без этих полей). Без Pod/namespace evidence в самом alert надёжная correlation
+конкретного срабатывания с конкретным Pod невозможна - текстовый `grep` по имени Pod в journal
+просто не найдёт совпадения. Добавляем эти поля через тот же `override` механизм, но с
+`output: append` вместо `condition: replace`:
 
 ```bash
-ssh control-plane 'sudo tee -a /etc/falco/falco_rules.local.yaml >/dev/null' <<'YAML'
+# терминал 1 (control-plane, root)
+cat >> /etc/falco/falco_rules.local.yaml <<EOF
 
 - rule: Terminal shell in container
   output: ' k8s_ns=%k8s.ns.name k8s_pod=%k8s.pod.name'
   override:
     output: append
-YAML
-ssh control-plane 'sudo systemctl restart falco && sleep 10'
+EOF
+systemctl restart falco && sleep 10
 ```
 
 В `/etc/falco/config.d/` включите JSON-формат и файловый вывод. Falco 0.38+ по умолчанию
-подхватывает `config_files` из этой директории; дописывание прямо в `falco.yaml` через
-`tee -a` создаёт дублирующиеся top-level ключи при повторном запуске и хуже переживает
-обновление пакета - `config.d` предназначен именно для локальных дополнений:
+подхватывает `config_files` из этой директории; дописывание прямо в `falco.yaml` создаёт
+дублирующиеся top-level ключи при повторном запуске и хуже переживает обновление пакета -
+`config.d` предназначен именно для локальных дополнений:
 
 ```bash
-ssh control-plane 'sudo mkdir -p /var/log/falco /etc/falco/config.d'
-ssh control-plane 'sudo tee /etc/falco/config.d/cks112-output.yaml >/dev/null' <<'YAML'
+# терминал 1 (control-plane, root)
+mkdir -p /var/log/falco /etc/falco/config.d
+cat > /etc/falco/config.d/cks112-output.yaml <<EOF
 json_output: true
 file_output:
   enabled: true
   filename: /var/log/falco/events.log
-YAML
-ssh control-plane 'sudo systemctl restart falco && sleep 10'
+EOF
+systemctl restart falco && sleep 10
 ```
 
 Подтверждаем структурированно, через `output_fields`, а не текстовым `grep` по имени Pod -
 это надёжно работает независимо от того, как именно отформатирована строка `output`:
 
 ```bash
+# терминал 2
 kubectl exec -n runtime-112 -it immutable-app -- sh -c 'echo shell-open; sleep 2'
+```
+
+```bash
+# терминал 1 (control-plane, root)
 sleep 2
-ssh control-plane "sudo tail -n 20 /var/log/falco/events.log" \
-  | jq -c '
-      select(
-        .rule == "Terminal shell in container" and
-        .output_fields["k8s.pod.name"] == "immutable-app" and
-        .output_fields["k8s.ns.name"] == "runtime-112"
-      )
-    ' \
+tail -n 20 /var/log/falco/events.log \
+  | jq -c 'select(.rule == "Terminal shell in container" and .output_fields["k8s.pod.name"] == "immutable-app" and .output_fields["k8s.ns.name"] == "runtime-112")' \
   | tail -1 \
   | jq '{pod: .output_fields["k8s.pod.name"], ns: .output_fields["k8s.ns.name"]}'
 # {"pod": "immutable-app", "ns": "runtime-112"}
 ```
 
-## Задание 8. Audit webhook backend
+## 8. Audit webhook backend
 
 `audit-receiver` уже развёрнут стартовым скриптом. Создайте webhook kubeconfig, указывающий
 на его Service; для лабы допустим HTTP, в production webhook требует HTTPS и client
 certificate (глава 32).
 
 ```bash
-RECEIVER_IP=$(kubectl get svc audit-receiver -n runtime-112 -o jsonpath='{.spec.clusterIP}')
-ssh control-plane "sudo tee /etc/kubernetes/audit/webhook-config.yaml >/dev/null" <<EOF
+# терминал 2: ClusterIP Service audit-receiver
+kubectl get svc audit-receiver -n runtime-112 -o jsonpath='{.spec.clusterIP}'; echo
+```
+
+```bash
+# терминал 1 (control-plane, root)
+RECEIVER_IP=10.111.15.20     # впишите ClusterIP, который вывел терминал 2
+cat > /etc/kubernetes/audit/webhook-config.yaml <<EOF
 apiVersion: v1
 kind: Config
 clusters:
@@ -503,8 +591,10 @@ EOF
 из задания 4 - webhook дополняет локальный лог, а не заменяет его:
 
 ```bash
-ssh control-plane 'sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml.bak-webhook'
-ssh control-plane "sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml"
+# терминал 1 (control-plane, root)
+mkdir -m 700 /etc/kubernetes/backup
+cp -p /etc/kubernetes/manifests/kube-apiserver.yaml /etc/kubernetes/backup/kube-apiserver.yaml.pre-webhook
+vim /etc/kubernetes/manifests/kube-apiserver.yaml
 # Добавить в command:
 #   - --audit-webhook-config-file=/etc/kubernetes/audit/webhook-config.yaml
 #   - --audit-webhook-batch-max-wait=1s
@@ -513,25 +603,27 @@ ssh control-plane "sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml"
 Дождитесь восстановления API и выполните аудируемый запрос:
 
 ```bash
-until kubectl get --raw=/readyz >/dev/null 2>&1; do sleep 5; done
+# терминал 2: повторяйте readyz, пока не вернёт "ok", затем аудируемый запрос
+kubectl get --raw=/readyz
 kubectl get configmap audit-config -n runtime-112 -o json >/dev/null
-sleep 3
 ```
 
 Проверьте, что webhook доставил событие получателю:
 
 ```bash
+# терминал 2
+sleep 3
 RECEIVER_POD=$(kubectl get pod -n runtime-112 -l app=audit-receiver -o jsonpath='{.items[0].metadata.name}')
 kubectl logs -n runtime-112 "$RECEIVER_POD" --tail=50 | grep -A5 objectRef
 ```
 
-Финальная проверка:
+Промежуточная проверка:
 
 ```bash
 check_result
 ```
 
-## Задание 9. Интеграционное задание: обход admission через containerd и обнаружение через Falco
+## 9. Интеграционное задание: обход admission через containerd и обнаружение через Falco
 
 Это задание связывает Supply Chain Security (лаба 111, глава 26) с Runtime Security этой
 лабы: admission-проверка (Kyverno) не видит контейнер, если он создан прямо через
@@ -544,21 +636,27 @@ containerd, минуя kube-apiserver. Falco, в отличие от admission c
 admission control без signature/attestor. Общий принцип для обоих один: admission работает
 только на API admission path.
 
-Подключаем lab-owned local registry names, подготовленные bootstrap-ом (не публичный Docker
-Hub - controlled abuse fixture этого задания должен быть safe и lab-owned, а не зависеть от
-доступности внешнего registry на момент проверки):
+Lab-owned local registry names подготовлены bootstrap-ом (не публичный Docker Hub - controlled
+abuse fixture этого задания должен быть safe и lab-owned, а не зависеть от доступности внешнего
+registry на момент проверки). Они лежат в `/etc/cks112/registry.env` на control-plane; подключите
+их в обоих терминалах:
 
 ```bash
-ssh control-plane 'sudo cat /etc/cks112/registry.env' > /tmp/cks112-registry.env
+# терминал 1 (control-plane, root)
+source /etc/cks112/registry.env
+echo "CKS112_REGISTRY=$CKS112_REGISTRY CKS112_TRUSTED_REPO=$CKS112_TRUSTED_REPO"
+START_TS=$(date '+%Y-%m-%d %H:%M:%S')     # момент начала прогона
+install-kyverno
+```
+
+```bash
+# терминал 2
+scp control-plane:/etc/cks112/registry.env /tmp/cks112-registry.env
 source /tmp/cks112-registry.env
 echo "CKS112_REGISTRY=$CKS112_REGISTRY CKS112_TRUSTED_REPO=$CKS112_TRUSTED_REPO"
 ```
 
-Устанавливаем Kyverno (та же версия, что в лабе 111):
-
-```bash
-ssh control-plane 'sudo install-kyverno'
-```
+(`install-kyverno` - та же версия Kyverno, что в лабе 111.)
 
 Создаём native `ValidatingPolicy` с allowlist на trusted registry. Используем Kyverno CEL
 Image library (`image(...).registry()`/`.repository()`) для точного сравнения, а не
@@ -568,6 +666,7 @@ image string просто начинается с разрешённой под�
 policy от любого другого admission webhook/policy в кластере:
 
 ```bash
+# терминал 2
 kubectl apply -f - <<YAML
 apiVersion: policies.kyverno.io/v1
 kind: ValidatingPolicy
@@ -578,8 +677,8 @@ spec:
     resourceRules:
     - apiGroups: [""]
       apiVersions: ["v1"]
-      resources: ["pods"]
-      operations: ["CREATE"]
+      resources: ["pods", "pods/ephemeralcontainers"]
+      operations: ["CREATE", "UPDATE"]
   matchConditions:
   - name: only-runtime-112
     expression: "object.metadata.namespace == 'runtime-112'"
@@ -587,7 +686,13 @@ spec:
   - expression: >
       object.spec.containers.all(c,
         image(c.image).registry() == '${CKS112_REGISTRY}' &&
-        image(c.image).repository() == '${CKS112_TRUSTED_REPO}')
+        image(c.image).repository() == '${CKS112_TRUSTED_REPO}') &&
+      (!has(object.spec.initContainers) || object.spec.initContainers.all(c,
+        image(c.image).registry() == '${CKS112_REGISTRY}' &&
+        image(c.image).repository() == '${CKS112_TRUSTED_REPO}')) &&
+      (!has(object.spec.ephemeralContainers) || object.spec.ephemeralContainers.all(c,
+        image(c.image).registry() == '${CKS112_REGISTRY}' &&
+        image(c.image).repository() == '${CKS112_TRUSTED_REPO}'))
     message: "CKS112_TRUSTED_REPO_POLICY: only ${CKS112_TRUSTED_IMAGE} is allowed in runtime-112"
   validationActions: [Deny]
 YAML
@@ -596,19 +701,8 @@ YAML
 Подтверждаем admission denial для образа вне allowlist:
 
 ```bash
-mkdir -p /var/work/tests/artifacts/9
-# Фиксируем момент начала прогона - все последующие journalctl-запросы используют
-# --since вместо -n N, чтобы не зависеть от объёма/шумности журнала и не подхватить
-# stale-события из предыдущего прогона этого же задания. Важно: время берём С
-# CONTROL-PLANE (той же машины, где потом читаем journal), а не с worker - иначе
-# при расхождении часов worker/control-plane (clock skew) отметка времени будет
-# интерпретирована неверно.
-START_TS="$(ssh control-plane "date '+%Y-%m-%d %H:%M:%S'")"
-# kubectl apply reads the manifest from ITS OWN stdin, so the heredoc must attach directly
-# to `kubectl apply -f -`, not to `tee` at the far end of the pipeline - piping through
-# `tee` first would leave `kubectl apply -f -` waiting on an empty/closed stdin instead.
-set +e
-ADMISSION_DENY=$(kubectl apply -n runtime-112 -f - 2>&1 <<YAML
+# терминал 2 (подождите около 10 секунд после создания policy)
+kubectl apply -n runtime-112 -f - > /var/work/tests/artifacts/9/admission-deny.txt 2>&1 <<YAML
 apiVersion: v1
 kind: Pod
 metadata:
@@ -620,12 +714,8 @@ spec:
     imagePullPolicy: IfNotPresent
     command: ["sleep", "60"]
 YAML
-)
-ADMISSION_RC=$?
-set -e
-printf '%s\n' "$ADMISSION_DENY" | tee /var/work/tests/artifacts/9/admission-deny.txt
-test "$ADMISSION_RC" -ne 0
-grep -q 'CKS112_TRUSTED_REPO_POLICY' /var/work/tests/artifacts/9/admission-deny.txt
+cat /var/work/tests/artifacts/9/admission-deny.txt
+# Error from server: ... CKS112_TRUSTED_REPO_POLICY: only ... is allowed in runtime-112
 ```
 
 Теперь моделируем путь, который admission controller не видит: контейнер создаётся напрямую
@@ -638,6 +728,7 @@ untrusted образы были бы неразличимы. Контейнер,
 этот суффикс, поэтому повторный прогон не столкнётся с остатками предыдущей попытки:
 
 ```bash
+# терминал 1 (control-plane, root)
 RUN_ID="$(date +%s%N)"
 BYPASS_1="cks112-bypass-1-$RUN_ID"
 OBSERVE_REPO="cks112-observe-repo-$RUN_ID"
@@ -645,9 +736,8 @@ PROBE_ALLOWED="cks112-probe-allowed-$RUN_ID"
 BYPASS_2="cks112-bypass-2-$RUN_ID"
 PREFIX_TRAP="cks112-prefix-trap-$RUN_ID"
 
-# CKS112_UNTRUSTED_IMAGE is already present in containerd's local content store from
-# bootstrap - no pull needed (and none should be required at grading time).
-ssh control-plane "sudo cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_1 'echo CKS112_CTR_BYPASS; sleep 5'"
+# CKS112_UNTRUSTED_IMAGE уже есть в локальном хранилище containerd после bootstrap - pull не нужен.
+cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_1 'echo CKS112_CTR_BYPASS; sleep 5'
 ```
 
 > `container.id != host` обязательно: команда `cks112-run ... 'echo CKS112_CTR_BYPASS'` сама
@@ -667,22 +757,23 @@ ssh control-plane "sudo cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_1 'echo CKS11
 Falco реально пишет:
 
 ```bash
-ssh control-plane 'sudo tee -a /etc/falco/falco_rules.local.yaml >/dev/null' <<'YAML'
+# терминал 1 (control-plane, root)
+cat >> /etc/falco/falco_rules.local.yaml <<EOF
 
 - rule: CKS112 Observe Trusted Repository Value
   desc: Temporary rule to capture the exact observed container.image.repository string for the trusted image
   condition: spawned_process and container.id != host and proc.cmdline contains "CKS112_OBSERVE_REPO"
   output: "CKS112 observed repository=%container.image.repository tag=%container.image.tag"
   priority: INFORMATIONAL
-YAML
-ssh control-plane 'sudo systemctl restart falco && sleep 10'
+EOF
+systemctl restart falco && sleep 10
 
-# CKS112_TRUSTED_IMAGE is already present locally from bootstrap - no pull needed.
-ssh control-plane "sudo cks112-run $CKS112_TRUSTED_IMAGE $OBSERVE_REPO 'echo CKS112_OBSERVE_REPO; sleep 5'"
+# CKS112_TRUSTED_IMAGE уже есть локально после bootstrap - pull не нужен.
+cks112-run $CKS112_TRUSTED_IMAGE $OBSERVE_REPO 'echo CKS112_OBSERVE_REPO; sleep 5'
 sleep 3
-TRUSTED_REPO=$(ssh control-plane "sudo journalctl -u falco-modern-bpf -b --no-pager -n 50 | grep -oP 'CKS112 observed repository=\K[^ ]+'" | tail -1)
+TRUSTED_REPO=$(journalctl -u falco-modern-bpf -b --no-pager -n 50 | grep -oP 'CKS112 observed repository=\K[^ ]+' | tail -1)
 echo "TRUSTED_REPO=$TRUSTED_REPO"
-ssh control-plane "sudo cks112-rm $OBSERVE_REPO" || true
+cks112-rm $OBSERVE_REPO
 ```
 
 Сохраните значение `$TRUSTED_REPO` (например `cks112/trusted` или
@@ -691,11 +782,12 @@ ssh control-plane "sudo cks112-rm $OBSERVE_REPO" || true
 а не к предположению:
 
 ```bash
-test -n "$TRUSTED_REPO" && [ "$TRUSTED_REPO" != "<NA>" ]
-printf '%s\n' "$TRUSTED_REPO" > /var/work/tests/artifacts/9/observed-trusted-repo.txt
+# терминал 1
+echo "$TRUSTED_REPO" > /tmp/art/9/observed-trusted-repo.txt
+cat /tmp/art/9/observed-trusted-repo.txt
 ```
 
-Теперь добавляем финальное правило вслед за временным observe-правилом (`tee -a`, не
+Теперь добавляем финальное правило вслед за временным observe-правилом (`>>`, не
 перезаписывая файл, чтобы не потерять правила из заданий 3 и 7). Условие использует **точное**
 сравнение с наблюдаемым `$TRUSTED_REPO`, а не `startswith`/prefix-проверку:
 `not container.image.repository startswith "$TRUSTED_REPO"` пропустил бы (не заметил бы)
@@ -707,10 +799,11 @@ property одинаковым (exact) способом и с одним и те�
 не эквивалентны как security control:
 
 ```bash
-ssh control-plane "sudo tee -a /etc/falco/falco_rules.local.yaml >/dev/null" <<YAML
+# терминал 1 (control-plane, root)
+cat >> /etc/falco/falco_rules.local.yaml <<EOF
 
 - rule: CKS112 Runtime Bypass of Admission
-  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via ctr/crictl directly)
+  desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via crictl/CRI directly)
   condition: >
     spawned_process and
     container.id != host and
@@ -723,88 +816,63 @@ ssh control-plane "sudo tee -a /etc/falco/falco_rules.local.yaml >/dev/null" <<Y
     pid=%proc.pid ppid=%proc.ppid user=%user.name)
   priority: CRITICAL
   tags: [cks112, supply_chain, admission_bypass]
-YAML
-ssh control-plane 'sudo systemctl restart falco && sleep 10'
+EOF
+systemctl restart falco && sleep 10
 ```
 
 Прежде чем повторять bypass с untrusted-образом, проверяем оба контролируемых случая, чтобы
-доказать, что сравнение действительно точное, а не prefix-based:
+доказать, что сравнение действительно точное, а не prefix-based. Сначала доверенный образ - для
+него алерта быть не должно (negative control):
 
 ```bash
-ssh control-plane "sudo cks112-run $CKS112_TRUSTED_IMAGE $PROBE_ALLOWED 'echo CKS112_CTR_BYPASS; sleep 5'"
+# терминал 1 (control-plane, root)
+cks112-run $CKS112_TRUSTED_IMAGE $PROBE_ALLOWED 'echo CKS112_CTR_BYPASS; sleep 5'
 sleep 3
-# Falco's output contains command=%proc.cmdline, not the ctr container name. Any alert
-# for this marker in the current run would therefore be a false positive for trusted repo.
-# Сохраняем отдельный evidence-файл именно для этого probe (trusted repo) - удобно
-# для диагностики независимо от общего falco-bypass-attempt.log, который читает BATS.
-ssh control-plane "sudo journalctl -u falco-modern-bpf --since '$START_TS' --no-pager | grep -F 'CKS112 runtime bypass of admission' | grep -F 'CKS112_CTR_BYPASS'" \
-  > /var/work/tests/artifacts/9/probe-trusted.log || true
-if [[ -s /var/work/tests/artifacts/9/probe-trusted.log ]]; then
-  echo "ERROR: unexpected Falco alert for allowed repository ($TRUSTED_REPO)"
-else
-  echo "OK: no alert for allowed repository ($TRUSTED_REPO), as expected"
-fi
-ssh control-plane "sudo cks112-rm $PROBE_ALLOWED" || true
+journalctl -u falco-modern-bpf --since "$START_TS" --no-pager | grep -F 'CKS112 runtime bypass of admission' | grep -F 'CKS112_CTR_BYPASS' > /tmp/art/9/probe-trusted.log
+wc -l < /tmp/art/9/probe-trusted.log        # 0: алерта для разрешённого repository нет
+cks112-rm $PROBE_ALLOWED
 ```
 
 Убираем первый container/task перед повтором, чтобы не оставлять "зависший" процесс, и
-запускаем второй с новым уникальным ID:
+запускаем второй с новым уникальным ID - для него алерт обязан быть:
 
 ```bash
-ssh control-plane "sudo cks112-rm $BYPASS_1" || true
+# терминал 1 (control-plane, root)
+cks112-rm $BYPASS_1
 
-ssh control-plane "sudo cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_2 'echo CKS112_CTR_BYPASS; sleep 5'"
+cks112-run $CKS112_UNTRUSTED_IMAGE $BYPASS_2 'echo CKS112_CTR_BYPASS; sleep 5'
 sleep 3
-ssh control-plane "sudo journalctl -u falco-modern-bpf --since '$START_TS' --no-pager | grep 'CKS112 runtime bypass of admission'" \
-  | tee /var/work/tests/artifacts/9/falco-bypass-attempt.log \
-  | tee /var/work/tests/artifacts/9/probe-alpine.log >/dev/null
-
-ssh control-plane "sudo cks112-rm $BYPASS_2" || true
+journalctl -u falco-modern-bpf --since "$START_TS" --no-pager | grep 'CKS112 runtime bypass of admission' > /tmp/art/9/falco-bypass-attempt.log
+cp /tmp/art/9/falco-bypass-attempt.log /tmp/art/9/probe-untrusted.log
+cks112-rm $BYPASS_2
 ```
 
 Наконец, доказываем сам prefix-trap: репозиторий, построенный как `${TRUSTED_REPO}-evil`,
 НАЧИНАЕТСЯ с той же подстроки, что и разрешённый `$TRUSTED_REPO`, но не равен ему точно.
-Если бы Falco condition использовал `startswith` (как в более ранней, неправильной версии
+Если бы Falco condition использовал `startswith` (как в наивном варианте
 этого правила), этот образ прошёл бы НЕЗАМЕЧЕННЫМ - именно поэтому исправленное условие
-`!=` обязано поймать его:
+`!=` обязано поймать его. Образ prefix-trap подготовлен bootstrap-ом (`$CKS112_PREFIX_IMAGE`,
+отдельный digest):
 
 ```bash
-# Собираем evil-ссылку так, чтобы TRUSTED_REPO остался буквальным префиксом registry-строки,
-# независимо от того, включает ли он сам hostname registry (cks112.local:5000/...) или только
-# repository-путь (cks112/...):
-case "$TRUSTED_REPO" in
-  */*) EVIL_IMAGE_REF="${TRUSTED_REPO}-evil:1.0" ;;
-  *)   EVIL_IMAGE_REF="${CKS112_REGISTRY}/${TRUSTED_REPO}-evil:1.0" ;;
-esac
-# Содержимое образа для prefix-trap не имеет значения - переиспользуем уже локально
-# присутствующий untrusted-образ и просто помечаем его новым (evil) именем.
-ssh control-plane "sudo ctr -n k8s.io images tag $CKS112_UNTRUSTED_IMAGE $EVIL_IMAGE_REF"
-ssh control-plane "sudo cks112-run $EVIL_IMAGE_REF $PREFIX_TRAP 'echo CKS112_CTR_BYPASS; sleep 5'"
+# терминал 1 (control-plane, root)
+cks112-run $CKS112_PREFIX_IMAGE $PREFIX_TRAP 'sleep 2; echo CKS112_CTR_BYPASS; sleep 6'
 sleep 3
-# Ищем именно наблюдаемое значение TRUSTED_REPO с суффиксом -evil, а не хардкодим
-# конкретное имя репозитория - EVIL_IMAGE_REF мог быть построен из любого observed
-# значения, не только library/busybox.
-ssh control-plane "sudo journalctl -u falco-modern-bpf --since '$START_TS' --no-pager | grep -F 'CKS112 runtime bypass of admission' | grep -F '${TRUSTED_REPO}-evil'" \
-  | tee -a /var/work/tests/artifacts/9/falco-bypass-attempt.log \
-  | tee /var/work/tests/artifacts/9/probe-prefix.log >/dev/null
-
-ssh control-plane "sudo cks112-rm $PREFIX_TRAP" || true
+journalctl -u falco-modern-bpf --since "$START_TS" --no-pager | grep -F 'CKS112 runtime bypass of admission' | grep -F "${TRUSTED_REPO}-evil" > /tmp/art/9/probe-prefix.log
+cat /tmp/art/9/probe-prefix.log >> /tmp/art/9/falco-bypass-attempt.log
+cks112-rm $PREFIX_TRAP
 ```
 
-> `$EVIL_IMAGE_REF` строится КАК СУФФИКС к observed `$TRUSTED_REPO` (`<trusted-repo>-evil`),
-> поэтому его repository-строка гарантированно НАЧИНАЕТСЯ с `$TRUSTED_REPO` как точной
-> подстроки-префикса, независимо от того, какой конкретно формат ваш стек реально
-> использует (`cks112/trusted` или `cks112.local:5000/cks112/trusted`) - именно на этом и
-> только на этом основано доказательство prefix-trap.
+```bash
+# терминал 2: забрать файлы задания 9
+scp 'control-plane:/tmp/art/9/*' /var/work/tests/artifacts/9/
+```
 
 > **Структура evidence-файлов задания 9.** `falco-bypass-attempt.log` - основной
 > объединённый artifact, который проверяет автоматическая приёмка (содержит оба алерта:
-> untrusted alpine и prefix-trap, но не должен содержать алерт для trusted repo).
-> Дополнительно каждый probe также пишет собственный отдельный файл для более удобной
-> ручной диагностики без необходимости разбирать общий лог: `probe-trusted.log` (должен
-> быть пустым - это и есть negative control), `probe-alpine.log` и `probe-prefix.log`.
-> Раздельные файлы избыточны по отношению к основному artifact, но снижают риск спутать
-> evidence разных проб при повторных прогонах или troubleshooting.
+> untrusted и prefix-trap, но не должен содержать алерт для trusted repo). Дополнительно
+> каждый probe пишет собственный файл для ручной диагностики: `probe-trusted.log` (должен быть
+> пустым - это и есть negative control), `probe-untrusted.log` и `probe-prefix.log`.
 
 Ключевой вывод этого задания: registry allowlist на admission и Falco на runtime - не
 взаимозаменяемые слои, а взаимодополняющие. Admission останавливает путь через Kubernetes
@@ -832,7 +900,8 @@ safe fixture (backing device на самом деле host `/dev/null`, а не 
 `control-plane`:
 
 ```bash
-ssh control-plane "sudo tee -a /etc/falco/falco_rules.local.yaml >/dev/null" <<'EOF'
+# терминал 1 (control-plane, root)
+cat >> /etc/falco/falco_rules.local.yaml <<EOF
 - rule: CKS112 Container access to /dev/mem
   desc: Detect an open of /dev/mem from a container process
   condition: >
@@ -846,7 +915,7 @@ ssh control-plane "sudo tee -a /etc/falco/falco_rules.local.yaml >/dev/null" <<'
   priority: CRITICAL
   tags: [container, mitre_privilege_escalation, mitre_defense_evasion]
 EOF
-ssh control-plane 'sudo systemctl restart falco && sleep 10'
+systemctl restart falco && sleep 10
 ```
 
 Дождитесь следующего периодического цикла `mem-scanner` (каждые ~15 секунд) и найдите
@@ -855,19 +924,35 @@ ssh control-plane 'sudo systemctl restart falco && sleep 10'
 alert", что и в задании 6:
 
 ```bash
-mkdir -p /var/work/tests/artifacts/10
-ssh control-plane "sudo journalctl -u falco-modern-bpf -b --no-pager -n 500 | grep -F 'CKS112 Container access to /dev/mem' | tail -1" \
-  > /var/work/tests/artifacts/10/falco-devmem.log
-cat /var/work/tests/artifacts/10/falco-devmem.log
+# терминал 1 (control-plane, root)
+journalctl -u falco-modern-bpf -b --no-pager -n 500 | grep -F 'CKS112 Container access to /dev/mem' | tail -1 > /tmp/art/10/falco-devmem.log
+cat /tmp/art/10/falco-devmem.log
+exit   # из root
+exit   # с control-plane
 ```
 
-Убедившись, что обнаружение подтверждено самим Falco (а не Pod manifest), останавливаем
-workload:
+```bash
+# терминал 2
+scp control-plane:/tmp/art/10/falco-devmem.log /var/work/tests/artifacts/10/
+```
+
+Убедившись, что обнаружение подтверждено самим Falco (а не Pod manifest), сохраните Pod,
+названный в alert, до масштабирования (в сохранённом JSON в цепочке owner будет ReplicaSet,
+принадлежащий Deployment `mem-scanner`):
 
 ```bash
+# терминал 2
+ALERT_POD=$(sed -n 's/.*k8s_pod=\([^ ]*\).*/\1/p' /var/work/tests/artifacts/10/falco-devmem.log | tail -1)
+echo "$ALERT_POD"
+kubectl get pod "$ALERT_POD" -n runtime-112 -o json > /var/work/tests/artifacts/10/detected-pod.json
+```
+
+Затем останавливаем workload:
+
+```bash
+# терминал 2
 kubectl scale deployment mem-scanner -n runtime-112 --replicas=0
-kubectl get deployment mem-scanner -n runtime-112 -o json \
-  > /var/work/tests/artifacts/10/scaled-down.json
+kubectl get deployment mem-scanner -n runtime-112 -o json > /var/work/tests/artifacts/10/scaled-down.json
 jq '.spec.replicas' /var/work/tests/artifacts/10/scaled-down.json
 # ожидается: 0
 ```

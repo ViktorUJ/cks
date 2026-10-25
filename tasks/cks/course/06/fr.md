@@ -24,7 +24,7 @@
 > **Cilium n'apparaît pas de lui-même dans un cluster.** C'est un CNI distinct, que
 > l'administrateur du cluster installe - avec le CLI `cilium` ou un Helm chart, sur un cluster
 > déjà créé ou à la place du CNI par défaut pendant sa création. Si Cilium n'est pas encore installé
-> dans votre environnement, tous les exemples de ce chapitre ne s'appliquent pas avant son installation. Instruction
+> dans votre environnement, aucun exemple de ce chapitre ne s'applique avant son installation. Instruction
 > officielle : [Cilium Quick Installation](https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/).
 > Des exemples plus détaillés de règles L3/L4/L7 que ceux présentés dans ce chapitre figurent dans la
 > section officielle [Overview of Network Policy](https://docs.cilium.io/en/stable/security/policy/),
@@ -56,7 +56,7 @@ La `NetworkPolicy` du chapitre 04 est une couche distincte sur ce même modèle 
 lit l'objet `NetworkPolicy` et ajoute ses propres règles du noyau qui autorisent ou
 bloquent le paquet **avant ou après** les règles kube-proxy, selon l'implémentation.
 
-> 🧠 Cilium associe les labels des workload à une identity et applique les politiques L3/L4 au moyen de eBPF maps ; L7 exige un proxy path.
+> 🧠 Cilium associe les labels des workload à une identity et applique les politiques L3/L4 au moyen d'eBPF maps ; L7 exige un proxy path.
 
 ### Ce que Cilium change : eBPF comme principal datapath L3/L4
 
@@ -178,7 +178,7 @@ portable ; Cilium la complète avec L7, FQDN, entities et observabilité.
 Une politique devient applicable à un endpoint lorsque `endpointSelector` le sélectionne. En
 `policyEnforcementMode: default`, Cilium active enforcement lorsqu'un endpoint est sélectionné par une
 politique ; `always` l'active pour tous les endpoints (un endpoint sans règle allow reçoit une
-interdiction), tandis que `never` désactive enforcement. Par défaut, la allow-list agit
+interdiction), tandis que `never` désactive enforcement. Par défaut, l'allow-list agit
 **indépendamment pour chaque direction** : la présence de `ingress` rend ingress default-deny jusqu'à
 correspondance avec une règle allow, et la présence de `egress` rend aussi default-deny uniquement pour egress.
 Une politique avec seulement `ingress` ne ferme pas egress, et inversement. Le selector doit donc être
@@ -416,8 +416,7 @@ comme DaemonSet `cilium-envoy` distinct, partagé par tous les Pod de ce nœud. 
 scénarios examinés ci-dessus, le trafic redirigé par une politique L7 ou
 proxy load balancing (`lb-l7`) le traverse. Cette liste n'est pas exhaustive : Cilium Ingress, Gateway API et
 `CiliumEnvoyConfig` dirigent également le trafic par le même Envoy par nœud. Le trafic Pod-to-Pod ordinaire
-L3/L4, pour lequel aucune de ces fonctionnalités fondées sur un proxy n'est activée, reste sur le
-eBPF datapath sans passer par userspace.
+L3/L4, pour lequel aucune de ces fonctionnalités fondées sur un proxy n'est activée, reste sur le datapath eBPF sans passer par userspace.
 
 **Comment cela affecte la latence et les paramètres de connexion.** Chaque paquet redirigé
 effectue une transition supplémentaire via le processus userspace Envoy sur le même nœud, et non via le
@@ -594,7 +593,7 @@ spec:
 
 Ne considérez pas `host` comme un objet inoffensif. `toEntities: host` contrôle l'accès réseau
 au nœud local et aux workloads host-networked et peut donc ouvrir un chemin vers kubelet ou
-d'autres listener TCP/UDP sur le host. Le runtime CRI socket est un mécanisme distinct : par exemple,
+d'autres listeners TCP/UDP sur le host. Le runtime CRI socket est un mécanisme distinct : par exemple,
 containerd est habituellement accessible via le Unix domain socket
 `/var/run/containerd/containerd.sock`, et son exposition dépend des filesystem
 mounts/`hostPath` et des privilèges du Pod, et non de `toEntities: host` à lui seul. La restriction
@@ -758,7 +757,7 @@ une modification manuelle sans historique.
 - **`toFQDNs`** est une règle egress fondée sur les noms DNS et les réponses DNS observées.
 - **Entity** est un groupe d'adresses Cilium prédéfini, par exemple `world`, `cluster`, `host`.
 - **Hubble** est l'observabilité des flows réseau Cilium.
-- **eBPF** est le mécanisme du noyau Linux avec lequel Cilium met en œuvre le datapath et policy enforcement.
+- **eBPF** est le mécanisme du noyau Linux avec lequel Cilium met en œuvre le datapath et le policy enforcement.
 
 ## 06.10. Résumé du chapitre
 
@@ -826,7 +825,7 @@ Une règle L3/L4 autorise toute la connexion TCP sur le port 80 et ne distingue 
 <details>
 <summary>6. Quand les entities `world`, `cluster` et `host` sont-elles adaptées, et pourquoi `host` demande-t-il une prudence particulière ?</summary>
 
-`world` désigne les adresses hors du cluster, `cluster` les endpoints en son sein, et `host` l'endpoint host local du nœud ainsi que les workloads host-networked. L'accès à `host` peut toucher kubelet et d'autres listener réseau du nœud, et exige donc une host-firewall policy prudente. Le runtime CRI socket est un autre attack path : il s'agit habituellement d'un Unix socket dans le filesystem du nœud, qui doit être protégé en limitant `hostPath`, les privilèges et les autres mécanismes d'accès au host filesystem.
+`world` désigne les adresses hors du cluster, `cluster` les endpoints en son sein, et `host` l'endpoint host local du nœud ainsi que les workloads host-networked. L'accès à `host` peut toucher kubelet et d'autres listeners réseau du nœud, et exige donc une host-firewall policy prudente. Le runtime CRI socket est un autre attack path : il s'agit habituellement d'un Unix socket dans le filesystem du nœud, qui doit être protégé en limitant `hostPath`, les privilèges et les autres mécanismes d'accès au host filesystem.
 </details>
 
 <details>
@@ -838,7 +837,7 @@ Après `cilium status --wait` et la configuration de l'accès à Hubble, les ref
 <details>
 <summary>8. Pourquoi est-il dangereux de commencer le déploiement d'une CCNP avec `endpointSelector: {}` dans un cluster de production ?</summary>
 
-Une CCNP agit dans tout le cluster, et un selector vide choisit tous les endpoints ; une erreur de allow/deny peut donc couper le trafic système et applicatif. Testez d'abord la règle avec des labels étroits dans un namespace distinct, observez le baseline avec Hubble et préparez un rollback en supprimant la policy ou en revenant en arrière via GitOps.
+Une CCNP agit dans tout le cluster, et un selector vide choisit tous les endpoints ; une erreur d'allow/deny peut donc couper le trafic système et applicatif. Testez d'abord la règle avec des labels étroits dans un namespace distinct, observez le baseline avec Hubble et préparez un rollback en supprimant la policy ou en revenant en arrière via GitOps.
 </details>
 
 ## Pratique
@@ -848,7 +847,7 @@ l'ordre des politiques au lieu d'essayer de déboguer tous les niveaux simultan�
 
 🧪 Lab 102 (Cilium NetworkPolicy L3/L4/L7) : [tasks/cks/labs/102](../../labs/102/README_FR.MD)
 
-🧪 Lab 115 (installer Cilium depuis zéro : remplacement de kube-proxy, WireGuard et Mutual Authentication basée sur SPIRE - niveau avancé/production, hors du périmètre formel de l'examen CKS Core) : [tasks/cks/labs/115](../../labs/115/README_RU.MD)
+🧪 Lab 115 (installer Cilium depuis zéro : remplacement de kube-proxy, WireGuard et Mutual Authentication basée sur SPIRE - niveau avancé/production, hors du périmètre formel de l'examen CKS Core) : [tasks/cks/labs/115](../../labs/115/README_FR.MD)
 
 🎮 Cilium Hubble (documentation et exemples interactifs) :
 [Hubble observability](https://docs.cilium.io/en/stable/observability/hubble/) ·

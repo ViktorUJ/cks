@@ -256,7 +256,7 @@ rules:
 
 Remove `nodes/proxy` from such roles: even `get` on this subresource is not harmless read-only access. Through kubelet WebSocket endpoints, it can permit command execution in containers. Fine-grained authorization does not replace TLS, network controls, or RBAC review, but it makes it possible to migrate from this broad permission to verifiable least privilege.
 
-At the cloud layer, use a security group or firewall: allow `2379` only from authorized etcd clients, primarily kube-apiserver; allow `2380` only between etcd members. This difference is important for external etcd. Allow `10250` only to the control plane and explicitly required monitoring; allow `6443` only from trusted networks, a VPN, a bastion, or a private endpoint. Do not expose etcd through NodePort, LoadBalancer, a reverse proxy, or public DNS. etcd requires client/peer TLS and client certificates, not only port filtering.
+At the cloud layer, use a security group or firewall: allow `2379` only from authorized etcd clients, primarily kube-apiserver; allow `2380` only between etcd members. This difference is important for external etcd. Allow `10250` only from the control plane and explicitly required monitoring; allow `6443` only from trusted networks, a VPN, a bastion, or a private endpoint. Do not expose etcd through `NodePort`, `LoadBalancer`, a reverse proxy, or public DNS. etcd requires client/peer TLS and client certificates, not only port filtering.
 
 Ordinary `NetworkPolicy` is useful for Pod-to-Pod traffic, but it is not a universal firewall for host endpoints. Traffic to a node IP can change its source because of SNAT, and a hostNetwork Pod can bypass the pod dataplane. To protect a node, combine CNI policy with a host firewall, cloud network controls, and component configuration. Cilium can provide additional host-aware controls, but they depend on CNI mode and require separate design.
 
@@ -264,7 +264,7 @@ Ordinary `NetworkPolicy` is useful for Pod-to-Pod traffic, but it is not a unive
 
 ## 05.4. Legacy: archived Kubernetes Dashboard and minimal GUI access
 
-For an already installed Dashboard, plan a replacement or retirement. Until then, do not expose the UI through a public LoadBalancer or Internet-facing Ingress and do not use `cluster-admin` as the daily identity. Keep the UI behind a VPN or authenticated access proxy, apply TLS and minimal namespace-scoped RBAC. The same requirements apply to any other supported web or desktop UI on top of the Kubernetes API: private exposure, strong authentication, short sessions, audit, and minimal-scope kubeconfig or ServiceAccount.
+For an already installed Dashboard, plan a replacement or retirement. Until then, do not expose the UI through a public `LoadBalancer` or Internet-facing Ingress and do not use `cluster-admin` as the daily identity. Keep the UI behind a VPN or authenticated access proxy, apply TLS and minimal namespace-scoped RBAC. The same requirements apply to any other supported web or desktop UI on top of the Kubernetes API: private exposure, strong authentication, short sessions, audit, and minimal-scope kubeconfig or ServiceAccount.
 
 For a read-only role, `get/list/watch` are needed for the common resource listing, while subresource `pods/log` practically needs only `get`:
 
@@ -349,7 +349,7 @@ A useful diagnostic order is to check Pod labels and policies, confirm CNI suppo
 - **Identity without node credentials for Pods.** Do not give applications implicit access to the node IAM role. In EKS, use EKS Pod Identity or IRSA and IMDSv2 hop limit `1` for ordinary non-`hostNetwork` Pods without disabling the node endpoint. Assess `hostNetwork` Pods separately: they retain IMDS access, so prohibit `hostNetwork` for untrusted workloads through policy/admission. In GKE, allow the needed GKE metadata path for Workload Identity Federation; in AKS, account for the fact that IMDS restriction is Preview, does not cover `hostNetwork`, is not intended for a production SLA, can be incompatible with add-ons/extension scenarios, and does not support Windows node pools. In all cases, apply minimal provider IAM roles and retain Cloud audit evidence.
 - **Egress allowlist as code.** Keep default-deny, DNS, and narrow destinations alongside the workload, review them, and test them in pre-production. A broad `0.0.0.0/0` with `except` must have an owner and removal deadline.
 - **Private management plane.** The API server, kubelet, and etcd are reachable only from the required networks. Security group, host firewall, TLS, and RBAC work together because the failure of one layer must not expose an endpoint.
-- **GUI as a legacy/management endpoint.** For an existing or supported UI, use SSO/auth proxy, short sessions, TLS, and namespace-scoped roles. Long-lived bearer tokens, a public LoadBalancer, and `cluster-admin` are not a normal configuration.
+- **GUI as a legacy/management endpoint.** For an existing or supported UI, use SSO/auth proxy, short sessions, TLS, and namespace-scoped roles. Long-lived bearer tokens, a public `LoadBalancer`, and `cluster-admin` are not a normal configuration.
 - **Observability and regular audit.** Track CNI flow logs, `NetworkPolicy` changes, public Services/Ingress, open security groups, and RBAC bindings. Check the metadata block after CNI, cloud template, and network topology updates.
 
 ## 05.7. Mini-glossary
@@ -443,7 +443,7 @@ Check that the read-only port is disabled (`--read-only-port=0`), anonymous acce
 <details>
 <summary>8. How do metadata endpoint, node identity, and workload identity differ for AWS/EKS, GKE, and AKS, and why must the metadata path not be unconditionally blocked for GKE?</summary>
 
-In AWS/EKS, IMDS issues the node identity and workloads use EKS Pod Identity or IRSA; in GKE, Workload Identity Federation receives a short-lived workload token through the GKE metadata server; AKS uses Microsoft Entra Workload ID. Therefore, the GKE metadata path can be required for workload identity, and a strict policy allows only the documented path for the used dataplane rather than unconditionally blocking the address.
+In AWS/EKS, IMDS issues the node identity and workloads use EKS Pod Identity or IRSA; in GKE, Workload Identity Federation receives a short-lived workload token through the GKE metadata server; AKS uses Microsoft Entra Workload ID. Therefore, the GKE metadata path can be required for workload identity, and a strict policy allows only the documented path for the dataplane in use rather than unconditionally blocking the address.
 </details>
 
 <details>

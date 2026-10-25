@@ -34,7 +34,7 @@ flowchart TB
 ```
 
 - **Network**はsourceが`6443`へTCP connectionを確立できるかを決めます。最初で最も低costなbarrierですが、identityとRBACの代わりにはなりません。
-- **TLS transport**はconnectionのconfidentialityとintegrityを保護し、clientがAPI server identityを検証できるようにします。server-side TLSだけはclient allowlistではありません。X.509 client-certificate authenticationでは、TLSがclient certificateをrequest・受信し、そのprivate keyのpossessionを証明します。その後**Authentication** layerのKubernetes X.509 authenticatorがconfigured client CAに対してcertificateを検証し、identityをuser/groupsに変換します。
+- **TLS transport**はconnectionのconfidentialityとintegrityを保護し、clientがAPI server identityを検証できるようにします。server-side TLSだけではclient allowlistになりません。X.509 client-certificate authenticationでは、TLSがclient certificateをrequest・受信し、そのprivate keyのpossessionを証明します。その後**Authentication** layerのKubernetes X.509 authenticatorがconfigured client CAに対してcertificateを検証し、identityをuser/groupsに変換します。
 - **Authentication**はcertificate、bearer token、その他credentialをsubjectに対応付けます。anonymous accessが有効なら、credentialのないrequestはuser `system:anonymous`とgroup `system:unauthenticated`になります。currentの`AuthenticationConfiguration`では、anonymous accessを**正確なHTTP paths**の明示的allowlistで制限できます。よく使うpathは`/livez`、`/readyz`、必要なら`/healthz`です。kubeadm public token discoveryには、`/api/v1/namespaces/kube-public/configmaps/cluster-info`を明示的に許可する必要がある場合があります。他のpathsはanonymous identityを受けません。
 - **Authorization**は許可されるverb、resource、scopeを確認します。通常のkubeadm clusterでは`Node,RBAC`です。
 - **Admission**はauthorization後、admission controlが適用されるrequests、主にcreate/delete/modifyと一部custom verbsだけで機能します。objectの`get`、`list`、`watch`はadmission layerを通りません。admissionはobjectを変更またはrequestをrejectできます。ここで`NodeRestriction`はkubelet identitiesからの許可される**changes**を制限します。
@@ -330,7 +330,7 @@ flowchart TB
 
 NetworkPolicyはSecurity Groupやhost firewallを置き換えません。CNIがPod trafficに適用するもので、host、external、control-plane trafficを各topologyで同じようにcoverするとは限りません。managed Kubernetesではendpointとfirewallの一部をproviderが所有します。その場合、存在しないstatic Podを編集しようとせず、providerのprivate/public endpoint、allowed CIDRs、個別control-plane security rulesを確認します。
 
-firewallを変更する前にcurrent listenersとruleを記録し、rollback用のseparate console sessionを維持してください。administratorまたはkubeletからの`6443`をblockするとclusterにアクセスできなくなります。
+firewallを変更する前にcurrent listenersとruleを記録し、rollback用のseparate console sessionを維持してください。administratorまたはkubeletからの`6443`をblockするとclusterにアクセスできなくなる可能性があります。
 
 ```bash
 # control planeで実行: APIをlistenするもの。specific programはruntimeに依存する。
@@ -400,7 +400,7 @@ APISERVER=$(kubectl config view --minify \
   -o jsonpath='{.clusters[0].cluster.server}')
 printf '%s\n' "$APISERVER"
 
-# Protected path: `401`は/ versionがanonymous authnを通らないことを証明する。
+# Protected path: `401`は/versionがanonymous authnを通らないことを証明する。
 # Lab testでは-kを使えるが、productionでは--cacertでCAを渡す。
 curl -k -sS -o /dev/null -w '%{http_code}\n' "$APISERVER/version"
 
@@ -466,7 +466,7 @@ anonymous checksとforbidden `delete`には`no`を期待します。dedicated `a
 ## 12.10. 章のまとめ
 
 - APIはnetwork、TLS、authentication、authorizationという複数のindependent layersでprotectします。mutatingとsupportされるcustom requestsにはadmissionも追加されます。
-- kubeletではanonymous access（`--anonymous-auth=false`）を無効化します。kube-apiserverでは、`AuthenticationConfiguration`でhealth endpointsとpublic token discoveryが必要な間は正確な`kube-public/cluster-info` pathを明示的に制限するか、いずれの場合も`system:anonymous`と`system:unauthenticated`の不要なRoleBinding/ClusterRoleBindingだけを確認して削除します。
+- kubeletではanonymous access（`--anonymous-auth=false`）を無効化します。kube-apiserverでは、`AuthenticationConfiguration`でanonymous accessをhealth endpointsに、またpublic token discoveryが必要な間は正確な`kube-public/cluster-info` pathに限って明示的に制限します。いずれの場合も、`system:anonymous`と`system:unauthenticated`の不要なRoleBinding/ClusterRoleBindingだけを確認して削除します。
 - legacy kubelet read-only portは`readOnlyPort: 0`で無効化します。`10250`はauthentication、`Webhook` authorization、network restriction付きだけにします。
 - secureなkubeadm authorizer baselineは`Node,RBAC`です。`AlwaysAllow`はleast privilegeと両立しません。`Node` authorizerがkubelet API permissionsを定め、NodeRestrictionがそのmutating requestsにrestrictionsを追加します。
 - API `:6443`にはprivate endpointを優先します。public endpointではstrict firewall/Security Group allowlistとstrong authenticationが必須です。どの場合もPod egressへのtargeted NetworkPolicyがlateral movementを減らします。
@@ -544,13 +544,13 @@ authorizer chainはmoduleがAllowまたはDenyを返すと直ちに停止し、N
 <details>
 <summary>6. API serverに対してNetworkPolicyがfirewallまたはSecurity Groupを置き換えない理由と、public endpointが正当化できるconditionsは何ですか?</summary>
 
-NetworkPolicyはCNIがPod trafficへ適用するもので、host、external、control-plane trafficを同じようにcoverする必要はありません。standard policyはDNS nameでdestination Serviceを選びません。firewallとSecurity Groupは別layerで`:6443`へのsource accessを制限します。public endpointはexplicit reason、strict CIDR allowlist、strong authentication、network architectureの理解がある場合だけ正当化できます。private endpointの方がしばしば望ましい選択です。
+NetworkPolicyはCNIがPod trafficへ適用するもので、host、external、control-plane trafficを同じようにcoverする必要はありません。standard policyはDNS nameでdestination Serviceを選びません。firewallとSecurity Groupは別layerで`:6443`へのsource accessを制限します。public endpointはexplicit reason、strict CIDR allowlist、strong authenticationがあり、network architectureを管理できている場合だけ正当化できます。private endpointの方がしばしば望ましい選択です。
 </details>
 
 <details>
 <summary>7. API network reachabilityとanonymous authorizationの不在を別々に証明する二つのchecksは何ですか?</summary>
 
-administrativeまたは他のallowed machineから、`kubectl cluster-info`または`kubectl get --raw='/livez?verbose'`でnetwork reachabilityとhealthを確認します。`/version`などprotected pathへcredentialなしの`curl`を行いAPI `401`を期待してAuthenticationを確認します。selective configurationでは、exact allowed health/discovery pathが意図的に`401`を返さないため別にtestします。`no`を期待する`kubectl auth can-i ... --as=system:anonymous --as-group=system:unauthenticated`はimpersonated identityのauthorizerだけを確認します。timeoutまたはrefusedはAuthenticationの証明ではなくnetworkとしてdiagnoseします。
+administrativeまたは他のallowed machineから、`kubectl cluster-info`または`kubectl get --raw='/livez?verbose'`でnetwork reachabilityとhealthを確認します。`/version`などprotected pathへcredentialなしの`curl`を行いAPI `401`を期待してAuthenticationを確認します。selective configurationでは、exact allowed health/discovery pathは意図的に`401`を返さない場合があるため別にtestします。`no`を期待する`kubectl auth can-i ... --as=system:anonymous --as-group=system:unauthenticated`はimpersonated identityのauthorizerだけを確認します。timeoutまたはrefusedはAuthenticationの証明ではなくnetworkとしてdiagnoseします。
 </details>
 
 <details>
@@ -566,7 +566,7 @@ Lab 104ではminimal Roleを持つServiceAccountを作成し、tokenのautomatic
 🧪 Lab 104（RBAC minimization、ServiceAccount tokens、API restriction）：
 [tasks/cks/labs/104](../../labs/104/README_JP.MD)
 
-🧪 Lab 114（kubeconfig contexts、client certificate の抽出、Service exposure の NodePort -> ClusterIP への縮小）：[tasks/cks/labs/114](../../labs/114/README_RU.MD)
+🧪 Lab 114（kubeconfig contexts、client certificate の抽出、Service exposure の NodePort -> ClusterIP への縮小）：[tasks/cks/labs/114](../../labs/114/README_JP.MD)
 
 🌐 追加のinteractive practice（killer.sh/killercoda、external resource）：[apiserver-crash](https://killercoda.com/killer-shell-cks/scenario/apiserver-crash) · [apiserver-misconfigured](https://killercoda.com/killer-shell-cks/scenario/apiserver-misconfigured) · [apiserver-node-restriction](https://killercoda.com/killer-shell-cks/scenario/apiserver-node-restriction)
 

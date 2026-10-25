@@ -181,14 +181,14 @@ curl --noproxy '*' -sS -o /dev/null -w '%{http_code}\n' \
 
 ## 05.3. Administrative Endpoints: kubelet, etcd und kube-apiserver
 
-Metadaten sind nicht das einzige Ziel. Nach dem Zugriff auf das Pod-Netzwerk sucht ein Angreifer nach Management-Endpoints, doch ihre Bedrohungsmodelle unterscheiden sich. etcd und gewöhnlich kubelet verlangen eine strikte Netzwerkeinschränkung. Ein gewöhnlicher Pod erreicht kube-apiserver üblicherweise über `kubernetes.default`; dessen Schutz beruht primär auf TLS, Authentication, Authorization/RBAC und Admission, während Egress-Policy nur unnötige Pfade zusätzlich einschränkt. Fassen Sie diese Endpoints nicht in einer Regel zusammen, um sie "für alle Pods zu blockieren".
+Metadaten sind nicht das einzige Ziel. Nach dem Zugriff auf das Pod-Netzwerk sucht ein Angreifer nach Management-Endpoints, doch ihre Bedrohungsmodelle unterscheiden sich. etcd und gewöhnlich kubelet verlangen eine strikte Netzwerkeinschränkung. Ein gewöhnlicher Pod erreicht kube-apiserver üblicherweise über `kubernetes.default`; dessen Schutz beruht primär auf TLS, Authentication, Authorization/RBAC und Admission, während Egress-Policy nur unnötige Pfade zusätzlich einschränkt. Fassen Sie diese Endpoints nicht in einer Regel zusammen, um sie „für alle Pods zu blockieren“.
 
 | Endpoint | Üblicher Port | Risiko bei Fehlkonfiguration | Baseline-Schutz |
 |---|---:|---|---|
 | kubelet HTTPS | `10250` | Befehlsausführung, Zugriff auf Pod-Daten oder Node API bei schwacher authn/authz | Mit Firewall schließen, anonymous access deaktivieren, Webhook Authorization aktivieren, TLS verwenden |
 | kubelet read-only | `10255` | Gab historisch Pod-Informationen ohne Authentication preis | Nicht aktivieren, `--read-only-port=0` |
 | etcd client/peer | `2379` / `2380` | Lesen oder Ändern des Clusterzustands einschließlich Secrets | `2379` nur von autorisierten etcd Clients, vor allem kube-apiserver, `2380` nur zwischen etcd Members; mTLS, Firewall, keine public exposure |
-| kube-apiserver | `6443` | Eingangspunkt für die gesamte Kubernetes API | TLS, starke authn/authz, private Endpoint oder Allowlist, Audit |
+| kube-apiserver | `6443` | Eingangspunkt für die gesamte Kubernetes API | TLS, starke authn/authz, privater Endpoint oder Allowlist, Audit |
 
 ```mermaid
 flowchart TB
@@ -264,7 +264,7 @@ Eine gewöhnliche `NetworkPolicy` ist für Pod-to-Pod Verkehr hilfreich, jedoch 
 
 ## 05.4. Legacy: archiviertes Kubernetes Dashboard und minimaler GUI-Zugriff
 
-Planen Sie für ein bereits installiertes Dashboard dessen Ablösung oder Stilllegung. Bis dahin dürfen Sie das UI nicht über einen öffentlichen LoadBalancer oder Internet-facing Ingress bereitstellen und `cluster-admin` nicht als alltägliche Identity verwenden. Halten Sie das UI hinter einem VPN oder authentifizierten Access Proxy, wenden Sie TLS und minimale Namespace-spezifische RBAC an. Dieselben Anforderungen gelten für jedes andere unterstützte Web- oder Desktop-UI über der Kubernetes API: private Bereitstellung, starke Authentication, kurze Sessions, Audit und kubeconfig oder ServiceAccount mit minimalem Scope.
+Planen Sie für ein bereits installiertes Dashboard dessen Ablösung oder Stilllegung. Bis dahin dürfen Sie das UI nicht über einen öffentlichen LoadBalancer oder Internet-facing Ingress bereitstellen und `cluster-admin` nicht als alltägliche Identity verwenden. Halten Sie das UI hinter einem VPN oder authentifizierten Access Proxy, wenden Sie TLS und minimales Namespace-spezifisches RBAC an. Dieselben Anforderungen gelten für jedes andere unterstützte Web- oder Desktop-UI über der Kubernetes API: private Bereitstellung, starke Authentication, kurze Sessions, Audit und kubeconfig oder ServiceAccount mit minimalem Scope.
 
 Für eine read-only Rolle werden für die übliche Auflistung von Ressourcen `get/list/watch` benötigt, während die Subresource `pods/log` praktisch nur `get` braucht:
 
@@ -368,7 +368,7 @@ Eine hilfreiche Diagnose-Reihenfolge besteht darin, Pod-Labels und Policies zu p
 
 - Cloud-Metadaten können ein kritischer Pfad von einem kompromittierten Pod zur Cloud-Identity der Node sein, aber Provider-spezifische Workload-Identity verändert das erwartete Verhalten: Bei GKE wird der Metadatenserver für WIF benötigt, und bei AWS muss auch IPv6 IMDS berücksichtigt werden.
 - Beginnen Sie mit Default-deny Egress und erlauben Sie nur DNS und erforderliche Ziele. `ipBlock` mit `except: 169.254.169.254/32` ist für ein vorübergehend breites Allow nützlich, ersetzt jedoch keine enge Allowlist.
-- Für EKS blockiert IMDSv2 mit Hop Limit `1` den gewöhnlichen Pfad zu Node-IMDS für non-`hostNetwork` Pods. Dies gilt nicht für `hostNetwork: true` Pods, die IMDS-Zugriff behalten und getrennte Kontrolle benötigen; deaktivieren Sie den IMDS-Endpoint nicht und reservieren Sie Hop Limit 2 nur für begründeten Workload-Zugriff. Dies ersetzt weder Workload-Identity noch Netzwerkisolation und Cloud-Identity mit Least Privilege.
+- Für EKS blockiert IMDSv2 mit Hop Limit `1` den gewöhnlichen Pfad zu Node-IMDS für non-`hostNetwork` Pods. Dies gilt nicht für `hostNetwork: true` Pods, die IMDS-Zugriff behalten und getrennte Kontrolle benötigen; deaktivieren Sie den IMDS-Endpoint nicht und reservieren Sie Hop Limit 2 nur für begründeten Workload-Zugriff. Dies ersetzt weder Workload-Identity noch Netzwerkisolation noch Cloud-Identity mit Least Privilege.
 - kubelet, etcd und kube-apiserver werden durch eine Kombination aus privatem Netzwerk, Firewall, TLS, Authentication, Authorization, `nodes/proxy`-Review und sicheren Flags geschützt, nicht nur durch Pod-Policy.
 - Verwenden Sie das archivierte Kubernetes Dashboard nicht für neue Installationen; ein bestehendes GUI darf weder öffentlich sein noch mit `cluster-admin` laufen. `pods/log` für eine read-only Rolle benötigt nur `get`, nicht `list/watch`.
 - Prüfen Sie den tatsächlich Provider-spezifischen Verkehr: Bei AWS erhält ein Pod keine Node-IMDS-Credentials; bei GKE funktioniert WIF nur über den erwarteten Metadatenpfad; bei AKS prüfen Sie Entra-Föderation und die Anwendbarkeit der IMDS restriction getrennt; Node-Endpoints sind für unnötige Quellen nicht offen.

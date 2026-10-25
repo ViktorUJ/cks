@@ -4,7 +4,7 @@
 
 > **Das Problem.** Eine Shell in einem Container oder ein Anwendungsfehler werden gefährlicher, wenn ein Prozess mit passender UID oder Capability einen sensitiven Pfad lesen, eine Datei ausführen oder auf Kernel-Objekte zugreifen kann, die gewöhnliche Linux Permissions erlauben. Ohne eine verpflichtende Policy begrenzt der Kernel solche Aktionen nicht nach dem Zweck des Workload, sondern nur nach UID.
 
-> **Was kommt als Nächstes.** In Kapitel 14-15 haben wir die Angriffsfläche des Host und den Zugriff darauf reduziert. Jetzt fügen wir Mandatory Access Control (MAC) für Containerprozesse hinzu: AppArmor erlaubt nur ausdrücklich beschriebene Aktionen mit Dateien, Capabilities, Netzwerk und anderen Kernel-Objekten. Dies ist die CKS-Domain **System Hardening** (10%). Im nächsten Kapitel ergänzt seccomp dieselbe Defense in Depth durch das Filtern von System Calls.
+> **Was kommt als Nächstes.** In Kapitel 14-15 haben wir die Angriffsfläche des Host und den Zugriff darauf reduziert. Jetzt fügen wir Mandatory Access Control (MAC) für Containerprozesse hinzu: AppArmor erlaubt nur ausdrücklich beschriebene Aktionen mit Dateien, Capabilities, Netzwerk und anderen Kernel-Objekten. Dies ist die CKS-Domain **System Hardening** (10 %). Im nächsten Kapitel ergänzt seccomp dieselbe Defense in Depth durch das Filtern von System Calls.
 
 > **Was Sie aus CKA benötigen.** Grundlegendes zu `securityContext`, Non-Root-Ausführung, Capabilities und `allowPrivilegeEscalation` wird in [CKA-Kapitel 20](../../../cka/course/20/de.md) behandelt und im [CKA-Lab 106](../../../cka/labs/106/README_DE.MD) geübt. Hier dient `securityContext` als Kubernetes-Schnittstelle zum AppArmor Profile; die Hauptaufgabe besteht darin, das Profile auf dem Node vorzubereiten, einem Pod zuzuweisen und zu belegen, dass das Verbot tatsächlich greift.
 
@@ -106,7 +106,7 @@ sudo grep -F 'k8s-demo' /sys/kernel/security/apparmor/profiles
 sudo apparmor_parser -R /etc/apparmor.d/k8s-demo
 ```
 
-`-r` ersetzt die geladene Version, `-R` lädt sie aus. `aa-complain` und `aa-enforce` schalten den Modus eines bereits geladenen Profile um und führen selbst dessen Reload durch: Für die Änderung des Modus selbst ist kein Pod Restart erforderlich. Suchen Sie vor der Entfernung Pods und Prozesse, die es noch verwenden könnten. Bearbeiten Sie Policy auf einem Production Node nicht auf Verdacht: Ein Fehler kann den Start eines Workload verhindern oder die Anwendung nach Reload brechen. Prüfen Sie zuerst Syntax und Rollout auf einem dedizierten Node.
+`-r` ersetzt die geladene Version, `-R` lädt sie aus. `aa-complain` und `aa-enforce` schalten den Modus eines bereits geladenen Profile um und führen selbst dessen Reload durch: Für die Änderung des Modus selbst ist kein Pod Restart erforderlich. Suchen Sie vor der Entfernung Pods und Prozesse, die es noch verwenden könnten. Bearbeiten Sie die Policy auf einem Production Node nicht auf Verdacht: Ein Fehler kann den Start eines Workload verhindern oder die Anwendung nach Reload brechen. Prüfen Sie zuerst Syntax und Rollout auf einem dedizierten Node.
 
 Unterscheiden Sie die Flags von `apparmor_parser`: `-p` expandiert nur `#include` und gibt das Ergebnis aus; `-Q` kompiliert die Policy, lädt sie aber nicht in den Kernel; `-r` ersetzt die geladene Version. Verwenden Sie zur sicheren Prüfung `-Q -K`, danach `-r -W`.
 
@@ -153,7 +153,7 @@ spec:
         drop: ["ALL"]
 ```
 
-Geben Sie für ein eigenes `Localhost` Profile genau den im Kernel geladenen Namen ohne Pfad `/etc/apparmor.d/` und ohne den Legacy-Präfix `localhost/` an:
+Geben Sie für ein eigenes `Localhost` Profile genau den im Kernel geladenen Namen ohne Pfad `/etc/apparmor.d/` und ohne das Legacy-Präfix `localhost/` an:
 
 ```yaml
 apiVersion: v1
@@ -239,13 +239,13 @@ kubectl get pod -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.met
 
 Ein leeres Ergebnis des Pod Audit beweist nicht, dass kein Container-Level Override oder keine Legacy-Konfiguration in einem Controller vorhanden ist. Prüfen Sie zusätzlich die Templates von Deployment, StatefulSet, DaemonSet, Job und CronJob: bei den ersten vier `.spec.template.metadata.annotations`, `.spec.template.spec.securityContext.appArmorProfile` und Container Overrides; bei CronJob dieselben Felder unter `.spec.jobTemplate.spec.template`. Korrigieren Sie bei der Migration das Controller-/Template-Manifest, nicht nur den von ihm erstellten Pod.
 
-> 🎯 Unterscheiden Sie Fehler beim Erstellen des Containers von Runtime Denial und bestätigen Sie dann Node, Name und Laden des Profile, effektive Enforcement und Kernel Evidence; ersetzen Sie die Ursache nicht durch `Unconfined`.
+> 🎯 Unterscheiden Sie Fehler beim Erstellen des Containers von Runtime Denial und bestätigen Sie dann Node, Name und Laden des Profile, effektives Enforcement und Kernel Evidence; ersetzen Sie die Ursache nicht durch `Unconfined`.
 
 ## 16.6. Startfehler und Denial: auf der richtigen Ebene diagnostizieren
 
 Bei einem `Localhost` Profile gibt es zwei unterschiedliche Fehlerkategorien.
 
-1. **Der Container wird nicht erstellt.** AppArmor ist auf dem Node deaktiviert, die runtime unterstützt den benötigten Modus nicht, der Profilname ist nicht geladen oder der Pod wurde auf einen anderen Node eingeplant. Dies ist ein Lifecycle Failure: Suchen Sie nach Pod Event sowie kubelet-/Runtime-Zustand.
+1. **Der Container wird nicht erstellt.** AppArmor ist auf dem Node deaktiviert, die Runtime unterstützt den benötigten Modus nicht, der Profilname ist nicht geladen oder der Pod wurde auf einen anderen Node eingeplant. Dies ist ein Lifecycle Failure: Suchen Sie nach Pod Event sowie kubelet-/Runtime-Zustand.
 2. **Der Container läuft, aber die Aktion wird abgewiesen.** Das Profile in `enforce` blockiert Pfad, Capability, Netzwerk, Mount oder ein anderes Objekt. Dies ist ein Runtime Denial: Die Anwendung erhält üblicherweise `Permission denied` und der Kernel schreibt `apparmor="DENIED"`.
 
 Beginnen Sie mit Kubernetes und gehen Sie danach zum tatsächlichen Node über:
@@ -310,7 +310,7 @@ Prüfen Sie für Evidence zuerst das Audit Subsystem (`ausearch` bei aktivem aud
 **In der Prüfung.** Ermitteln Sie schnell den Node, prüfen Sie `aa-status`, laden oder ersetzen Sie das
 erforderliche Profile mit `apparmor_parser`, schalten Sie es gemäß der Vorgabe mit `aa-enforce`/`aa-complain`
 um und weisen Sie dem Pod das aktuelle `appArmorProfile` zu. Prüfen Sie nach dem Anwenden nicht nur
-das YAML: `kubectl describe pod`, `/proc/1/attr/current` und quellenbezogene AppArmor Audit-Evidenz
+das YAML: `kubectl describe pod`, `/proc/1/attr/current` und quellenbezogene AppArmor Audit Evidence
 unterscheiden einen Scheduling-/Profilbereitstellungsfehler von einem echten Denial. Suchen Sie nach einem Denial
 zuerst mit `ausearch` bei aktivem auditd oder in `/var/log/audit/audit.log`; `journalctl -k` und `dmesg`
 verwenden Sie als Fallback auf dem konkreten Node. Erkennen Sie die alte Annotation, verwenden Sie
@@ -446,7 +446,7 @@ verlassen Sie sich nicht auf das kubelet-Verzeichnis als Mechanismus für die Po
 >
 > **Missbrauchspfad:** versuchen, die Grenzen des Profile zu verlassen, wenn es falsch geladen, benannt oder in `complain` statt in `enforce` ist.
 >
-> **Erwartete Belege:** effektives AppArmor Profile und ein Denial Event in einer verfügbaren Audit-Quelle:
+> **Erwartete Evidence:** effektives AppArmor Profile und ein Denial Event in einer verfügbaren Audit-Quelle:
 > `ausearch`/`audit.log` oder `journalctl -k`/`dmesg` als Fallback.
 >
 > **Kontrolle:** verifiziertes Profile im Modus `enforce` und Prüfung mit `aa-status`.
@@ -458,7 +458,7 @@ verlassen Sie sich nicht auf das kubelet-Verzeichnis als Mechanismus für die Po
 <details>
 <summary>1. Warum ersetzt AppArmor nicht UID/GID, Capabilities, seccomp oder RBAC?</summary>
 
-Diese Controls beantworten unterschiedliche Fragen: DAC prüft UID/GID und Mode Bits, Capabilities - separate Kernel-Privilegien, seccomp - erlaubte Syscalls und RBAC - den Kubernetes API-Zugriff einer Identity. AppArmor fügt path-based MAC für Prozessaktionen gemäß Profile hinzu. Deshalb ergänzt ein Profile die Notwendigkeit von Non-Root, gedroppten Capabilities, seccomp und minimalem RBAC, hebt sie aber nicht auf.
+Diese Controls beantworten unterschiedliche Fragen: DAC prüft UID/GID und Mode Bits, Capabilities - separate Kernel-Privilegien, seccomp - erlaubte Syscalls und RBAC - den Kubernetes API-Zugriff einer Identity. AppArmor fügt path-based MAC für Prozessaktionen gemäß Profile hinzu. Deshalb ergänzt ein Profile Non-Root, gedroppte Capabilities, seccomp und minimales RBAC, hebt aber deren Notwendigkeit nicht auf.
 </details>
 
 <details>

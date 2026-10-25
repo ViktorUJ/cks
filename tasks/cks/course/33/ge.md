@@ -18,7 +18,7 @@
 > JSONPath განხილულია [CKA-ს 47-ე თავში](../../../cka/course/47/ge.md), ხოლო ამოცანები
 > node-ებზე, static Pod და troubleshooting - [CKA-ს 48-ე თავში](../../../cka/course/48/ge.md).
 > გამოცდამდე გაიმეორეთ editor-ის მინიმუმი [CKA-ს 0.8-ე თავიდან](../../../cka/course/00-8-vim/ge.md).
-> აქ არ მეორდება CKA-ის საფუძვლები, არამედ ემატება CKS-ის security-სპეციფიკური
+> აქ არ მეორდება CKA-ს საფუძვლები, არამედ ემატება CKS-ის security-სპეციფიკური
 > მასალა.
 
 CKS არის performance-based გამოცდა: მოწმდება ცოცხალი კლასტერის, node-ის და
@@ -33,7 +33,7 @@ high-churn snapshot-ებია: თუ შენახული ტექს�
 ExamUI-სგან/ინსტრუქციებისგან გამოცდის თარიღზე, უპირატესობა აქვს ExamUI-ს და
 LF-ის აქტუალურ ინსტრუქციებს.
 
-> 🎯 განყოფილებები 33.1–33.6 - ერთიანი exam workflow: `base`-ზე წაიკითხეთ პირობა,
+> 🎯 განყოფილებები 33.1-33.6 - ერთიანი exam workflow: `base`-ზე წაიკითხეთ პირობა,
 > დაუკავშირდით დანიშნულ host-ს, დაადასტურეთ context და scope, შეიტანეთ მინიმალური
 > ცვლილება, დაამტკიცეთ შედეგი და დაბრუნდით `base`-ზე. გამოიყენეთ დაშვებული
 > დოკუმენტაცია ზუსტი ველის ან flag-ისთვის, გადაანაწილეთ დრო ამოცანების flag-ებზე
@@ -81,7 +81,7 @@ k config use-context "$CONTEXT"
 k config current-context
 k cluster-info
 
-# ცხადი namespace უსაფრთხოა, თუ ამოცანას არ სჭირდება default namespace-ის შეცვლა.
+# ცხადი namespace უფრო უსაფრთხოა, თუ ამოცანას არ სჭირდება default namespace-ის შეცვლა.
 k get pods -n "$NAMESPACE"
 
 # ამოცანა და მისი შემოწმება დასრულებულია - დაბრუნდით base-ზე.
@@ -508,7 +508,7 @@ flowchart TB
     style loss fill:#f4b400,color:#000
 ```
 
-> 🧠 ცვლილებამდე განსაზღვრეთ asset, კონფიგურაციის დონე, identity/node/namespace/
+> 🧠 ცვლილებამდე განსაზღვრეთ asset, კონფიგურაციის დონე,
 > context, დაშვებული და აკრძალული შედეგი და დაკვირვებადი მტკიცებულება.
 
 ### ხუთი დიაგნოსტიკური კითხვა ნებისმიერი security-ამოცანისთვის
@@ -568,7 +568,7 @@ export KUBE_EDITOR=vim
 4. ქსელისთვის შეამოწმეთ დაშვებული და აკრძალული ნაკადი, DNS-ის ჩათვლით, თუ
    არსებობს egress policy.
 5. Node-ისა და static Pod-ისთვის დაადასტურეთ სერვისი/container, log და API
-   readiness დანიშნულ host-ზე. ნუ დაასრულებთ გამოცდას მოუქმედ API server-ით.
+   readiness დანიშნულ host-ზე. ნუ დაასრულებთ გამოცდას არამოქმედი API server-ით.
 6. ყოველი შემოწმების შემდეგ დაბრუნდით `base`-ზე, შემდეგ ხელახლა წაიკითხეთ
    ფორმულირება, ფაილების path-ები და მოთხოვნილი output-ის ფორმატი. «თითქმის
    იგივე» არ ნიშნავს შესრულებულ კრიტერიუმს.
@@ -606,7 +606,7 @@ window და rollback plan.
 - **Localhost AppArmor profile** - AppArmor-profile, წინასწარ ჩატვირთული
   node-ზე და არჩეული container-ის მიერ `securityContext`-ის მეშვეობით.
 - **read-only root filesystem** - container-ის image layer-ში ჩაწერის
-  აკრძალვა; საჭირო writable path-ები მოცემულია ცხადი volumes-ებით.
+  აკრძალვა; საჭირო writable path-ები მოცემულია ცხადი volume-ებით.
 - **triage** - finding-ის ან event-ის სწრაფი კლასიფიკაცია წყაროს, რისკის,
   scope-ისა და შემდეგი ქმედების მიხედვით.
 
@@ -627,7 +627,7 @@ window და rollback plan.
   სასარგებლოა ორი ციკლისთვის: ხარვეზების დიაგნოსტიკა, შემდეგ მკაცრი
   რეპეტიცია და დარჩენილი შეცდომების აღმოფხვრა.
 - CKS-ისთვის განსაკუთრებით მნიშვნელოვანია სწრაფი security-ველები,
-  static Pod-ის სწორი შესწორება, AppArmor საჭირო node-ზე, `kube-bench`/
+  static Pod-ის სწორი შესწორება, AppArmor საჭირო node-ზე,
   `trivy`/`falco`-ს დიაგნოსტიკა და ქსელის დადებითი და უარყოფითი ტესტი.
 - დოკუმენტაცია არის საშუალება ზუსტი ველის ან flag-ის საპოვნელად დაშვებულ
   საიტზე, არა პრაქტიკის ჩანაცვლება.
@@ -709,7 +709,7 @@ YAML/mount path-ები და საჭიროების შემთხ�
 Policy-ის წარმატებული apply არ ამტკიცებს მის ქსელურ სემანტიკას. საჭიროა
 გვაჩვენოთ, რომ დაშვებული flow მუშაობს და აკრძალული არ გადის, რადგან
 selector, namespace ან port შეიძლება არ ემთხვეოდეს intent-ს. Egress policy
-ადვილად ბლოკავს DNS-ს არასასურველ ტრაფიკთან ერთად, ამიტომ მოწმდება DNS-
+ადვილად ბლოკავს DNS-ს არასასურველ ტრაფიკთან ერთად, ამიტომ მოწმდება
 მოთხოვნაც, თუ policy ზღუდავს egress-ს.
 </details>
 
@@ -731,7 +731,7 @@ Profile უნდა არსებობდეს და იყოს ჩა�
 შეიძლება გამოყენებულ იქნას ამოცანებში მათ დადგენილ ფარგლებში. Quick
 Reference ეხება კონკრეტულ ამოცანას და უშვებს მხოლოდ იქ ნაჩვენებ ბმულებს;
 მისი დაშვება ვერ გადაიტანება სხვა ამოცანებზე. გამოცდის წინ სია მაინც
-ეჯერება Resources Allowed-ს და ExamUI-ს, არა კურსის შენახულ ცხრილს.
+მოწმდება Resources Allowed-ისა და ExamUI-ის მიხედვით, და არა კურსის შენახული ცხრილის მიხედვით.
 </details>
 
 <details>
@@ -748,11 +748,11 @@ Remote Desktop-აპლიკაციებში - `Ctrl+C` და `Ctrl+V`. 
 ## პრაქტიკა
 
 გაიარეთ ყველა ლაბორატორიული სამუშაო ხელახლა გადაწყვეტილებების გარეშე,
-შემდეგ შეურიეთ დავალებები სხვადასხვა დომენიდან და შეცვალეთ ამასთანავე
+შემდეგ შეურიეთ დავალებები სხვადასხვა დომენიდან და დავალებებს შორის შეცვალეთ
 context. ყოველი lab-ისთვის ჩაწერეთ დრო, შეცდომა და შემოწმების ბრძანება -
 ეს არის თქვენი პირადი flag-ების სია mock-გამოცდისთვის.
 
-| Lab | ვარჯიშობადი დომენები და უნარები |
+| Lab | სავარჯიშო დომენები და უნარები |
 |---|---|
 | [ლაბა 101](../../labs/101/README_GE.MD) | NetworkPolicy: default-deny, ingress/egress, metadata-ის იზოლაცია და დაცვა |
 | [ლაბა 102](../../labs/102/README_GE.MD) | CiliumNetworkPolicy L3/L4/L7 და metadata-ის დაცვა |
@@ -767,8 +767,8 @@ context. ყოველი lab-ისთვის ჩაწერეთ დრ�
 | [ლაბა 111](../../labs/111/README_GE.MD) | minimal image, სტატიკური ანალიზი, Trivy, SBOM, ხელმოწერა და ImagePolicyWebhook |
 | [ლაბა 112](../../labs/112/README_GE.MD) | Falco, audit-ლოგები და container-ის უცვლელობა |
 | [ლაბა 113](../../labs/113/README_GE.MD) | kubeadm minor upgrade: control-plane → worker, version skew, drain/uncordon და evidence downtime-ის არარსებობისთვის |
-| [ლაბა 114](../../labs/114/README_RU.MD) | kubeconfig context-ები, client certificate-ის ამოღება, Service exposure-ის შემცირება NodePort → ClusterIP |
-| [ლაბა 115](../../labs/115/README_RU.MD) | Cilium ნულიდან: kube-proxy replacement, WireGuard, Mutual Authentication SPIRE-ით (advanced/production, არ არის CKS Core) |
+| [ლაბა 114](../../labs/114/README_GE.MD) | kubeconfig context-ები, client certificate-ის ამოღება, Service exposure-ის შემცირება NodePort → ClusterIP |
+| [ლაბა 115](../../labs/115/README_GE.MD) | Cilium ნულიდან: kube-proxy replacement, WireGuard, Mutual Authentication SPIRE-ით (advanced/production, არ არის CKS Core) |
 
 ---
 [სარჩევი](../README_GE.md) · [თავი 32](../32/ge.md)

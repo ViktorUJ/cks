@@ -30,7 +30,7 @@ locals {
   access_cidrs          = ["0.0.0.0/0"]
   ubuntu_version        = "22.04"
   ami_id                = ""
-  root_volume           = { type = "gp3", size = "10" }
+  root_volume           = { type = "gp3", size = "30" }
   subnets = {
     public = {
       "pub1" = { name = "k8s-1", cidr = "10.111.1.0/24", az = "eu-central-1a" }

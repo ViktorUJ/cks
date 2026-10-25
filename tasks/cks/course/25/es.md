@@ -602,9 +602,9 @@ Esta es una comprobación de cordura, no una validación completa de schema/conf
 | se encuentra el package, pero la versión no coincide | la image se compiló desde otra base/dependency o el advisory se aplica a otra distribution | `versionInfo`, purl, base image, lock file y condiciones del advisory |
 | existe un SBOM, pero el deployment sigue siendo vulnerable | CD aplicó un tag/digest antiguo o el rollout no está completo | manifest `image:`, Pod `imageID`, rollout status y registry digest |
 
-El criterio de preparación de la verificación es: un SPDX 2.3 JSON no vacío que superó una comprobación de cordura (para
-conformance completa se requiere un SPDX validator independiente), contiene el package/version registrado para un
-platform-manifest digest específico y cuyos comandos y archivos pueden entregarse a otro engineer para
+El criterio de preparación de la verificación es: existe un SPDX 2.3 JSON no vacío que superó una comprobación de cordura (para
+conformance completa se requiere un SPDX validator independiente), en él está registrado el package/version para un
+platform-manifest digest específico, y los comandos y archivos pueden entregarse a otro engineer para
 reproducir el resultado.
 
 > 🏭 Automatice la emisión y conservación de SBOM, provenance y scan evidence para cada release digest; un informe creado manualmente después de un incidente no sustituye este proceso.
@@ -623,7 +623,7 @@ reproducir el resultado.
   change record al nivel aplicable de esta cadena. Un release tag puede mantenerse para
   las personas, pero no sustituye la prueba del contenido.
 - **Un registry es una frontera controlada.** Los permisos de push se delimitan por proyecto, los release tags
-  están protegidos contra overwrite y audit logs, replication y cleanup policy están activados. Una workstation
+  están protegidos contra overwrite, y audit logs, replication y cleanup policy están activados. Una workstation
   no publica directamente una production image.
 - **CI tiene mínimos privilegios.** Ephemeral runners, short-lived tokens, scoped secrets,
   protected branches y revisión de la build definition reducen el riesgo de manipulación de artifacts, sustitución inesperada o filtración de credentials.

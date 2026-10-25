@@ -104,8 +104,8 @@ container image генератор читает filesystem и package metadata �
 | **SPDX 2.3 JSON** | Стандарт Linux Foundation для состава software, лицензий, пакетов и отношений; хорошо подходит для compliance и обмена inventory | OCI artifacts, дистрибутивы, CI и Kubernetes ecosystem |
 | **CycloneDX** | Формат Open Worldwide Application Security Project (OWASP), ориентированный на component analysis и security tooling; удобен для vulnerability management | scanners, dependency analysis, security dashboards |
 
-Оба формата могут описать один image, но их JSON-поля различаются. Все примеры SPDX ниже --
-**SPDX 2.3 JSON**: в этой схеме пакеты обычно находятся в `.packages`, а версия -- в
+Оба формата могут описать один image, но их JSON-поля различаются. Все примеры SPDX ниже -
+**SPDX 2.3 JSON**: в этой схеме пакеты обычно находятся в `.packages`, а версия - в
 `versionInfo`; в CycloneDX компоненты находятся в
 `.components`, а версия - в `version`. Не переносите эти пути на SPDX 3.0: у него другая
 модель данных. Не пишите универсальный `jq`-запрос, не зная формата и версии файла: отсутствие
@@ -122,7 +122,7 @@ container image генератор читает filesystem и package metadata �
 - один version string ещё не означает уязвимость: важно сопоставить его с vendor advisory,
   OS distribution, архитектурой и статусом исправления.
 
-**Runtime SBOM и полная цепочка сборки -- разные инвентари.** SBOM final multi-stage image
+**Runtime SBOM и полная цепочка сборки - разные инвентари.** SBOM final multi-stage image
 описывает то, что дошло до runtime; зависимости из отброшенных builder stages в нём
 закономерно отсутствуют. Даже анализ `--scope all-layers` охватывает слои конечного image,
 а не все исчезнувшие стадии сборки. Для полного inventory supply chain нужны также source,
@@ -414,7 +414,7 @@ SLSA provenance `v1`; старые версии BuildKit/Buildx могли вы�
 этом параметре проверяйте `Statement/v1` с `https://slsa.dev/provenance/v1`. После push
 сохраните immutable digest и для multi-arch release определите platform manifest, который
 будет запускаться. Эти build-native attestations полезны для связи output с build, но не
-отменяют отдельные проверку signature, SBOM final image и inventory всей цепочки по
+отменяют отдельную проверку signature, SBOM final image и inventory всей цепочки по
 source/lock files.
 
 На практике улучшения выглядят так:
@@ -722,7 +722,7 @@ SBOM - это inventory компонентов и версий конкретн�
 </details>
 
 <details>
-<summary>6. Почему поиск только по имени `ca-certificates-bundle` не достаточен для решения по CVE?</summary>
+<summary>6. Почему поиск только по имени `ca-certificates-bundle` недостаточен для решения по CVE?</summary>
 
 Решение по advisory требует exact package, его версию, ecosystem/distribution и условия fixed version, а имя может встречаться в нескольких вариантах. Нужен поиск имени вместе с `versionInfo` и привязка SBOM к digest образа. Затем результат сопоставляют с advisory и runtime imageID, а не удаляют workload только по совпадению имени.
 </details>
@@ -752,7 +752,7 @@ CD должен продвигать уже проверенный immutable dig
 </details>
 
 <details>
-<summary>11. **Flashback (глава 32).** SBOM/provenance (эта глава) отвечают на вопрос "из чего состоит этот artifact и как он был собран". Kubernetes audit log (глава 32) отвечает на вопрос "кто и когда взаимодействовал с API server". Если нужно доказать полную цепочку "кто задеплоил именно этот image, с этим SBOM, в это время" - какого из двух источников евиденс недостаточно самого по себе, и как их совместное использование закрывает то, что не закрывает каждый по отдельности?</summary>
+<summary>11. **Flashback (глава 32).** SBOM/provenance (эта глава) отвечают на вопрос "из чего состоит этот artifact и как он был собран". Kubernetes audit log (глава 32) отвечает на вопрос "кто и когда взаимодействовал с API server". Если нужно доказать полную цепочку "кто задеплоил именно этот image, с этим SBOM, в это время" - какого из двух источников evidence недостаточно самого по себе, и как их совместное использование закрывает то, что не закрывает каждый по отдельности?</summary>
 
 Одного SBOM/provenance недостаточно: они доказывают состав и процесс сборки digest, но не API-действие deployment. Одного audit log тоже недостаточно: он показывает identity, время и объект API, но не состав образа и достоверность его build. Сверка image digest из manifest/audit с digest, к которому привязаны SBOM и provenance, связывает автора deploy с конкретным проверяемым artifact.
 </details>

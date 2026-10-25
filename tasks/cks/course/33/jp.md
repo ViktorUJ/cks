@@ -4,7 +4,7 @@
 
 > **課題。** CKS では、正しい設定を行っても、それを誤った SSH host、誤った context や
 > namespace に適用したり、実際の結果を確認しなかったりすれば得点にはなりません。2 時間と
-> いくつかの実践課題は、長い試行錯誤や static Pod への危険な編集、壊れた cluster のまま
+> いくつかの実践課題は、長時間の検索や static Pod への危険な編集、壊れた cluster のまま
 > 次の課題に進んでしまうことのコストを増大させます。再現可能な workflow が必要です: scope、
 > 最小限の変更、evidence、確認、そして `base` への復帰。
 
@@ -19,7 +19,7 @@
 > ここでは CKA の基礎は繰り返さず、CKS 固有の security の側面を追加します。
 
 CKS は performance-based な試験です。稼働中の cluster、node、作成した artifact の状態が
-検証され、回答の text ではありません。確認日**2026-09-05**時点で、LF の product page は試験
+検証され、回答の text は検証されません。確認日**2026-09-05**時点で、LF の product page は試験
 対象として Kubernetes `v1.35` を示しています。`v1.36` はこのコースの target version かつ
 production 向けの拡張であり、CKS への約束ではありません。curriculum PDF や他のドキュメントは
 別のタイミングで更新される可能性があるため、試験直前には LF の product page、Important
@@ -28,7 +28,7 @@ domain の weight、許可されたリソース、キー割り当て、simulator
 snapshot です。保存されたテキストと試験当日の実際の ExamUI/instruction が異なる場合は、
 ExamUI と LF の最新の instruction が優先されます。
 
-> 🎯 33.1〜33.6 節は 1 つの試験 workflow です: `base` で条件を read し、指定された host に接続し、context と scope を確認し、最小限の変更を行い、結果を証明し、`base` に戻ります。正確なフィールドやフラグを見つけるには許可されたドキュメントを使い、時間は課題の flag によって配分し、最後にすべての基準を再確認してください。
+> 🎯 33.1〜33.6 節は 1 つの試験 workflow です: `base` で条件を読み、指定された host に接続し、context と scope を確認し、最小限の変更を行い、結果を証明し、`base` に戻ります。正確なフィールドやフラグを見つけるには許可されたドキュメントを使い、時間は課題の flag によって配分し、最後にすべての基準を再確認してください。
 
 ## 33.1. 形式と環境: 指定された SSH host、context、`base` への復帰
 
@@ -41,7 +41,7 @@ CKS には**2 時間**が割り当てられ、LF の公式 instruction は **15�
 
 ```mermaid
 flowchart TB
-    base["base<br/>課題の infobox を read"] --> ssh["指定された host に ssh"]
+    base["base<br/>課題の infobox を読む"] --> ssh["指定された host に ssh"]
     ssh --> scope["hostname、context、namespace<br/>と評価基準"]
     scope --> change["この host で変更し<br/>確認する"]
     change --> exit["exit: base に戻る"]
@@ -52,7 +52,7 @@ flowchart TB
     style exit fill:#db4437,color:#fff
 ```
 
-すべての課題を `base` で開始し、infobox にある `host` の名前を read してそこに接続して
+すべての課題を `base` で開始し、infobox にある `host` の名前を読み、そこに接続して
 ください。完了したら必ず `base` に戻ります。nested SSH はサポートされていません。次の課題が
 別の host を要求する場合は、まず `exit` し、その後 `base` から新たに `ssh` を実行してください。
 
@@ -122,9 +122,9 @@ Istio がグローバルに許可されており、加えて instruction、`/usr
 何でも良い」というリストではありません。
 
 **Quick Reference** は別の、task-specific なソースです: 特定の課題では、公式 Kubernetes
-ドキュメントや他の必要なリソースへのリンクが与えられる場合があります。そのタスクで表示された
+ドキュメントや他の必要なリソースへのリンクが与えられる場合があります。その課題で表示された
 リンクのみを使用し、その許可を他の課題に持ち越さないでください。以下の `Trivy` と AppArmor は
-学習用リンクであり、グローバルに許可されたサイトではありません: そのタスクの Quick Reference
+学習用リンクであり、グローバルに許可されたサイトではありません: その課題の Quick Reference
 に示されている場合にのみ開いてください。SSH host では `man` と distribution のパッケージが
 利用できますが、`base` にはありません。試験直前には
 [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed)
@@ -142,7 +142,7 @@ Istio がグローバルに許可されており、加えて instruction、`/usr
 | [Cilium](https://docs.cilium.io/) | `CiliumNetworkPolicy`、entity、DNS、encryption | `CiliumNetworkPolicy toFQDNs`、`transparent encryption` |
 | [Istio](https://istio.io/latest/docs/) | `PeerAuthentication`、mTLS、mesh の確認 | `PeerAuthentication STRICT` |
 | [etcd](https://etcd.io/docs/) | health、TLS、`etcdctl` 操作 | `etcdctl endpoint health`、`snapshot` |
-| [bom](https://kubernetes-sigs.github.io/bom/cli-reference/) | `bom` コマンドによる SPDX 形式の SBOM | `bom generate`（SPDX); CycloneDX は syft/trivy 経由 |
+| [bom](https://kubernetes-sigs.github.io/bom/cli-reference/) | `bom` コマンドによる SPDX 形式の SBOM | `bom generate` (SPDX); CycloneDX は syft/trivy 経由 |
 | [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/) | Ingress Controller の TLS と設定 | `Ingress TLS`、`annotations`; community プロジェクト `ingress-nginx` は retired、第08章参照 |
 | [Falco](https://falco.org/docs/) | rule、event フィールド、alert の出力 | `Falco rule condition`、`Falco fields` |
 | [Trivy](https://trivy.dev/) | image、filesystem、config の学習用スキャン | 最新のリストか Quick Reference なしではグローバルに許可されているとみなさない |
@@ -200,16 +200,16 @@ flowchart TB
     style p3 fill:#673ab7,color:#fff
 ```
 
-**Pass 1。** すべての課題を read する。すぐに、短くよく知っている課題を解く: 正確な
+**Pass 1。** すべての課題を読みます。すぐに、短くよく知っている課題を解きます: 正確な
 `SecurityContext`、default-deny、限定された RBAC、PSA の有効化、既製の scanner。それぞれの
 課題でまず `base` から指定された host へ入ります。条件が稀な設定や SSH での診断を要求する
 場合は、目立つ flag を残し、最初の数分を検索に変えないでください。
 
-**Pass 2。** 期待される見返りの順に flag に戻る: まず、解決の道筋が既に見えており残るのが
+**Pass 2。** 期待される見返りの順に flag に戻ります: まず、解決の道筋が既に見えており残るのが
 1 つの修正だけの課題、その後、static Pod、node hardening、network の調査のような長い設定。
 各課題の後は `base` に戻り、nested SSH や context の混在のコストで課題をまとめないでください。
 
-**Pass 3。** 条件を開き、それぞれの要件を照合する。apply された YAML は証明にはなりません:
+**Pass 3。** 条件を開き、それぞれの要件を照合します。apply された YAML は証明にはなりません:
 object が誤った namespace にある、static Pod が起動しない、`NetworkPolicy` が望ましくない
 egress とともに DNS をブロックしている、といった可能性があります。
 
@@ -348,7 +348,7 @@ k get --raw='/readyz?verbose'
 
 コンポーネントが Ready に戻らない場合、次の課題に進んだり診断や rollback の前に exit したり
 しないでください。`crictl` と `journalctl` を読み、YAML と hostPath/volumeMount の path を
-確認してください。必要なら保存した manifest を戻し、readiness を確認してから `base` で
+確認してください。必要なら保存した manifest を戻し、readiness を確認してから `base` に戻るために
 `exit` してください。よくある誤りは、audit のフラグや volume を 1 か所だけに追加してしまう
 ことです: container 内部の path、`mountPath`、hostPath は 1 つの整合したチェーンを形成する
 必要があります。
@@ -356,7 +356,7 @@ k get --raw='/readyz?verbose'
 ### ツールを数分で: 実行するだけでなく evidence を収集する
 
 ツールは狭い目的で使い、関連する結果を保存してください。パラメータの形式はインストールされた
-バージョンに依存する場合があるため、コマンドが不慣れなら実行前に `--help` を確認してください。
+バージョンに依存する場合があるため、コマンドに慣れていなければ実行前に `--help` を確認してください。
 
 ```bash
 # CIS: findings を取得し、確認条件に関係するものを選ぶ。
@@ -448,7 +448,7 @@ exit
 
 ## 33.5. Domain 別チェックリストと典型的な落とし穴
 
-試験前には「read した」ではなく「ヒントなしで実行し結果を確認した」にチェックを入れて
+試験前には「読んだ」ではなく「ヒントなしで実行し結果を確認した」にチェックを入れて
 ください。以下の章のマップは CKS 固有の資料へ導きます。CKA の基礎は各章のリンク先に残ります。
 
 | Domain | 最低限できるべきこと | 結果の確認 | よくある落とし穴 |
@@ -566,7 +566,7 @@ Pod を一度に変更しない、retention policy とデータ保護の方針�
 
 - CKS は 2 時間、15〜20 件の課題を持つ実践的な試験です。各課題は指定された SSH host で実行し、
   その後 nested SSH なしで `base` に戻る必要があります。
-- サイクルで作業してください: `base` で host を read → host に SSH → context を選ぶ →
+- サイクルで作業してください: `base` で host を確認 → host に SSH → context を選ぶ →
   最小限の変更 → 結果を確認 → `base` へ `exit`。
 - LF の weight 15%、15%、10%、20%、20%、20% は 2026-09-05 の snapshot として示されています。
   CNCF curriculum は異なる可能性があるため、試験前には現在の source を確認してください。
@@ -637,7 +637,7 @@ LF の product page、curriculum、ExamUI を確認し、実際の instruction �
 指定された control-plane host で、編集前に manifest を `/etc/kubernetes/manifests/` の外に
 保存し、その後 `crictl ps -a` と `journalctl -u kubelet` で再作成を確認します。起動後、
 API server の Pod と `k get --raw='/readyz?verbose'` を確認します。readiness が戻らない場合、
-`base` に出る前に log を read し、YAML/mount path を確認し、必要なら backup をロールバック
+`base` に出る前に log を読み、YAML/mount path を確認し、必要なら backup をロールバック
 します。
 </details>
 
@@ -701,8 +701,8 @@ terminal では `Ctrl+Shift+C` と `Ctrl+Shift+V` を使い、他の Remote Desk
 | [Lab 111](../../labs/111/README_JP.MD) | minimal image、静的解析、Trivy、SBOM、署名、ImagePolicyWebhook |
 | [Lab 112](../../labs/112/README_JP.MD) | Falco、audit ログ、container の immutability |
 | [Lab 113](../../labs/113/README_JP.MD) | kubeadm の minor upgrade: control-plane → worker、version skew、drain/uncordon、downtime がないことの evidence |
-| [Lab 114](../../labs/114/README_RU.MD) | kubeconfig contexts、client certificate の抽出、Service exposure の NodePort → ClusterIP への縮小 |
-| [Lab 115](../../labs/115/README_RU.MD) | Cilium をゼロから構築: kube-proxy replacement、WireGuard、SPIRE による Mutual Authentication（advanced/production、CKS Core 外） |
+| [Lab 114](../../labs/114/README_JP.MD) | kubeconfig contexts、client certificate の抽出、Service exposure の NodePort → ClusterIP への縮小 |
+| [Lab 115](../../labs/115/README_JP.MD) | Cilium をゼロから構築: kube-proxy replacement、WireGuard、SPIRE による Mutual Authentication（advanced/production、CKS Core 外） |
 
 ---
 [目次](../README_JP.md) · [第32章](../32/jp.md)

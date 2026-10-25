@@ -19,8 +19,8 @@
 > **რა უნდა ვიცოდეთ CKA-დან.** image-ის, Dockerfile-ის, layer-ების, tag-ებისა და
 > multi-stage build-ის ძირითადი ცნებები განხილულია [CKA-ს 23-ე თავში](../../../cka/course/23/ge.md),
 > ხოლო `runAsNonRoot`, capabilities და read-only root filesystem -
-> [CKA-ს 20-ე თავში](../../../cka/course/20/ge.md). აქ ვიცავთ მათ supply-chain
-> საფრთხისგან: არა უბრალოდ ვამცირებთ image-ის ზომას, არამედ ვაშორებთ ზედმეტს final
+> [CKA-ს 20-ე თავში](../../../cka/course/20/ge.md). აქ ვიყენებთ მათ supply-chain
+> საფრთხის მიმართ: არა უბრალოდ ვამცირებთ image-ის ზომას, არამედ ვაშორებთ ზედმეტს final
 > artifact-იდან.
 
 > 🧠 მინიმალური final image ამცირებს CVE-სა და post-exploitation tool-ებს, მაგრამ არ ცვლის RCE-საწინააღმდეგო დაცვას, `SecurityContext`-ს, ქსელს ან detection-ს.
@@ -65,7 +65,7 @@ flowchart TB
 
 უსაფრთხოებას მხოლოდ მეგაბაიტებით არ ვზომავთ. 5 MiB ზომის image, დაუცველი
 აპლიკაციით ან root-პროცესით, უსაფრთხო არ არის, ხოლო CA-სერტიფიკატების წაშლას
-შესაძლოა TLS-ის გატეხა. მინიმიზაცია ხდება **გააზრებულად**: ვტოვებთ runtime-ს,
+შესაძლოა მოჰყვეს TLS-ის მუშაობის მოშლა. მინიმიზაცია ხდება **გააზრებულად**: ვტოვებთ runtime-ს,
 CA bundle-ს, timezone data-სა და dynamic library-ებს, რომლებიც აპლიკაციას
 ნამდვილად სჭირდება.
 
@@ -74,15 +74,15 @@ CA bundle-ს, timezone data-სა და dynamic library-ებს, რომ�
 ## 24.2. `scratch`, distroless და Alpine: runtime-ის შერჩევა საჭიროებების მიხედვით
 
 Base image განსაზღვრავს, რომელი ფაილები არსებობს `COPY`-ის შესრულებამდე. Final
-stage builder-ის მსგავსი არ უნდა იყოს. აირჩიეთ ის მხოლოდ მას შემდეგ, რაც გაარკვევთ,
-წარმოადგენს artifact static ბინარს, სჭირდება თუ არა language runtime და
+stage არ არის ვალდებული, builder-ის მსგავსი იყოს. აირჩიეთ ის მხოლოდ მას შემდეგ, რაც გაარკვევთ,
+წარმოადგენს თუ არა artifact static ბინარს, სჭირდება თუ არა language runtime და
 საჭიროებს თუ არა დიაგნოსტიკას ან native library-ებს.
 
 | Runtime base | რა შედის შიგნით | კარგად ერგება | შეზღუდვები და რისკი |
 |---|---|---|---|
-| `scratch` | ცარიელი base image: image-ში თავადვე არ არსებობს runtime-ფაილები | static Go/Rust/C++ binary, რომელსაც არ სჭირდება ხელმიუწვდომელი runtime-library-ები | არ არსებობს shell, CA bundle, timezone data და dynamic loader; Kubernetes/runtime ჩვეულებრივ Pod-ს აწვდის `/etc/resolv.conf`-ს, მაგრამ აპლიკაციას მაინც უნდა ჰქონდეს თანხვედრადი DNS resolver და საჭირო runtime-მონაცემები |
+| `scratch` | ცარიელი base image: image-ში თავადვე არ არსებობს runtime-ფაილები | static Go/Rust/C++ binary, რომელსაც არ სჭირდება ხელმიუწვდომელი runtime-library-ები | არ არსებობს shell, CA bundle, timezone data და dynamic loader; Kubernetes/runtime ჩვეულებრივ Pod-ს აწვდის `/etc/resolv.conf`-ს, მაგრამ აპლიკაციას მაინც უნდა ჰქონდეს თავსებადი DNS resolver და საჭირო runtime-მონაცემები |
 | distroless | მხოლოდ შერჩეული runtime/library-ები, shell-ისა და package manager-ის გარეშე | Go/Java/Node/Python აპლიკაციები, როცა საჭირო არის მინიმალურად მხარდაჭერილი runtime | ჩვეულებრივი `kubectl exec -- sh` შეუძლებელია; debug-ი logs, metrics და `kubectl debug`-ის მეშვეობით |
-| Alpine | მინიმალური Linux BusyBox-ითა და `apk`-ით | აპლიკაცია ან დიაგნოსტიკა, რომელსაც რეალურად სჭირდება shell/package-ები | shell და package manager რჩება; `musl` glibc-ის ნაცვლად შესაძლოა შეუთანხმებელი იყოს native dependency-სთან |
+| Alpine | მინიმალური Linux BusyBox-ითა და `apk`-ით | აპლიკაცია ან დიაგნოსტიკა, რომელსაც რეალურად სჭირდება shell/package-ები | shell და package manager რჩება; `musl` glibc-ის ნაცვლად შესაძლოა შეუთავსებელი იყოს native dependency-სთან |
 
 `/etc/resolv.conf`, `/etc/hosts` და hostname-თან დაკავშირებული ფაილები შესაძლოა
 kubelet-მა/container runtime-მა უზრუნველყოს Pod-ის გაშვებისას და არ არის ფაილები,
@@ -104,12 +104,12 @@ flowchart TB
     style verify fill:#326ce5,color:#fff
 ```
 
-`Alpine` ავტომატურად უსაფრთხო არ არის distroless-ზე მხოლოდ იმის გამო, რომ პატარაა.
+`Alpine` ავტომატურად უფრო უსაფრთხო არ არის distroless-ზე მხოლოდ იმის გამო, რომ პატარაა.
 მისი `/bin/sh` და `apk` სასარგებლოა დეველოპერისთვის, მაგრამ ასევე სასარგებლოა
 RCE-ის დროსაც. ამის საპირისპიროდ, distroless არ უნდა შეირჩეს მუშაობის
 ხარისხის ხარჯზე. მაგალითად, აპლიკაციას CGO-დამოკიდებულებით შესაძლოა სჭირდებოდეს
 glibc და კონკრეტული shared library-ები; მაშინ ჯერ ამოწმეთ binary `ldd`-ის
-მეშვეობით builder-ში და აირჩიეთ თანხვედრადი runtime.
+მეშვეობით builder-ში და აირჩიეთ თავსებადი runtime.
 
 შეამოწმეთ, რას გულისხმობს tag კონკრეტული provider-ისთვის. `:latest` არ ფიქსირებს
 artifact-ს და არ ერგება production-ს. ვერსირებული tag (`alpine:3.21.2`) - მინიმუმია;
@@ -125,15 +125,15 @@ Digest-ი ჩაწერილია GitOps/manifest-ში image-ის შ�
 გარანტიას იმ ბაიტებზე, რომლებიც სკანირებული და ხელმოწერილი იყო. Kubernetes-ში ეს
 იგივე მნიშვნელობა მითითებულია `image:`-ში.
 
-> 🎯 გამოცალკევებული builder და final stage `COPY --from=builder`-ით, მხოლოდ მზა artifact-ის, compiler, source, cache და credentials არ ხვდება runtime-ში.
+> 🎯 გამოცალკევებული builder და final stage `COPY --from=builder`-ით მხოლოდ მზა artifact-ის კოპირებით; compiler, source, cache და credentials არ ხვდება runtime-ში.
 
 ## 24.3. Multi-stage build: builder არ უნდა გახდეს runtime
 
 Multi-stage Dockerfile განაცალკევებს სანდო როლებს. პირველ stage-ს შესაძლოა ჰქონდეს
 Go compiler, package cache და source. ბოლო stage იღებს მხოლოდ მზა artifact-ს.
-`COPY --from=builder` არ გადმოგადგილებს builder-ის filesystem-ს მთლიანად, თუ
+`COPY --from=builder` არ გადაიტანს builder-ის filesystem-ს მთლიანად, თუ
 ერთი ფაილი ცხადად კოპირდება. ეს გამორიცხავს compiler-ს, `git`-ს, `go.mod`-ს,
-პრივატულ build cache-ებსა და დამოკიდებულებების უმეტესობას runtime-იდან.
+პრივატულ build cache-ებსა და transitive დამოკიდებულებების უმეტესობას runtime-იდან.
 
 ქვემოთ მოცემულია სრული მაგალითი პატარა Go HTTP-სერვისისთვის. ის გულისხმობს, რომ
 საქაღალდეში არსებობს `go.mod`, `go.sum` და `./cmd/server`; `CGO_ENABLED=0` ქმნის
@@ -163,15 +163,15 @@ EXPOSE 8080
 ENTRYPOINT ["/server"]
 ```
 
-რიცხვითი UID/GID საშუალებას აძლევს runtime-ს გაშვას პროცესი მომხმარებლის
+რიცხვითი UID/GID საშუალებას აძლევს runtime-ს გაუშვას პროცესი მომხმარებლის
 `/etc/passwd`-ში ჩაწერის გარეშე, მაგრამ არ იძლევა გარანტიას აპლიკაციის
 მუშაობაზე: მას შესაძლოა სჭირდებოდეს user-ის ან group-ის lookup, `HOME`,
 timezone data, CA bundle, NSS ან სხვა runtime-ფაილები.
 
 `USER` image-ში პირველი ბარიერია: პროცესი ნაგულისხმევად არ არის root, მათ
-შორის ლოკალურ `docker run`-ის დროსაც. დაამყარეთ ის Pod-level policy-სა და
+შორის ლოკალური `docker run`-ის დროსაც. დაამყარეთ ის Pod-level policy-სა და
 SecurityContext-ში, რათა image-ის მომხმარებელმა შემთხვევითი manifest-ით არ
-გააუარესოს ეს გადაწყვეტილება:
+გააუქმოს ეს გადაწყვეტილება:
 
 ```yaml
 apiVersion: v1
@@ -237,12 +237,12 @@ Multi-stage ამცირებს runtime-ს, მაგრამ თავ�
 build-ს reproducible-ს. Release-ისთვის დაფიქსირეთ და გადამოწმეთ base-image
 digest, modules/packages-ის ვერსიები და დამოკიდებულებების წყარო; არ დაუშვათ,
 რომ build უკონტროლოდ იყოს დამოკიდებული mutable გარეშე repository-ებზე.
-Secrets-ები private dependency-ებისთვის გადმოეცით მხოლოდ BuildKit/Podman
+Secret-ები private dependency-ებისთვის გადმოეცით მხოლოდ BuildKit/Podman
 secret mount-ების მეშვეობით.
 
-არ გამოიყენოთ `--no-cache` როგორც მუდმივი „security-შემოწმება": ის მხოლოდ
+არ გამოიყენოთ `--no-cache` როგორც მუდმივი „security-შემოწმება“: ის მხოლოდ
 გამორთავს cache-ს, ზრდის დროსა და ტრაფიკს, მაგრამ არ ხდის დამოკიდებულებებს
-reproducible. ამის შემდეგ შეამოწმეთ შექმნილი digest გამოქვეყნებამდე.
+reproducible-ს. ამის შემდეგ შეამოწმეთ შექმნილი digest გამოქვეყნებამდე.
 
 ### ვარიანტი distroless-ით
 
@@ -282,11 +282,11 @@ history-ში ან cache-ში. Build-time credentials-ისთვის �
 secret mount-ები `ARG`-ის, `ENV`-ის, `COPY`-ის ან `ADD`-ის ნაცვლად.
 
 ```dockerfile
-# ᲘᲧᲣᲗᲪᲘᲡᲦᲠᲘᲡ: token დარჩება history/config-ში ან ერთ-ერთ layer-ში.
+# არასდროს: token დარჩება history/config-ში ან ერთ-ერთ layer-ში.
 ARG NPM_TOKEN
 RUN npm config set //registry.example.com/:_authToken="$NPM_TOKEN" && npm ci
 
-# ᲘᲧᲣᲗᲪᲘᲡᲦᲠᲘᲡ: .npmrc შესაძლოა ხვდებოდეს COPY . .-ში და დარჩეს layer-ში.
+# არასდროს: .npmrc შესაძლოა ხვდებოდეს COPY . .-ში და დარჩეს layer-ში.
 COPY .npmrc /root/.npmrc
 RUN npm ci
 RUN rm /root/.npmrc
@@ -334,7 +334,7 @@ artifact-ზე, შემდეგ ხელახლა ააგეთ image 
 ### `.dockerignore` - build context-ის საზღვარი
 
 Dockerfile-ის გაშვებამდე კლიენტი აგზავნის build context-ს builder-ისთვის.
-`.dockerignore`-ის გარეშე `COPY . .` შესაძლოა დაჰპატიმროს `.git`, ლოკალური
+`.dockerignore`-ის გარეშე `COPY . .` შესაძლოა დააკოპიროს `.git`, ლოკალური
 `.env`, SSH key-ები, ტესტური artifacts და დიდი საქაღალდეები. `.dockerignore`
 ამცირებს ტრაფიკს, აჩქარებს build-ს და არ აძლევს ამ ფაილებს Dockerfile-ის
 ინსტრუქციებისთვის ხელმისაწვდომი გახდომის საშუალებას. ეს მნიშვნელოვანი დაცვაა,
@@ -366,12 +366,12 @@ README.md
 `docker build -f docker/Dockerfile docker/`, თუ Dockerfile-ს არ სჭირდება
 მთლიანი monorepo.
 
-### Layer-ების შემცირება საზიანო „ოპტიმიზაციების" გარეშე
+### Layer-ების შემცირება საზიანო „ოპტიმიზაციების“ გარეშე
 
 გააერთიანეთ ერთმანეთთან დაკავშირებული install/cleanup ერთ `RUN`-ში, რათა
 package manager-ის cache არ დარჩეს წინა layer-ში. მაგრამ არ შეაერთოთ მთელი
-Dockerfile ერთ ურთიერთუკავშირო ბრძანებაში: `COPY`-ის მიმდევრობამ უნდა
-შეინარჩუნოს cache, ხოლო policy-სა და review-ს უნდა შესწევდეს ხედვის უნარი,
+Dockerfile ერთ ძნელად წასაკითხ ბრძანებაში: `COPY`-ის მიმდევრობამ უნდა
+შეინარჩუნოს cache, ხოლო policy-სა და review-ს უნდა ჰქონდეთ იმის დანახვის შესაძლებლობა,
 რაც ინსტალირდება.
 
 ```dockerfile
@@ -382,17 +382,17 @@ RUN apk add --no-cache --virtual .build-deps build-base \
 ```
 
 ეს სასარგებლოა მხოლოდ იმ შემთხვევაში, თუ ბრძანება final stage-შია. უკეთესი
-ვარიანტი ჩვეულებრივ უფრო მარტივია: ზოგადად არ გადმოგადგილდეს stage, სადაც
+ვარიანტი ჩვეულებრივ უფრო მარტივია: საერთოდ არ გადაიტანოთ stage, სადაც
 არსებობს `apk`, compiler და cache, runtime-ში multi-stage build-ის მეშვეობით.
 
-> 🎯 შეამოწმეთ final artifact `history`-ის, `inspect`-ისა და `dive`-ის მეშვეობით; distroless/scratch-ისთვის shell-ის არარსებობას ადასტურებს მხოლოდ მოსალოდნელი შეცდომა ხელმიუწვდომელი executable-ის შესახებ, არა ნებისმიერი non-zero `kubectl exec`.
+> 🎯 შეამოწმეთ final artifact `history`-ის, `inspect`-ისა და `dive`-ის მეშვეობით; distroless/scratch-ისთვის shell-ის არარსებობას ადასტურებს მხოლოდ მოსალოდნელი შეცდომა არარსებული executable-ის შესახებ, არა ნებისმიერი non-zero `kubectl exec`.
 
 ## 24.5. ინსპექცია: ზომის, layer-ებისა და შემცველობის გაზომვა
 
 Build-ის შემდეგ არ ივარაუდოთ, რომ final image მინიმალურია: დაამტკიცეთ ეს.
 `docker image ls` აჩვენებს საერთო ზომას, მაგრამ არ ხსნის, რომელმა layer-მა
 გამოიწვია ის. `history`, `inspect` და `dive` ეხმარებიან ბრძანებების, ზომებისა
-და ფაილურ ცვლილებების დანახვაში.
+და ფაილური ცვლილებების დანახვაში.
 
 ```bash
 IMAGE=registry.example.com/training/minimal-api:1.0.0
@@ -419,7 +419,7 @@ dive "$IMAGE"
 - package cache, compiler, tests, `.git`, `.env`, private key ან `.npmrc` -
   მიზეზი Dockerfile-ის/.dockerignore-ის გამოსასწორებლად და ნაპოვნი secret-ის
   დაუყოვნებლივ ბრუნვისთვის;
-- „wasted bytes" `RUN install`-ისა და ცალკე `RUN rm`-ის შემდეგ - წაშლა
+- „wasted bytes“ `RUN install`-ისა და ცალკე `RUN rm`-ის შემდეგ - წაშლა
   მოგვიანებით მოხდა, ახალ layer-ში;
 - ცარიელი ან `root`-ის ტოლი `User` - Dockerfile-მა არ დააფიქსირა non-root
   user.
@@ -437,7 +437,7 @@ deployment/admission ამოწმებს ამ კავშირს. შ�
 
 Shell-ის არარსებობა distroless/scratch runtime-ის თვისებაა, არა Kubernetes-ის
 შეცდომა. ამიტომ წარმატებული `kubectl exec <pod> -- /bin/sh` ასეთ image-ში
-სამაშურდი სიგნალი იქნებოდა. შეამოწმეთ აპლიკაციის endpoint და UID ჩვეული
+საგანგაშო სიგნალი იქნებოდა. შეამოწმეთ აპლიკაციის endpoint და UID ჩვეული
 საშუალებებით, ხოლო shell-ის მოსალოდნელი უარყოფა დაფიქსირეთ ცალკე.
 
 ```bash
@@ -455,7 +455,7 @@ if [[ "$(kubectl auth can-i create pods --subresource=exec)" != yes ]]; then
   exit 1
 fi
 
-# distroless/scratch-ისთვის მოსალოდნელია ზუსტად ხელმიუწვდომელი executable-ის შეცდომა.
+# distroless/scratch-ისთვის მოსალოდნელია ზუსტად არარსებული executable-ის შეცდომა.
 if output=$(kubectl exec minimal-api -c api -- /bin/sh 2>&1); then
   echo "ERROR: /bin/sh unexpectedly exists in the minimal runtime" >&2
   exit 1
@@ -475,7 +475,7 @@ kubectl get pod minimal-api -o jsonpath='{.spec.securityContext.runAsNonRoot}{"\
 kubectl get pod minimal-api -o jsonpath='{.spec.containers[0].securityContext.allowPrivilegeEscalation}{"\n"}'
 ```
 
-არ დაამატოთ `busybox` production image-ს „debug-ისთვის": ეს აუქმებს
+არ დაამატოთ `busybox` production image-ს „debug-ისთვის“: ეს აუქმებს
 მინიმიზაციის მიზნის ნაწილს. ინციდენტისას გამოიყენეთ logs, metrics, trace,
 `kubectl describe` და დროებითი ephemeral debug container, იზოლირებული
 production image-ისგან:
@@ -493,16 +493,16 @@ namespace-ს. `--target=api` ითხოვს container runtime-ისგა�
 namespace-ით და არ დაინახოს აპლიკაციის პროცესები. მისი root filesystem და
 mount namespace ავტომატურად არ ხდება სამიზნე container-ის filesystem.
 Debug image-საც უნდა ჰქონდეს კონკრეტული ვერსია (production-ში - დამტკიცებული
-digest) და არ უნდა გამოიყენებოდეს ხელმიუწვდომელი shell-ის მუდმივ
+digest) და არ უნდა გამოიყენებოდეს არარსებული shell-ის მუდმივ
 გვერდის ავლის საშუალებად.
 
 ### ტიპური შეცდომები და დიაგნოსტიკა
 
 | სიმპტომი | სავარაუდო მიზეზი | რა უნდა გაკეთდეს |
 |---|---|---|
-| `exec /server: no such file or directory` `scratch`-ში | binary დინამურად ლინკირებულია ან არასწორია architecture | ააგეთ `CGO_ENABLED=0`-ით; შეამოწმეთ `file /out/server`, platform და დამოკიდებულებები builder-ში |
-| HTTPS არ მუშაობს `scratch`-ში | არ არსებობს CA certificates | ჩაანთვალეთ CA bundle აპლიკაციაში ან დააკოპირეთ მხოლოდ საჭირო საჯარო bundle ცალკე stage-იდან |
-| Pod არ იწყებს გაშვებას `runAsNonRoot`-ით | image/manifest ცდილობს UID 0-ის გამოყენებას | დაწესეთ `USER` Dockerfile-ში, ownership და ცხადი რიცხვითი UID; არ გვერდზევლოთ შემოწმებას |
+| `exec /server: no such file or directory` `scratch`-ში | binary დინამიურად ლინკირებულია ან არასწორია architecture | ააგეთ `CGO_ENABLED=0`-ით; შეამოწმეთ `file /out/server`, platform და დამოკიდებულებები builder-ში |
+| HTTPS არ მუშაობს `scratch`-ში | არ არსებობს CA certificates | ჩააშენეთ CA bundle აპლიკაციაში ან დააკოპირეთ მხოლოდ საჭირო საჯარო bundle ცალკე stage-იდან |
+| Pod არ იწყებს გაშვებას `runAsNonRoot`-ით | image/manifest ცდილობს UID 0-ის გამოყენებას | დაწესეთ `USER` Dockerfile-ში, ownership და ცხადი რიცხვითი UID; ნუ აუვლით გვერდს შემოწმებას |
 | `kubectl exec ... /bin/sh` არ მუშაობს | shell-ის მოსალოდნელი არარსებობა distroless/scratch-ში | შეამოწმეთ logs/endpoint; გამოსაკვლევად გამოიყენეთ `kubectl debug` |
 | secret ნაპოვნია `dive`/history-ში | credential დაკოპირებულია, გადმოცემულია `ARG`-ით ან წაშლილია მოგვიანო layer-ში | გააუქმეთ secret, ხელახლა ააგეთ მის გარეშე, გამოიყენეთ BuildKit/Podman secret mount |
 | Docker-მა და Podman-მა შექმნეს განსხვავებული შედეგი | სხვადასხვა builder/cache/platform ან დაუფიქსირებელი base image | ცხადად დააფიქსირეთ platform საჭიროებისამებრ, დააფიქსირეთ digest და შეადარეთ final digest |
@@ -513,7 +513,7 @@ digest) და არ უნდა გამოიყენებოდეს �
 
 - **Build და runtime გამოცალკევებულია.** Builder შესაძლოა მძიმე იყოს, მაგრამ
   final stage უშვებს მხოლოდ artifact-ს, runtime-library-ებსა და საჭირო
-  public data-ს. Stages, dependencies და base images-ები გაივლის review-ს
+  public data-ს. Stages, dependencies და base image-ები გაივლის review-ს
   production-კოდის მსგავსად.
 - **ვერსია და digest ფიქსირდება.** `latest`-ს ბლოკავენ linter/policy-ით.
   Release აკავშირებს ადამიანურ tag-ს immutable digest-თან; იმავე digest
@@ -521,7 +521,7 @@ digest) და არ უნდა გამოიყენებოდეს �
 - **Non-root - defence in depth.** `USER` image-ში, `runAsNonRoot`/რიცხვითი
   UID Pod-ში და admission policy ერთმანეთს აძლიერებენ. დაამატეთ
   `drop: ["ALL"]`, `allowPrivilegeEscalation: false` და read-only root, როცა
-  აპლიკაცია თანხვედრადია.
+  აპლიკაცია თავსებადია.
 - **Secrets არასდროს არ ხდება build arguments.** CI იძლევა short-lived
   credential-ს build-ის დროისთვის; BuildKit/Podman secret mounts, scoped
   registry permissions და `.dockerignore` ამცირებს გაჟონვის შანსს. ყოველი
@@ -586,7 +586,7 @@ digest) და არ უნდა გამოიყენებოდეს �
 **გამოცდაზე.** საჭიროა სწრაფად ამოვიცნოთ `latest`, root user, secret
 Dockerfile-ში და ზედმეტი runtime stage; დავწეროთ `COPY --from=...`, `USER`,
 `.dockerignore`, ბრძანებები `docker build`/`podman build` და შევამოწმოთ
-image. დავალება „რატომ არ მუშაობს `kubectl exec ... sh`?" distroless-ისთვის
+image. დავალება „რატომ არ მუშაობს `kubectl exec ... sh`?“ distroless-ისთვის
 ჩვეულებრივ ამოწმებს მინიმალური runtime-ის გაგებას, არა shell-ის უკან
 დაბრუნების უნარს.
 
@@ -598,7 +598,7 @@ policy-ს - იმუშაოს ზუსტად განსაზღვ�
 
 > ### 🔴 თავდამსხმელის მზერა
 > **Asset:** secrets და credentials build-დროის ფაილებში, მაგალითად `.npmrc` და token.
-> **Starting foothold:** წვდომა Dockerfile-ზე/build context-ზე ან შესაძლებლობა შესწავლილ image-ის გამოკვლევისთვის.
+> **Starting foothold:** წვდომა Dockerfile-ზე/build context-ზე ან შესაძლებლობა აგებული image-ის გამოკვლევისა.
 > **Attacker objective:** image-ის intermediate layer-ებში დავიწყებული credential-ის პოვნა.
 > **Abuse path:** გამოქვეყნებული final image-ის layer-ების შესწავლა და credential-ის გამოტანა, თუ ის შექმნილია ერთ-ერთ მის ქვედა layer-ში ან შემთხვევით დაკოპირებულია builder-იდან. ცალკეული builder-layer-ები არ ხვდება ჩვეულებრივ final multi-stage image-ში, მაგრამ credential შესაძლოა დარჩეს ცალკე გამოქვეყნებულ intermediate image-ში, build logs-ში ან cacheable filesystem output-ში, თუ secret გადმოცემულია `ARG`/`ENV`/`COPY`-ის მეშვეობით ან ჩაწერილია build-ბრძანების მიერ layer/artifact-ში. სწორი BuildKit `--mount=type=secret` არ ინახავს secret-ის მნიშვნელობას final layer-ში ან provenance attestation-ში.
 > **Expected evidence:** final layers, კოპირებული artifacts და ხელმისაწვდომი build outputs არ შეიცავს credential-ს; provenance არ შეიცავს secret-ის მნიშვნელობებს.
@@ -626,16 +626,16 @@ TLS, CA bundle და საჭირო runtime-მონაცემები.
 მინიმალურად მხარდაჭერილი language runtime, ამიტომ ირჩევენ შესაბამის distroless
 ვარიანტს. თუ ნამდვილად საჭიროა shell, `apk` ან native diagnostic tool,
 გამართლებულია Alpine, მაგრამ მისი BusyBox/package manager და `musl` მოითხოვს
-ცალკე თანხვედრადობის და უსაფრთხოების შეფასებას.
+ცალკე თავსებადობისა და უსაფრთხოების შეფასებას.
 </details>
 
 <details>
-<summary>3. რას ხდის ზუსტად `COPY --from=builder`, და რა შესაძლოა მაინც შემთხვევით მოხვდეს final image-ში?</summary>
+<summary>3. რას აღკვეთს ზუსტად `COPY --from=builder`, და რა შესაძლოა მაინც შემთხვევით მოხვდეს final image-ში?</summary>
 
-`COPY --from=builder` გადმოგადგილებს მხოლოდ ცხადად მითითებულ artifact-ს, არა
+`COPY --from=builder` აკოპირებს მხოლოდ ცხადად მითითებულ artifact-ს, არა
 builder-ის filesystem-ს მთლიანად, ამიტომ compiler, source, `git`, build cache
 და დამოკიდებულებების უმეტესობა ავტომატურად არ ხვდება runtime-ში. მაგრამ
-შემცდომად ფართო `COPY`, დამატებული runtime-დამოკიდებულება ან secret,
+შეცდომით ფართო `COPY`, დამატებული runtime-დამოკიდებულება ან secret,
 რომელიც წინასწარ იმყოფებოდა კოპირებულ გზაზე, მაინც შესაძლოა მოხვდეს final
 image-ში. შემცველობა ამოწმდება `history`-ის, `inspect`-ისა და `dive`-ის
 მეშვეობით.
@@ -645,7 +645,7 @@ image-ში. შემცველობა ამოწმდება `histor
 <summary>4. რატომ არის ვერსირებული tag `latest`-ზე უკეთესი, ხოლო digest - version tag-ზე ძლიერი release-ისთვის?</summary>
 
 `latest` mutable-ია და არ ფიქსირებს შემოწმებულ artifact-ს, ხოლო version tag
-ერგება მხოლოდ release-ის გამოხატვას. Immutable digest აკავშირებს
+სულ მცირე გამოხატავს release-ს. Immutable digest აკავშირებს
 deployment-ს manifest/content-ის კონკრეტულ ბაიტებთან, რომლებიც სკანირებული
 და ხელმოწერილი იყო. Release-ისთვის თავი გვირჩევს GitOps-ში tag-ის და
 შემოწმებული `@sha256:...` digest-ის ერთდროულ შენახვას.
@@ -665,7 +665,7 @@ deployment-ს manifest/content-ის კონკრეტულ ბაიტ�
 <details>
 <summary>6. რატომ არ შლის `RUN rm /secret` secret-ს image history-იდან? რომელი მექანიზმი გამოვიყენოთ private dependency credential-ისთვის?</summary>
 
-თუ secret შექმნილია layer-ში, რომელი stage-იც გამოქვეყნებულ image-ში ხვდება,
+თუ secret შექმნილია იმ stage-ის layer-ში, რომელიც გამოქვეყნებულ image-ში ხვდება,
 წაშლა შემდეგ layer-ში არ ასუფთავებს მის ბაიტებს ქვედა layer-იდან/history-იდან.
 ჩვეულებრივ multi-stage build-ში ცალკეული builder თავისთავად არ ხვდება final
 image-ში, მაგრამ `ARG`, `ENV`, `COPY` ან `ADD` დაუცველია: credential შესაძლოა
@@ -675,7 +675,7 @@ intermediate image-ში. BuildKit/Podman `--mount=type=secret` დროებ
 final layer-ში ან provenance attestation-ში. მაგრამ build-ბრძანებას შესწევს
 თავადვე secret-ის დაბეჭდვის ან შექმნილ artifact-ში ჩაწერის უნარი, ამიტომ
 output მაინც ამოწმდება. თუ secret უკვე გამოქვეყნებულია, ის გაუქმდება და
-ბრუნდება, ხოლო image ხელახლა ეწერება სუფთა Dockerfile-იდან.
+ბრუნდება, ხოლო image ხელახლა აიგება სუფთა Dockerfile-იდან.
 </details>
 
 <details>
@@ -704,9 +704,9 @@ bytes `RUN install`-ისა და ცალკე `RUN rm`-ის შემ�
 <summary>9. როგორ დავამტკიცოთ, რომ distroless Pod მუშა მდგომარეობაშია, თუ `/bin/sh` განზრახ არ არსებობს?</summary>
 
 ამოწმებენ Ready-ს, logs-ს, health endpoint-ს ან probe-ს, მაგალითად
-`kubectl port-forward`-ისა და `curl`-ის მეშვეობით, ვინაიდან shell-ის
+`kubectl port-forward`-ისა და `curl`-ის მეშვეობით, shell-ის
 დაბრუნების ცდის ნაცვლად. Shell-ის არარსებობას ადასტურებს ზუსტად მოსალოდნელი
-შეცდომა ხელმიუწვდომელი executable-ის შესახებ, Pod Ready-ისა და `pods/exec`
+შეცდომა არარსებული executable-ის შესახებ, Pod Ready-ისა და `pods/exec`
 წვდომის შემოწმების შემდეგ; ნებისმიერი non-zero `kubectl exec` მტკიცებულებას
 არ წარმოადგენს. Incident diagnosis-ისთვის გამოიყენებენ logs, metrics,
 `describe` ან დროებით დამტკიცებულ ephemeral debug container-ს.
@@ -718,13 +718,13 @@ bytes `RUN install`-ისა და ცალკე `RUN rm`-ის შემ�
 Rootless Podman უშვებს build/run-ს ჩვეულებრივი მომხმარებლის სახელით, root
 Docker daemon-ის გარეშე, რაც ამცირებს pipeline-ისთვის host-ის Docker socket-ზე
 წვდომის მიცემის საჭიროებას. ის იყენებს იმავე Dockerfile-სა და build
-context-ს, მაგრამ არ აღკვეთს secret-ისა და ზედმეტი ფაილების ხვედას image-ში.
+context-ს, მაგრამ არ აღკვეთს secret-ისა და ზედმეტი ფაილების მოხვედრას image-ში.
 ამიტომ `.dockerignore`, secret mounts და Dockerfile-ის review მაინც
 სავალდებულო რჩება.
 </details>
 
 <details>
-<summary>11. **Flashback (14-ე თავი).** Base image-ის მინიმიზაცია (ეს თავი: distroless, shell-ისა და package manager-ის არარსებობა) და host footprint-ის მინიმიზაცია (14-ე თავი: ზედმეტი სერვისების/package-ების გამორთვა node-ზე) - ერთი და იმავე პრინციპის "ნაკლები attack surface" გამოყენება ორ სხვადასხვა დონეზე. თუ დროგრძელი შემოგესმა გამოცდის/ინციდენტის წინ, რომელი ამ ორ დონედან ამცირებს რისკს **უკვე კომპრომეტირებული** container-ისთვის უფრო სწრაფად - და რატომ არ ჩაანაცვლებს ერთი მეორეს?</summary>
+<summary>11. **Flashback (14-ე თავი).** Base image-ის მინიმიზაცია (ეს თავი: distroless, shell-ისა და package manager-ის არარსებობა) და host footprint-ის მინიმიზაცია (14-ე თავი: ზედმეტი სერვისების/package-ების გამორთვა node-ზე) - ერთი და იმავე პრინციპის "ნაკლები attack surface" გამოყენება ორ სხვადასხვა დონეზე. თუ გამოცდამდე/ინციდენტამდე დრო შეზღუდულია, რომელი ამ ორ დონედან ამცირებს რისკს **უკვე კომპრომეტირებული** container-ისთვის უფრო სწრაფად - და რატომ არ ჩაანაცვლებს ერთი მეორეს?</summary>
 
 უკვე კომპრომეტირებული container-ისთვის უფრო სწრაფად ცვლის თავდამსხმელისთვის
 ხელმისაწვდომ ინსტრუმენტებს runtime image-ის მინიმიზაცია: მასში დაუყოვნებლივ
@@ -732,7 +732,7 @@ context-ს, მაგრამ არ აღკვეთს secret-ისა �
 მინიმიზაცია იცავს node-სა და სხვა workloads-ს, ამცირებს სერვისებსა და
 package-ებს, რომელთა მეშვეობითაც შესაძლებელია escape-ის განვითარება host
 access-ის შემდეგ. Image არ იცავს კომპრომეტირებულ node-ს, ხოლო უსაფრთხო
-node არ ხსნის ზედმეტ ინსტრუმენტებს container-ის შიგნით, ამიტომ საჭირო არის
+node არ აშორებს ზედმეტ ინსტრუმენტებს container-ის შიგნიდან, ამიტომ საჭირო არის
 ორივე დონე.
 </details>
 

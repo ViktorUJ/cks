@@ -155,7 +155,7 @@ conservez normalement le filesystem par défaut et définissez un `sizeLimit`.
 
 `securityContext` existe au niveau Pod (`spec.securityContext`) et au niveau de chaque
 container (`spec.containers[].securityContext`, y compris les containers init et ephemeral).
-Chaque champ n'est pas autorisé aux deux niveaux. Pour les champs disponibles aux deux endroits, la valeur
+Tous les champs ne sont pas autorisés aux deux niveaux. Pour les champs disponibles aux deux endroits, la valeur
 du container prévaut **pour ce container**. La valeur Pod demeure la baseline des
 containers voisins.
 
@@ -176,7 +176,7 @@ flowchart TB
 
 | Champ | Où le définir | Règle et conclusion pratique |
 |---|---|---|
-| `runAsUser`, `runAsGroup`, `runAsNonRoot` | Pod et container | un override container ne l'affecte que lui ; ne cachez pas une exception dans un sidecar |
+| `runAsUser`, `runAsGroup`, `runAsNonRoot` | Pod et container | un override container ne s'applique qu'à lui ; ne cachez pas une exception dans un sidecar |
 | `seccompProfile` | Pod et container | un override de profil container est plus fort ; définissez `RuntimeDefault` sur le Pod et documentez chaque override `Localhost` |
 | `fsGroup`, `fsGroupChangePolicy`, `supplementalGroups`, `supplementalGroupsPolicy` | Pod uniquement | c'est le contexte du Pod partagé et de ses volumes ; il n'existe pas de `fsGroup` container |
 | `capabilities`, `privileged`, `allowPrivilegeEscalation`, `readOnlyRootFilesystem` | container uniquement | répétez les paramètres renforcés pour **chaque** container et initContainer |
@@ -245,7 +245,7 @@ les événements contiennent `SupplementalGroupsPolicyNotSupported`.
 
 Ce sont des champs du même `SecurityContext`, mais ils ne forment pas la baseline Linux universelle ci-dessus.
 `seLinuxOptions` sur un Pod ou un container définit le label SELinux du processus ; une valeur au niveau container
-override celle du niveau Pod. Lors du relabeling SELinux récursif normal, le **container runtime**
+prévaut sur celle du niveau Pod. Lors du relabeling SELinux récursif normal, le **container runtime**
 modifie le label inode du contenu du volume avant son utilisation par le container - pas kubelet.
 `seLinuxChangePolicy: MountOption` au niveau Pod demande le relabeling via l'option de montage
 `-o context=`, sans le garantir à lui seul. Pour un PVC avec un access mode autre que
@@ -254,7 +254,7 @@ désactivé par défaut) et `CSIDriver.spec.seLinuxMount: true` dans le driver C
 utilise le relabeling récursif normal. Ne changez pas un label ou une policy pour gagner en vitesse sans tester
 l'isolation et la compatibilité avec le CSI/filesystem concerné.
 
-> 🔬 **Upstream v1.37.** Dans Kubernetes v1.37, `SELinuxMount` est devenu GA et est activé par défaut. Avant de mettre à niveau un cluster SELinux-enabled, vérifiez les conflits de labels de volume ; si nécessaire, un workload peut conserver explicitement le comportement récursif avec `spec.securityContext.seLinuxChangePolicy: Recursive`. Détails : [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_FR.md).
+> 🔬 **Upstream v1.37.** Dans Kubernetes v1.37, `SELinuxMount` est devenu GA et est activé par défaut. Avant de mettre à niveau un cluster SELinux-enabled, vérifiez les conflits de labels de volume ; si nécessaire, un workload peut conserver explicitement le comportement récursif avec `spec.securityContext.seLinuxChangePolicy: Recursive`. Détails : [Kubernetes v1.37 Security Delta (uniquement en russe)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 `procMount` est une option Linux au seul niveau container : le `Default` sûr conserve masquées les parties sensibles de
 `/proc` ; `Unmasked` étend la visibilité du processus et ne convient pas aux workloads restreints.
@@ -281,8 +281,8 @@ Essayez d'abord `fsGroup`, un ownership correct dans l'image ou une policy stora
 doit être courte, justifiée et isolée.
 
 Un container ephemeral ajouté avec `kubectl debug` n'hérite pas non plus automatiquement du
-container security context du workload. Il est utile à la réponse contrôlée à incident, mais ne doit pas devenir un contournement
-de PSA ou de la baseline renforcée : convenez de son image, de son identité et de sa admission policy, limitez sa durée de vie
+container security context du workload. Il est utile pour une réponse contrôlée aux incidents, mais ne doit pas devenir un contournement
+de PSA ou de la baseline renforcée : convenez de son image, de son identité et de sa policy d'admission, limitez sa durée de vie
 et enregistrez le changement. Pour le diagnostic permanent, modifiez le template Deployment et créez un nouveau Pod,
 au lieu de tenter de modifier le `securityContext` immuable d'un Pod en cours d'exécution.
 
@@ -467,7 +467,7 @@ uniquement lorsqu'il est exigé par l'application ou un sidecar local.
 ### Debug sans supprimer le hardening
 
 `Read-only file system` est un symptôme utile. Identifiez d'abord le chemin, puis déterminez s'il s'agit de
-temporaire, cache ou données. Ne traitez pas un incident en ajoutant `privileged: true` ou en écrivant dans
+fichiers temporaires, de cache ou de données. Ne traitez pas un incident en ajoutant `privileged: true` ou en écrivant dans
 `hostPath`.
 
 ```bash
@@ -518,11 +518,11 @@ profil aux nodes par une méthode de confiance, épinglez le scheduling aux node
 l'application effective. Le modèle détaillé et le diagnostic du refus de syscall se trouvent dans le
 [chapitre 17](../17/fr.md).
 
-Checking from inside the process Linux namespace:
+Vérification depuis l'intérieur du Linux namespace du processus :
 
 ```bash
 kubectl exec hardened-web -c app -- sh -c 'grep -E "^(NoNewPrivs|Seccomp):" /proc/1/status'
-# Attendu : NoNewPrivs: 1 et Seccomp: 2 (filter) pour un runtime RuntimeDefault typique
+# Attendu : NoNewPrivs : 1 et Seccomp : 2 (filter) pour un runtime RuntimeDefault typique
 ```
 
 `Seccomp: 2` prouve qu'un filter est activé pour PID 1, mais ne prouve pas que le syscall requis est
@@ -559,62 +559,62 @@ kubectl get pod hardened-web -o jsonpath='{.spec.securityContext}{"\n"}'
 kubectl get pod hardened-web -o jsonpath='{range .spec.containers[*]}{.name}{": "}{.securityContext}{"\n"}{end}'
 kubectl get pod hardened-web -o jsonpath='{range .spec.initContainers[*]}{.name}{": "}{.securityContext}{"\n"}{end}'
 
-# Host namespaces and privileged flag must be searched separately
+# Les host namespaces et le flag privileged doivent être recherchés séparément
 kubectl get pod hardened-web -o jsonpath='{.spec.hostPID}{" "}{.spec.hostNetwork}{" "}{.spec.hostIPC}{"\n"}'
 kubectl get pod hardened-web -o json | jq '
   ((.spec.containers // []) + (.spec.initContainers // []) + (.spec.ephemeralContainers // []))
   | .[] | {name, privileged: (.securityContext.privileged // false)}'
 ```
 
-JSONPath shows declared configuration. For an absent boolean field, empty output does not
-equal `false`: audit requirements must be explicit rather than rely on a default.
-Also check `initContainers`, injected service-mesh/observability sidecars, and ephemeral
-containers: one weak container shares the network and volumes of the same Pod.
+JSONPath affiche la configuration déclarée. Pour un champ booléen absent, une sortie vide n'équivaut pas à
+`false` : dans un audit, les exigences doivent être explicites plutôt que de reposer sur une valeur par défaut.
+Vérifiez aussi les `initContainers`, les sidecars service-mesh/observability injectés et les containers
+ephemeral : un seul container faible partage le réseau et les volumes du même Pod.
 
-### 2. Verify startup and effective identity
+### 2. Vérifier le démarrage et l'identité effective
 
 ```bash
 kubectl wait --for=condition=Ready pod/hardened-web --timeout=90s
 kubectl describe pod hardened-web
 
 kubectl exec hardened-web -c app -- id
-# Expected: uid=10001(...) gid=10001(...) and no uid=0
+# Attendu : uid=10001(...) gid=10001(...) et pas d'uid=0
 
 kubectl exec hardened-web -c app -- sh -c 'grep -E "^(Cap(Inh|Prm|Eff|Bnd|Amb)|NoNewPrivs|Seccomp):" /proc/1/status'
 ```
 
-In `/proc/1/status`, effective capabilities for `drop: ALL` must be zero. The
-`NoNewPrivs: 1` field confirms escalation denial. `Seccomp: 2` normally means a filter, but
-inspect the real runtime and do not replace verification with interpreting one number. If the image
-does not contain `sh`, use an authorized diagnostic image/ephemeral procedure or inspect state
-through node/runtime tools with access control.
+Dans `/proc/1/status`, les capabilities effectives avec `drop: ALL` doivent être nulles. Le
+champ `NoNewPrivs: 1` confirme l'interdiction d'escalade. `Seccomp: 2` signifie normalement un filter, mais
+vérifiez le runtime réel et ne remplacez pas la vérification par l'interprétation d'un seul chiffre. Si l'image
+ne contient pas `sh`, utilisez une image de diagnostic autorisée/une procédure ephemeral ou vérifiez l'état
+via des outils node/runtime avec contrôle d'accès.
 
-### 3. Negative checks and typical results
+### 3. Vérifications négatives et résultats typiques
 
-| Check | Expected result | If the result differs |
+| Vérification | Résultat attendu | Si le résultat diffère |
 |---|---|---|
-| `id -u` in app | not `0` | image/override starts root; check Pod and container contexts |
-| write to `/` | `Read-only file system` | root filesystem is not read-only or write reached a broad mount |
-| write to `/tmp` | succeeds in the dedicated `emptyDir` | no mount, wrong UID/GID, or `fsGroup` unsupported by volume driver |
-| setuid-escalation attempt | no new privileges, `NoNewPrivs: 1` | `allowPrivilegeEscalation` absent/true, container privileged, has `CAP_SYS_ADMIN`, or wrong runtime policy |
-| unsafe syscall in a test Pod | seccomp denial | profile not applied, test uses the wrong syscall, or a different container ran |
-| Pod with `privileged: true` in a restricted namespace | admission reject | PSA/policy is not enforce or namespace has an exception |
+| `id -u` dans app | différent de `0` | l'image/override démarre en root ; vérifiez les contextes Pod et container |
+| écriture dans `/` | `Read-only file system` | le root filesystem n'est pas en lecture seule ou l'écriture a atteint un montage large |
+| écriture dans `/tmp` | réussit dans l'`emptyDir` dédié | pas de montage, UID/GID incorrects ou `fsGroup` non pris en charge par le driver de volume |
+| tentative d'escalade setuid | aucun nouveau privilège, `NoNewPrivs: 1` | `allowPrivilegeEscalation` absent/true, container privileged, possède `CAP_SYS_ADMIN` ou mauvaise policy runtime |
+| syscall dangereux dans un Pod de test | refus seccomp | profil non appliqué, le test utilise un autre syscall ou un autre container a été lancé |
+| Pod avec `privileged: true` dans un namespace restricted | rejet par l'admission | PSA/la policy n'est pas en mode enforce ou le namespace a une exception |
 
-A negative write test in `/` must not modify the application. Use a separate smoke-test Pod or a
-harmless path, after excluding a volume mount. In production, first test an observed copy of the workload:
-tests must not accidentally fill `emptyDir`, remove cache, or trigger a restart.
+Un test négatif d'écriture dans `/` ne doit pas modifier l'application. Utilisez un Pod de smoke-test séparé ou un
+chemin inoffensif, en excluant au préalable tout montage de volume. En production, testez d'abord une copie observée du workload :
+les tests ne doivent pas remplir accidentellement `emptyDir`, supprimer le cache ni provoquer un redémarrage.
 
-## 18.8. Common failures and safe remediation
+## 18.8. Défaillances courantes et correction sûre
 
-| Symptom | Likely cause | Remediation |
+| Symptôme | Cause probable | Correction |
 |---|---|---|
-| `container has runAsNonRoot and image will run as root` | image has no non-root USER and UID is not set | build the image with a non-root USER or explicitly set a verified nonzero UID |
-| `Permission denied` on a mounted volume | UID/GID do not match, `fsGroup` was not applied by the driver | check ownership, storage driver, and `fsGroup`; do not use blanket `chmod 777` |
-| `Read-only file system` | app writes PID/cache/temp in the image layer | add a narrow `emptyDir` or PVC exactly at the required path |
-| Pod is not created with `Localhost` seccomp | profile is absent on the selected node | deliver the profile and restrict placement, or return to `RuntimeDefault` |
-| port 80 does not open | non-root and no `NET_BIND_SERVICE` | listen on a high port and set Service `targetPort`; a capability is only a justified exception |
-| sidecar breaks after hardening | SecurityContext is set only on app or sidecar writes to the root filesystem | a hardened context and explicit writable volumes are needed for every container |
-| PSA rejects the Pod | prohibited setting (`privileged`, host namespace, `Unconfined`) | remove the bypass; create an exception separately, minimally, and temporarily |
+| `container has runAsNonRoot and image will run as root` | l'image n'a pas de USER non-root et l'UID n'est pas défini | construire l'image avec un USER non-root ou définir explicitement un UID non nul vérifié |
+| `Permission denied` sur un volume monté | les UID/GID ne correspondent pas, `fsGroup` n'a pas été appliqué par le driver | vérifier l'ownership, le driver de stockage et `fsGroup` ; ne pas faire de `chmod 777` généralisé |
+| `Read-only file system` | l'application écrit PID/cache/temp dans la couche d'image | ajouter un `emptyDir` ou PVC étroit exactement sur le chemin requis |
+| le Pod n'est pas créé avec seccomp `Localhost` | le profil est absent du node sélectionné | livrer le profil et restreindre le placement, ou revenir à `RuntimeDefault` |
+| le port 80 ne s'ouvre pas | non-root et pas de `NET_BIND_SERVICE` | écouter sur un high port et définir le `targetPort` du Service ; une capability n'est qu'une exception justifiée |
+| le sidecar casse après le hardening | SecurityContext défini uniquement sur app ou le sidecar écrit dans le root filesystem | un contexte renforcé et des volumes accessibles en écriture explicites sont nécessaires pour chaque container |
+| PSA rejette le Pod | réglage interdit (`privileged`, host namespace, `Unconfined`) | supprimer le contournement ; créer l'exception séparément, de façon minimale et temporaire |
 
 Ne copiez pas de secrets dans un `emptyDir` accessible en écriture si l'application peut les lire depuis un Secret monté. Si un
 programme doit transformer un certificat/une configuration, créez un petit volume accessible en écriture séparé, limitez sa
@@ -651,7 +651,7 @@ nouveau ReplicaSet/Pod et observez le rollout.
 <summary>1. Pourquoi `runAsNonRoot: true` ne rend-il pas sûr un Pod avec `privileged: true` ?</summary>
 
 `runAsNonRoot` vérifie l'UID effectif au démarrage, mais ce n'est pas un bac à sable. `privileged: true` accorde
-presque toutes les capabilities et l'accès aux devices, rend seccomp effectif à `Unconfined`, et AppArmor est
+presque toutes les capabilities et l'accès aux devices, rend le seccomp effectivement `Unconfined`, et AppArmor est
 ignoré. Un processus non-root disposant de cet accès conserve des chemins dangereux vers le node.
 </details>
 

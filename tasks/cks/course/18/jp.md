@@ -4,7 +4,7 @@
 
 > **課題。** application の vulnerability は、process が root で動作し、capabilities を保持し、privilege を elevate でき、writable root filesystem 内の binary を置換できる場合、container 内の shell から node takeover または persistence へ変わります。Pod または sidecar の安全でない一つの default は、統一された limiting contract がなければ compromise の impact を拡大します。hardened `SecurityContext` はこの余分な path を事前に遮断します。
 
-> **この後。** AppArmor は process が access できる object を、seccomp は実行できる system call を制限しました。次にこれらと basic process restriction を、一つの reproducible Pod contract にまとめます。non-root、empty capability set、privilege escalation の禁止、read-only root filesystem、seccomp profile です。これは CKS の公式 **Minimize Microservice Vulnerabilities（20%）**domain、`SecurityContext` と Pod Security Standards の material です。Cluster Setup はこれに間接的に関係します。node の kubelet と runtime がこれらの setting を support し適用する必要があるためです。目的は「すべてを true/false にする」ことではなく、各 container に必要な privilege だけを与え、それを証明可能にすることです。
+> **この後。** AppArmor は process が access できる object を、seccomp は実行できる system call を制限しました。次にこれらと basic process restriction を、一つの reproducible Pod contract にまとめます。non-root、empty capability set、privilege escalation の禁止、read-only root filesystem、seccomp profile です。これは CKS の公式 **Minimize Microservice Vulnerabilities（20%）** domain、`SecurityContext` と Pod Security Standards の material です。Cluster Setup はこれに間接的に関係します。node の kubelet と runtime がこれらの setting を support し適用する必要があるためです。目的は「すべてを true/false にする」ことではなく、各 container に必要な privilege だけを与え、それを証明可能にすることです。
 
 > **CKA で必要な知識。** `SecurityContext` field、UID/GID、capabilities、Pod/container level は[CKA 第20章](../../../cka/course/20/jp.md)で扱います。ここでは `seccompProfile`、`privileged` と host namespace の拒否、writable `emptyDir`、YAML だけでなく effective state の確認と共に、single hardened baseline として適用します。
 
@@ -185,7 +185,7 @@ spec:
 
 これらは同じ `SecurityContext` の field ですが、上記の universal Linux baseline ではありません。Pod または container の `seLinuxOptions` は process の SELinux label を設定します。container-level value は Pod-level を override します。通常の recursive SELinux relabel では、**container runtime** が container による使用前に volume content の inode label を変更します。kubelet ではありません。Pod-level の `seLinuxChangePolicy: MountOption` は mount option `-o context=` による relabel を要求しますが、それ自体は保証しません。Kubernetes v1.36 で access mode が `ReadWriteOncePod` 以外の PVC には、enabled `SELinuxMount` feature gate（default では disabled）と CSI driver の `CSIDriver.spec.seLinuxMount: true` が必要です。そうでなければ Kubernetes は通常の recursive relabel を使用します。specific CSI/filesystem の isolation と compatibility を test せず、speed のために label や policy を変えてはいけません。
 
-> 🔬 **Upstream v1.37。** Kubernetes v1.37 では `SELinuxMount` が GA となり enabled by default になりました。SELinux-enabled cluster の upgrade 前に volume-label conflict を確認します。必要なら workload は `spec.securityContext.seLinuxChangePolicy: Recursive` により recursive behavior を明示的に保持できます。詳細: [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_JP.md)。
+> 🔬 **Upstream v1.37。** Kubernetes v1.37 では `SELinuxMount` が GA となり enabled by default になりました。SELinux-enabled cluster の upgrade 前に volume-label conflict を確認します。必要なら workload は `spec.securityContext.seLinuxChangePolicy: Recursive` により recursive behavior を明示的に保持できます。詳細: [Kubernetes v1.37 Security Delta (ロシア語版のみ)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
 
 `procMount` は container-level Linux option だけです。safe default の `Default` は sensitive `/proc` の一部を masked のままにします。`Unmasked` は process view を拡大し restricted workload には適しません。Kubernetes v1.30 以降、`Unmasked` は user namespace の Pod、すなわち `spec.hostUsers: false` にだけ許可されます。Pod-level の `securityContext.sysctls` は Pod の network/IPC namespace に sysctl を設定します。Kubernetes documentation にある safe sysctl だけを使います。unsafe sysctl は kubelet allowlist を要求し host namespace と conflict し得るため、application setting ではなく deliberate node-level exception です。
 
@@ -195,7 +195,7 @@ Windows ではこれらの Linux control は適用されません。Windows cont
 
 ### Init、sidecar、ephemeral container - separate process
 
-`initContainers` は application より前に実行されますが、inappropriate owner/mode の file を作成したり、extra privilege を要求したりできます。hardened workload では同じ原則を受けます。explicit non-root UID、drop all capability、no escalation、read-only root、必要なら separate writable volume です。`chown -R` のためだけに initContainer を root で動かしてはいけません。これは image error を隠すことが多いです。最初に `fsGroup`、image 内の correct ownership、storage-class policy を試します。privileged exception は short、justified、isolated である必要があります。
+`initContainers` は application より前に実行されますが、inappropriate owner/mode の file を作成したり、extra privilege を要求したりできます。hardened workload では同じ原則が適用されます。explicit non-root UID、drop all capability、no escalation、read-only root、必要なら separate writable volume です。`chown -R` のためだけに initContainer を root で動かしてはいけません。これは image error を隠すことが多いです。最初に `fsGroup`、image 内の correct ownership、storage-class policy を試します。privileged exception は short、justified、isolated である必要があります。
 
 `kubectl debug` により追加する ephemeral container も、workload container security context を自動で inherit しません。controlled incident response に有用ですが、PSA または hardened baseline の bypass になってはいけません。image、identity、admission policy を合わせ、lifetime を制限し change を記録します。permanent diagnostic には Deployment template を変更して new Pod を作成します。すでに running の Pod の immutable `securityContext` を変えようとしてはいけません。
 
@@ -383,7 +383,7 @@ spec:
       type: RuntimeDefault
 ```
 
-`Localhost` では path は container filesystem でなく kubelet の seccomp directory に相対的です。JSON profile を ConfigMap に copy して kubelet が見つけると期待してはいけません。profile は trusted method で node に配布し、それがある node に scheduling を固定して、actual application を証明する必要があります。syscall denial の detailed model と debugging は[第17章](../17/jp.md)にあります。
+`Localhost` では path は container filesystem でなく kubelet の seccomp directory に相対的です。JSON profile を ConfigMap に copy して kubelet が見つけると期待してはいけません。profile は trusted method で node に配布し、それがある node に scheduling を固定して、実際に適用されていることを証明する必要があります。syscall denial の detailed model と debugging は[第17章](../17/jp.md)にあります。
 
 process の Linux namespace 内から検証します。
 
@@ -392,7 +392,7 @@ kubectl exec hardened-web -c app -- sh -c 'grep -E "^(NoNewPrivs|Seccomp):" /pro
 # 期待値: typical RuntimeDefault runtime では NoNewPrivs: 1 と Seccomp: 2 (filter)
 ```
 
-`Seccomp: 2` は PID 1 の filter 有効化を証明しますが、needed syscall が intended profile により block されたことは証明しません。`Localhost` では controlled negative test、expected `EPERM`/`Operation not permitted`、node/runtime log の確認を追加します。verification を combat exploit にしてはいけません。isolated environment で safe な forbidden syscall を test します。
+`Seccomp: 2` は PID 1 の filter 有効化を証明しますが、needed syscall が intended profile により block されたことは証明しません。`Localhost` では controlled negative test、expected `EPERM`/`Operation not permitted`、node/runtime log の確認を追加します。実際の攻撃に使う exploit を verification に使ってはいけません。isolated environment で safe な forbidden syscall を test します。
 
 > 🎯 template の intent、admission/start、process の effective state を確認します。`kubectl apply` は UID、capability、seccomp、write denial を証明しません。
 
@@ -473,7 +473,7 @@ application が mounted Secret として read できるなら、Secret を writa
 
 ## 18.9. hardened baseline の段階的導入
 
-created Pod を手動でなく、Deployment/StatefulSet/Job template と Helm chart に baseline を導入します。ほとんどの running Pod の `securityContext` は immutable です。correct change は新しい ReplicaSet/Pod として release し、rollout を監視します。
+作成済みの Pod に手動で導入するのではなく、Deployment/StatefulSet/Job template と Helm chart に baseline を導入します。ほとんどの running Pod の `securityContext` は immutable です。correct change は新しい ReplicaSet/Pod として release し、rollout を監視します。
 
 1. process、writable path、low port、volume ownership、syscall/profile requirement、current の `privileged`/`host*` exception を inventory します。
 2. image を fix します。non-root `USER`、必要な UID/GID が読める file、`/` ではなく documented directory への application write です。
@@ -484,7 +484,7 @@ created Pod を手動でなく、Deployment/StatefulSet/Job template と Helm ch
 7. admission guardrail（Pod Security Admission restricted および/または policy engine）を有効にし、次の chart version が privileged/host namespace または `Unconfined` を戻さないようにします。
 8. 各 exception を document し定期的に review します。owner、reason、scope、expiry、required capability/profile、test evidence です。
 
-## 18.10. Self-check question
+## 18.10. 自己確認問題
 
 <details>
 <summary>1. `runAsNonRoot: true` は、なぜ `privileged: true` を持つ Pod を安全にしないのですか？</summary>
@@ -580,7 +580,7 @@ team は baseline を manifest 間で copy せず、common Helm chart または 
 
 **実務で。** 同じ順序により hardening は repeatable process になります。safe baseline は template にあり、admission は regression を防ぎ、rollout と runtime signal は incompatibility を示します。各 exception には minimal scope、responsible owner、review expiry を設定するため、temporary concession が permanent vulnerability になりません。
 
-## Practice
+## 演習
 
 [CKA Lab 107](../../../cka/labs/107/README_JP.MD)で hardened template を練習します。`emptyDir` を explicitly described ephemeral writable storage として使い、`check_result` で result を確認します。次に separate test workload に、この章の baseline を追加します。non-root UID、`drop: ["ALL"]`、`allowPrivilegeEscalation: false`、read-only root filesystem、`/tmp` 用の `emptyDir`、`RuntimeDefault` です。`id`、`NoNewPrivs`、`Seccomp`、mount point、root への expected write denial を証明します。syscall policy の deep diagnostic は[第17章](../17/jp.md)に戻ります。
 
@@ -589,7 +589,7 @@ team は baseline を manifest 間で copy せず、common Helm chart または 
 
 🌐 追加 interactive practice（killer.sh/killercoda、external resource）: [privileged-containers](https://killercoda.com/killer-shell-cks/scenario/privileged-containers) · [privilege-escalation-containers](https://killercoda.com/killer-shell-cks/scenario/privilege-escalation-containers)
 
-## Reference material
+## 参考資料
 
 - [Kubernetes: Pod または Container の Security Context を設定する](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)
 - [Kubernetes: Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/)

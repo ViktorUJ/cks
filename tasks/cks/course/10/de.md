@@ -288,10 +288,10 @@ folgenden Kombinationen.
 | `impersonate` auf `users`, `groups`, `serviceaccounts`, `uids` oder `userextras/<name>` | Erlaubt, Anfragen im Namen einer anderen, auch privilegierteren Identity auszuführen. Extra-Felder werden über einen exakten Resource Name festgelegt, etwa `userextras/scopes` in der API Group `authentication.k8s.io`. | Nur bei Bedarf an Auditoren geben und mit `resourceNames` begrenzen. |
 | `create`/`update`/`patch` RoleBinding und ClusterRoleBinding | Kann zusammen mit einer verfügbaren Rolle Rechte weitergeben; ClusterRoleBinding tut dies für den gesamten Cluster. | Der Anwendung verweigern; die Vergabe von Zugriff von der Workload-Entwicklung trennen. |
 | `get`/`list`/`watch` `secrets` | Ein Secret enthält oft Passwort, Registry Credential, Schlüssel oder Bearer Token; `list`/`watch` legen die Werte vieler Secrets offen. | Für `get` ein konkretes Secret über `resourceNames` angeben oder der Anwendung keinen API-Zugang geben. |
-| `create` `serviceaccounts/token` | Stellt ein Token für den ausgewählten ServiceAccount aus und kann ein Weg sein, dessen Rechte zu verwenden. | Nur vertrauenswürdiger Automatisierung und für konkrete ServiceAccounts erlauben. |
+| `create` `serviceaccounts/token` | Stellt einen Token für den ausgewählten ServiceAccount aus und kann ein Weg sein, dessen Rechte zu verwenden. | Nur vertrauenswürdiger Automatisierung und für konkrete ServiceAccounts erlauben. |
 | `create` `pods/exec` | Erlaubt die interaktive Ausführung von Befehlen in einem bereits laufenden Pod und Zugriff auf dessen Netzwerk, Dateisystem und gemountete Secrets. | Nicht in gewöhnliche Rollen aufnehmen; kurzlebigen Break-glass-Zugang und Audit verwenden. |
 | `create` `pods/portforward` | Erstellt einen Tunnel zu Pod-Ports und umgeht die gewöhnliche Netzwerk-Exposition. | Gezielt für Diagnose erteilen und nach dem Incident widerrufen. |
-| `create` Workload (`pods`, `deployments`, `jobs` usw.) | Das Erstellen eines Pods/Workloads in einem Namespace gibt bereits für sich starken indirekten Zugriff: Jeder ServiceAccount dieses Namespace kann ausgewählt und im Pod spec auf Secret, ConfigMap und verfügbaren Storage verwiesen werden, auch ohne separates `get secrets` der ursprünglichen Identity. Damit können Daten oder API-Rechte eines anderen Workloads erlangt werden. Wenn die Policy privileged-/Host-level-Pods zulässt, können die Folgen auf die node übergreifen. | Nicht ohne Bedarf an nicht vertrauenswürdige Tenant-Identities erteilen; Workload-Erstellung als privilegiertes Recht behandeln und Pod Security, ServiceAccount-, Secret-/Storage-Design sowie Admission Policy beschränken. |
+| `create` Workload (`pods`, `deployments`, `jobs` usw.) | Das Erstellen eines Pods/Workloads in einem Namespace gibt bereits für sich starken indirekten Zugriff: Man kann einen beliebigen ServiceAccount dieses Namespace auswählen und im Pod spec auf Secret, ConfigMap und verfügbaren Storage verweisen, auch ohne separates `get secrets` der ursprünglichen Identity. Damit können Daten oder API-Rechte eines anderen Workloads erlangt werden. Wenn die Policy privileged-/Host-level-Pods zulässt, können die Folgen auf die node übergreifen. | Nicht ohne Bedarf an nicht vertrauenswürdige Tenant-Identities erteilen; Workload-Erstellung als privilegiertes Recht behandeln und Pod Security, ServiceAccount-, Secret-/Storage-Design sowie Admission Policy beschränken. |
 | `nodes` | Zugriff auf node-Objekte legt Infrastrukturinformationen offen; das Ändern einer node ist eine clusterweite Operation. | Aus Tenant-Rollen ausschließen; separaten Operational Identities erteilen. |
 | `get` `nodes/proxy` | Erlaubt Proxy-Anfragen an das kubelet. Das ist kein Read-only-Zugriff: Kubelet-Proxy-Operationen können Admission und das normale Audit des API server umgehen. | Nicht an Workloads und Tenant-Rollen erteilen; nur einer streng kontrollierten Operational Identity bereitstellen. |
 
@@ -308,7 +308,7 @@ für eine legitime operative Aufgabe eine enge Subresource statt `nodes/proxy`, 
 Kompatibilität bleibt `nodes/proxy` als Fallback bestehen.
 
 ```yaml
-# Beispiel für eine Monitoring-Identity; ersetzen Sie damit keine beliebigen Kubelet-Operationen.
+# Beispiel für eine Monitoring-Identity; ersetzen Sie damit keine beliebigen kubelet-Operationen.
 rules:
 - apiGroups: [""]
   resources: ["nodes/metrics", "nodes/stats"]
@@ -409,13 +409,13 @@ Prüfen Sie den Scope einer Ressource vor der Wahl des Objekts. `pods`, `configm
 `nodes`, `namespaces`, `persistentvolumes` und `clusterroles` sind cluster-scoped: Dafür ist
 `ClusterRole` erforderlich; `RoleBinding` macht eine cluster-scoped Ressource nicht lokal.
 Wird ein Satz namespaced Berechtigungen in mehreren Namespaces benötigt, definieren Sie eine
-`ClusterRole`, binden sie aber mit getrennten `RoleBinding` in jedem erlaubten Namespace.
+`ClusterRole`, binden Sie sie aber mit getrennten `RoleBinding` in jedem erlaubten Namespace.
 
 `nonResourceURLs` beschreibt URLs des API server und keine Kubernetes-Objekte. Solche URLs
 haben keinen Namespace-Scope; die Regel muss daher in einer `ClusterRole` stehen und über
 `ClusterRoleBinding` erteilt werden. Einer separaten Health-check-Identity lässt sich
 beispielsweise genau `nonResourceURLs: ["/healthz"]` und `verbs: ["get"]` geben, ohne
-Wildcard `/*` zu erteilen. `RoleBinding`, auch wenn es auf eine solche `ClusterRole`
+Wildcard `/*` zu erteilen. `RoleBinding`, auch wenn er auf eine solche `ClusterRole`
 verweist, macht eine Non-resource-URL nicht zu einer namespaced Permission.
 
 ```mermaid
@@ -566,7 +566,7 @@ kubectl auth can-i get nodes --as="$SA"
 
 Wenn die Antwort unerwartet `yes` lautet, finden Sie alle Bindings des Subjects und
 wiederholen die Prüfung nach Entfernen oder Einschränken des überflüssigen Zugriffs. Zu
-löschen ist das präzise Objekt, nicht zufällig der Zugriff einer anderen Gruppe:
+löschen ist das präzise Objekt, damit nicht versehentlich einem anderen Team der Zugriff entzogen wird:
 
 ```bash
 kubectl get rolebinding -A -o yaml | grep -n -C 4 'app-sa'
@@ -593,7 +593,7 @@ der Audit-Logs und des Workload-Eigentümers.
   `automountServiceAccountToken: false`; andernfalls erstellen Sie einen separaten
   ServiceAccount mit minimalen Rechten. So bleiben Audit und Widerruf des Zugriffs
   punktgenau.
-- **RBAC als Code.** Bewahren Sie eigene Rollen in Git auf, prüfen Sie Diff der Regeln und
+- **RBAC als Code.** Bewahren Sie eigene Rollen in Git auf, prüfen Sie den Diff der Regeln und
   Aggregation Labels in CI. Blockieren Sie Wildcard, `escalate`, `bind`, `impersonate` und
   Zugang zu Secrets ohne explizite Ausnahme separat.
 - **Konfiguration der API-server-Autorisierung.** Bestimmen Sie zuerst, welche der beiden
@@ -604,7 +604,7 @@ der Audit-Logs und des Workload-Eigentümers.
 
   Setzen Sie bei File-based-Konfiguration über `--authorization-config` nicht gleichzeitig
   `--authorization-mode`: Prüfen Sie das Vorhandensein von `type: RBAC`, die
-  Zusammenstellung und Reihenfolge von `authorizers` direkt in der
+  Zusammensetzung und Reihenfolge von `authorizers` direkt in der
   `AuthorizationConfiguration`.
 
   Zusammensetzung und Reihenfolge der Authorizer Chain müssen Teil des Security Review sein.
@@ -663,7 +663,7 @@ wörtlich: `pods/exec` ist nicht dasselbe wie `pods`; `nodes` ist cluster-scoped
 statt alles wahllos zu ändern.
 
 **In der realen Arbeit.** RBAC begrenzt den Blast Radius eines gestohlenen Tokens,
-Automatisierungsfehler und einer Pod-Kompromittierung. Die gefährlichsten Incidents entstehen
+eines Automatisierungsfehlers und einer Pod-Kompromittierung. Die gefährlichsten Incidents entstehen
 gewöhnlich nicht durch die YAML-Syntax, sondern durch bequeme breite Rollen, Wildcards und
 versteckte Bindings. Regelmäßiges `can-i`-Audit, Review von Aggregation Labels und ein
 expliziter Zugriffsvertrag machen RBAC zu einer überprüfbaren Security-Grenze.

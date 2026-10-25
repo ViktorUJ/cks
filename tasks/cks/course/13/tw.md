@@ -316,7 +316,7 @@ remediation 與 regression，也難以安全 rollback。
 ## 13.10. 這如何派上用場：考試與實際工作
 
 **考試中。** 題目可能要求你安全地升級叢集，或說明版本順序。先確認目前與目標版本，不要違反 version
-skew，先將 control plane 升級到工作節點，升級 kubelet 前使用 `drain`，並透過 `uncordon` 讓節點恢復。
+skew，先於工作節點升級 control plane，升級 kubelet 前使用 `drain`，並透過 `uncordon` 讓節點恢復。
 請記住差異：第一個 control-plane 節點使用 `kubeadm upgrade apply`，worker 使用 `kubeadm upgrade node`。
 
 **實際工作中。** 這項技能的價值不在機械式執行 `kubeadm`，而在於不犧牲可用性地降低 CVE 暴露程度。

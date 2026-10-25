@@ -151,7 +151,7 @@ EXPOSE 8080
 ENTRYPOINT ["/server"]
 ```
 
-A numeric UID/GID lets runtime run a process without a user entry in `/etc/passwd`, but does not
+A numeric UID/GID lets the runtime run a process without a user entry in `/etc/passwd`, but does not
 guarantee application functionality: it can need user or group lookup, `HOME`, timezone data, CA
 bundle, NSS, or other runtime files.
 
@@ -182,7 +182,7 @@ spec:
 ```
 
 `runAsNonRoot: true` does not create an image user or fix file ownership. It prevents startup if
-runtime determines the user is root. Ensure that the binary and directories the application writes
+the runtime determines the user is root. Ensure that the binary and directories the application writes
 to are available to UID `65532`; with `readOnlyRootFilesystem: true`, put temporary data in
 `emptyDir` rather than restoring a writable root.
 
@@ -218,7 +218,7 @@ podman run --rm --user 65532:65532 \
 
 Multi-stage reduces runtime, but does not itself make the builder trusted or a build reproducible.
 For release, pin and verify the base-image digest, module/package versions, and dependency source;
-do not let a build depend uncontrolledly on mutable external repositories. Pass secrets for private
+do not let a build depend in an uncontrolled way on mutable external repositories. Pass secrets for private
 dependencies only through BuildKit/Podman secret mounts.
 
 Do not use `--no-cache` as a permanent "security check": it only disables cache and increases
@@ -448,7 +448,7 @@ kubectl debug -it pod/minimal-api --target=api \
 ```
 
 An ephemeral debug container is in the same Pod and shares its network namespace. `--target=api`
-asks container runtime to put the debug container in the target container's process namespace;
+asks the container runtime to put the debug container in the target container's process namespace;
 this requires runtime support. Without it, the debug container can start with an isolated process
 namespace and not see application processes. Its root filesystem and mount namespace do not
 automatically become those of the target container. The debug image must also have a specific
@@ -464,7 +464,7 @@ missing shell.
 | Pod does not start with `runAsNonRoot` | image/manifest tries to use UID 0 | set `USER` in Dockerfile, ownership, and explicit numeric UID; do not bypass the check |
 | `kubectl exec ... /bin/sh` does not work | expected absence of shell in distroless/scratch | check logs/endpoint; use `kubectl debug` for investigation |
 | secret found in `dive`/history | credential was copied, passed by `ARG`, or removed in a later layer | revoke secret, rebuild without it, use BuildKit/Podman secret mount |
-| Docker and Podman built different result | different builder/cache/platform or unpinned base image | explicitly set platform when needed, pin digest, and compare final digest |
+| Docker and Podman built different results | different builder/cache/platform or unpinned base image | explicitly set platform when needed, pin digest, and compare final digest |
 
 > 🏭 Pinned base/release digest, narrow context, secret management, non-root runtime, SBOM/scan/signature, and admission; debug uses an approved ephemeral debug image.
 
@@ -501,7 +501,7 @@ missing shell.
   `COPY --from=`.
 - **Layer** - immutable change to an image filesystem; removal in a new layer does not erase
   old-layer content.
-- **Digest** - immutable SHA-256 identifier of particular image manifest/content.
+- **Digest** - immutable SHA-256 identifier of a particular image manifest/content.
 - **Rootless Podman** - Podman mode in which an ordinary user, rather than a root daemon,
   performs build/run.
 - **Secret mount** - temporary credential mount for one build command, without writing it to
@@ -575,7 +575,7 @@ A static Go binary with `CGO_ENABLED=0` suits `scratch` if DNS, TLS, CA bundle, 
 <details>
 <summary>5. How is `USER` in Dockerfile related to `runAsNonRoot` in a Pod, and why are both needed?</summary>
 
-`USER` makes non-root execution the default for an image and local `docker run`; a numeric UID works even without an `/etc/passwd` entry. `runAsNonRoot` in a Pod does not create a user or fix ownership, but prevents runtime from starting a determined root user. A Pod can also explicitly set UID/GID and reinforce the decision with admission policy.
+`USER` makes non-root execution the default for an image and local `docker run`; a numeric UID works even without an `/etc/passwd` entry. `runAsNonRoot` in a Pod does not create a user or fix ownership, but prevents the runtime from starting a specific root user. A Pod can also explicitly set UID/GID and reinforce the decision with admission policy.
 </details>
 
 <details>

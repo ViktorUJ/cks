@@ -155,16 +155,16 @@ Ein **minimales Betriebssystem-Image** ist der manuellen Bereinigung jedes berei
 
 > 🏭 **Production.** Ein spezialisiertes Kubernetes-Betriebssystem - beispielsweise [Bottlerocket](https://bottlerocket.dev/) - kann den veränderbaren Host Footprint durch ein absichtlich minimales Immutable Image und einen verwalteten Update Workflow verringern. Dies ist eine Architekturentscheidung: Prüfen Sie vor einem Production Rollout in Stage die Unterstützung der Kubernetes-Zielversion, CNI/CSI, Bootstrap, Observability, Debug-Zugang und Rollback. Übertragen Sie nicht ohne offizielle Dokumentation die Befehle `apt`/`dpkg` oder Pfade einer gewöhnlichen Linux-Distribution auf ein solches Betriebssystem.
 
-| Ansatz | Vorteil | Risiko und Control |
+| Ansatz | Vorteil | Risiko und Kontrolle |
 |---|---|---|
 | Package auf einem laufenden Node entfernen | entfernt eine bekannte Angriffsfläche schnell | Drift zwischen Nodes; in IaC/Image dokumentieren |
 | Golden Image mit Allowlist für Packages | einheitlicher, auditierbarer Zustand | Prozess für Neubau und Aktualisierung erforderlich |
 | Immutable/minimales Betriebssystem | weniger Packages und Änderungen zur Laufzeit | Debug und Aktualisierung im Voraus vorsehen |
-| "Alles Unbekannte entfernen" | nein | kann kubelet, CNI, Storage, Monitoring oder Zugang beeinträchtigen |
+| „Alles Unbekannte entfernen“ | nein | kann kubelet, CNI, Storage, Monitoring oder Zugang beeinträchtigen |
 
 ## 14.4. Kernel-Module: Inventarisierung und kontrollierte Deaktivierung
 
-Ein Kernel-Modul ist Teil der Angriffsfläche, aber kein "überflüssiges Package", das ohne Folgen entfernt werden kann. Erfassen Sie zuerst geladene Module, deren Parameter und Laderegeln; prüfen Sie den Zweck eines Moduls mit dem Verantwortlichen des Image und in der Betriebssystemdokumentation.
+Ein Kernel-Modul ist Teil der Angriffsfläche, aber kein „überflüssiges Package“, das ohne Folgen entfernt werden kann. Erfassen Sie zuerst geladene Module, deren Parameter und Laderegeln; prüfen Sie den Zweck eines Moduls mit dem Verantwortlichen des Image und in der Betriebssystemdokumentation.
 
 ```bash
 MODULE='example_module'
@@ -186,7 +186,7 @@ sudo grep -RnsE "^(blacklist|install)[[:space:]]+${MODULE}\b" \
   2>/dev/null || true
 ```
 
-`modprobe -c` zeigt die finalen Regeln unter Berücksichtigung von Precedence; file-level `find`/`grep` wird nur benötigt, um die Quelle einer gesehenen Regel zu finden, und kann überschriebenen Einträge zeigen. Für ein bestimmtes Modul zeigt `modprobe -n -v` die tatsächliche Aktion, die `modprobe` anwenden wird.
+`modprobe -c` zeigt die finalen Regeln unter Berücksichtigung von Precedence; file-level `find`/`grep` wird nur benötigt, um die Quelle einer gesehenen Regel zu finden, und kann überschriebene Einträge zeigen. Für ein bestimmtes Modul zeigt `modprobe -n -v` die tatsächliche Aktion, die `modprobe` anwenden wird.
 
 `modprobe -r <module>` entlädt ein Modul **nur vorübergehend**: Es übersteht keinen Reboot und schlägt fehl, wenn das Modul verwendet oder durch eine Abhängigkeit gehalten wird. Das dauerhafte Verbot wird in verwalteter `modprobe`-Konfiguration festgelegt; `blacklist` verhindert gewöhnliches Autoloading, während `install ... /bin/false` auch einen expliziten `modprobe` über diese Regel blockiert. Wenden Sie beide Mechanismen nur zusammen an, nachdem geprüft wurde, dass das Modul wirklich nicht benötigt wird.
 
@@ -210,7 +210,7 @@ Prüfen Sie nach einem geplanten Reboot `lsmod`, `modprobe -n -v` und die Node H
 
 ## 14.5. Offene Ports: Listener, Zweck und Netzwerkperimeter
 
-Nicht der Port selbst ist gefährlich, sondern ein unbekannter Service oder ein Service, der für die falschen Quellen erreichbar ist. Ordnen Sie zuerst "Listener - PID - Unit - benötigte Quellen" zu und beschränken Sie dann Service und Firewall. `ss` ist üblicherweise auf aktuellem Linux verfügbar; `lsof` und `netstat` sind als Alternativen nützlich.
+Nicht der Port selbst ist gefährlich, sondern ein unbekannter Service oder ein Service, der für die falschen Quellen erreichbar ist. Ordnen Sie zuerst „Listener - PID - Unit - benötigte Quellen“ zu und beschränken Sie dann Service und Firewall. `ss` ist üblicherweise auf aktuellem Linux verfügbar; `lsof` und `netstat` sind als Alternativen nützlich.
 
 ```bash
 # TCP- und UDP-Listener mit Prozess und PID (für vollständige Informationen wird root benötigt).
@@ -229,10 +229,9 @@ sudo ss -lxnp | grep -E 'docker|containerd' || true
 | kube-apiserver `6443/tcp` | Control Plane; Worker und Administratoren gemäß Architektur | Allowlist/private Endpoint, nicht `0.0.0.0/0` |
 | etcd `2379`, `2380/tcp` | nur Control Plane/etcd Peers | nicht auf Worker oder im externen Netzwerk veröffentlichen |
 | Docker TCP API (häufig `2375`/`2376`) | nur bei begründetem Remote Management | `2375` nicht lauschen lassen; jeder TCP Endpoint erfordert eine explizite Ausnahme, mTLS und eine genaue Firewall |
-
 | containerd/NRI Unix Socket | lokal auf dem Node | `root` und minimale Menge erlaubter System-Consumer |
 
-Schließen Sie nicht vom Port auf den Prozess: Beispielsweise wird `6443` auf der Control Plane erwartet, kann auf einem Worker jedoch ein Fehler sein; `10250` benötigt kubelet, darf aber nicht öffentlich sein. Der Netzwerkfilter ergänzt die Deaktivierung eines nicht benötigten Service, ersetzt sie aber nicht. Die detaillierte Einschränkung externen Zugriffs und von SSH wird in Kapitel 15 behandelt.
+Ziehen Sie aus einer Portnummer keine Schlüsse, ohne den Prozess zu kennen: Beispielsweise wird `6443` auf der Control Plane erwartet, kann auf einem Worker jedoch ein Fehler sein; `10250` wird von kubelet benötigt, darf aber nicht öffentlich sein. Der Netzwerkfilter ergänzt die Deaktivierung eines nicht benötigten Service, ersetzt sie aber nicht. Die detaillierte Einschränkung externen Zugriffs und von SSH wird in Kapitel 15 behandelt.
 
 ```bash
 SERVICE='service-owning-the-listener.service'
@@ -258,7 +257,7 @@ echo "OK: TCP listener ${PORT} is absent"
 
 Auf einem aktuellen Kubernetes-Node ist containerd die primäre CRI runtime; Docker Daemon und sein Socket gehören nicht zur CRI Baseline und werden nur für eine separate bestätigte Aufgabe benötigt. Ein Runtime Daemon hat mehr Rechte als ein gewöhnlicher Container. Ein Client, der containerd, NRI oder die Docker API erreichen kann, kann häufig einen privilegierten Container starten, das Host Filesystem mounten oder Node Credentials erhalten. Ein Unix Socket ist daher eine Zugriffsgrenze, nicht ein harmloses Implementierungsdetail.
 
-> 🎯 Zugriff auf den containerd CRI Socket erhalten nur `root` und minimale systemische Consumer, ohne world-writable Mode und ohne Mount in einen unprivilegierten Workload.
+> 🎯 Zugriff auf den containerd CRI Socket erhalten nur `root` und minimale System-Consumer, ohne world-writable Mode und ohne Mount in einen unprivilegierten Workload.
 
 ```mermaid
 flowchart TB
@@ -279,7 +278,7 @@ flowchart TB
 
 ### Docker: keine unauthentifizierte TCP API
 
-`dockerd -H tcp://0.0.0.0:2375` öffnet die Docker API für alle, die den Port erreichen können. Auf `2375` gibt es weder TLS noch Authentifizierung: Das entspricht praktisch Remote Root. Es darf weder in `ExecStart` einer systemd Unit noch in einem Drop-in oder `/etc/docker/daemon.json` vorhanden sein. Versuchen Sie nicht, `2375` nur mit einer Firewall zu "schützen": Ein Fehler in der Regel macht die API wieder erreichbar.
+`dockerd -H tcp://0.0.0.0:2375` öffnet die Docker API für alle, die den Port erreichen können. Auf `2375` gibt es weder TLS noch Authentifizierung: Das entspricht praktisch Remote Root. Es darf weder in `ExecStart` einer systemd Unit noch in einem Drop-in oder `/etc/docker/daemon.json` vorhanden sein. Versuchen Sie nicht, `2375` nur mit einer Firewall zu „schützen“: Ein Fehler in der Regel macht die API wieder erreichbar.
 
 ```bash
 set -euo pipefail
@@ -471,7 +470,7 @@ Ist die Remote Docker API tatsächlich eine abgestimmte Anforderung, beweist die
 
 ### containerd, NRI und Dateigrenzen der runtime
 
-Der primäre CRI Socket befindet sich gewöhnlich unter `/run/containerd/containerd.sock`; der Pfad des NRI Socket ist konfigurierbar und lautet häufig `/run/nri/nri.sock` (entspricht `/var/run/nri/nri.sock`). Zugriff auf **jeden** von beiden ist root-equivalent. Überlassen Sie ihn nur `root` und der minimalen Menge systemischer Prozesse. Wenn für den Betrieb eine Gruppe nötig ist, muss es eine dedizierte Systemgruppe ohne gewöhnliche Benutzer sein; fügen Sie keine Entwickler, CI-Accounts oder Workload Identities hinzu. Mounten Sie `containerd.sock` oder `nri.sock` niemals in einen unprivilegierten Container.
+Der primäre CRI Socket befindet sich gewöhnlich unter `/run/containerd/containerd.sock`; der Pfad des NRI Socket ist konfigurierbar und lautet häufig `/run/nri/nri.sock` (entspricht `/var/run/nri/nri.sock`). Zugriff auf **jeden** von beiden ist root-equivalent. Überlassen Sie ihn nur `root` und der minimalen Menge von Systemprozessen. Wenn für den Betrieb eine Gruppe nötig ist, muss es eine dedizierte Systemgruppe ohne gewöhnliche Benutzer sein; fügen Sie keine Entwickler, CI-Accounts oder Workload Identities hinzu. Mounten Sie `containerd.sock` oder `nri.sock` niemals in einen unprivilegierten Container.
 
 Es gibt kein universelles `chmod` für Docker- oder containerd-Sockets: Pfad, Owner, Gruppe und Mode werden von Package, systemd Unit und der Policy des jeweiligen Node bestimmt. Verwenden Sie keine world-writable Modes und beheben Sie Berechtigungen nicht mit einem einmaligen Befehl, wenn systemd den Socket neu erstellt. Bestimmen Sie zuerst den Verantwortlichen für die Konfiguration, legen Sie dann den minimal nötigen Zugriff über die unterstützte Konfiguration des Image/IaC fest und prüfen Sie ihn nach einem Neustart.
 
@@ -497,7 +496,7 @@ sudo find /run/containerd /var/lib/containerd /etc/containerd /etc/cni/net.d /op
 
 In containerd 2.0 ist NRI standardmäßig aktiviert. Dies ist ein klarer Entscheidungspunkt: Wird NRI nicht verwendet, deaktivieren Sie das Plugin in der geprüften Konfiguration (`[plugins."io.containerd.nri.v1.nri"]` und `disable = true`); wird es verwendet, behandeln Sie NRI Plugins, ihre Konfiguration und externe Plugin-Verbindungen als Teil der Runtime TCB und beschränken Sie deren Pfade und Zugriff.
 
-Debug und Metrics sind separate API-Angriffsflächen. Beschränken Sie einen Unix Debug Socket auf `root` und erlaubte systemische Consumer; einen TCP Debug Endpoint veröffentlichen Sie niemals. Metrics von containerd besitzen häufig weder TLS noch Authentifizierung: Binden Sie sie nur an Loopback oder ein dediziertes Management Interface und beschränken Sie Firewall/Routing zusätzlich. Gleichen Sie vor einer Änderung die unterstützten Optionen mit genau Ihrer containerd-Version ab und prüfen Sie Listener nach dem Neustart mit `ss`.
+Debug und Metrics sind separate API-Angriffsflächen. Beschränken Sie einen Unix Debug Socket auf `root` und erlaubte System-Consumer; einen TCP Debug Endpoint veröffentlichen Sie niemals. Metrics von containerd besitzen häufig weder TLS noch Authentifizierung: Binden Sie sie nur an Loopback oder ein dediziertes Management Interface und beschränken Sie Firewall/Routing zusätzlich. Gleichen Sie vor einer Änderung die unterstützten Optionen mit genau Ihrer containerd-Version ab und prüfen Sie Listener nach dem Neustart mit `ss`.
 
 ### Docker: nur wenn er tatsächlich benötigt wird
 
@@ -535,7 +534,7 @@ Die folgende Baseline gilt für eine **neue** Docker-Installation nach Prüfung 
 |---|---|---|
 | `live-restore` | kann Container bei Nichtverfügbarkeit des Daemon weiterlaufen lassen | Aktualisierungsworkflow, Monitoring und erwartetes Neustartverhalten; keine Garantie für jede Config-/Migration-Änderung |
 | `no-new-privileges` | verbietet neuen Containerprozessen die Privilege Escalation über `setuid`/File Capabilities | Anwendungen, die fälschlich Privilege Escalation benötigen; bestehende Container neu erstellen |
-| `userns-remap` | mappt Container Root auf einen unprivilegierten Host UID | Volumes, Owner, Images und Kompatibilität; nicht ohne Test auf einem Production Node aktivieren |
+| `userns-remap` | mappt Container Root auf eine unprivilegierte Host UID | Volumes, Owner, Images und Kompatibilität; nicht ohne Test auf einem Production Node aktivieren |
 | `log-driver: local` | begrenzt das Wachstum von JSON Logs und die Rotation wird vom Driver verwaltet | zentralisierte Log-Sammlung und Retention; bestehende Container migrieren nicht automatisch |
 
 #### Bestehender Docker Host: separate Migration
@@ -576,7 +575,7 @@ sudo systemctl --no-pager --full status docker.service
 sudo docker info --format '{{json .SecurityOptions}}'
 ```
 
-> 🎯 Belegen Sie die Minimierung mit Vorher-/Nachher-Diff und negativen Prüfungen: Nicht benötigter Service ist nicht active/enabled, Listener und `2375` fehlen, ein unprivilegierter Benutzer erhält keinen Runtime Access.
+> 🎯 Belegen Sie die Minimierung mit Vorher-/Nachher-Diff und negativen Prüfungen: Ein nicht benötigter Service ist nicht active/enabled, Listener und `2375` fehlen, ein unprivilegierter Benutzer erhält keinen Runtime Access.
 
 ## 14.7. Ergebnis prüfen: Einen minimalen Node belegen
 
@@ -658,11 +657,11 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 
 ## 14.9. Anwendung in der Produktion
 
-- **Kubernetes v1.37 Rootless Node Path.** `KubeletInUserNamespace` wurde Beta und ermöglicht den Aufbau eines Node Stack, in dem kubelet und zugehörige Node Components ohne Host Root über einen User Namespace laufen. Verwechseln Sie dies nicht mit `spec.hostUsers: false`, das einen Pod isoliert. Siehe [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_DE.md).
+- **Kubernetes v1.37 Rootless Node Path.** `KubeletInUserNamespace` wurde Beta und ermöglicht den Aufbau eines Node Stack, in dem kubelet und zugehörige Node Components ohne Host Root über einen User Namespace laufen. Verwechseln Sie dies nicht mit `spec.hostUsers: false`, das einen Pod isoliert. Siehe [Kubernetes v1.37 Security Delta (nur auf Russisch)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 - **Baseline wird als Code festgelegt.** Die Liste der Packages, enabled Services, systemd Drop-ins, Firewall und Socket-Prüfung gehören in ein Immutable Image, Ansible/Cloud-Init oder anderes IaC. Ein manueller Emergency Fix wird anschließend in die Source of Truth übertragen.
-- **Nodes werden nach Rolle getrennt.** Control Plane, Worker, Build Host und Docker Host erhalten nicht denselben Satz an Packages und Ports. Insbesondere wird Docker Daemon nicht nur wegen interaktivem `docker ps` auf einem Worker installiert, wenn CRI containerd ist.
+- **Nodes werden nach Rolle getrennt.** Control Plane, Worker, Build Host und Docker Host erhalten nicht denselben Satz an Packages und Ports. Insbesondere wird Docker Daemon nicht nur wegen eines interaktiven `docker ps` auf einem Worker installiert, wenn CRI containerd ist.
 - **Runtime-Zugriff wird als privilegierter Zugriff geprüft.** Änderungen an Gruppenmitgliedern, Berechtigungen von containerd/NRI/Docker Socket und systemd Override durchlaufen dasselbe Review wie die Vergabe von `sudo`; erlaubte Systemgruppen enthalten keine gewöhnlichen Benutzer.
-- **Drift wird geprüft.** Regelmäßige CIS-/Betriebssystem-Scans, Package-Inventar, enabled Units und Listener werden mit der Baseline verglichen. Ein neuer Listener ohne Verantwortlichen ist ein Incident oder Change, kein "Normalzustand".
+- **Drift wird geprüft.** Regelmäßige CIS-/Betriebssystem-Scans, Package-Inventar, enabled Units und Listener werden mit der Baseline verglichen. Ein neuer Listener ohne Verantwortlichen ist ein Incident oder Change, kein „Normalzustand“.
 - **Schrittweise ändern.** Zuerst ein Staging Node und ein Service, dann Health Check von `kubelet`/`containerd`, erst danach das Rollout. Für die Control Plane wird eine Out-of-Band Console und getestetes Rollback vorgehalten.
 
 > **Für alle, die tiefer einsteigen möchten, nicht prüfungsrelevant.** Dieses Kapitel und die Kapitel 16-17 erklären Namespaces, Capabilities, cgroups und MAC genau in dem Umfang, der für CKS erforderlich ist: Risiko erkennen, das passende Feld in `securityContext` oder eine Policy anwenden und die Wirkung prüfen. Wird eine tiefere Erklärung des Mechanismus selbst benötigt - wie der Kernel Syscall Interception umsetzt, was auf Ebene eines cgroup-v2-Controller geschieht oder wie Namespace-Isolation auf Ebene von Kernel Structures funktioniert -, ist dem eine eigene Veröffentlichung gewidmet: Liz Rice, *Container Security*, 2nd edition (O'Reilly, 2025). Der Kurs versucht nicht, damit in der Tiefe von Linux Internals zu konkurrieren; dies ist eine bewusste Umfangsgrenze und kein Zeichen dafür, dass das Thema mit den Kapiteln 14-17 erschöpft wäre.
@@ -670,13 +669,13 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 ## 14.10. Mini-Glossar
 
 - **Footprint** - die Menge an Packages, Prozessen, Ports, Sockets und Konfiguration, die die Angriffsfläche eines Node vergrößert.
-- **Attack Surface** - alle erreichbaren Punkte, über die ein Angriff oder eine Konfigurationsfehler möglich ist.
+- **Attack Surface** - alle erreichbaren Punkte, über die ein Angriff oder ein Konfigurationsfehler möglich ist.
 - **systemd Unit** - Beschreibung eines Service, Socket, Timer oder einer anderen von systemd verwalteten Entität.
 - **Unix Socket** - lokaler dateibasierter IPC-Punkt; Dateiberechtigungen bestimmen, wer die Daemon API erreichen kann.
 - **Docker Socket** - `/var/run/docker.sock`, lokale API des Docker Daemon; falls Docker installiert ist, ist der Zugriff root-equivalent und durch die Policy der jeweiligen Unit/des Package eingeschränkt.
 - **`docker` Group** - Gruppe, die Zugriff auf den Docker Socket gibt; sie wird als root-equivalent und nicht als gewöhnliche Arbeitsgruppe behandelt.
 - **CRI Socket** - Endpoint zwischen kubelet und der primären containerd runtime, etwa `/run/containerd/containerd.sock`; Zugriff darauf ist root-equivalent.
-- **NRI Socket** - Unix API der Node Resource Interface von containerd; auch der Zugriff darauf ist root-equivalent.
+- **NRI Socket** - Unix API des Node Resource Interface von containerd; auch der Zugriff darauf ist root-equivalent.
 - **`daemon.json`** - Docker-Daemon-Konfigurationsdatei, gewöhnlich `/etc/docker/daemon.json`.
 - **`live-restore`** - Docker-Modus, der Container beim Neustart des Daemon weiterlaufen lässt.
 - **`userns-remap`** - User Namespace Remapping von Container UID/GID auf dem Host.
@@ -719,7 +718,7 @@ Geben Sie zuerst TCP/UDP Listener mit PID und Prozess durch `sudo ss -tulpn` aus
 </details>
 
 <details>
-<summary>4. Warum können `10250` und `6443` nicht gleichermaßen "überall geschlossen" werden, während `2375` fehlen muss?</summary>
+<summary>4. Warum können `10250` und `6443` nicht gleichermaßen „überall geschlossen“ werden, während `2375` fehlen muss?</summary>
 
 `10250` wird von der geschützten kubelet API benötigt und `6443` vom API server, daher hängt ihr Zugriff von Node-Rolle und Architektur ab: Control Plane, Worker, Administratoren und Monitoring erhalten genaue Allowlists. Sie dürfen nicht aus dem Internet erreichbar sein, aber vollständiges Schließen würde benötigte Flows brechen. `2375` ist eine unauthentifizierte Docker TCP API und in einer sicheren Baseline überhaupt nicht erforderlich.
 </details>
@@ -733,7 +732,7 @@ Die Docker API auf `2375` verwendet weder TLS noch Authentication; jeder Client,
 <details>
 <summary>6. Warum ist Zugriff auf den containerd/NRI Socket root-equivalent und wem darf er gewährt werden?</summary>
 
-Ein Client der containerd oder NRI API kann Container mit Privilegien verwalten, das Host Filesystem mounten oder Node Credentials erhalten, daher ist der Socket eine Security Boundary. Zugriff bleibt root und der minimalen Menge systemischer Prozesse vorbehalten. Ist eine Gruppe nötig, muss sie eine dedizierte Systemgruppe ohne gewöhnliche Benutzer, Entwickler, CI Identities und Workloads sein.
+Ein Client der containerd oder NRI API kann Container mit Privilegien verwalten, das Host Filesystem mounten oder Node Credentials erhalten, daher ist der Socket eine Security Boundary. Zugriff bleibt root und der minimalen Menge von Systemprozessen vorbehalten. Ist eine Gruppe nötig, muss sie eine dedizierte Systemgruppe ohne gewöhnliche Benutzer, Entwickler, CI Identities und Workloads sein.
 </details>
 
 <details>
@@ -745,7 +744,7 @@ Pfad, Owner, Gruppe und Mode eines Socket werden durch Package, systemd Unit und
 <details>
 <summary>8. Warum darf ein TCP Debug Endpoint nicht öffentlich sein und warum werden Metrics ohne TLS/auth auf Loopback oder Management Interface beschränkt?</summary>
 
-Eine Debug API stellt eine zusätzliche diagnostische Oberfläche bereit, daher wird ihre TCP-Variante nicht veröffentlicht; ein Unix Socket wird auf root und erlaubte systemische Consumer beschränkt. containerd Metrics besitzen häufig weder TLS noch Authentication, daher legt ein öffentlicher Listener Daten für jede Quelle offen. Sie werden an Loopback oder ein dediziertes Management Interface gebunden und zusätzlich über Firewall/Routing eingeschränkt.
+Eine Debug API stellt eine zusätzliche diagnostische Oberfläche bereit, daher wird ihre TCP-Variante nicht veröffentlicht; ein Unix Socket wird auf root und erlaubte System-Consumer beschränkt. containerd Metrics besitzen häufig weder TLS noch Authentication, daher legt ein öffentlicher Listener Daten für jede Quelle offen. Sie werden an Loopback oder ein dediziertes Management Interface gebunden und zusätzlich über Firewall/Routing eingeschränkt.
 </details>
 
 <details>
@@ -763,20 +762,20 @@ Ein Modul kann für CNI, Storage Driver, runtime oder Netzwerk-/Festplattenhardw
 <details>
 <summary>11. Welche Risiken müssen vor `userns-remap` in `daemon.json` geprüft werden?</summary>
 
-`userns-remap` mappt Container Root auf einen unprivilegierten Host UID, ändert aber auch den Owner von Docker-Dateien und das Verhalten von Bind Mounts. Prüfen Sie vor der Aktivierung Volumes, Owner, Images und Workload-Kompatibilität. Dies ist eine Einstellung für einen dedizierten Docker Host, die Tests, Validierung durch `dockerd` und einen Rollback-Plan benötigt, und kein Ersatz für `runAsNonRoot` bei Kubernetes mit containerd.
+`userns-remap` mappt Container Root auf eine unprivilegierte Host UID, ändert aber auch den Owner von Docker-Dateien und das Verhalten von Bind Mounts. Prüfen Sie vor der Aktivierung Volumes, Owner, Images und Workload-Kompatibilität. Dies ist eine Einstellung für einen dedizierten Docker Host, die Tests, Validierung durch `dockerd` und einen Rollback-Plan benötigt, und kein Ersatz für `runAsNonRoot` bei Kubernetes mit containerd.
 </details>
 
 <details>
-<summary>12. **Rückblick (Kapitel 29).** Dieses Kapitel beseitigt bekannte überflüssige Prozesse und Ports im Voraus (Static Hardening, "vor dem Incident"). Wie erkennt Falco aus Kapitel 29 **einen neuen**, zuvor nicht erfassten Prozess auf dem Node nach dem Hardening - welches Detection Signal ergänzt das Static Inventory, wenn ein Angreifer etwas startet, das nicht in der ursprünglichen Liste der Services enthalten war?</summary>
+<summary>12. **Rückblick (Kapitel 29).** Dieses Kapitel beseitigt bekannte überflüssige Prozesse und Ports im Voraus (Static Hardening, „vor dem Incident“). Wie erkennt Falco aus Kapitel 29 **einen neuen**, zuvor nicht erfassten Prozess auf dem Node nach dem Hardening - welches Detection Signal ergänzt das Static Inventory, wenn ein Angreifer etwas startet, das nicht in der ursprünglichen Liste der Services enthalten war?</summary>
 
-Ein Static Inventory vergleicht bekannte Services, Packages und Listener mit der Baseline, erkennt eine vorher unbekannte Anwendung jedoch nicht im Voraus als Regel. Falco ergänzt es durch Runtime Detection: Eine Rule für unerwartete Process Execution oder den Start einer Shell/eines Binary in einem sensiblen Kontext erzeugt auf Basis eines System Events einen Alert. Dieses Signal ermöglicht die Untersuchung eines neuen Prozesses nach dem Hardening und anschließend die Aktualisierung der Baseline oder eine Incident Response.
+Ein Static Inventory vergleicht bekannte Services, Packages und Listener mit der Baseline, erkennt eine vorher unbekannte Anwendung jedoch in der Regel nicht. Falco ergänzt es durch Runtime Detection: Eine Rule für unerwartete Process Execution oder den Start einer Shell/eines Binary in einem sensiblen Kontext erzeugt auf Basis eines System Events einen Alert. Dieses Signal ermöglicht die Untersuchung eines neuen Prozesses nach dem Hardening und anschließend die Aktualisierung der Baseline oder eine Incident Response.
 </details>
 
 ## Praxis
 
 Lab 105 verbindet System Hardening: die Inventarisierung von Services, Packages und Ports, die Minimierung des Node-Zugriffs und die Sicherheit des Docker Daemon. Führen Sie es mit einem Kontroll-Snapshot vor Änderungen aus und starten Sie `check_result` erst nach allen Prüfungen aus 14.7.
 
-🧪 Lab 105 (Betriebssystem-System-Hardening und Sicherheit des Docker-Daemon):
+🧪 Lab 105 (System Hardening des Betriebssystems und Sicherheit des Docker Daemon):
 [tasks/cks/labs/105](../../labs/105/README_DE.MD)
 🌐 Zusätzliche interaktive Praxis (killer.sh/killercoda, externe Ressource): [system-hardening-close-open-ports](https://killercoda.com/killer-shell-cks/scenario/system-hardening-close-open-ports) · [system-hardening-manage-packages](https://killercoda.com/killer-shell-cks/scenario/system-hardening-manage-packages)
 

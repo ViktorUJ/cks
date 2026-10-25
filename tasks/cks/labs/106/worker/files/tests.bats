@@ -7,6 +7,16 @@ NODE_LABEL="security.cks.io/localhost-profiles-106"
 AA_PROFILE="k8s-106-deny-write"
 SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
 
+# Lab-owned canonical AppArmor profile (worker-side fixture). Compared byte for byte (command
+# substitution drops the trailing newline on both sides): whitespace separates AppArmor
+# tokens, so it must not be normalised away. Task 1 copies the fixture as-is; Task 2 may only
+# remove the 'complain' flag.
+canonical_aa_profile_complain() { cat "/opt/lab106-fixtures/${AA_PROFILE}" 2>/dev/null; }
+canonical_aa_profile_enforce() { sed 's/, complain,/,/' "/opt/lab106-fixtures/${AA_PROFILE}" 2>/dev/null; }
+read_node_aa_profile() {
+  ssh -o BatchMode=yes control-plane "sudo cat /etc/apparmor.d/${AA_PROFILE} 2>/dev/null" 2>/dev/null || true
+}
+
 @test "0 Init" {
   echo '' > /var/work/tests/result/all
   echo '' > /var/work/tests/result/ok
@@ -22,7 +32,14 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
   # requires enforce specifically.
   profile_file=$(ssh -o BatchMode=yes control-plane "sudo test -r /etc/apparmor.d/${AA_PROFILE} && echo present" 2>/dev/null || true)
   status=$(ssh -o BatchMode=yes control-plane "sudo cat /sys/kernel/security/apparmor/profiles 2>/dev/null" 2>/dev/null || true)
-  if [[ -n "$node" && "$profile_file" == "present" ]] && grep -qE "^${AA_PROFILE} \((complain|enforce)\)\$" <<<"$status"; then
+  current_profile=$(read_node_aa_profile)
+  expected_complain=$(canonical_aa_profile_complain)
+  expected_enforce=$(canonical_aa_profile_enforce)
+  profile_content_ok="no"
+  if [[ -n "$current_profile" && ( "$current_profile" == "$expected_complain" || "$current_profile" == "$expected_enforce" ) ]]; then
+    profile_content_ok="yes"
+  fi
+  if [[ -n "$node" && "$profile_file" == "present" && "$profile_content_ok" == "yes" ]] && grep -qE "^${AA_PROFILE} \((complain|enforce)\)\$" <<<"$status"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -30,10 +47,12 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
       echo "HINT: No node carries label '${NODE_LABEL}=true'. This should already be set by bootstrap - contact the lab operator if missing."
     elif [[ "$profile_file" != "present" ]]; then
       echo "HINT: /etc/apparmor.d/${AA_PROFILE} is missing on control-plane. This profile is delivered ONLY on the worker at /opt/lab106-fixtures/${AA_PROFILE} - copy it to the node yourself, e.g. 'scp /opt/lab106-fixtures/${AA_PROFILE} control-plane:/tmp/' then 'ssh control-plane sudo mv /tmp/${AA_PROFILE} /etc/apparmor.d/${AA_PROFILE}'."
+    elif [[ "$profile_content_ok" != "yes" ]]; then
+      echo "HINT: /etc/apparmor.d/${AA_PROFILE} is not the lab-owned profile from /opt/lab106-fixtures/${AA_PROFILE}. Task 1 requires transferring that profile; the only allowed content change by Task 2 is removing the 'complain' flag."
     else
       echo "HINT: /etc/apparmor.d/${AA_PROFILE} exists on the node but does not appear in /sys/kernel/security/apparmor/profiles - it is on disk but not actually loaded. Load it with 'sudo apparmor_parser -r /etc/apparmor.d/${AA_PROFILE}'."
     fi
-    echo "labelled_node=${node:-missing} profile_file=${profile_file:-missing} apparmor_profiles=$(tr '\n' ' ' <<<"$status")"
+    echo "labelled_node=${node:-missing} profile_file=${profile_file:-missing} profile_content_ok=$profile_content_ok apparmor_profiles=$(tr '\n' ' ' <<<"$status")"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -82,7 +101,13 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
     && grep -qE 'RC=0$' <<<"$bootstrap_baseline"; then
     bootstrap_baseline_ok="yes"
   fi
-  if [[ -n "$node" && "$profile_file" == "present" && "$bootstrap_baseline_ok" == "yes" ]] && grep -qE "^${AA_PROFILE} \(enforce\)$" <<<"$status"; then
+  # The baseline above only proves something about the ORIGINAL profile: the file on disk
+  # must still be that profile, differing only by the removed 'complain' flag.
+  current_profile=$(read_node_aa_profile)
+  expected_enforce=$(canonical_aa_profile_enforce)
+  profile_matches_enforce_fixture="no"
+  [[ -n "$current_profile" && "$current_profile" == "$expected_enforce" ]] && profile_matches_enforce_fixture="yes"
+  if [[ -n "$node" && "$profile_file" == "present" && "$bootstrap_baseline_ok" == "yes" && "$profile_matches_enforce_fixture" == "yes" ]] && grep -qE "^${AA_PROFILE} \(enforce\)$" <<<"$status"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -94,10 +119,12 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
       echo "HINT: /var/lib/cks-lab106-checker (dir='$baseline_dir_owner_mode') or its bootstrap-baseline-1.txt (file='$baseline_file_owner_mode') is not locked down to root:root 0700/0400 as expected - this is an infrastructure precondition failure, not something you can fix from inside the lab. Contact the lab operator."
     elif [[ "$bootstrap_baseline_ok" != "yes" ]]; then
       echo "HINT: the checker's own bootstrap-time baseline shows the write probe under the complain-mode profile did NOT succeed as expected before the lab started - this is an infrastructure precondition failure, not something you can fix from inside the lab. Contact the lab operator."
+    elif [[ "$profile_matches_enforce_fixture" != "yes" && "$current_profile" != "$(canonical_aa_profile_complain)" ]]; then
+      echo "HINT: The enforced profile on disk no longer matches the lab fixture. Preserve the supplied rules exactly and change only the profile mode from complain to enforce."
     else
       echo "HINT: /sys/kernel/security/apparmor/profiles does not contain a line '${AA_PROFILE} (enforce)'. Load the profile with 'apparmor_parser -r /etc/apparmor.d/${AA_PROFILE}' then 'aa-enforce /etc/apparmor.d/${AA_PROFILE}' (or edit the flags and reload) - the file being present is not enough, it must actually be parsed and loaded into the kernel in enforce mode. Note: 'aa-status' output does NOT show a per-profile '(enforce)' suffix in its profile list, so do not rely on grepping that command's output for this string."
     fi
-    echo "labelled_node=${node:-missing} profile_file=${profile_file:-missing} bootstrap_baseline_ok=$bootstrap_baseline_ok baseline_trust_boundary_ok=$baseline_trust_boundary_ok apparmor_profiles=$(tr '\n' ' ' <<<"$status")"
+    echo "labelled_node=${node:-missing} profile_file=${profile_file:-missing} bootstrap_baseline_ok=$bootstrap_baseline_ok baseline_trust_boundary_ok=$baseline_trust_boundary_ok profile_matches_enforce_fixture=$profile_matches_enforce_fixture apparmor_profiles=$(tr '\n' ' ' <<<"$status")"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -109,6 +136,23 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
   profile=$(jq -r '.spec.securityContext.appArmorProfile.type + ":" + (.spec.securityContext.appArmorProfile.localhostProfile // "")' <<<"$pod" 2>/dev/null) || true
   node_selector=$(jq -r ".spec.nodeSelector[\"${NODE_LABEL}\"] // \"\"" <<<"$pod" 2>/dev/null) || true
   automount=$(jq -r '.spec.automountServiceAccountToken' <<<"$pod" 2>/dev/null) || true
+  # The task requires an emptyDir mounted writable at /work. An AppArmor denial alone does
+  # not prove the volume provenance: hostPath, a PVC or a bare image path can be readable
+  # and denied by the same profile. Volume/mount names are free, the shape is not.
+  volume_shape=$(jq -r '
+    ((.spec.containers // []) | length == 1) and
+    .spec.containers[0].name == "app" and
+    .spec.containers[0].image == "busybox:1.36" and
+    ((.spec.initContainers // []) | length == 0) and
+    ((.spec.ephemeralContainers // []) | length == 0) and
+    ((.spec.volumes // []) | length == 1) and
+    (.spec.volumes[0].emptyDir | type == "object") and
+    ((.spec.containers[0].volumeMounts // []) | length == 1) and
+    (.spec.containers[0].volumeMounts[0].name == .spec.volumes[0].name) and
+    (.spec.containers[0].volumeMounts[0].mountPath == "/work") and
+    ((.spec.containers[0].volumeMounts[0].readOnly // false) == false) and
+    ((.spec.containers[0].volumeMounts[0].subPath // null) == null)
+  ' <<<"$pod" 2>/dev/null) || true
   phase=$(jq -r '.status.phase' <<<"$pod" 2>/dev/null) || true
   effective_profile=$(kubectl exec -n "$NS" apparmor-writer --context "$CTX" -- cat /proc/1/attr/current 2>/dev/null || true)
   # Checker-run positive control BEFORE the write probe: the profile grants '/** rix' -
@@ -139,7 +183,7 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
   kernel_denial=$(ssh -o BatchMode=yes control-plane "sudo journalctl -k --no-pager -n 500 2>/dev/null | grep -F 'apparmor=\"DENIED\"' | grep -F 'profile=\"${AA_PROFILE}\"' | grep -F '${denied_file}' | tail -1" 2>/dev/null || true)
   if [[ "$profile" == "Localhost:${AA_PROFILE}" && "$node_selector" == "true" && "$automount" == "false" && "$phase" == "Running" \
         && "$effective_profile" == "${AA_PROFILE}"* && "$effective_profile" == *"(enforce)"* \
-        && "$read_status" -eq 0 && "$write_status" -ne 0 && -n "$kernel_denial" ]] \
+        && "$volume_shape" == "true" && "$read_status" -eq 0 && "$write_status" -ne 0 && -n "$kernel_denial" ]] \
         && grep -Eqi 'permission denied|operation not permitted' <<<"$output"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
@@ -152,6 +196,8 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
       echo "HINT: Pod is not Running (phase=$phase). If the profile name in the Pod spec does not match a profile actually loaded on the node, kubelet will report CreateContainerError."
     elif [[ "$effective_profile" != "${AA_PROFILE}"* || "$effective_profile" != *"(enforce)"* ]]; then
       echo "HINT: /proc/1/attr/current inside the container does not show '${AA_PROFILE} (enforce)' applied - check the profile name matches exactly (case-sensitive) between the Pod spec and /etc/apparmor.d/, and that the profile is actually in enforce mode on the node."
+    elif [[ "$volume_shape" != "true" ]]; then
+      echo "HINT: apparmor-writer must have exactly one container app (busybox:1.36) and exactly one volume of type emptyDir mounted at /work as writable, without subPath; hostPath/PVC/Secret volumes and extra containers are not allowed."
     elif [[ "$read_status" -ne 0 ]]; then
       echo "HINT: A plain read ('ls /work') failed inside the container. The profile's '/** rix' rule should allow this - if even reads are blocked, something else (wrong mountPath, missing emptyDir volume, a stricter profile than intended) is broken, and a write failure alone would not prove AppArmor is doing what this task expects."
     elif [[ "$write_status" -eq 0 ]]; then
@@ -159,7 +205,7 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
     elif [[ -z "$kernel_denial" ]]; then
       echo "HINT: The write failed, but no matching 'apparmor=\"DENIED\" ... profile=\"${AA_PROFILE}\" ... name=\".../${denied_file}\"' kernel audit event was found via 'journalctl -k' on control-plane. A non-zero exit code and a 'permission denied' string alone can come from an unrelated DAC/filesystem error, not necessarily from THIS AppArmor profile - the kernel log is the only evidence that AppArmor itself produced this specific denial."
     fi
-    echo "profile=$profile node_selector=$node_selector automount=$automount phase=$phase effective_profile=${effective_profile:-missing} read_status=$read_status write_status=$write_status output=$output kernel_denial=${kernel_denial:-missing}"
+    echo "profile=$profile node_selector=$node_selector automount=$automount volume_shape=${volume_shape:-missing} phase=$phase effective_profile=${effective_profile:-missing} read_status=$read_status write_status=$write_status output=$output kernel_denial=${kernel_denial:-missing}"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -304,10 +350,19 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
   kubelet_active=$(ssh -o BatchMode=yes control-plane 'sudo systemctl is-active kubelet' 2>/dev/null || true)
   node_ready=$(kubectl get node "$node" --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
   pod=$(kubectl get pod no-seccomp-field -n "$NS" --context "$CTX" -o json 2>/dev/null) || true
-  pod_seccomp=$(jq -r '.spec.securityContext.seccompProfile // .spec.containers[0].securityContext.seccompProfile // "unset"' <<<"$pod" 2>/dev/null) || true
+  # Count EXPLICIT seccompProfile fields anywhere in the Pod spec (pod level, containers,
+  # initContainers, ephemeralContainers) - a profile on any container would otherwise hide
+  # behind a silent first container.
+  explicit_seccomp_count=$(jq '[
+      .spec.securityContext.seccompProfile,
+      (.spec.containers[]?.securityContext.seccompProfile),
+      (.spec.initContainers[]?.securityContext.seccompProfile),
+      (.spec.ephemeralContainers[]?.securityContext.seccompProfile)
+    ] | map(select(. != null)) | length' <<<"$pod" 2>/dev/null) || explicit_seccomp_count=-1
+  explicit_seccomp_count=${explicit_seccomp_count:--1}
   effective=$(kubectl exec -n "$NS" no-seccomp-field --context "$CTX" -- grep '^Seccomp:' /proc/1/status 2>/dev/null || true)
   if [[ "$effective_seccomp_default" == "true" && "$kubelet_active" == "active" && "$node_ready" == "True" \
-    && "$pod_seccomp" == "unset" && "$effective" == *"2"* ]]; then
+    && "$explicit_seccomp_count" == "0" && "$effective" == *"2"* ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -315,12 +370,12 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
       echo "HINT: kubelet's EFFECTIVE, applied configuration (from /api/v1/nodes/${node:-<node>}/proxy/configz, .kubeletconfig.seccompDefault) is not 'true' - a grep on config.yaml's text alone is not enough, because a command-line flag or drop-in could still override the on-disk file. Make sure kubelet actually reloaded this specific field after your change (restart kubelet), and that you edited the file kubelet is really reading."
     elif [[ "$kubelet_active" != "active" || "$node_ready" != "True" ]]; then
       echo "HINT: kubelet is not active or node is NotReady after the config change (kubelet=$kubelet_active node_ready=$node_ready). Check for a YAML syntax error in config.yaml."
-    elif [[ "$pod_seccomp" != "unset" ]]; then
-      echo "HINT: Pod 'no-seccomp-field' must NOT set any seccompProfile field at all - the whole point of this task is to prove kubelet's own default takes effect when the Pod is silent about it."
+    elif [[ "$explicit_seccomp_count" != "0" ]]; then
+      echo "HINT: Pod 'no-seccomp-field' must not contain securityContext.seccompProfile anywhere: not at Pod level and not in containers, initContainers, or ephemeralContainers. The task must prove kubelet defaulting, not an explicit per-container profile."
     elif [[ "$effective" != *"2"* ]]; then
       echo "HINT: /proc/1/status inside the Pod does not show 'Seccomp: 2' (filter mode) even though the Pod spec has no seccompProfile - kubelet's seccompDefault is not actually applying RuntimeDefault. Check kubelet actually restarted with the new config."
     fi
-    echo "effective_seccompDefault=${effective_seccomp_default:-missing} kubelet_active=$kubelet_active node_ready=$node_ready pod_seccomp=$pod_seccomp effective=${effective:-missing}"
+    echo "effective_seccompDefault=${effective_seccomp_default:-missing} kubelet_active=$kubelet_active node_ready=$node_ready explicit_seccomp_count=$explicit_seccomp_count effective=${effective:-missing}"
     result=1
   fi
   [ "$result" -eq 0 ]

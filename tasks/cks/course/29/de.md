@@ -179,10 +179,10 @@ falco_enable_unit="falco-modern-bpf.service"  # Beispiel: modern eBPF gewählt
 systemctl cat "$falco_enable_unit" 2>/dev/null | grep -q '^ExecStart=' \
   || { echo "Ausgewählte Falco-Engine-Unit nicht gefunden: $falco_enable_unit"; exit 1; }
 
-# Führen Sie enable nicht für falco.service aus, auch wenn der alias bereits von der Package Configuration erstellt wurde.
+# Führen Sie enable nicht für falco.service aus, auch wenn der Alias bereits von der Package Configuration erstellt wurde.
 sudo systemctl enable --now "$falco_enable_unit"
 
-# Nach enable wird der Paket-alias nur für Runtime-Befehle verwendet.
+# Nach enable wird der Paket-Alias nur für Runtime-Befehle verwendet.
 falco_unit="falco.service"
 systemctl cat "$falco_unit" 2>/dev/null | grep -q '^ExecStart=' \
   || { echo 'Falco-Engine-Alias falco.service ist nicht konfiguriert'; exit 1; }
@@ -255,7 +255,7 @@ gewöhnlich über Values/ConfigMap des Chart übergeben oder als separate Datei 
 Sie die Datei nicht innerhalb eines laufenden Falco-Pod: Die Änderung verschwindet nach
 Restart/Rollout und besteht kein Review. Bewahren Sie die Rule in Git auf und wenden Sie sie
 deklarativ an. Bei aktiviertem `watch_config_files` lädt Falco geänderte Config-/Rule-Dateien per
-Hot Reload; Restart oder Rollout Restart sind Fallback, falls das Watching deaktiviert ist, der
+Hot Reload; Restart oder Rollout Restart dienen als Fallback, falls das Watching deaktiviert ist, der
 Reload nicht erfolgt ist oder die Änderung dies erfordert.
 
 > 🎯 Sie sollten die tatsächlich geladenen `rules_files` finden, eine lokale Rule hinzufügen, die
@@ -284,7 +284,7 @@ sudo grep -n '^rules_files:' /etc/falco/falco.yaml
 sudo falco --support
 sudo sed -n '1,120p' /etc/falco/falco_rules.local.yaml
 
-# Die main config und das gesamte ruleset prüfen, das tatsächlich geladen wird.
+# Die Main Config und das gesamte Ruleset prüfen, das tatsächlich geladen wird.
 sudo falco -c /etc/falco/falco.yaml --dry-run
 ```
 
@@ -371,7 +371,7 @@ Triage wenig brauchbar.
 `/etc/shadow` ist in dieser Rule ein Pfad, der im Mount Namespace des Container beobachtet wird. Er
 beweist kein Lesen des `/etc/shadow` der Node, sofern nicht das Host-Dateisystem in den Container
 gemountet ist. `%container.image.digest` hängt von den Metadata des Runtime ab und kann `<NA>`
-sein; `%evt.hostname` enthält den Hostname des zugrunde liegenden Host. Gleichen Sie ihn in einem
+sein; `%evt.hostname` enthält den Hostnamen des zugrunde liegenden Host. Gleichen Sie ihn in einem
 Kubernetes-DaemonSet mit der Node ab, setzen Sie beispielsweise `FALCO_HOSTNAME` aus
 `spec.nodeName`, sonst kann der Hostname der Name des Falco-Pod sein.
 
@@ -611,7 +611,7 @@ aber nicht die Prüfung des lokalen Alert auf jeder Node.
 `READY == DESIRED` beweist das Scheduling des DaemonSet, aber nicht das Fehlen blinder Flecken: Bei
 Überlast kann Falco ein Syscall-Event verlieren, bevor die Rule ausgewertet wird. Der Verlust von
 Events kann auch den internen Zustand von Prozessen, Dateien und Container-Metadata stören.
-Aktivieren Sie native Metrics und Alerting auf nicht-null oder wachsende Drops; Falco-Metriken sind
+Aktivieren Sie native Metrics und Alerting auf von null verschiedene oder wachsende Drops; Falco-Metriken sind
 standardmäßig deaktiviert. Für Prometheus werden aktivierte Metrics, ein Webserver und dessen
 Prometheus-Endpoint benötigt:
 
@@ -737,7 +737,7 @@ Plugin garantiert. Führen Sie beide Prüfungen zusammen mit dem vollständigen
    Production-Deployment ohne Evidence zu Coverage und Delivery gilt nicht als abgeschlossen.
 
 > **Production-Hinweis, kein Prüfungsstoff.** Falco ist ein Detektor: Er sieht den Syscall und
-> meldet ihn per Alert erst **nachdem** die Aktion bereits erfolgt ist. **Cilium Tetragon** ist
+> meldet ihn per Alert, erst **nachdem** die Aktion bereits erfolgt ist. **Cilium Tetragon** ist
 > ein grundsätzlich anderes Modell: Mithilfe von eBPF-LSM-Hooks kann es eine Aktion **inline**
 > **blockieren**, im Moment des Versuchs, statt sie nur nachträglich zu melden - zum Beispiel das
 > `execve` selbst oder das Öffnen einer Datei verweigern, statt nur dessen Ausführung zu
@@ -846,7 +846,7 @@ ergänzt den Scan, statt ihn zu ersetzen.
 
 Falco sieht Syscall-Events auf Node-Ebene wie `execve`, `openat`, `connect` und `unlink`, weil
 Container-Prozesse den Kernel der Node nutzen. Der Driver `kmod` oder `modern_ebpf` leitet sie an
-die Userspace-Engine weiter, die Felder von Prozess, Datei und Netzwerk nutzt. CRI-/Kubernetes-
+die Userspace-Engine weiter, die Felder von Prozess, Datei und Netzwerk nutzt. CRI-/Kubernetes-Metadata
 Metadata verknüpft das Event mit `container.id`, Image, Pod und Namespace und macht aus dem Syscall
 einen untersuchbaren Alert.
 </details>
@@ -930,11 +930,11 @@ Die Praxis der Runtime-Domain verbindet Falco-Rules, Kubernetes Audit Logs und d
 des Container. Darin muss Falco gestartet oder geprüft, ein Shell-Event abgefangen, eine Custom
 Rule mit prüfbarem Output hinzugefügt und Evidence für `check_result` gesichert werden.
 
-🧪 Labor 112 (Runtime: Falco, Audit-Logs und Immutabilität): [tasks/cks/labs/112](../../labs/112/README_DE.MD)
+🧪 Lab 112 (Runtime: Falco, Audit-Logs und Immutabilität): [tasks/cks/labs/112](../../labs/112/README_DE.MD)
 🌐 Zusätzliche interaktive Praxis (killer.sh/killercoda, externe Ressource): [falco-change-rule](https://killercoda.com/killer-shell-cks/scenario/falco-change-rule)
 
 Für das Format der Prüfungsaufgaben und die Arbeit mit `check_result` verwenden Sie außerdem die
-[CKA-Labormaterialien](../../../cka/labs/112/README_DE.MD). Der Inhalt des CKS-Labors erweitert
+[CKA-Labormaterialien](../../../cka/labs/112/README_DE.MD). Der Inhalt des CKS-Labs erweitert
 dieses Format um Aufgaben zu Falco, Audit Logs und Runtime-Immutabilität.
 
 Nützliche Dokumentation: [Falco documentation](https://falco.org/docs/) ·

@@ -226,7 +226,7 @@ k get pod -n "$NAMESPACE" "$POD" -o wide
 
 ### Static Pod: edit and verify on the assigned host
 
-`kube-apiserver`, scheduler, and controller-manager in a kubeadm cluster are usually static Pod. Kubelet watches their manifest on the control plane. For such a task, the infobox must assign a control-plane host: from `base`, connect specifically to it, save a copy, then change one logical setting. Do not SSH from one host to another and do not try to run `k` on `base`.
+`kube-apiserver`, scheduler, and controller-manager in a kubeadm cluster are usually static Pods. Kubelet watches their manifest on the control plane. For such a task, the infobox must assign a control-plane host: from `base`, connect specifically to it, save a copy, then change one logical setting. Do not SSH from one host to another and do not try to run `k` on `base`.
 
 ```bash
 # On base.
@@ -411,7 +411,7 @@ Final procedure in the last 10-15 minutes:
 
 Exam discipline is useful during an incident: first determine scope and identity, then make the minimal reversible change, collect evidence, and verify the service from the user's perspective. The CKS context differs from production in that a real environment requires a change record, peer review, backup, maintenance window, and rollback plan before a change.
 
-Apply the same habits to platform work: do not grant wildcard RBAC for a quick fix, do not run a scanner without triaging findings, do not change static Pod on all control-plane nodes at once, and do not enable detailed audit without a retention policy and data protection. Successful defense is an available service with a reduced attack surface and observable evidence of actions.
+Apply the same habits to platform work: do not grant wildcard RBAC for a quick fix, do not run a scanner without triaging findings, do not change static Pods on all control-plane nodes at once, and do not enable detailed audit without a retention policy and data protection. Successful defense is an available service with a reduced attack surface and observable evidence of actions.
 
 ## 33.8. Mini-glossary
 
@@ -514,8 +514,8 @@ Complete all labs again without solutions, then mix tasks from different domains
 | [Lab 111](../../labs/111/README.MD) | minimal image, static analysis, Trivy, SBOM, signing, and ImagePolicyWebhook |
 | [Lab 112](../../labs/112/README.MD) | Falco, audit logs, and container immutability |
 | [Lab 113](../../labs/113/README.MD) | kubeadm minor upgrade: control-plane → worker, version skew, drain/uncordon, and evidence of no downtime |
-| [Lab 114](../../labs/114/README_RU.MD) | kubeconfig contexts, client certificate extraction, reducing Service exposure NodePort → ClusterIP |
-| [Lab 115](../../labs/115/README_RU.MD) | Cilium from scratch: kube-proxy replacement, WireGuard, SPIRE Mutual Authentication (advanced/production, not CKS Core) |
+| [Lab 114](../../labs/114/README.MD) | kubeconfig contexts, client certificate extraction, reducing Service exposure NodePort → ClusterIP |
+| [Lab 115](../../labs/115/README.MD) | Cilium from scratch: kube-proxy replacement, WireGuard, SPIRE Mutual Authentication (advanced/production, not CKS Core) |
 
 ---
 [Table of contents](../README.md) · [Chapter 32](../32/README.md)

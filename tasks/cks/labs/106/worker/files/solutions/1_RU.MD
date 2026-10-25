@@ -1,43 +1,66 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
 # Лаба 106 - эталонное решение: AppArmor и seccomp
 
-> Выполняйте Kubernetes-команды с рабочей машины. Для заданий 1–2 нужен SSH-доступ к
-> ноде `control-plane`. Namespace `security-106` создаётся в задании 3.
+> Kubernetes-команды (`kubectl`) выполняйте на рабочей машине (`worker`). Всё, что касается
+> самой ноды (AppArmor, kubelet, `crictl`), делайте **прямо на ноде**: зайдите по `ssh` один
+> раз и станьте root (`sudo -i`) - это быстрее, чем отправлять каждую команду отдельным
+> `ssh control-plane '...'`, и именно так нужно работать на экзамене. Namespace
+> `security-106` создаётся в задании 3.
+>
+> ```bash
+> ssh control-plane
+> sudo -i
+> # ... команды на ноде ...
+> exit   # из root
+> exit   # с ноды обратно на worker
+> ```
+>
+> Артефакты проверка читает с **рабочей машины** (`/var/work/tests/artifacts/<номер>/`), они
+> нужны только для лабы - на экзамене их нет. Сохраняем их короткой командой с `worker`
+> (`> файл`), содержимое смотрим отдельно через `cat <файл>`.
 
 ## 1. Перенос и загрузка AppArmor profile
 
-Профиль лежит только на рабочей машине. Копируем его на ноду и загружаем в ядро -
-файл уже содержит флаг `complain`, поэтому одного `apparmor_parser -r` достаточно для
-первичной загрузки (без `aa-complain`, который, как и `aa-enforce`, парсит все файлы в
-`/etc/apparmor.d/` и упал бы на ещё сломанном `k8s-106-broken-profile` из задания 9):
+Профиль лежит только на рабочей машине. Копируем его на ноду (с `worker`), затем на ноде
+кладём на место и загружаем в ядро. Файл уже содержит флаг `complain`, поэтому одного
+`apparmor_parser -r` достаточно для первичной загрузки (без `aa-complain`, который, как и
+`aa-enforce`, парсит все файлы в `/etc/apparmor.d/` и упал бы на ещё сломанном
+`k8s-106-broken-profile` из задания 9):
 
 ```bash
-scp -o StrictHostKeyChecking=no /opt/lab106-fixtures/k8s-106-deny-write control-plane:/tmp/k8s-106-deny-write
-ssh control-plane 'sudo mv /tmp/k8s-106-deny-write /etc/apparmor.d/k8s-106-deny-write'
-ssh control-plane 'sudo apparmor_parser -r /etc/apparmor.d/k8s-106-deny-write'
-ssh control-plane "sudo cat /sys/kernel/security/apparmor/profiles | grep -F 'k8s-106-deny-write'"
-# ожидается: k8s-106-deny-write (complain)
+# на worker
+scp /opt/lab106-fixtures/k8s-106-deny-write control-plane:/tmp/k8s-106-deny-write
+
+# на ноде
+ssh control-plane
+sudo -i
+mv /tmp/k8s-106-deny-write /etc/apparmor.d/k8s-106-deny-write
+apparmor_parser -r /etc/apparmor.d/k8s-106-deny-write
+aa-status --pretty-json | grep k8s-106-deny-write
+# ожидается: "k8s-106-deny-write":	"complain",
 ```
 
 ## 2. Перевод AppArmor profile в enforce
 
-Profile сейчас в режиме `complain` (загружен с этим флагом в задании 1). На
-workload-ноде переведём именно существующий profile в enforcing mode и проверим
-результат:
+Profile сейчас в режиме `complain` (загружен с этим флагом в задании 1). Остаёмся на ноде
+(под root) и переводим именно существующий profile в enforcing mode:
 
 ```bash
-ssh control-plane "sudo sed -i 's/, complain,/,/' /etc/apparmor.d/k8s-106-deny-write"
-ssh control-plane 'sudo apparmor_parser -r /etc/apparmor.d/k8s-106-deny-write'
-ssh control-plane "sudo cat /sys/kernel/security/apparmor/profiles | grep -F 'k8s-106-deny-write'"
-# ожидается: k8s-106-deny-write (enforce)
-# Не проверяйте это через 'aa-status | grep ...': aa-status группирует профили под
-# заголовками секций ('N profiles are in enforce mode.') и печатает под ними голые
-# имена БЕЗ суффикса (enforce)/(complain) на каждой строке - такой суффикс есть только
-# в /proc/<pid>/attr/current и в файле ядра /sys/kernel/security/apparmor/profiles.
+sed -i 's/, complain,/,/' /etc/apparmor.d/k8s-106-deny-write
+apparmor_parser -r /etc/apparmor.d/k8s-106-deny-write
+aa-status --pretty-json | grep k8s-106-deny-write
+# ожидается: "k8s-106-deny-write":	"enforce",
+# Обычный 'aa-status | grep ...' режим профиля не покажет: в текстовом выводе профили
+# сгруппированы под заголовками ('N profiles are in enforce mode.'), имена идут без суффикса.
+# Для проверки конкретного профиля используйте 'aa-status --pretty-json' (или '--json').
+exit
+exit
 ```
 
-Не используйте `aa-enforce`/`aa-complain`/`aa-status` и другие инструменты пакета
-`apparmor-utils`, написанные на Python, для ЭТОГО профиля, пока не выполнено задание 9:
-все они внутри вызывают `apparmor.read_profiles()`, который при старте разбирает
+Не используйте `aa-enforce`/`aa-complain` и другие инструменты изменения профилей из
+пакета `apparmor-utils`, написанные на Python, для ЭТОГО профиля, пока не выполнено
+задание 9: они внутри вызывают `apparmor.read_profiles()`, который при старте разбирает
 (парсит) **все** файлы в `/etc/apparmor.d/`, включая ещё не загруженный и заведомо
 сломанный `/etc/apparmor.d/k8s-106-broken-profile` из задания 9 - и падают с ошибкой
 парсера на ЧУЖОМ файле, даже не пытаясь дойти до вашего профиля. `apparmor_parser`
@@ -45,6 +68,13 @@ ssh control-plane "sudo cat /sys/kernel/security/apparmor/profiles | grep -F 'k8
 только его и не подвержен этой проблеме - именно поэтому мы правим флаг профиля
 (убираем `complain` из `flags=(...)`) вручную через `sed`, а затем перезагружаем именно
 этот файл через `apparmor_parser -r`.
+
+`aa-status` - отдельный инструмент просмотра состояния, а не изменения профилей, и сюда он
+не относится. Режим конкретного профиля показывает `aa-status --pretty-json` (проверено на
+ноде лабы, apparmor 3.0.4; `--json` даёт то же в одну строку, например
+`aa-status --json | jq -r '.profiles["k8s-106-deny-write"]'`). Альтернатива - файл ядра
+`grep -F 'k8s-106-deny-write' /sys/kernel/security/apparmor/profiles`: там формат
+`name (enforce|complain)`.
 
 ## 3. Pod с Localhost AppArmor и отказом записи
 
@@ -85,8 +115,10 @@ spec:
 ```
 
 ```bash
+# на worker
 kubectl apply -f apparmor-writer.yaml
-kubectl wait -n security-106 --for=condition=Ready pod/apparmor-writer --timeout=120s
+kubectl get pod -n security-106 apparmor-writer
+# дождитесь STATUS Running (повторите get), затем выполняйте exec
 
 # Evidence: профиль действительно назначен процессу PID 1, а не только записан в Pod YAML.
 kubectl exec -n security-106 apparmor-writer -- cat /proc/1/attr/current
@@ -101,13 +133,21 @@ kubectl exec -n security-106 apparmor-writer -- sh -c 'ls /work'
 kubectl exec -n security-106 apparmor-writer -- \
   sh -c 'printf blocked >/work/cks-106-denied.txt'
 # ожидается ненулевой код: Permission denied / Operation not permitted
+```
 
-# Ненулевой exit code и текст 'permission denied' сами по себе НЕ доказывают, что именно
-# AppArmor это правило сработало - обычная DAC/filesystem ошибка выглядела бы идентично
-# с точки зрения shell. Свяжите отказ именно с этим profile через kernel audit log.
-# Выполняйте сразу после попытки выше.
-ssh control-plane "sudo journalctl -k --no-pager -n 500 | grep -F 'apparmor=\"DENIED\"' | grep -F 'profile=\"k8s-106-deny-write\"' | grep -F 'cks-106-denied.txt'"
-# ожидается запись вида: ... apparmor="DENIED" ... profile="k8s-106-deny-write" name=".../cks-106-denied.txt" ... denied_mask="w" ...
+Ненулевой exit code и текст 'permission denied' сами по себе НЕ доказывают, что сработало
+именно это правило AppArmor - обычная DAC/filesystem ошибка выглядела бы идентично с
+точки зрения shell. Свяжите отказ именно с этим profile через kernel audit log; смотрим его
+на ноде сразу после попытки выше:
+
+```bash
+# на ноде
+ssh control-plane
+sudo -i
+journalctl -k --no-pager -n 500 | grep -F 'apparmor="DENIED"' | grep -F 'profile="k8s-106-deny-write"' | grep -F 'cks-106-denied.txt'
+# ожидается запись вида: ... apparmor="DENIED" ... profile="k8s-106-deny-write" name=".../cks-106-denied.txt" ... denied_mask="c" ... (mknod: создание файла; при записи в существующий файл будет "w")
+exit
+exit
 ```
 
 Если `/proc/1/attr/current` недоступен в конкретном runtime, зафиксируйте это и опирайтесь
@@ -141,8 +181,9 @@ spec:
 ```
 
 ```bash
+# на worker
 kubectl apply -f runtime-default.yaml
-kubectl wait -n security-106 --for=condition=Ready pod/runtime-default --timeout=120s
+kubectl get pod -n security-106 runtime-default
 kubectl exec -n security-106 runtime-default -- grep '^Seccomp:' /proc/1/status
 # Seccomp: 2
 ```
@@ -150,18 +191,25 @@ kubectl exec -n security-106 runtime-default -- grep '^Seccomp:' /proc/1/status
 ## 5–6. Localhost seccomp и доказательство блокировки `unshare`
 
 Файл лежит только на рабочей машине, в `/opt/lab106-fixtures/cks-106-deny-unshare.json`.
-Определяем целевую ноду по её label и копируем JSON в kubelet seccomp root:
+Копируем его на ноду (с `worker`) и кладём в kubelet seccomp root (на ноде):
 
 ```bash
-ssh control-plane 'sudo mkdir -p /var/lib/kubelet/seccomp/profiles'
-scp -o StrictHostKeyChecking=no /opt/lab106-fixtures/cks-106-deny-unshare.json control-plane:/tmp/cks-106-deny-unshare.json
-ssh control-plane 'sudo mv /tmp/cks-106-deny-unshare.json /var/lib/kubelet/seccomp/profiles/cks-106-deny-unshare.json'
-ssh control-plane 'sudo jq empty /var/lib/kubelet/seccomp/profiles/cks-106-deny-unshare.json && echo valid'
+# на worker
+scp /opt/lab106-fixtures/cks-106-deny-unshare.json control-plane:/tmp/cks-106-deny-unshare.json
+
+# на ноде
+ssh control-plane
+sudo -i
+mkdir -p /var/lib/kubelet/seccomp/profiles
+mv /tmp/cks-106-deny-unshare.json /var/lib/kubelet/seccomp/profiles/cks-106-deny-unshare.json
+jq empty /var/lib/kubelet/seccomp/profiles/cks-106-deny-unshare.json && echo valid
+exit
+exit
 ```
 
 В API указываем путь относительно seccomp root: `profiles/cks-106-deny-unshare.json`.
 
-`SYS_ADMIN` здесь - намеренное опасное исключение только для laboratory control. Без custom
+`SYS_ADMIN` здесь - намеренное опасное исключение только для лабы (проверку control без seccomp делает checker). Без custom
 filter `unshare -n` с этой capability может сработать; seccomp должен вернуть `EPERM`.
 Это не hardened combination. `allowPrivilegeEscalation: false` включает `no_new_privs`, но
 не отнимает capabilities, уже выданные процессу, поэтому мы не используем это поле как
@@ -171,7 +219,7 @@ filter `unshare -n` с этой capability может сработать; seccom
 Используем `unshare -n` (network namespace, `CLONE_NEWNET`), а НЕ `unshare -m` (mount
 namespace). Обе операции требуют одну и ту же `CAP_SYS_ADMIN`, но BusyBox `unshare -m`
 после успешного `unshare(2)` дополнительно выполняет самостоятельный `mount(2)` syscall
-для forced private propagation - а containerd default AppArmor-профиль (`RuntimeDefault`,
+для forced private propagation - а стандартный AppArmor-профиль containerd (`RuntimeDefault`,
 который получает этот Pod, так как явный `appArmorProfile` здесь не задан) содержит
 `deny mount,` без каких-либо условий на флаги, независимо от capabilities/seccomp. Поэтому
 `unshare -m true` может провалиться с `EPERM` из-за AppArmor, даже если seccomp вообще не
@@ -213,8 +261,9 @@ spec:
 ```
 
 ```bash
+# на worker
 kubectl apply -f localhost-seccomp.yaml
-kubectl wait -n security-106 --for=condition=Ready pod/localhost-seccomp --timeout=120s
+kubectl get pod -n security-106 localhost-seccomp
 kubectl exec -n security-106 localhost-seccomp -- cat /tmp/unshare-result
 # unshare denied by seccomp
 
@@ -223,16 +272,6 @@ kubectl exec -n security-106 localhost-seccomp -- grep '^Seccomp:' /proc/1/statu
 
 kubectl exec -n security-106 localhost-seccomp -- unshare -n true
 # ожидается ненулевой код: Operation not permitted / Permission denied
-```
-
-Теперь выполните negative control: тот же syscall с той же capability, но без seccomp
-filter. Успех control Pod доказывает, что отказ выше дал именно custom profile.
-
-```bash
-kubectl run sysadmin-control -n security-106 --rm -i --restart=Never \
-  --image=busybox:1.36 \
-  --overrides='{"spec":{"nodeSelector":{"security.cks.io/localhost-profiles-106":"true"},"securityContext":{"seccompProfile":{"type":"Unconfined"}},"containers":[{"name":"sysadmin-control","image":"busybox:1.36","securityContext":{"capabilities":{"add":["SYS_ADMIN"]}},"command":["unshare","-n","true"]}]}}'
-# ожидается exit 0; Pod удаляется из-за --rm
 ```
 
 ## 7. User namespaces: `hostUsers: false` и `uid_map`
@@ -261,22 +300,30 @@ spec:
 ```
 
 ```bash
+# на worker
 kubectl apply -f userns-probe.yaml
-kubectl wait -n security-106 --for=condition=Ready pod/userns-probe --timeout=120s
+kubectl get pod -n security-106 userns-probe
 mkdir -p /var/work/tests/artifacts/6
 
-kubectl exec -n security-106 userns-probe -- id | tee /var/work/tests/artifacts/6/userns.txt
+kubectl exec -n security-106 userns-probe -- id > /var/work/tests/artifacts/6/userns.txt
+cat /var/work/tests/artifacts/6/userns.txt
 # uid=0(root) gid=0(root) groups=0(root)
 ```
 
-Host PID контейнера не совпадает ни с PID внутри контейнера, ни виден напрямую через
-`kubectl`; получаем его через `crictl inspect` на ноде, где реально запущен Pod:
+Host PID контейнера не совпадает с PID внутри контейнера и не виден напрямую через
+`kubectl`. Берём ID контейнера на worker, а PID получаем через `crictl inspect` на ноде,
+где реально запущен Pod:
 
 ```bash
-CONTAINER_ID=$(kubectl get pod userns-probe -n security-106 -o jsonpath='{.status.containerStatuses[0].containerID}' | sed 's#^containerd://##')
-ssh control-plane "sudo crictl inspect '$CONTAINER_ID'" > /tmp/userns-inspect.json
-HOST_PID=$(jq -r '.info.pid' /tmp/userns-inspect.json)
-echo "host_pid=$HOST_PID"
+# на worker
+kubectl get pod userns-probe -n security-106 -o jsonpath='{.status.containerStatuses[0].containerID}'
+# containerd://<ID> - скопируйте <ID> без префикса containerd://
+
+# на ноде
+ssh control-plane
+sudo -i
+crictl inspect <ID> | jq -r '.info.pid'
+# например: 15205 - это <host PID>
 ```
 
 `/proc/<host PID>/uid_map` на ноде описывает трансляцию: три числа - `<container-uid-start>
@@ -285,40 +332,50 @@ echo "host_pid=$HOST_PID"
 непривилегированный диапазон хоста, а `length` - стандартный per-Pod блок `65536` UID.
 
 ```bash
-ssh control-plane "sudo cat /proc/$HOST_PID/uid_map" | tee -a /var/work/tests/artifacts/6/userns.txt
-# 0     100000      65536
+# на ноде (под root)
+cat /proc/<host PID>/uid_map
+# 0 1349844992 65536   (host-uid-start на каждом Pod свой, главное - не 0)
+exit
+exit
+```
+
+Сохраняем строку `uid_map` в артефакт (на `worker`):
+
+```bash
+ssh control-plane "sudo cat /proc/<host PID>/uid_map" >> /var/work/tests/artifacts/6/userns.txt
 ```
 
 Если `host-uid-start` равен `0` - user namespace не применился (например, из-за
 несовместимого containerd/runc или отсутствия `hostUsers: false` в реально применённом
-Pod) - это не hardening, а обычный root на хосте. Сравните с обычным Pod без
-`hostUsers: false`, чтобы увидеть разницу:
-
-```bash
-kubectl run runc-baseline-userns -n security-106 --rm -i --restart=Never \
-  --image=busybox:1.36 --overrides='{"spec":{"nodeSelector":{"security.cks.io/localhost-profiles-106":"true"}}}' \
-  -- sh -c 'echo baseline-no-userns; sleep 5' &
-sleep 2
-kubectl get pod runc-baseline-userns -n security-106 -o jsonpath='{.status.containerStatuses[0].containerID}' 2>/dev/null
-# Обычный Pod без hostUsers: false использует host user namespace напрямую -
-# у него отдельного /proc/<PID>/uid_map с непривилегированной трансляцией не будет.
-```
+Pod) - это не hardening, а обычный root на хосте. Для сравнения: у обычного Pod без
+`hostUsers: false` файл `/proc/<host-PID>/uid_map` тоже существует, но процесс остаётся в
+host (initial) user namespace. Поэтому mapping начинается с UID 0 -> host UID 0 (обычно
+строка вида `0 0 4294967295`, например `cat /proc/1/uid_map` на ноде), а не с
+непривилегированного per-Pod host UID. У `userns-probe` с `hostUsers: false` ожидаем
+противоположное: `0 <ненулевой-host-uid> <диапазон-per-pod>`.
 
 ## 8. `seccompDefault: true` на kubelet
 
-Все предыдущие Pod явно задавали `seccompProfile`. Здесь проверяем node-level baseline:
+Предыдущие Pod с профилем seccomp (задания 4-6) явно задавали `seccompProfile`. Здесь проверяем node-level baseline:
 если разработчик забудет это поле, kubelet должен сам применить `RuntimeDefault`, а не
-оставить процесс `Unconfined`.
+оставить процесс `Unconfined`. Правим конфигурацию kubelet на ноде:
 
 ```bash
-ssh control-plane 'sudo grep -q "^seccompDefault:" /var/lib/kubelet/config.yaml \
-  && sudo sed -i "s/^seccompDefault:.*/seccompDefault: true/" /var/lib/kubelet/config.yaml \
-  || echo "seccompDefault: true" | sudo tee -a /var/lib/kubelet/config.yaml'
-ssh control-plane 'sudo systemctl restart kubelet'
-ssh control-plane 'sudo systemctl is-active kubelet'
-# Имя Node в API - не алиас 'control-plane' из /etc/hosts, а реальное имя ноды (ip-10-...).
-NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
-kubectl get node "$NODE" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}'
+# на ноде
+ssh control-plane
+sudo -i
+grep -q '^seccompDefault:' /var/lib/kubelet/config.yaml \
+  && sed -i 's/^seccompDefault:.*/seccompDefault: true/' /var/lib/kubelet/config.yaml \
+  || echo 'seccompDefault: true' >> /var/lib/kubelet/config.yaml
+systemctl restart kubelet
+systemctl is-active kubelet     # active
+exit
+exit
+```
+
+```bash
+# на worker: имя Node в API - не алиас 'control-plane' из /etc/hosts, а реальное имя ноды (ip-10-...)
+kubectl get nodes     # Ready
 ```
 
 Создаём Pod без единого упоминания `seccompProfile` - ни на Pod, ни на container level:
@@ -340,16 +397,17 @@ spec:
 ```
 
 ```bash
+# на worker
 kubectl apply -f no-seccomp-field.yaml
-kubectl wait -n security-106 --for=condition=Ready pod/no-seccomp-field --timeout=60s
+kubectl get pod -n security-106 no-seccomp-field
 kubectl exec -n security-106 no-seccomp-field -- grep '^Seccomp:' /proc/1/status
 # Seccomp: 2  -- kubelet применил RuntimeDefault сам, без поля в манифесте
 
 # Проверьте себя через РЕАЛЬНО ПРИМЕНЁННУЮ конфигурацию kubelet, не через текст файла на
 # диске - drop-in или флаг командной строки могли бы переопределить значение без
 # изменения самого config.yaml:
-node=$NODE
-kubectl get --raw "/api/v1/nodes/${node}/proxy/configz" | jq '.kubeletconfig.seccompDefault'
+NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
+kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" | jq '.kubeletconfig.seccompDefault'
 # true
 ```
 
@@ -362,49 +420,63 @@ kubectl get --raw "/api/v1/nodes/${node}/proxy/configz" | jq '.kubeletconfig.sec
 хватает запятой после правила `deny /work/** w`. Сначала находим ошибку без загрузки в
 ядро. `-p`/`--preprocess` здесь НЕ подходит - это preprocessing (разворачивает
 `#include` в stdout), а не safe dry-run/syntax-check. Используем `-Q`/`--skip-kernel-load`
-(полная компиляция/проверка без загрузки в ядро, без привилегий) или `-d`/`--debug`
-(однократно - только syntax check):
+(полная компиляция/проверка без загрузки в ядро) или `-d`/`--debug`
+(однократно - только syntax check).
+
+Артефакт `apparmor-debug.txt` должен содержать **исходную** ошибку парсера, поэтому
+сохраняем его до исправления (на `worker`):
 
 ```bash
 mkdir -p /var/work/tests/artifacts/8
 ssh control-plane 'sudo apparmor_parser -Q /etc/apparmor.d/k8s-106-broken-profile' \
-  2>&1 | tee /var/work/tests/artifacts/8/apparmor-debug.txt
+  > /var/work/tests/artifacts/8/apparmor-debug.txt 2>&1
+cat /var/work/tests/artifacts/8/apparmor-debug.txt
 # ... syntax error, unexpected TOK_CLOSE, expecting TOK_END_OF_RULE
 ```
 
-Обязательно с `sudo`, даже с флагом `-Q`/`--skip-kernel-load`: этот флаг лишь пропускает
-загрузку профиля в ЯДРО, но `apparmor_parser` всё равно пытается настроить policy cache в
-`/var/cache/apparmor` при каждом запуске. Без привилегий это падает с "Failed setting up
-policy cache (/var/cache/apparmor): Permission denied" ДО того, как парсер доходит до
-проверки синтаксиса - вы получите обманчивую ошибку о правах доступа вместо реальной
-синтаксической ошибки, а `apparmor-debug.txt` не будет содержать нужный текст "syntax
-error" для проверки.
+Используем `sudo` и для compile-only проверки `-Q`: на ноде лабы (apparmor 3.0.4, Ubuntu)
+без привилегий парсер при каждом запуске пытается настроить policy cache в
+`/var/cache/apparmor` и падает с "Failed setting up policy cache (/var/cache/apparmor):
+Permission denied" ДО проверки синтаксиса - вы получите обманчивую ошибку о правах вместо
+реальной синтаксической ошибки, а `apparmor-debug.txt` не будет содержать нужный текст
+"syntax error". Проверено на самой ноде, в том числе на заведомо сломанном профиле.
+Альтернатива без `sudo` - добавить `-K`/`--skip-cache` (`apparmor_parser -Q -K ...`): без
+кэширования парсер доходит до разбора профиля. `sudo` в этой лабе выбран для единого
+workflow с последующим `-r`, который в любом случае требует привилегий.
 
-Исправляем: правило AppArmor обязано завершаться запятой.
-
-```bash
-ssh control-plane "sudo sed -i 's/^\(\s*deny \/work\/\*\* w\)\$/\1,/' /etc/apparmor.d/k8s-106-broken-profile"
-ssh control-plane 'sudo tail -5 /etc/apparmor.d/k8s-106-broken-profile'
-```
-
-Загружаем исправленный профиль в ядро - именно `-r -v` (reload + verbose), а не `-Q`/`-p`,
-которые ничего не загружают:
+Исправляем на ноде: правило AppArmor обязано завершаться запятой. Затем загружаем
+исправленный профиль в ядро - именно `-r -v` (reload + verbose), а не `-Q`/`-p`, которые
+ничего не загружают:
 
 ```bash
-ssh control-plane 'sudo apparmor_parser -r -v /etc/apparmor.d/k8s-106-broken-profile' \
-  | tee -a /var/work/tests/artifacts/8/apparmor-debug.txt
-ssh control-plane 'sudo aa-status | grep k8s-106-broken-profile'
+# на ноде
+ssh control-plane
+sudo -i
+sed -i 's/^\(\s*deny \/work\/\*\* w\)$/\1,/' /etc/apparmor.d/k8s-106-broken-profile
+tail -5 /etc/apparmor.d/k8s-106-broken-profile
+apparmor_parser -r -v /etc/apparmor.d/k8s-106-broken-profile
+aa-status --pretty-json | grep k8s-106-broken-profile
+# ожидается: "k8s-106-broken-profile":	"enforce",
 ```
 
 Финальная проверка, что файл теперь валиден без ошибок:
 
 ```bash
-ssh control-plane 'sudo apparmor_parser -Q /etc/apparmor.d/k8s-106-broken-profile'
+apparmor_parser -Q /etc/apparmor.d/k8s-106-broken-profile
 echo "exit: $?"
 # exit: 0
+exit
+exit
 ```
 
-В конце запустите:
+Теперь на `worker` допишите подтверждение загрузки ПОСЛЕ исправления в тот же артефакт:
+
+```bash
+ssh control-plane 'sudo aa-status --pretty-json' | grep k8s-106-broken-profile >> /var/work/tests/artifacts/8/apparmor-debug.txt
+cat /var/work/tests/artifacts/8/apparmor-debug.txt
+```
+
+В конце запустите (на `worker`):
 
 ```bash
 check_result

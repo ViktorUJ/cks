@@ -80,7 +80,7 @@ flowchart TB
     pod["Pod<br/>runtimeClassName:<br/>gvisor"] --> api["kube-apiserver<br/>RuntimeClass gvisor"]
     api --> rc["handler: runsc<br/>contraintes de<br/>scheduling"]
     rc --> scheduler["scheduler<br/>sélectionne le<br/>sandbox node"]
-    scheduler --> kubelet["kubelet<br/>sur le node"]
+    scheduler --> kubelet["kubelet<br/>sur la node"]
     kubelet --> cri["containerd CRI<br/>runtime handler:<br/>runsc"]
     cri --> shim["containerd-shim-<br/>runsc-v1"]
     shim --> sentry["runsc /<br/>gVisor Sentry"]
@@ -302,7 +302,7 @@ Si l'en-tête actuel est `version = 3` **ou** `version = 4`, utilisez le nouveau
 
 containerd 2.x continue de prendre en charge la config v2 ; la config v4 est la version actuelle dans containerd 2.3, et les anciennes configs sont migrées au démarrage. Ne modifiez donc pas arbitrairement l'en-tête pour ajouter le runtime : vérifiez d'abord `version = ...`, la configuration effective et la documentation de votre distribution de containerd.
 
-Ne changez pas `default_runtime_name` en `runsc` : les DaemonSet système, CNI, CSI et les workloads ordinaires déjà déboguées peuvent nécessiter `runc`. RuntimeClass doit sélectionner explicitement le sandbox.
+Ne changez pas `default_runtime_name` en `runsc` : les DaemonSet système, CNI, CSI et les workloads ordinaires déjà débogués peuvent nécessiter `runc`. RuntimeClass doit sélectionner explicitement le sandbox.
 
 Vérifiez le TOML et ne redémarrez le daemon que selon la procédure de change management : le redémarrage de containerd peut affecter la création de nouveaux containers et le fonctionnement de la node. Sur une node de production, commencez par cordon/drain en tenant compte des DaemonSet et des PDB, puis appliquez la configuration vérifiée.
 
@@ -452,7 +452,7 @@ spec:
             drop: ["ALL"]
 ```
 
-N'ajoutez pas `hostNetwork`, `hostPID`, `hostIPC`, `privileged`, hostPath ni de montages de périphériques pour « corriger » une incompatibilité du sandbox. Cela compromet soit le threat model, soit indique que le workload doit être repensé ou placé dans un pool de confiance séparé avec une exception clairement documentée.
+N'ajoutez pas `hostNetwork`, `hostPID`, `hostIPC`, `privileged`, hostPath ni de montages de périphériques pour « corriger » une incompatibilité du sandbox. Cela soit compromet le threat model, soit indique que le workload doit être repensé ou placé dans un pool de confiance séparé avec une exception clairement documentée.
 
 > 🔬 Mesurez `RuntimeClass.overhead` pour des versions, un type de nœud et un workload précis ; une valeur erronée remplit trop le pool ou fait perdre de la capacité.
 
@@ -553,7 +553,7 @@ N'extrapolez pas une ligne unique `Starting gVisor` en preuve de production. En 
 |---|---|---|
 | Pod `Pending`, `didn't match Pod's node affinity/selector` | aucun nœud n'a le label RuntimeClass ou le selector du Pod est en conflit | `kubectl describe pod` ; comparez `spec.nodeSelector` et les labels des nœuds |
 | Pod `Pending`, taint non toléré | le Pod n'a pas reçu ou ne correspond pas à la toleration RuntimeClass | vérifiez `kubectl get runtimeclass -o yaml`, `kubectl describe node` |
-| `FailedCreatePodSandBox`, runtime handler inconnu | aucun bloc handler, mauvais nom ou containerd non relu | comparez `RuntimeClass.handler`, config.toml, `crictl info` ; corrigez et redémarrez selon le runbook |
+| `FailedCreatePodSandBox`, unknown runtime handler | aucun bloc handler, mauvais nom ou containerd non relu | comparez `RuntimeClass.handler`, config.toml, `crictl info` ; corrigez et redémarrez selon le runbook |
 | `executable file not found` pour le shim | shim non installé ou hors du PATH du service containerd | vérifiez `command -v`, les permissions et l'Environment systemd |
 | Le Pod gVisor démarre, l'application échoue | syscall, montage ou fonctionnalité réseau non prise en charge/différente | reproducer minimal, documentation runtime, corrigez l'application ou sélectionnez un autre runtime approuvé |
 | Kata ne démarre pas | backend RuntimeClass sélectionné indisponible, virtualisation imbriquée, config hypervisor/kernel ou capacité | `kata-runtime check` ; pour QEMU/KVM utilisez `/dev/kvm`, pour Microsoft Hypervisor utilisez `/dev/mshv` et un VMM compatible mshv ; vérifiez les capacités de l'instance cloud et les logs du shim |
@@ -567,7 +567,7 @@ Ne « corrigez » pas `FailedCreatePodSandBox` en retirant `runtimeClassName` : 
 
 - **Séparez les pools par confiance.** Les nœuds gVisor/Kata ne reçoivent que des workloads sandbox grâce au scheduling RuntimeClass, au label et au taint `NoSchedule` ; les agents système et workloads de confiance sont séparés.
 - **Conservez `runc` par défaut.** Déplacer toute la plateforme vers un nouveau runtime sans matrice de compatibilité augmente le blast radius. Activez le sandbox par classe et par canari.
-- **Traitez le handler comme un contrat.** Versionnez les binaries, le shim, la configuration containerd et RuntimeClass dans un même changement revu. Une différence accidentelle entre `runsc`, `kata` et `kata-qemu` provoque des pannes.
+- **Traitez le handler comme un contrat.** Les versions des binaries, du shim, de la configuration containerd et de RuntimeClass changent dans un même changement revu. Une différence accidentelle entre `runsc`, `kata` et `kata-qemu` provoque des pannes.
 - **Refusez les combinaisons dangereuses.** La policy PSA/d'admission doit rejeter `privileged`, les host namespaces, les montages hostPath/socket et les exemptions larges dans un namespace de tenant, quelle que soit RuntimeClass.
 - **Calculez la capacité.** Mesurez l'overhead runtime, la latence de démarrage, la densité, la pression du nœud et le cold start. Un pool Kata a souvent besoin d'un profil d'autoscaling séparé.
 - **Surveillez la limite.** Alertez sur `FailedCreatePodSandBox`, les erreurs containerd/shim, les nœuds sandbox NotReady, une latence de démarrage accrue et un placement inattendu hors du pool.
@@ -575,15 +575,15 @@ Ne « corrigez » pas `FailedCreatePodSandBox` en retirant `runtimeClassName` : 
 
 ## 22.11. Comment cela aide : à l'examen et dans le travail réel
 
-- **À l'examen.** Distinguez `RuntimeClass`, le handler CRI et `runtime_type` ; dirigez un Pod vers un pool sandbox préparé grâce au `scheduling`, aux labels, taints et tolerations ; diagnostiquez `FailedCreatePodSandBox` sans fallback non sûr vers `runc`.
-- **Dans le travail réel.** Ces compétences isolent les workloads de tenants, CI et plugins non fiables, permettent de déployer gVisor ou Kata de façon sûre comme canari, de prendre en compte l'overhead et de confirmer le runtime avec les données Kubernetes, CRI/containerd et de test smoke d'application.
+- **À l'examen.** Il faut savoir distinguer `RuntimeClass`, le handler CRI et `runtime_type`, diriger un Pod vers un pool sandbox préparé grâce au `scheduling`, aux labels, taints et tolerations, ainsi que diagnostiquer `FailedCreatePodSandBox` sans fallback non sûr vers `runc`.
+- **Dans le travail réel.** Ces compétences permettent d'isoler les workloads de tenants, de CI et de plugins non fiables, de déployer gVisor ou Kata de façon sûre par canari, de prendre en compte l'overhead et de confirmer le runtime à l'aide des données de Kubernetes, de CRI/containerd et d'un test smoke de l'application.
 
 ## 22.12. Mini-glossaire
 
 - **Sandbox de runtime de container** - runtime qui ajoute une limite entre le workload et le kernel hôte.
 - **gVisor** - runtime sandbox avec un kernel userspace ; le handler CRI est souvent `runsc`.
 - **`runsc`** - runtime OCI gVisor et nom de handler dans cet exemple.
-- **Kata Containers** - runtime qui démarre un sandbox Pod dans une VM légère avec un kernel guest.
+- **Kata Containers** - runtime qui démarre un Pod sandbox dans une VM légère avec un kernel guest.
 - **RuntimeClass** - ressource Kubernetes de portée cluster qui sélectionne un handler CRI et des contraintes optionnelles d'overhead/scheduling.
 - **handler** - nom du runtime dans la configuration CRI qui doit correspondre à `RuntimeClass.spec.handler`.
 - **shim** - processus/binary containerd reliant containerd à un runtime spécifique.
@@ -594,7 +594,7 @@ Ne « corrigez » pas `FailedCreatePodSandBox` en retirant `runtimeClassName` : 
 
 - Les containers ordinaires partagent le kernel du nœud ; pour les workloads multi-tenant non fiables, gVisor ou Kata ajoutent une limite significative mais ne remplacent pas RBAC, PSA, `securityContext` ni NetworkPolicy.
 - gVisor (`runsc`) intercepte les appels système par un kernel userspace ; Kata utilise une VM légère et un kernel guest. Le choix suit le threat model, la compatibilité et le SLO.
-- `RuntimeClass.metadata.name`, `spec.handler` et `runtime_type` containerd sont différents niveaux de nommage. Un handler doit correspondre exactement à la configuration CRI de chaque nœud cible.
+- `RuntimeClass.metadata.name`, `spec.handler` et `runtime_type` containerd sont des niveaux de nommage différents. Un handler doit correspondre exactement à la configuration CRI de chaque nœud cible.
 - `RuntimeClass.scheduling` avec `nodeSelector` et tolerations, ainsi que les labels/taints, confine les workloads sandbox au pool de nœuds préparé.
 - containerd a besoin de binaries et d'un shim correspondants, d'un handler dans config.toml et d'un redémarrage/d'une vérification contrôlés du daemon. Ne modifiez pas `runc` par défaut sans raison.
 - La vérification doit relier la classe et le nœud du Pod au handler/shim dans les logs CRI/containerd, puis confirmer la vue du workload et le comportement de l'application ; `runtimeClassName` seul ne suffit pas.
@@ -611,7 +611,7 @@ Un container ordinaire isole les namespaces et limite les ressources avec les cg
 <details>
 <summary>2. Quelle est la différence clé entre le kernel userspace gVisor et le kernel guest Kata ?</summary>
 
-gVisor `runsc` intercepte la plupart des syscalls et les implémente via le kernel userspace Sentry au-dessus du kernel hôte. Kata démarre un sandbox Pod dans une VM légère où le workload voit un kernel guest distinct et une limite hypervisor. Kata offre normalement une isolation plus forte, de type VM, mais exige la virtualisation et coûte davantage de mémoire et de temps de démarrage.
+gVisor `runsc` intercepte la plupart des syscalls et les implémente via le kernel userspace Sentry au-dessus du kernel hôte. Kata démarre un Pod sandbox dans une VM légère où le workload voit un kernel guest distinct et une limite hypervisor. Kata offre normalement une isolation plus forte, de type VM, mais exige la virtualisation et coûte davantage de mémoire et de temps de démarrage.
 </details>
 
 <details>
@@ -629,13 +629,13 @@ L'API server stocke RuntimeClass, mais ne vérifie pas les binaries, le shim et 
 <details>
 <summary>5. Comment `RuntimeClass.scheduling.nodeSelector` et les tolerations interagissent-ils avec les labels et taints du sandbox-node-pool ?</summary>
 
-RuntimeClass ajoute son `nodeSelector` et ses tolerations à son Pod. Le selector doit correspondre au label d'un nœud sandbox préparé et la toleration passe son taint `NoSchedule` ; le taint reste une protection contre un Pod sans la toleration. Un conflit de selector RuntimeClass/Pod est rejeté à l'admission au lieu de devenir Pending.
+RuntimeClass ajoute son `nodeSelector` et ses tolerations au Pod qui y fait référence. Le selector doit correspondre au label d'un nœud sandbox préparé et la toleration permet de franchir le taint `NoSchedule` ; le taint reste une protection contre un Pod sans la toleration. Un conflit de selector RuntimeClass/Pod est rejeté à l'admission au lieu de devenir Pending.
 </details>
 
 <details>
 <summary>6. Pourquoi est-il dangereux de faire de `runsc` le runtime par défaut de tout le cluster sans test de compatibilité ?</summary>
 
-Les DaemonSet système, CNI, CSI et workloads ordinaires peuvent exiger des fonctionnalités que le sandbox implémente différemment ou ne prend pas en charge. Conservez `runc` par défaut et sélectionnez explicitement le sandbox via RuntimeClass pour un pool canari compatible. Sinon, le blast radius atteint toute la plateforme.
+Les DaemonSet système, CNI, CSI et workloads ordinaires peuvent exiger des fonctionnalités que le sandbox implémente différemment ou ne prend pas en charge. Le chapitre prescrit de conserver `runc` par défaut et de sélectionner explicitement le sandbox via RuntimeClass pour un pool canari compatible. Sinon, le blast radius atteint toute la plateforme.
 </details>
 
 <details>
@@ -674,7 +674,7 @@ Exercez-vous à RuntimeClass, `runsc`, au scheduling et à la vérification sand
 
 🌐 Pratique interactive supplémentaire (killer.sh/killercoda, ressource externe) : [sandbox-gvisor](https://killercoda.com/killer-shell-cks/scenario/sandbox-gvisor)
 
-Références officielles utiles : [RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/), [scheduling RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/#scheduling), [gVisor](https://gvisor.dev/docs/), [gVisor avec containerd](https://gvisor.dev/docs/user_guide/containerd/), et [Kata Containers](https://katacontainers.io/).
+Références officielles utiles : [RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/), [scheduling RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/#scheduling), [gVisor](https://gvisor.dev/docs/), [gVisor avec containerd](https://gvisor.dev/docs/user_guide/containerd/) et [Kata Containers](https://katacontainers.io/).
 
 ---
 [Table des matières](../README_FR.md) · [Chapitre 21](../21/fr.md) · [Chapitre 23](../23/fr.md)

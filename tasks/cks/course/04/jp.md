@@ -2,7 +2,7 @@
 
 # 第04章. セキュリティのためのNetworkPolicy
 
-> **課題。** 1つのPodでのRCEは攻撃者にfootholdを与えます。フラットなpodネットワークでは、そこからServiceのスキャン、DB、内部API、cloud metadataへのアクセスが可能になります。これはlateral movementであり、1つのアプリケーションの侵害が他システムへの入口になります。
+> **課題。** 1つのPodでのRCEは攻撃者にfootholdを与えます。フラットなpodネットワークでは、そこからServiceのスキャン、DB、内部API、cloud metadataへのアクセスが可能になることがよくあります。これはlateral movementであり、1つのアプリケーションの侵害が他システムへの入口になります。
 
 > **この先。** 脅威モデルとLinuxの隔離メカニズムを確認しました。ここでは侵害されたPodが利用できるネットワーク経路を絞り込みます。**NetworkPolicy**はフラットなpodネットワークを明示的に許可された接続の集合に変えます。これはCKSのCluster Setup（15%）ドメインです。
 

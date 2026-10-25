@@ -1,3 +1,5 @@
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
+
 # Лаба 113 - Upgrade кластера Kubernetes через kubeadm (minor upgrade)
 
 ## Цель
@@ -14,13 +16,13 @@
 <details>
 <summary>1. Почему `kubeadm upgrade` требует upgrade control-plane СТРОГО перед worker-узлами, а не в любом порядке?</summary>
 
-`kubeadm upgrade apply` на control-plane обновляет версию API server и other control-plane компонентов, а также version skew policy кластера. Worker-нода со слишком новым kubelet относительно API server может нарушить поддерживаемый skew (kubelet не должен быть новее kube-apiserver). Обновление control-plane первым гарантирует, что API server уже на целевой версии, когда worker переходит на неё же - это не произвольная рекомендация, а требование version skew policy Kubernetes.
+`kubeadm upgrade apply` на control-plane обновляет версию API server и других компонентов control plane; от этой версии отсчитывается version skew policy кластера. Worker-нода со слишком новым kubelet относительно API server может нарушить поддерживаемый skew (kubelet не должен быть новее kube-apiserver). Обновление control-plane первым гарантирует, что API server уже на целевой версии, когда worker переходит на неё же - это не произвольная рекомендация, а требование version skew policy Kubernetes.
 </details>
 
 <details>
 <summary>2. Почему переключение apt-репозитория `pkgs.k8s.io` обязательно при переходе на новый minor, хотя patch-обновления работают без этого?</summary>
 
-Начиная с миграции с `packages.cloud.google.com`/`apt.kubernetes.io`, `pkgs.k8s.io` организован как **отдельный репозиторий на каждую minor-версию** (`core:/stable:/v1.35`, `core:/stable:/v1.36` и т.д.), а не единый репозиторий со всеми версиями. Внутри уже подключённого repo `v1.35` доступны только `1.35.x` patch-релизы. Чтобы `apt install kubeadm=1.36.x-*` увидел версии `1.36`, нужно сначала подключить (`sources.list.d/kubernetes.list`) и подписать (`Release.key`) repo именно `core:/stable:/v1.36`.
+Начиная с миграции с `packages.cloud.google.com`/`apt.kubernetes.io`, `pkgs.k8s.io` организован как **отдельный репозиторий на каждую minor-версию** (`core:/stable:/v1.35`, `core:/stable:/v1.36` и т.д.), а не единый репозиторий со всеми версиями. Внутри уже подключённого repo `v1.35` доступны только `1.35.x` patch-релизы. Чтобы `apt install kubeadm=1.36.x-*` увидел версии `1.36`, нужно сначала подключить в `sources.list.d/kubernetes.list` repo именно `core:/stable:/v1.36` (меняется только версия в URL; keyring с ключом подписи `Release.key` остаётся прежним).
 </details>
 
 <details>
@@ -55,7 +57,7 @@ Namespace `upgrade-113` с Deployment `canary` (2 реплики) уже раз�
 индикатор отсутствия downtime. На протяжении всего upgrade минимум одна реплика должна
 оставаться `Available`; после `uncordon` каждого узла и в финале Deployment должен
 восстанавливаться до `2/2`. Bootstrap заранее распределяет обе реплики по разным
-nodes (required `podAntiAffinity`) и создаёт `PodDisruptionBudget` с `minAvailable: 1`.
+узлам (required `podAntiAffinity`) и создаёт `PodDisruptionBudget` с `minAvailable: 1`.
 
 ## Развёртывание
 
@@ -83,20 +85,20 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 ---
 | **1** | **Upgrade control-plane до целевого minor** |
 | :---: | :--- |
-| Что делаем | На `k8s113_controlPlane_1` переключите apt-репозиторий `pkgs.k8s.io` с `core:/stable:/v1.35` на `core:/stable:/v1.36` (новый keyring и `sources.list.d/kubernetes.list`). Обновите пакет `kubeadm` до `1.36.x`, выполните `kubeadm upgrade plan`, затем `kubeadm upgrade apply v1.36.x`. Только после успешного `apply` выполните `kubectl drain` этого узла, обновите пакеты `kubelet`/`kubectl` до `1.36.x`, перезапустите `kubelet`, затем `kubectl uncordon`. |
-| Критерии приёмки | `kubeadm version`, `kubelet --version`, локальный `kubectl version --client` и версия API server (`kubectl version`) на control-plane сообщают `v1.36.x`. Узел `k8s113_controlPlane_1` в статусе `Ready`. Полный вывод команды `kubeadm upgrade apply` (со строкой `SUCCESS` и целевой версией) сохранён буквально в `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt`. |
+| Что делаем | • Зайдите на `k8s113_controlPlane_1` (`ssh`, затем `sudo -i`).<br/>• Переключите apt-репозиторий `pkgs.k8s.io` с `core:/stable:/v1.35` на `core:/stable:/v1.36`: в `/etc/apt/sources.list.d/kubernetes.list` меняется только версия в URL (так описано в документации Kubernetes, keyring прежний).<br/>• Обновите пакет `kubeadm` до `1.36.x`, выполните `kubeadm upgrade plan`, затем `kubeadm upgrade apply v1.36.x`.<br/>• Только после успешного `apply` выполните `kubectl drain` этого узла.<br/>• Обновите пакеты `kubelet`/`kubectl` до `1.36.x`, перезапустите `kubelet`, затем выполните `kubectl uncordon`. |
+| Критерии приёмки | • `kubeadm version`, `kubelet --version`, локальный `kubectl version --client` и версия API server (`kubectl version`) на control-plane сообщают `v1.36.x`.<br/>• Узел control-plane (`<cp-имя>` из `kubectl get no`) в статусе `Ready`.<br/>• Полный вывод команды `kubeadm upgrade apply` (со строкой `SUCCESS` и целевой версией) сохранён буквально в `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt` на рабочей машине (команда выполняется на узле, вывод пишется в файл на узле, затем копируется `scp`). |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
 
-Порядок принципиален: сначала `apt-mark unhold kubeadm` → обновить пакет → `apt-mark hold kubeadm` → `kubeadm upgrade plan` → `kubeadm upgrade apply vX.Y.Z`, и только ПОСЛЕ успешного `apply` - `drain` и обновление `kubelet`/`kubectl`. Обновлять `kubelet` до вызова `kubeadm upgrade apply` не нужно и не рекомендуется официальной процедурой. Сохраните вывод `kubeadm upgrade apply` через `tee`, а не восстанавливайте его по памяти после - тест ищет буквальный текст со словом `SUCCESS`.
+Порядок принципиален: сначала `apt-mark unhold kubeadm` → обновить пакет → `apt-mark hold kubeadm` → `kubeadm upgrade plan` → `kubeadm upgrade apply vX.Y.Z`, и только ПОСЛЕ успешного `apply` - `drain` и обновление `kubelet`/`kubectl`. Обновлять `kubelet` до вызова `kubeadm upgrade apply` не нужно и не рекомендуется официальной процедурой. Сохраните вывод `kubeadm upgrade apply` в файл на узле (`> /tmp/kubeadm-upgrade-apply.txt 2>&1`), а не восстанавливайте его по памяти после - тест ищет буквальный текст со словом `SUCCESS`.
 </details>
 
 ---
 | **2** | **Upgrade worker-узла до целевого minor** |
 | :---: | :--- |
-| Что делаем | На `k8s113_node_worker1` аналогично переключите `pkgs.k8s.io` на `core:/stable:/v1.36`, обновите `kubeadm`, выполните `kubeadm upgrade node` (не `apply` - это команда только для control-plane). Затем `kubectl drain` этого узла (с рабочей машины, не с самого узла), обновите `kubelet`/`kubectl`, перезапустите `kubelet`, `kubectl uncordon`. |
-| Критерии приёмки | `kubeadm version`, `kubelet --version` и локальный `kubectl version --client` на worker-узле сообщают `v1.36.x`; `kubectl get nodes` показывает для worker-узла `v1.36.x` в `kubeletVersion` и статус `Ready`. Вывод `kubeadm upgrade node` сохранён в `/var/work/tests/artifacts/2/kubeadm-upgrade-node.txt`. |
+| Что делаем | • На `k8s113_node_worker1` (`ssh`, `sudo -i`) аналогично переключите `pkgs.k8s.io` на `core:/stable:/v1.36` и обновите `kubeadm`.<br/>• Выполните `kubeadm upgrade node` (не `apply` - это команда только для control-plane).<br/>• Выполните `kubectl drain` этого узла (с рабочей машины, не с самого узла).<br/>• Обновите `kubelet`/`kubectl`, перезапустите `kubelet`, выполните `kubectl uncordon`. |
+| Критерии приёмки | • `kubeadm version`, `kubelet --version` и локальный `kubectl version --client` на worker-узле сообщают `v1.36.x`.<br/>• `kubectl get nodes` показывает для worker-узла `v1.36.x` в `kubeletVersion` и статус `Ready`.<br/>• Вывод `kubeadm upgrade node` сохранён в файл на узле и скопирован `scp` в `/var/work/tests/artifacts/2/kubeadm-upgrade-node.txt` на рабочей машине. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -107,25 +109,25 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 ---
 | **3** | **Соблюсти правильный порядок upgrade** |
 | :---: | :--- |
-| Что делаем | Убедитесь, что вы выполнили upgrade control-plane (задание 1) полностью, включая uncordon, ДО того как начали upgrade worker-узла (задание 2). Никакого отдельного действия в кластере это задание не требует - порядок автоматически проверяется checker-owned монитором состояния кластера и версий. |
-| Критерии приёмки | Control-plane должна полностью перейти на `1.36.x`, стать `Ready` и schedulable, пока worker всё ещё остаётся на `1.35.x`; только после этого может начаться upgrade worker-узла. |
+| Что делаем | • Выполните upgrade control-plane (задание 1) полностью, включая uncordon, ДО того как начнёте upgrade worker-узла (задание 2).<br/>• Отдельного действия в кластере это задание не требует: порядок автоматически проверяется checker-owned монитором состояния кластера и версий. |
+| Критерии приёмки | • Checker-owned monitor фиксирует исходный `1.35.x` baseline.<br/>• Затем фиксируется полный переход control-plane на `1.36.x` (включая `Ready` и schedulable) при worker на `1.35.x`, и только после этого начало upgrade worker-узла.<br/>• Состояние переживает перезапуск монитора; отсутствие baseline или разрыв наблюдения свыше 60 секунд не засчитывается. |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
 
-Если вы уже начали (или тем более закончили) upgrade worker-узла до control-plane - остановитесь, откатите worker обратно на скачивание пакетов `1.35.x` невозможно простым способом, но правильный путь - завершить upgrade control-plane, затем продолжить/повторить upgrade worker-узла. Главное - следующий upgrade worker-узла (когда бы он ни был начат) должен произойти позже полностью завершённого upgrade control-plane. Не начинайте задание 2, пока `kubectl get node k8s113_controlPlane_1` не покажет `v1.36.x` и `Ready`.
+Если вы уже начали (или тем более закончили) upgrade worker-узла до control-plane - остановитесь: откатить worker обратно на пакеты `1.35.x` простым способом невозможно, правильный путь - завершить upgrade control-plane, затем продолжить/повторить upgrade worker-узла. Главное - следующий upgrade worker-узла (когда бы он ни был начат) должен произойти позже полностью завершённого upgrade control-plane. Не начинайте задание 2, пока `kubectl get node <cp-имя>` (имя control-plane из `kubectl get no`) не покажет `v1.36.x` и `Ready`.
 </details>
 
 ---
 | **4** | **Доказать отсутствие downtime у существующей нагрузки** |
 | :---: | :--- |
-| Что делаем | Пока выполняете задания 1-2, параллельно (в отдельной сессии на рабочей машине) запустите цикл, опрашивающий доступность Deployment `canary` в namespace `upgrade-113` каждые несколько секунд, и допишите каждую строку опроса в `/var/work/tests/artifacts/4/canary-availability.log` в формате, содержащем `available=N` (например `available=2`). Продолжайте опрос на протяжении всего upgrade обоих узлов. |
-| Критерии приёмки | Deployment `canary` в конце имеет `2/2` доступных реплик. Отсутствие downtime проверяется checker-owned мониторингом (независимая проверка через `crictl` на обоих узлах), а не содержимым student-лога. Файл `/var/work/tests/artifacts/4/canary-availability.log` не пуст, содержит минимум 2 отдельные строки `available=N` (как доказательство того, что вы действительно опрашивали Deployment в цикле на протяжении upgrade, а не записали значение один раз в конце). |
+| Что делаем | • Пока выполняете задания 1-2, в отдельной сессии на рабочей машине запустите цикл, опрашивающий доступность Deployment `canary` в namespace `upgrade-113` каждые несколько секунд.<br/>• Допишите каждую строку опроса в `/var/work/tests/artifacts/4/canary-availability.log` в формате, содержащем `available=N` (например `available=2`).<br/>• Продолжайте опрос на протяжении всего upgrade обоих узлов. |
+| Критерии приёмки | • Deployment `canary` в конце имеет `2/2` доступных реплик, исходные Deployment/PDB и required Pod anti-affinity сохранены.<br/>• Отсутствие downtime проверяется checker-owned monitor по Pod Ready и CRI-контейнерам именно из `upgrade-113`; ошибки API/SSH/CRI учитываются как UNKNOWN, а не как ноль.<br/>• Student-файл `/var/work/tests/artifacts/4/canary-availability.log` содержит минимум две строки формата `<unix_timestamp> available=N` или `<unix_timestamp> available=api-unreachable`, с наблюдениями до upgrade control-plane и после начала upgrade worker. |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
 
-Пример цикла опроса, который можно оставить работать в отдельном терминале/`screen`/`tmux` на всё время выполнения заданий 1-2: `while true; do echo "$(date +%s) available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}')" >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. Если Deployment на короткое время терял все реплики - скорее всего оба Pod'а оказались на одном и том же узле без anti-affinity, и `drain` этого узла разом убрал оба; проверьте распределение `kubectl get pods -n upgrade-113 -o wide` и, если нужно, перераспределите реплики перед повторной попыткой.
+Пример цикла опроса, который можно оставить работать в отдельном терминале/`screen`/`tmux` на всё время выполнения заданий 1-2: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. Если Deployment на короткое время терял все реплики - проверьте `kubectl get pods -n upgrade-113 -o wide` и что последовательные drain соблюдают PDB и required anti-affinity.
 </details>
 
 ## Проверка

@@ -2,9 +2,9 @@
 
 # 第 05 章。保護節點元資料與端點;保護 GUI
 
-> **問題。** 遭入侵的 Pod 或 SSRF 可以存取外部使用者無法存取的端點:節點的 cloud metadata、control plane 或服務用的 GUI。一個解析錯誤的網路路徑,就能暴露節點的 cloud identity 和臨時 credentials,或是特權管理介面。一般的 RBAC workload 無法保護 metadata,因為它不是 Kubernetes API。
+> **問題。** 遭入侵的 Pod 或 SSRF 可以存取外部使用者無法存取的端點:節點的 cloud metadata、control plane 或服務用的 GUI。一個被錯誤允許的網路路徑,就能暴露節點的 cloud identity 和臨時 credentials,或是特權管理介面。一般的 RBAC workload 無法保護 metadata,因為它不是 Kubernetes API。
 
-> **接下來是什麼。** 在第 04 章中,我們把扁平的 pod 網路轉變成一組已解析的連線。現在,讓我們把 egress isolation 應用到特別危險的目的地:cloud metadata、control plane 和 GUI。這是 CKS 的 Cluster Setup (15%) 領域。此類權限中的一個錯誤,就能把 Pod 遭入侵轉變成 cloud identity 或叢集遭入侵。
+> **接下來是什麼。** 在第 04 章中,我們把扁平的 pod 網路轉變成一組已允許的連線。現在,讓我們把 egress isolation 應用到特別危險的目的地:cloud metadata、control plane 和 GUI。這是 CKS 的 Cluster Setup (15%) 領域。此類權限中的一個錯誤,就能把 Pod 遭入侵轉變成 cloud identity 或叢集遭入侵。
 
 > **從 CKA 需要具備的知識。** egress `NetworkPolicy`、`ipBlock` 的基本語法和 CNI 的運作方式,已在 [CKA 第 34 章](../../../cka/course/34/tw.md) 中討論過。這裡我們探討的是對節點 metadata 和服務端點的威脅,而不是重複策略的基礎知識。
 
@@ -142,7 +142,7 @@ spec:
 
 這是遷移期的折衷方案,而不是良好的最終狀態:此規則仍然開放了幾乎整個 IPv4 網際網路。`except` 只會把該位址從這條規則中排除。policy 是可疊加的,因此另一個帶有 `0.0.0.0/0`、更寬 CIDR 或 IMDS 位址的 egress allow,會再次允許 metadata。更穩健的做法,是針對每個必要相依性,分別使用精確的 DNS、egress proxy、CIDR 或端點規則。如果有使用 IPv6,請設計並驗證獨立的 IPv6 路徑,不要把 IPv4 policy 當成完整的防護。
 
-只有在 CNI 確實有落實 `NetworkPolicy` 時,網路 policy 才能提供防護。針對 metadata 的 `ipBlock.except` 是常見的考試風格與過渡模式,但它對 link-local 和 host 端點的落實情況,取決於 CNI 和 dataplane。此外,節點流量與 SNAT 的實作方式,在不同 CNI 與 managed Kubernetes 之間也有差異。不要用這個 policy 取代 cloud instance 和節點防火牆的防護:在生產環境中,主要的邊界是 provider 的 metadata 設定和 workload identity,而 policy 只是額外的一層。
+只有在 CNI 確實有落實 `NetworkPolicy` 時,網路 policy 才能提供防護。針對 metadata 的 `ipBlock.except` 是常見的 exam-style 與過渡模式,但它對 link-local 和 host 端點的落實情況,取決於 CNI 和 dataplane。此外,節點流量與 SNAT 的實作方式,在不同 CNI 與 managed Kubernetes 之間也有差異。不要用這個 policy 取代 cloud instance 和節點防火牆的防護:在生產環境中,主要的邊界是 provider 的 metadata 設定和 workload identity,而 policy 只是額外的一層。
 
 > 🏭 針對 metadata 存取與所選 workload identity,經版本核對的 AWS/GKE/AKS controls 與 evidence。
 
@@ -150,7 +150,7 @@ spec:
 |---|---|---|---|---|
 | AWS / EKS | 透過 IMDS `169.254.169.254`(若使用 IPv6 則為 `fd00:ec2::254`)取得節點的 IAM role | EKS Pod Identity 或 IRSA,取代 node credentials | 對於非 `hostNetwork` 的 Pod,以 hop limit `1` 的 IMDSv2 作為 baseline;`hostNetwork: true` 的 Pod 仍保留對 IMDS 的存取,需要另外的控制/admission policy;policy/firewall 是額外的層 | 最小化節點的 IAM role;CloudTrail,並檢查 Pod 沒有取得 node credentials |
 | GKE | 節點的 service account/access scopes | Workload Identity Federation:Pod -> GKE metadata server(`metadata.google.internal` / metadata IP) -> KSA token -> STS -> 短期的 federated token | 目前 strict policy 的範例:一般 dataplane 為 `169.254.169.252/32`,TCP `988` 和 `987`;GKE Dataplane V2 為 `169.254.169.254/32`,TCP `80` 和 `8080`。套用前請核對 GKE 文件 | 最小化 KSA/GSA 的 IAM roles;Cloud Audit Logs,並檢查 federated token |
-| Azure / AKS | 透過 IMDS `169.254.169.254` 取得節點的 managed identity | Microsoft Entra Workload ID | AKS IMDS restriction — **Preview**,僅適用於非 `hostNetwork` 的 Pod;不適用於 production SLA,與部分 add-ons/extension 情境不相容,且不支援 Windows node pools | 最小化節點的 managed identity;檢查 Entra federation,並另外檢查 IMDS restriction 的適用性 |
+| Azure / AKS | 透過 IMDS `169.254.169.254` 取得節點的 managed identity | Microsoft Entra Workload ID | AKS IMDS restriction - **Preview**,僅適用於非 `hostNetwork` 的 Pod;不適用於 production SLA,與部分 add-ons/extension 情境不相容,且不支援 Windows node pools | 最小化節點的 managed identity;檢查 Entra federation,並另外檢查 IMDS restriction 的適用性 |
 
 GKE Workload Identity 帶來了一個乍看之下重要的矛盾:安全的 workload identity 本身就會使用 GKE metadata server。因此不能把封鎖 `169.254.169.254` 當成通用規則:這個位址由 Azure IMDS 和 GKE Dataplane V2 使用,而不只是 AWS。在 strict `NetworkPolicy` 中,只允許實際 GKE dataplane 所記錄的路徑:一般 dataplane 中的 Workload Identity Federation 使用 `169.254.169.252/32` 的 TCP `988` 和 `987`,或是 GKE Dataplane V2 使用 `169.254.169.254/32` 的 TCP `80` 和 `8080`。這些是目前的範例,而不是永久不變的常數:套用前請重新核對 GKE 文件。`hostNetwork` 的 Pod 有不同的存取模型,需要另外評估。
 
@@ -185,7 +185,7 @@ metadata 不是唯一的目標。在進入 pod 網路後,攻擊者會尋找管�
 
 | Endpoint | 常見 port | 錯誤設定時的風險 | 基本防護 |
 |---|---:|---|---|
-| kubelet HTTPS | `10250` | 在 authn/authz 較弱時,可執行指令、存取 Pod 資料或 node API | 關閉 firewall、停用 anonymous access、啟用 Webhook authorization、使用 TLS |
+| kubelet HTTPS | `10250` | 在 authn/authz 較弱時,可執行指令、存取 Pod 資料或 node API | 用 firewall 限制存取、停用 anonymous access、啟用 Webhook authorization、使用 TLS |
 | kubelet read-only | `10255` | 過去曾在未經驗證的情況下暴露 Pod 資訊 | 不要啟用,設定 `--read-only-port=0` |
 | etcd client/peer | `2379` / `2380` | 讀取或修改叢集狀態,包括 Secrets | `2379` 僅允許授權的 etcd clients(主要是 kube-apiserver)存取,`2380` 僅允許 etcd members 之間存取;mTLS、firewall,不對外公開 |
 | kube-apiserver | `6443` | 整個 Kubernetes API 的入口點 | TLS、強固的 authn/authz、private endpoint 或 allowlist、audit |
@@ -386,7 +386,7 @@ kubectl -n payments exec egress-test -- sh -c '
 >
 > **Attacker objective:** 把看似 read-only 的存取,轉變成能夠管理節點上容器的能力。
 >
-> **Abuse path:** 不安全的權限 — ServiceAccount 對 `nodes/proxy` 有 `get`;透過 kubelet 的 `GET` 和 WebSocket endpoints,產生了前面已描述過的 RCE 風險。
+> **Abuse path:** 不安全的權限 - ServiceAccount 對 `nodes/proxy` 有 `get`;透過 kubelet 的 `GET` 和 WebSocket endpoints,產生了前面已描述過的 RCE 風險。
 >
 > **Expected evidence:** SubjectAccessReview、audit events,以及對 kubelet 存取的 telemetry。
 >
@@ -394,7 +394,7 @@ kubectl -n payments exec egress-test -- sh -c '
 >
 > **Retest:** metrics 持續正常運作,而管理/exec 路徑不再被授權。
 >
-> **ATT&CK:** [T1609 — Container Administration Command](https://attack.mitre.org/techniques/T1609/) 與 [T1613 — Container and Resource Discovery](https://attack.mitre.org/techniques/T1613/)。
+> **ATT&CK:** [T1609 - Container Administration Command](https://attack.mitre.org/techniques/T1609/) 與 [T1613 - Container and Resource Discovery](https://attack.mitre.org/techniques/T1613/)。
 
 ## 05.10. 自我檢查問題
 

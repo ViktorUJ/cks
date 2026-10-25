@@ -100,8 +100,8 @@ anonymous health endpoints.
 In Kubernetes 1.34+, you can use `AuthenticationConfiguration`, allowing anonymous
 access only for explicitly required endpoints. If public `cluster-info` is no longer
 needed, first move join/discovery to an appropriate alternative and only then remove this access.
-For example, a separate file mounted into the static Pod through
-`--authentication-config=<path>` can contain:
+For example, a separate file connected to the static Pod through
+`--authentication-config=<path>` and the corresponding mount can contain:
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -231,7 +231,7 @@ sudo crictl logs "$(sudo crictl ps -aq --name kube-apiserver | head -n1)"
 Keep permanent backup files outside `/etc/kubernetes/manifests/` anyway (as in step 1
 above): a hidden candidate is needed only for the replacement itself, not as a long-term copy.
 
-Before kubelet, first check sysctl values and configuration, then restart only it. An ordinary `systemctl restart kubelet` by itself does not stop already running Pods and containers: the container runtime continues to execute them, and after starting kubelet restores reconciliation. Nevertheless, on a control plane, change kubelet one node at a time and monitor the Node heartbeat, kubelet logs, and `/readyz`: a configuration error can leave a node `NotReady` or prevent further management of static Pods.
+For kubelet, first check sysctl values and configuration, then restart only it. An ordinary `systemctl restart kubelet` by itself does not stop already running Pods and containers: the container runtime continues to execute them, and kubelet restores reconciliation after it starts. Nevertheless, on a control plane, change kubelet one node at a time and monitor the Node heartbeat, kubelet logs, and `/readyz`: a configuration error can leave a node `NotReady` or prevent further management of static Pods.
 
 ```yaml
 # /var/lib/kubelet/config.yaml - example configuration-API fragment.
@@ -285,7 +285,7 @@ Modern Go and Kubernetes defaults already exclude obsolete protocols and insecur
 suites; there is no universal “short secure list.” Do not carry a random
 short list between components or versions. If organization policy or a specific
 CIS profile requires an approved list, apply exactly that list after inventorying
-certificates and clients, rather than opposing it to the hardening baseline.
+certificates and clients, rather than setting it against the hardening baseline.
 An RSA-only list is not a safe default: it breaks an endpoint with an ECDSA certificate
 and narrows compatibility unnecessarily. TLS 1.3 suites in Go are usually not controlled by
 `--tls-cipher-suites`: the TLS implementation selects them, so this flag concerns primarily
@@ -594,7 +594,7 @@ kubectl get nodes
 | apiserver does not start | YAML typo, unsupported flag, or cipher | `journalctl -u kubelet`, `crictl logs`; restore the last working manifest |
 | client gets protocol version | client is older than the configured minimum | upgrade the client or temporarily select an agreed minimum under an approved exception |
 | TLS handshake fails with TLS 1.2 | certificate key algorithm is incompatible with permitted cipher suites | inspect `openssl x509 -text`, add suitable ECDSA/RSA suites |
-| etcd is not healthy | peer/client cannot negotiate TLS or lost access to a key | test all member endpoints with mTLS, inspect etcd logs, roll back one node |
+| etcd is not healthy | peer/client cannot negotiate TLS or has lost access to a key | test all member endpoints with mTLS, inspect etcd logs, roll back one node |
 | `openssl` shows a TLS 1.3 cipher not in the list | the TLS library controls TLS 1.3 ciphers | check minimum version and version documentation; do not treat this as bypassing the flag |
 
 ## 09.5. Verifying Kubernetes platform binaries: signature and sha256
@@ -738,7 +738,7 @@ config file/effective endpoint of the component; argv alone is then insufficient
 
 If `/configz` is unavailable due to permissions or topology, do not fall back to
 a hard-coded `/var/lib/kubelet/config.yaml`: obtain actual `--config` and
-`--config-dir` from the unit/process, read exactly them, and then account for ordinary CLI overrides.
+`--config-dir` from the unit/process, read exactly those, and then account for ordinary CLI overrides.
 
 ```bash
 # 2. Behavior: the read-only kubelet port is closed. The check_kubelet_10255 function (see §09.3)
@@ -868,7 +868,7 @@ timer it is easy to carry over the wrong format from memory. If you doubt the ex
 the installed version, checking it through `--help` of the running binary
 (the method in 09.4) is faster than searching the web. After editing, wait for the static Pod to be recreated and
 demonstrate both sides: the permitted version completes a handshake and a version below the minimum
-is rejected - that, not only successful `/readyz`, proves that the policy applied.
+is rejected - that, not only a successful `/readyz`, proves that the policy applied.
 
 **In real work.** Component hardening is a platform-contract change,
 not a one-time CIS checkbox. It requires client inventory, an IaC source of truth, rolling
@@ -912,7 +912,7 @@ An RSA-only list contains no suite compatible with the key algorithm of an ECDSA
 <details>
 <summary>6. Which commands confirm that TLS 1.1 is rejected, TLS 1.2 is permitted, and apiserver remains healthy after the change?</summary>
 
-For a positive TLS 1.2 test, check the exit status of `openssl s_client` itself, use `-verify_return_error` for certificate verification, and ensure a nonempty cipher actually negotiated; merely grepping `Protocol`/`Verify return code` is insufficient. For a negative test, seeing the word `protocol` or any handshake error is insufficient: prove that the client **sent** TLS 1.1 `ClientHello` and that the peer under test **returned** a fatal `protocol_version` alert. `openssl s_client -msg -state` distinguishes server-side rejection from a local OpenSSL/crypto-policy prohibition; if ClientHello was not sent, the result is `INCONCLUSIVE`, not PASS. After protocol tests, confirm apiserver health through `/readyz` and `kubectl get nodes`.
+For a positive TLS 1.2 test, check the exit status of `openssl s_client` itself, use `-verify_return_error` for certificate verification, and ensure that a nonempty cipher was actually negotiated; merely grepping `Protocol`/`Verify return code` is insufficient. For a negative test, seeing the word `protocol` or any handshake error is insufficient: prove that the client **sent** TLS 1.1 `ClientHello` and that the peer under test **returned** a fatal `protocol_version` alert. `openssl s_client -msg -state` distinguishes server-side rejection from a local OpenSSL/crypto-policy prohibition; if ClientHello was not sent, the result is `INCONCLUSIVE`, not PASS. After protocol tests, confirm apiserver health through `/readyz` and `kubectl get nodes`.
 </details>
 
 <details>

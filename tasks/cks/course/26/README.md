@@ -4,8 +4,8 @@
 
 > **Problem.** An attacker with push permission in a registry or access to CD can retarget a
 > mutable tag and deploy an untrusted image from an external or even familiar internal repository.
-> A successful pull does not prove trusted pipeline built these bytes, while an allowlist without
-> signature verification does not stop an unsigned artifact. Immutable digest, publisher
+> A successful pull does not prove that a trusted pipeline built these bytes, while an allowlist without
+> signature verification does not stop an unsigned artifact. An immutable digest, publisher
 > verification, and fail-closed admission are needed before a Pod is persisted.
 
 > **What comes next.** In [chapter 25](../25/README.md), we defined where dependencies, SBOM, and
@@ -20,7 +20,7 @@
 > to run.
 
 > **The simple signing idea.** It answers one question: **who approved these exact image bytes?**
-> Pipeline first pins the immutable digest - the content fingerprint - then signs that digest.
+> The pipeline first pins the immutable digest - the content fingerprint - then signs that digest.
 > Before startup, a verifier compares the image digest with the signature and establishes that the
 > signer is trusted. If a tag now points to other bytes, the old signature no longer applies.
 > Signing does not encrypt an image or replace malware/CVE scanning: it proves publisher identity
@@ -30,8 +30,8 @@
 
 ## 26.1. What must be protected
 
-Supply chain begins before Kubernetes: source code and CI build an image, registry stores it and
-its signature, GitOps or `kubectl` sends the reference to API server, and admission decides whether
+The supply chain begins before Kubernetes: source code and CI build an image, the registry stores it and
+its signature, GitOps or `kubectl` sends the reference to the API server, and admission decides whether
 to admit the Pod. If any stage is tampered with or unexpectedly replaced, a correct manifest can run untrusted code.
 
 ```mermaid
@@ -63,7 +63,7 @@ rollout. An allowlist does not replace signature verification: an attacker with 
 to a trusted registry can still place an unsigned image there. Conversely, a signature does not
 prohibit use of an unapproved registry.
 
-> 🎯 Implement fail-closed admission allowlist for the required registry/repository and check normal, init, and ephemeral containers. In Kubernetes v1.36, separately consider `spec.volumes[].image.reference`: until a verifier can demonstrably check such OCI artifact, it is safer to reject image volumes in a protected namespace. Native `ValidatingAdmissionPolicy` and Gatekeeper are direct approaches to this task.
+> 🎯 Implement a fail-closed admission allowlist for the required registry/repository and check normal, init, and ephemeral containers. In Kubernetes v1.36, separately consider `spec.volumes[].image.reference`: until a verifier can demonstrably check such an OCI artifact, it is safer to reject image volumes in a protected namespace. Native `ValidatingAdmissionPolicy` and Gatekeeper are direct approaches to this task.
 
 ## 26.2. Registry allowlist through native ValidatingAdmissionPolicy, Kyverno, and Gatekeeper
 
@@ -115,11 +115,11 @@ spec:
 
 Label a test namespace `registry-policy: enforced` (`kubectl label namespace
 <ns> registry-policy=enforced`) before expanding `namespaceSelector` to the whole cluster:
-without `matchResources.namespaceSelector` in the Binding, policy immediately becomes cluster-wide
+without `matchResources.namespaceSelector` in the Binding, the policy immediately becomes cluster-wide
 and affects every matching Pod, not only the selected namespace.
 
 VAP, like a Pod-only Gatekeeper Constraint, rejects a Pod created by a controller; early rejection
-of a Deployment itself needs separate CEL rules for its template. First apply policy in a test
+of a Deployment itself needs separate CEL rules for its template. First apply the policy in a test
 namespace and check normal/init/ephemeral-container images and a Pod with
 `spec.volumes[].image`: this example must reject the image volume. For signature requirements,
 keep the following `ImageValidatingPolicy` or another cryptographic verifier.
@@ -207,7 +207,7 @@ The test prefix matters: this Kyverno `ValidatingPolicy` checks only
 `registry.example.com/platform/*`, so testing the policy needs an image from the matching registry
 with an incorrect path beneath it, not an arbitrary foreign registry.
 
-Do not add all of `docker.io` "temporarily": that turns allowlist into allow-all. For system
+Do not add all of `docker.io` "temporarily": that turns the allowlist into allow-all. For system
 components, define narrow separate prefixes, for example `registry.k8s.io/*`, and record the
 exception when reviewing the change.
 
@@ -317,7 +317,7 @@ Gatekeeper is convenient where an organization standardizes Rego and Constraints
 both engines for the same mandatory check without an explicit owner and agreed migration order:
 duplicate denial messages complicate diagnosis, and two different allowlists drift apart.
 
-> 🎯 `ImagePolicyWebhook` is an exam-oriented admission mechanism: API server delegates allow/deny to a backend that must be available and configured fail-closed.
+> 🎯 `ImagePolicyWebhook` is an exam-oriented admission mechanism: the API server delegates allow/deny to a backend that must be available and configured fail-closed.
 
 ## 26.3. ImagePolicyWebhook: backend and API-server configuration
 
@@ -346,15 +346,15 @@ sequenceDiagram
     end
 ```
 
-The backend must be reachable *from API server* and make a fail-closed decision. The configuration
-below selects mTLS: API server presents a client certificate, while backend verifies it and the CA.
+The backend must be reachable *from the API server* and make a fail-closed decision. The configuration
+below selects mTLS: the API server presents a client certificate, while the backend verifies it and the CA.
 mTLS is not a universal `ImagePolicyWebhook` requirement; backend authentication is defined by its
 kubeconfig and infrastructure. The backend must not pull an image on every request: check
 reference/digest, signature, and trusted identity, and cache results only with a short justified
 TTL. A long allow cache after signature revocation leaves a window for undesired startup.
 
 Set `defaultAllow: false` in admission configuration. Paths and file mounts below are shown for a
-kubeadm static Pod; replace actual backend endpoint, CA, and client certificate with values from
+kubeadm static Pod; replace the actual backend endpoint, CA, and client certificate with values from
 your infrastructure.
 
 ```yaml
@@ -396,9 +396,9 @@ current-context: image-policy
 
 Add the plugin to `kube-apiserver` and pass the admission configuration. Do not replace the
 existing enabled-admission-plugin list: add `ImagePolicyWebhook` to its current value, otherwise
-you can accidentally disable required built-in controllers. Also enable API
+you can accidentally disable required built-in controllers. Also enable the API
 `imagepolicy.k8s.io/v1alpha1` used by `ImageReview`; without it, this fragment is incomplete and
-backend is not called. If `--runtime-config` already exists, add
+the backend is not called. If `--runtime-config` already exists, add
 `imagepolicy.k8s.io/v1alpha1=true` to its current value without overwriting other settings.
 
 ```yaml
@@ -429,12 +429,12 @@ spec:
       type: DirectoryOrCreate
 ```
 
-Editing the static Pod restarts API server. Keep a backup manifest **outside**
+Editing the static Pod restarts the API server. Keep a backup manifest **outside**
 `/etc/kubernetes/manifests/` (for example under `/root/k8s-manifest-backup/`): kubelet can read a
 file with any extension inside that directory as another static Pod manifest. Retain control-plane
 console access and check backend TLS in advance: erroneous endpoint, CA, client key, or fail-open
 configuration can respectively block every new Pod or remove protection. After restart, check
-`/readyz`, API-server logs, and explicit allow/deny test. Below are minimal conceptual backend
+`/readyz`, API-server logs, and an explicit allow/deny test. Below are minimal conceptual backend
 responses, not objects for `kubectl apply`:
 
 ```yaml
@@ -446,7 +446,7 @@ status:
   auditAnnotations:
     decision: "approved signed digest"
 ---
-# deny: short reason enters admission error
+# deny: a short reason ends up in the admission error
 apiVersion: imagepolicy.k8s.io/v1alpha1
 kind: ImageReview
 status:
@@ -468,7 +468,7 @@ easier to maintain.
 
 Cosign creates and verifies OCI-artifact signatures. Sign the **digest** obtained from your own
 build/push pipeline; do not substitute `latest` or a digest from someone else's message. A
-signature is stored next to artifact in registry, so registry access control and retention matter
+signature is stored next to the artifact in the registry, so registry access control and retention matter
 as much as a key.
 
 ```bash
@@ -478,10 +478,10 @@ IMAGE="${IMAGE:?set image reference}"
 # Do not use the private key created here as a production key or add it to Git.
 cosign generate-key-pair
 
-# CI receives the key briefly; password is not printed in logs.
+# CI receives the key briefly; the password is not printed in logs.
 cosign sign --key cosign.key "$IMAGE"
 
-# Verify with trusted public key - before deploy and at admission.
+# Verify with a trusted public key - before deploy and at admission.
 cosign verify --key cosign.pub "$IMAGE"
 ```
 
@@ -497,9 +497,9 @@ trail of who signed which digest and when.
 
 ### Keyless: short-lived identity instead of a local signing key
 
-Sigstore keyless flow obtains a short-lived certificate after CI OIDC authentication and writes
+The Sigstore keyless flow obtains a short-lived certificate after CI OIDC authentication and writes
 proof to the transparency log. A local private key need not be created or distributed to
-developers, but do not trust "any certificate": trust the exact OIDC identity of release workflow.
+developers, but do not trust "any certificate": trust the exact OIDC identity of the release workflow.
 
 ```bash
 IMAGE="${IMAGE:?set image reference}"
@@ -514,26 +514,26 @@ cosign verify \
   "$IMAGE"
 ```
 
-For GitHub Actions, workflow must grant its job `id-token: write`; that is not registry push
-permission and does not replace scoped registry credential. Identity restriction must include
+For GitHub Actions, the workflow must grant its job `id-token: write`; that is not registry push
+permission and does not replace a scoped registry credential. Identity restriction must include
 organization, repository, workflow, and suitable ref/environment. An overly broad
 `--certificate-identity-regexp='.*'` makes keyless verification almost meaningless: any OIDC user
-accepted by verifier can sign an image.
+accepted by the verifier can sign an image.
 
 > 🎯 Signature verification becomes mandatory only on the admission path: a locally successful CI verification does not stop direct `kubectl apply`.
 
 ## 26.5. Signature verification at admission and Notary
 
 Pre-deployment verification is useful, but not enforcement: a user can bypass a local CI script
-and call API directly. Verification must therefore live on admission path. In Kyverno 1.19,
+and call the API directly. Verification must therefore live on the admission path. In Kyverno 1.19,
 CEL-based `ImageValidatingPolicy` does this; legacy `ClusterPolicy.verifyImages` is retained only
 for migration. Do not treat this policy as a check for `spec.volumes[].image.reference`: this
 chapter's allowlist policy already fail-closed rejects image volumes until verifier support is
 confirmed.
 
-**The exam core** is repository allowlist, immutable digest, fail-closed admission, and denial
+**The exam core** is a repository allowlist, an immutable digest, fail-closed admission, and denial
 diagnosis. Kyverno `ImageValidatingPolicy`, Notary, and signed SBOM/in-toto attestations are a
-**production extension**: they connect policy to trusted signer and release evidence. The example
+**production extension**: they connect policy to a trusted signer and release evidence. The example
 does not put a private key into the cluster.
 
 ```yaml
@@ -608,7 +608,7 @@ equivalent): allowlist VAP from the preceding section rejects it before signatur
 for this ImageValidatingPolicy it does not match `matchImageReferences` and does not test its CEL
 rules. `validationConfigurations` first lets Kyverno append a digest, then requires and verifies
 it; signature and `signedSbom` thus refer to one immutable digest. `releaseNotary` is a native
-Notary attestor, while signature condition permits one of explicitly selected trust roots; do not
+Notary attestor, while the signature condition permits one of the explicitly selected trust roots; do not
 mix them without a documented migration period. For keyless, configure
 `cosign.keyless.identities` with exact issuer and subject of the particular CI workflow. Test a
 signed and unsigned digest, erroneous signer, absent signed SBOM, and unavailable registry.
@@ -628,11 +628,11 @@ notation verify "$IMAGE"
 Notary by itself is not a Kubernetes admission controller. Its trust policy must be converted
 into a policy-controller or webhook-backend check that returns allow/deny to kube-apiserver. Do
 not expect one verifier to automatically understand everything: Cosign/Sigstore and
-Notary/Notation use different trust models. Choose a standard for each repository, document trust
+Notary/Notation use different trust models. Choose a standard for each repository, document the trust
 root, allowed identities, and rotation procedure, then migrate with an explicit period of dual
 signing and dual verification.
 
-> 🏭 End-to-end process combines build, scan, SBOM/attestations, signing, deployment by digest, and fail-closed admission with audit evidence.
+> 🏭 The end-to-end process combines build, scan, SBOM/attestations, signing, deployment by digest, and fail-closed admission with audit evidence.
 
 ## 26.6. Verifiable production process
 
@@ -642,7 +642,7 @@ A minimum secure pipeline is:
 
 1. CI builds a reproducible image, scans it, and obtains the digest after push.
 2. CI creates SBOM/attestations and signs the digest using a key or keyless OIDC identity.
-3. Deployment reference uses that same digest; allowlist permits only the required
+3. A Deployment reference uses that same digest; allowlist permits only the required
    registry/repository, and image volumes are explicitly verified by a separate verifier or
    prohibited fail-closed.
 4. Admission compares registry, digest, and signature against a limited trusted identity and
@@ -665,7 +665,7 @@ For a controller-owned Pod, check Events and `FailedCreate` on ReplicaSet/Job, a
 trace use API-server audit and logs of the relevant admission controller.
 
 If a legitimate deployment is rejected, check its digest, repository prefix, signer identity,
-certificate/key, and network/TLS to registry. Do not repair an incident by temporarily using
+certificate/key, and network/TLS to the registry. Do not repair an incident by temporarily using
 `validationActions: [Audit]`, `failurePolicy: Ignore`, or a broad production allowlist: that
 removes exactly the control meant to detect compromise. For an emergency exception, use a
 short-lived namespace- and digest-scoped solution with owner, expiry, and later removal.
@@ -677,9 +677,9 @@ short-lived namespace- and digest-scoped solution with owner, expiry, and later 
 - **Cosign** - Sigstore tool for signing and verifying OCI artifacts.
 - **Keyless signing** - signing with a short-lived certificate issued after OIDC authentication,
   instead of a permanent local signing key.
-- **ImagePolicyWebhook** - admission plugin delegating the image decision to external backend
+- **ImagePolicyWebhook** - admission plugin delegating the image decision to an external backend
   through `ImageReview`.
-- **Admission verification** - mandatory provenance/signature check before API server persists a Pod.
+- **Admission verification** - mandatory provenance/signature check before the API server persists a Pod.
 - **Notary Project / Notation** - OCI-signing ecosystem with X.509 trust policy; Kubernetes
   enforcement needs admission integration.
 
@@ -692,7 +692,7 @@ short-lived namespace- and digest-scoped solution with owner, expiry, and later 
 - `ImagePolicyWebhook` needs a protected available backend, API-server configuration, and
   fail-closed `defaultAllow: false`; mTLS in the example is the selected backend-authentication
   approach.
-- Cosign signs and verifies immutable digest; a private key must not enter Git, a manifest, or
+- Cosign signs and verifies an immutable digest; a private key must not enter Git, a manifest, or
   cluster policy.
 - Keyless Sigstore verification trusts a specific OIDC issuer and CI-workflow identity, not an
   arbitrary certificate.
@@ -703,36 +703,36 @@ short-lived namespace- and digest-scoped solution with owner, expiry, and later 
 
 **On the exam.** The short core is the difference among registry policy, tag, and digest,
 configuration or diagnosis of validating admission, API-server admission configuration, and
-fail-open risk. Saving the admission-denial response and checking exact image reference is faster
+fail-open risk. Saving the admission-denial response and checking the exact image reference is faster
 and safer than disabling a controller. Kyverno `ImageValidatingPolicy`, Notary, and attestations
-are production extensions for which understanding purpose is sufficient.
+are production extensions for which understanding their purpose is sufficient.
 
 **In real work.** Signing connects a production workload to a release workflow and a particular
 artifact, while admission makes this rule mandatory for every deployment path. Together with
-least-privilege CI permissions, protected registry, and audit logs, it reduces likelihood of
+least-privilege CI permissions, a protected registry, and audit logs, it reduces the likelihood of
 running an image that did not pass your pipeline.
 
 > ### 🔴 Attacker's view
 > **Asset:** production-workload reference to an image.
-> **Starting foothold:** ability to push to registry or compromised CI.
-> **Attacker objective:** bypass registry allowlist/admission checking by retargeting a mutable tag to a malicious image without changing digest of already deployed workloads.
+> **Starting foothold:** ability to push to the registry or compromised CI.
+> **Attacker objective:** bypass registry allowlist/admission checking by retargeting a mutable tag to a malicious image without changing the digest of already deployed workloads.
 > **Abuse path:** retarget a tag to another image. Without digest pinning, the same string
 > `registry/app:stable` does not guarantee the same bytes: with `imagePullPolicy: Always`, kubelet
-> resolves the tag again at every startup; with `IfNotPresent`, cached image can temporarily hide
+> resolves the tag again at every startup; with `IfNotPresent`, a cached image can temporarily hide
 > the change, but a new node or cleared cache receives the new digest at first pull; `Never`
 > prevents pull but is not a supply-chain-verification control. `imagePullPolicy` does not replace
 > digest pinning and signature/provenance verification.
 > **Expected evidence:** saved admission-denial response or audit log; for a controller-owned Pod,
 > also `FailedCreate` event on its owner.
 > **Control:** digest pinning, registry allowlist, and admission signature verification through ImagePolicyWebhook or Kyverno.
-> **Retest:** a workload by digest does not change after tag retargeting, and unsigned image is rejected at admission.
+> **Retest:** a workload by digest does not change after tag retargeting, and an unsigned image is rejected at admission.
 
 ## 26.10. Self-check questions
 
 <details>
-<summary>1. Why does an allowlist of trusted registry not prove a trusted CI created the image?</summary>
+<summary>1. Why does an allowlist of trusted registries not prove that a trusted CI created the image?</summary>
 
-An allowlist answers only which registry/repository an image may come from. A user with push permission to that trusted registry can still publish an unsigned or untrusted artifact. Therefore, verify provenance of a particular digest through a signature and restricted signer identity.
+An allowlist answers only which registry/repository an image may come from. A user with push permission to that trusted registry can still publish an unsigned or untrusted artifact. Therefore, verify the provenance of a particular digest through a signature and a restricted signer identity.
 </details>
 
 <details>
@@ -750,19 +750,19 @@ Policy must check `containers`, `initContainers`, and `ephemeralContainers`. Oth
 <details>
 <summary>4. Which TLS files and fail-closed parameters does an `ImagePolicyWebhook` backend need?</summary>
 
-Backend kubeconfig needs CA in `certificate-authority`, and under the selected mTLS scheme API-server `client-certificate` and `client-key`; corresponding paths must be mounted into the static Pod. `AdmissionConfiguration` sets `defaultAllow: false` so backend error or unavailability does not permit an image. Retain existing admission plugins and enable `imagepolicy.k8s.io/v1alpha1` API for `ImageReview` as well.
+The backend kubeconfig needs the CA in `certificate-authority`, and under the selected mTLS scheme API-server `client-certificate` and `client-key`; corresponding paths must be mounted into the static Pod. `AdmissionConfiguration` sets `defaultAllow: false` so that a backend error or unavailability does not permit an image. Retain existing admission plugins and enable `imagepolicy.k8s.io/v1alpha1` API for `ImageReview` as well.
 </details>
 
 <details>
 <summary>5. How does a keyless signature differ from a static Cosign key, and which issuer/identity must verification restrict?</summary>
 
-Keyless flow obtains a short-lived certificate after CI OIDC authentication and does not require distribution of a permanent local private key. A static Cosign key is a separate key pair kept in KMS or another protected production store. Keyless verification restricts the exact OIDC issuer and workflow identity: organization, repository, release workflow, and permitted ref/environment, not regex `.*`.
+A keyless flow obtains a short-lived certificate after CI OIDC authentication and does not require distribution of a permanent local private key. A static Cosign key is a separate key pair kept in KMS or another protected production store. Keyless verification restricts the exact OIDC issuer and workflow identity: organization, repository, release workflow, and permitted ref/environment, not regex `.*`.
 </details>
 
 <details>
 <summary>6. Why does `cosign verify` in CI not prevent direct `kubectl apply`?</summary>
 
-CI verification runs only on paths that actually invoke it. A user or another pipeline can call Kubernetes API directly and create a Pod with unsigned image. Mandatory verification must reside on admission path and return deny before the Pod is persisted.
+CI verification runs only on paths that actually invoke it. A user or another pipeline can call the Kubernetes API directly and create a Pod with an unsigned image. Mandatory verification must reside on the admission path and return deny before the Pod is persisted.
 </details>
 
 <details>
@@ -772,7 +772,7 @@ CI verification runs only on paths that actually invoke it. A user or another pi
 </details>
 
 <details>
-<summary>8. **Flashback (chapter 20).** Question 6 of this chapter showed that `cosign verify` in CI does not stop direct `kubectl apply` of unsigned image. How does admission policy from chapter 20 (native `ValidatingAdmissionPolicy` or Kyverno `ImageValidatingPolicy`) close that bypass, and how does "signature verification as admission policy" differ in reliability from "signature verification only in CI pipeline"?</summary>
+<summary>8. **Flashback (chapter 20).** Question 6 of this chapter showed that `cosign verify` in CI does not stop direct `kubectl apply` of an unsigned image. How does the admission policy from chapter 20 (native `ValidatingAdmissionPolicy` or Kyverno `ImageValidatingPolicy`) close that bypass, and how does "signature verification as admission policy" differ in reliability from "signature verification only in a CI pipeline"?</summary>
 
 Admission policy is run by kube-apiserver for every matching Pod CREATE/UPDATE, so manual `kubectl apply` also undergoes checking and can be rejected. `ImageValidatingPolicy` can verify signature/attestation of a particular digest, while native VAP suits CEL reference allowlist, for example, but does not replace a cryptographic verifier. CI-only verification is a voluntary pipeline stage; admission makes the rule fail-closed enforcement at the cluster boundary.
 </details>

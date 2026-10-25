@@ -86,10 +86,10 @@ operational complexity 更高，node 與 cloud 中也必須支援 virtualization
 | 屬性 | 一般 `runc` | gVisor / `runsc` | Kata Containers |
 |---|---|---|---|
 | workload 可見的 kernel | host kernel | host kernel 上的 gVisor userspace kernel | 獨立 VM guest kernel |
-| Isolation boundary | namespaces/cgroups | syscall interception + sandbox | VM/hypervisor + guest kernel |
+| 隔離邊界 | namespaces/cgroups | syscall interception + sandbox | VM/hypervisor + guest kernel |
 | Density 與 startup | baseline | 通常較接近 container | 通常有較高 memory 與 startup 成本 |
-| syscall/kernel features compatibility | 最高 | 可能有不支援的 syscalls/features | 通常接近 VM，但取決於 runtime |
-| Typical choice | trusted platform workload | untrusted web/CI/multi-tenant code | 強隔離、受監管或特別高風險的 workload |
+| syscall/kernel features 相容性 | 最高 | 可能有不支援的 syscalls/features | 通常接近 VM，但取決於 runtime |
+| 典型選擇 | trusted platform workload | untrusted web/CI/multi-tenant code | 強隔離、受監管或特別高風險的 workload |
 
 不要只依此表評估 runtime。請測試實際 images：eBPF、FUSE、low-level
 network tools、nested containers、device plugins、huge pages、GPU 和 host mounts 可能
@@ -774,7 +774,7 @@ Kata 通常提供更強且更接近 VM 的 isolation，但需要 virtualization�
 </details>
 
 <details>
-<summary>3. `RuntimeClass.metadata.name`、containerd 的 `handler` 與 `runtime_type` 有何差異？</summary>
+<summary>3. `RuntimeClass.metadata.name`、`handler` 與 containerd 的 `runtime_type` 有何差異？</summary>
 
 `metadata.name`，例如 `gvisor`，是 Pod 中 `spec.runtimeClassName` 的值。`handler`，
 例如 `runsc`，必須與 node CRI configuration 中 runtime 的名稱完全相符。`runtime_type`，

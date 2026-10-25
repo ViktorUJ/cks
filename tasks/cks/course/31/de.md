@@ -30,7 +30,7 @@
 
 ## 31.1. Die Bedrohung durch Runtime-Mutation: warum ein writable root ein Weg zur Persistence ist
 
-Ein Image besteht aus read-only Layern. Nach dem Start fügt der Container Runtime ihnen eine dünne
+Ein Image besteht aus read-only Layern. Nach dem Start fügt die Container Runtime ihnen eine dünne
 **writable layer** hinzu. Wenn eine Anwendung oder ein Angreifer in diese Layer schreiben kann, erhält
 er einen bequemen Arbeitsplatz innerhalb der bereits laufenden Container-Instanz: Er kann einen
 Downloader in `/tmp` ablegen, ein Script in `/app` ersetzen, eine Konfigurationsdatei ändern, um einen
@@ -61,7 +61,7 @@ Es ist wichtig, diesen Schutz nicht zu überschätzen. `readOnlyRootFilesystem: 
 Schreiben in das Image-Root-Filesystem **eines bestimmten Containers**, aber nicht in einen beliebigen
 separaten writable mount und auch nicht in die Kubernetes API. Über explizit deklarierte volumeMounts
 hinaus sollte man kubelet-/runtime-verwaltete mounts berücksichtigen. Zum Beispiel erstellt und verwaltet
-Kubernetes `/etc/hosts` separat für jeden Container, daher ist das kein Beweis für eine writable Image
+Kubernetes `/etc/hosts` separat für jeden Container, daher ist das kein Beweis für ein writable Image
 Layer. Jeder Container hat sein eigenes root filesystem: Ein Prozess erhält keinen direkten Schreibzugriff
 auf das root filesystem eines anderen Containers. Container können jedoch absichtlich Daten über
 denselben writable volume austauschen, der in beide Container gemountet ist. Der Prozess kann weiterhin
@@ -147,7 +147,7 @@ allen Containern verlangen.
 
 ### Ein Container-, kein Pod-Level-Flag
 
-Das Vorhandensein der Einstellung im Haupt-`app`-Container hardened den Helper nicht:
+Das Vorhandensein der Einstellung im Haupt-`app`-Container härtet den Helper nicht:
 
 ```yaml
 spec:
@@ -185,7 +185,7 @@ Führen Sie einen Workload schrittweise in read-only root über:
    mounten Sie nicht das breite `/` oder `/app` wegen einer einzigen Datei.
 4. Legen Sie owner/mode für den non-root Benutzer und, wo verfügbar, `sizeLimit` fest.
 5. Prüfen Sie Startup, Readiness, Workload Traffic und Pod-Restart, und aktivieren Sie die Policy dann
-   zunächst im audit- und anschließend im enforce-Modus.
+   zunächst im audit- und nach der Korrektur im enforce-Modus.
 
 Lösen Sie den Fehler nicht mit `chmod -R 777 /`. Rechte des Images und des volumes müssen minimal sein:
 Der Prozess braucht seine UID/GID und Schreibrecht nur in sein eigenes Runtime-Verzeichnis.
@@ -332,7 +332,7 @@ kubectl exec -n payments api-7d9d6f4d5c-x2m7q -c api -- sh -c \
 
 In einem gehärteten distroless Image gibt es möglicherweise kein `sh`, `mount` und `ls`; das ist normal
 und kein Grund, eine Shell in das Production-Image aufzunehmen. Für eine kontrollierte Diagnose nutzen
-Sie einen temporären Container gemäß der Prozedur des Befehls oder einen separaten Debug-Pod mit
+Sie einen temporären Container gemäß der Prozedur des Teams oder einen separaten Debug-Pod mit
 denselben mounts und derselben Identity. Ändern Sie den Production-Workload nicht, um
 Diagnose-Pakete zu installieren.
 
@@ -486,7 +486,7 @@ Secret volume beschränkt einen gewöhnlichen Prozess im Pod und den API-/RBAC-Z
 Schutz vor einer Node-Level-Kompromittierung.
 
 Wenn die Anwendung ein Secret in ein Runtime-Format umwandelt (zum Beispiel ein Template für einen
-Proxy), kann ein initContainer das Ergebnis in einen memory `emptyDir` schreiben, und der Hauptcontainer
+Proxy), kann ein initContainer das Ergebnis in ein memory `emptyDir` schreiben, und der Hauptcontainer
 kann es read-only erhalten, wie in Abschnitt 31.3. So verteilt sich das aus dem Secret abgeleitete
 Output nicht über die Image Layer und bleibt auf den Lifecycle des Pod beschränkt.
 
@@ -538,7 +538,7 @@ kubectl exec -n "$namespace" "$pod" -c api -- sh -c 'touch /tmp/write-test && rm
 Die letzten Befehle setzen eine Shell im Image voraus. Für einen distroless Workload nutzen Sie eine
 der folgenden Varianten: eine Prüfung der Mount-Optionen auf dem Node durch einen berechtigten
 Operator, einen vorbereiteten Test-Endpoint, einen separaten Compatibility-Pod mit demselben
-securityContext, oder einen kontrollierten ephemeral Container. Verwandeln Sie das Fehlen einer Shell
+securityContext oder einen kontrollierten ephemeral Container. Verwandeln Sie das Fehlen einer Shell
 nicht in ein Hardening-Failure - das ist gerade das erwartete Ergebnis des Distroless-Designs.
 
 Ein nützlicher clusterweiter Audit für alle Container-Typen:
@@ -557,7 +557,7 @@ kubectl get pods -A -o json | jq -r '
 ```
 
 Leeres Output bedeutet, dass bei regular, init und den bereits hinzugefügten ephemeral Containern das
-Feld explizit `true` ist; bewerten Sie separat ausgeschlossene namespaces und den Policy-Status. Führen
+Feld explizit `true` ist; bewerten Sie separat ausgeschlossene Namespaces und den Policy-Status. Führen
 Sie so einen Audit nicht mit Secret-Ausgabe aus: Dieser Befehl liest nur die Pod Spec und die
 Image-Referenz.
 
@@ -593,7 +593,7 @@ kubectl get namespace payments --show-labels
 `enforce` lehnt künftige create/update-Operationen ab, `warn` zeigt dem Client eine Warnung, `audit`
 schreibt eine Annotation in das Audit Event. Die PSS-Version wird gepinnt, nicht auf `latest` belassen:
 Bei einem Kubernetes-Update testet man zuerst die neue Version in `warn`/`audit` und aktualisiert dann
-bewusst alle drei labels. PSA schreibt bereits laufende Pods nicht um und ersetzt keinen Test-Workload:
+bewusst alle drei Labels. PSA schreibt bereits laufende Pods nicht um und ersetzt keinen Test-Workload:
 Inventarisieren Sie zunächst Ausnahmen und korrigieren Sie das Deployment-/Job-Template, nicht einen
 bereits erstellten einzelnen Pod.
 
@@ -621,7 +621,7 @@ kubectl apply -f rejected.yaml
 ```
 
 Machen Sie `kube-system`, den Namespace der Policy Engine und Vendor-System-Namespaces nicht blind
-restricted: Systemweite DaemonSets können begründet Host-Zugriff benötigen. Trennen Sie
+restricted: System-DaemonSets können begründet Host-Zugriff benötigen. Trennen Sie
 Benutzer-Namespaces und dokumentierte Platform-Ausnahmen, beschränken Sie den Zugriff auf solche
 Namespaces per RBAC und überprüfen Sie Ausnahmen regelmäßig.
 
@@ -682,11 +682,11 @@ spec:
         - rootfs-temporary-exception
 ```
 
-`pods/ephemeralcontainers` ist wichtig: Ein Debug-Container wird über eine subresource nach der
+`pods/ephemeralcontainers` ist wichtig: Ein Debug-Container wird über eine Subresource nach der
 Erstellung des Pod hinzugefügt, daher kontrolliert eine Prüfung nur von `pods` diesen Pfad nicht.
 
 > **Coverage-Grenze der nativen VAP.** Diese `resourceRules` erfassen nur `pods` und
-> `pods/ephemeralcontainers`. Sie lehnen weder `CREATE`/`UPDATE` des Deployment, StatefulSet,
+> `pods/ephemeralcontainers`. Sie lehnen nicht `CREATE`/`UPDATE` des Deployment, StatefulSet,
 > DaemonSet, Job oder CronJob selbst mit einem unsicheren Template ab: Der Controller wird
 > angenommen, und der von ihm erstellte Pod wird erst später abgelehnt. Das ist ein zulässiges
 > minimales Pod-Level-Gate, erzeugt aber einen „angenommenen, aber funktionsunfähigen“ Controller.
@@ -750,7 +750,7 @@ spec:
       allowPrivilegeEscalation: false
       capabilities:
         drop: ["ALL"]
-      # Einzige beabsichtigte Verletzung — readOnlyRootFilesystem fehlt.
+      # Einzige beabsichtigte Verletzung - readOnlyRootFilesystem fehlt.
 YAML
 }
 
@@ -826,7 +826,7 @@ bereits laufender Pods und kein „Vererben“ des securityContext zwischen Cont
 das Template des Controllers, und der daraus erstellte Pod durchläuft danach ebenfalls die gewöhnliche
 Admission. Prüfen Sie die generierten Regeln/den Status der installierten Version und verlassen Sie
 sich nicht auf Autogen für eine Rule, die nicht auf einen Pod passt oder die Generierung absichtlich
-deaktiviert hat. Insbesondere die subresource `pods/ephemeralcontainers` wird über einen separaten
+deaktiviert hat. Insbesondere die Subresource `pods/ephemeralcontainers` wird über einen separaten
 Admission-Pfad geprüft, wie bei der nativen Policy oben.
 
 > 🔬 PSA, native CEL und Kyverno unterscheiden sich in Coverage und operativen Anforderungen.
@@ -881,7 +881,7 @@ und die generierten Controller-Rules, sofern das ein erklärter Teil seines Prod
   Cache und temporäre Dateien haben einen konfigurierbaren Pfad, Self-Update und Runtime-Package-Install
   sind deaktiviert.
 - **Writable Areas sind minimal.** Jedem `emptyDir` weist man Owner, Mount-Pfad, Medium, `sizeLimit`
-  und Retention-Semantik zu. Durable Data wird nicht mit einem temporären volume getarnt.
+  und Retention-Semantik zu. Durable Data wird nicht mit einem temporären Volume getarnt.
 - **Das Final Image ist minimal.** Build-Tools bleiben in der Builder-Stage; das Release-Image ist
   distroless oder eine andere geprüfte minimale Runtime. SBOM und Scan beziehen sich auf den finalen
   Digest.
@@ -902,13 +902,13 @@ In der CKS-Prüfung ist es wichtig, schnell grundlegendes Hardening von bewiesen
 unterscheiden: Prüfen Sie `readOnlyRootFilesystem` bei jedem regular, init und bereits hinzugefügten
 ephemeral Container, benennen Sie die benötigten writable Mount-Pfade und erklären Sie den Lifecycle von
 `emptyDir`. Im Arbeitscluster hilft derselbe Ansatz, einen `EROFS`-Fehler zu klären, ohne den Schutz zu
-schwächen: Finden Sie den genauen Schreibpfad, geben Sie ihm einen minimalen begrenzten volume, und
+schwächen: Finden Sie den genauen Schreibpfad, geben Sie ihm einen minimalen begrenzten Volume, und
 bestätigen Sie das Ergebnis mit einer positiven und einer negativen Prüfung.
 
 **Kurzes Szenario für 6 Minuten.** Finden Sie bei einem Pod mit `EROFS` zuerst den genauen Pfad im Log,
 fügen Sie dann ein enges `emptyDir` nur dafür hinzu, prüfen Sie den Restart und das Verbot des
 Schreibens nach `/`. Prüfen Sie am Ende regular/init/ephemeral Container in der effektiven Pod Spec und
-wenden Sie ein bad manifest an: Nach `Deny` muss das native Binding es ablehnen.
+wenden Sie ein schlechtes Manifest an: Nach `Deny` muss das native Binding es ablehnen.
 
 ## 31.13. Mini-Glossar, Zusammenfassung und Selbstkontrolle
 
@@ -917,8 +917,8 @@ wenden Sie ein bad manifest an: Nach `Deny` muss das native Binding es ablehnen.
 - **Writable Layer** - veränderliche Layer, die die Runtime über den read-only Image Layern hinzufügt.
 - **Runtime Mutation** - Änderung des Filesystems oder der Konfiguration eines laufenden Containers.
 - **`readOnlyRootFilesystem`** - container-level SecurityContext, der das Schreiben ins Root des
-  Filesystems verbietet, außer in gemountete writable volumes.
-- **`emptyDir`** - temporärer volume, der zusammen mit dem Pod lebt und beim Löschen des Pod entfernt
+  Filesystems verbietet, außer in gemountete writable Volumes.
+- **`emptyDir`** - temporärer Volume, der zusammen mit dem Pod lebt und beim Löschen des Pod entfernt
   wird.
 - **Distroless** - minimales Runtime-Image ohne gewöhnliches OS-Userland und ohne Shell.
 - **PSA** - eingebauter Admission Controller von Kubernetes für Pod Security Standards über
@@ -936,7 +936,7 @@ wenden Sie ein bad manifest an: Nach `Deny` muss das native Binding es ablehnen.
   zu ersetzen; ein read-only root verengt diese Angriffsfläche, ersetzt aber nicht Patching und
   Network-/RBAC-Controls.
 - `readOnlyRootFilesystem: true` wird bei jedem regular, init und ephemeral Container gesetzt.
-  Legitimes Schreiben wird in enge named volumes ausgelagert, üblicherweise ein begrenztes `emptyDir`.
+  Legitimes Schreiben wird in enge named Volumes ausgelagert, üblicherweise ein begrenztes `emptyDir`.
 - `emptyDir` bleibt bei einem Container-Restart erhalten, wird aber zusammen mit dem Pod gelöscht; es
   ist ein temporärer scratch space, kein persistent storage. Memory `emptyDir` verbraucht das Memory
   des Schreibers, disk `emptyDir`, writable layer und Logs nutzen den lokalen ephemeral-storage.
@@ -945,39 +945,39 @@ wenden Sie ein bad manifest an: Nach `Deny` muss das native Binding es ablehnen.
 - ConfigMap und Secret liefern read-only Konfiguration; `subPath` erhält keine Live-Updates. Secrets
   sollten durch RBAC, Unix Permissions und das Fehlen unnötiger Token/Mounts geschützt werden.
 - PSA `restricted` mit gepinnter Version bietet eine allgemeine Baseline, verlangt aber kein read-only
-  root. Native ValidatingAdmissionPolicy + Binding schließt diese Anforderung; Kyverno bleibt eine
+  root. Native ValidatingAdmissionPolicy + Binding deckt diese Anforderung ab; Kyverno bleibt eine
   optionale Erweiterung. Die Wirksamkeit wird durch positive/negative Admission Tests bewiesen.
 
 **Fragen zur Selbstkontrolle.**
 
 <details>
-<summary>1. Warum überlebt eine Änderung einer Datei in der writable layer nicht unbedingt einen kubelet-Restart des Containers, ist aber trotzdem gefährlich für einen zu untersuchenden Incident?</summary>
+<summary>1. Warum überlebt eine Änderung einer Datei in der Writable Layer nicht unbedingt einen kubelet-Restart des Containers, ist aber trotzdem gefährlich für einen zu untersuchenden Incident?</summary>
 
-Die writable layer gehört zu einer konkreten Container-Instanz. Der Restart eines Kindprozesses im selben Container löscht sie nicht, aber ein kubelet-Restart/-Neuaufbau erzeugt eine neue Instanz mit einer neuen Layer, selbst wenn der Pod als API-Objekt derselbe bleibt. Deshalb bietet die Layer keine Persistence über einen Container-Restart hinweg; dafür braucht man einen volume oder externen Speicher. Solange der aktuelle Container lebt, kann der Angreifer weiterhin ein Tool ablegen, ein Script oder eine Konfiguration ändern, einen Token speichern und dies für Lateral Movement oder die Fortsetzung des Angriffs nutzen. Das verändert auch die Evidenz und erfordert eine Untersuchung vor destruktivem Containment.
+Die Writable Layer gehört zu einer konkreten Container-Instanz. Der Restart eines Kindprozesses im selben Container löscht sie nicht, aber ein kubelet-Restart/-Neuaufbau erzeugt eine neue Instanz mit einer neuen Layer, selbst wenn der Pod als API-Objekt derselbe bleibt. Deshalb bietet die Layer keine Persistence über einen Container-Restart hinweg; dafür braucht man einen Volume oder externen Speicher. Solange der aktuelle Container lebt, kann der Angreifer weiterhin ein Tool ablegen, ein Script oder eine Konfiguration ändern, einen Token speichern und dies für Lateral Movement oder die Fortsetzung des Angriffs nutzen. Das verändert auch die Evidenz und erfordert eine Untersuchung vor destruktivem Containment.
 </details>
 
 <details>
-<summary>2. Welche drei Verzeichnisse schreibt Ihre Anwendung beim Start, und warum sollte jedes ein eigener mount sein oder entfernt werden?</summary>
+<summary>2. Welche drei Verzeichnisse schreibt Ihre Anwendung beim Start, und warum sollte jedes ein eigener Mount sein oder entfernt werden?</summary>
 
-Das Kapitel nennt typische Pfade `/tmp`, `/run` bzw. `/var/run`, `/var/cache/<app>` sowie `/var/log/<app>`, `/home/<user>` und generiertes `/etc/<app>`; die konkreten drei müssen anhand von Log und Anwendungsverhalten ermittelt werden. Jeder berechtigte Pfad wird in einen engen named volume mit Zweck, Owner und Size Limit ausgelagert, statt `/` oder `/app` writable zu machen. Unnötiges Schreiben, zum Beispiel Runtime-Install oder Datei-Logs, wird entfernt oder durch stdout/stderr ersetzt.
+Das Kapitel nennt typische Pfade `/tmp`, `/run` bzw. `/var/run`, `/var/cache/<app>` sowie `/var/log/<app>`, `/home/<user>` und generiertes `/etc/<app>`; die konkreten drei müssen anhand von Log und Anwendungsverhalten ermittelt werden. Jeder berechtigte Pfad wird in einen engen named Volume mit Zweck, Owner und Size Limit ausgelagert, statt `/` oder `/app` writable zu machen. Unnötiges Schreiben, zum Beispiel Runtime-Install oder Datei-Logs, wird entfernt oder durch stdout/stderr ersetzt.
 </details>
 
 <details>
 <summary>3. Worin unterscheidet sich `emptyDir.medium: Memory` von einem gewöhnlichen `emptyDir` hinsichtlich Ressource und Risiko?</summary>
 
-`medium: Memory` erstellt tmpfs, und die bytes zählen als Memory des Containers, der schreibt; eine Überfüllung kann zu OOM oder Eviction führen. Ein gewöhnliches `emptyDir` nutzt den lokalen ephemeral-storage des Node zusammen mit der writable layer und den Container-Logs. `sizeLimit` begrenzt den volume, reserviert aber keine Node-Kapazität; für disk-gestützten scratch setzt man zusätzlich requests/limits für `ephemeral-storage`.
+`medium: Memory` erstellt tmpfs, und die Bytes zählen als Memory des Containers, der schreibt; eine Überfüllung kann zu OOM oder Eviction führen. Ein gewöhnliches `emptyDir` nutzt den lokalen ephemeral-storage des Node zusammen mit der Writable Layer und den Container-Logs. `sizeLimit` begrenzt den Volume, reserviert aber keine Node-Kapazität; für disk-gestützten Scratch setzt man zusätzlich requests/limits für `ephemeral-storage`.
 </details>
 
 <details>
 <summary>4. Warum darf `readOnlyRootFilesystem` nicht nur auf den Hauptcontainer des Deployment angewendet werden, und warum prüft man separat `ephemeralcontainers`?</summary>
 
-Das ist ein container-level Feld, daher macht eine gehärtete App den initContainer oder Sidecar nicht automatisch read-only. Alle regular, init und Sidecar-Container brauchen ihren eigenen `securityContext`. Ein ephemeral Container wird später über eine separate subresource hinzugefügt und kann ohne Prüfung zu einer Debug-Umgehung der Baseline werden, daher wird er in Audit und VAP-Rules einbezogen.
+Das ist ein container-level Feld, daher macht eine gehärtete App den initContainer oder Sidecar nicht automatisch read-only. Alle regular, init und Sidecar-Container brauchen ihren eigenen `securityContext`. Ein ephemeral Container wird später über eine separate Subresource hinzugefügt und kann ohne Prüfung zu einer Debug-Umgehung der Baseline werden, daher wird er in Audit und VAP-Rules einbezogen.
 </details>
 
 <details>
-<summary>5. Was ist der Unterschied zwischen einem ConfigMap volume mit `subPath` und dem Mounten des gesamten Verzeichnisses beim Update der Konfiguration?</summary>
+<summary>5. Was ist der Unterschied zwischen einem ConfigMap-Volume mit `subPath` und dem Mounten des gesamten Verzeichnisses beim Update der Konfiguration?</summary>
 
-Eine über `subPath` gemountete ConfigMap-/Secret-Datei erhält im bereits laufenden Pod kein automatisches Update. Beim Mounten des gesamten Verzeichnisses kann kubelet die projizierten Dateien aktualisieren, aber die Anwendung muss reload trotzdem unterstützen. Wird kein dynamisches Update benötigt, verwendet man einen kontrollierten Rollout; ConfigMap/Secret werden nicht als mutable scratch space genutzt.
+Eine über `subPath` gemountete ConfigMap-/Secret-Datei erhält im bereits laufenden Pod kein automatisches Update. Beim Mounten des gesamten Verzeichnisses kann kubelet die projizierten Dateien aktualisieren, aber die Anwendung muss den Reload trotzdem unterstützen. Wird kein dynamisches Update benötigt, verwendet man einen kontrollierten Rollout; ConfigMap/Secret werden nicht als mutable scratch space genutzt.
 </details>
 
 <details>
@@ -1001,7 +1001,7 @@ Nachdem `validationActions` des Binding auf `Deny` umgestellt wurde, reicht man 
 <details>
 <summary>9. **Flashback (Kapitel 24).** Ein distroless Image (Kapitel 24) entfernt Shell/Package Manager aus dem Image - das ist **Build-Time**-Immutability. `readOnlyRootFilesystem` (dieses Kapitel) verbietet das Schreiben zur **Runtime** - das ist Runtime-Immutability. Wenn eine Anwendung weder eine Shell im Image noch die Möglichkeit hat, ins root filesystem zu schreiben, welcher praktische Post-Exploitation-Schritt bleibt für einen Angreifer mit RCE trotzdem möglich, und welcher ist durch diese Kombination sicher geschlossen?</summary>
 
-Mit RCE kann der Angreifer weiterhin das erreichbare Application Binary ausführen, für ihn zugängliche Daten lesen und über das Netzwerk senden, daher braucht es NetworkPolicy, minimalen ServiceAccount und weitere Controls. Die Kombination schließt das Herunterladen/Installieren eines Package über eine Shell sowie das Schreiben von Tools oder das Ersetzen von Dateien in der Image Layer, einschließlich `/app` und `/etc`. Existiert ein explizit writable gemounteter volume, sind Aktionen darin weiterhin möglich und müssen separat begrenzt werden.
+Mit RCE kann der Angreifer weiterhin das erreichbare Application Binary ausführen, für ihn zugängliche Daten lesen und über das Netzwerk senden, daher braucht es NetworkPolicy, minimalen ServiceAccount und weitere Controls. Die Kombination verhindert das Herunterladen/Installieren eines Package über eine Shell sowie das Schreiben von Tools oder das Ersetzen von Dateien in der Image Layer, einschließlich `/app` und `/etc`. Existiert ein explizit writable gemounteter Volume, sind Aktionen darin weiterhin möglich und müssen separat begrenzt werden.
 </details>
 
 ## Praxis
@@ -1013,7 +1013,7 @@ Runtime-Einschränkungen unter Bedingungen, die der CKS-Prüfung nahekommen.
 🌐 Zusätzliche interaktive Praxis (killer.sh/killercoda, externe Ressource): [immutability-readonly-fs](https://killercoda.com/killer-shell-cks/scenario/immutability-readonly-fs)
 
 Wiederholen Sie als Grundlage [SecurityContext - CKA-Kapitel 20](../../../cka/course/20/de.md),
-[`emptyDir` und volumes - CKA-Kapitel 24](../../../cka/course/24/de.md),
+[`emptyDir` und Volumes - CKA-Kapitel 24](../../../cka/course/24/de.md),
 [ConfigMap - CKA-Kapitel 18](../../../cka/course/18/de.md) und
 [Secret - CKA-Kapitel 19](../../../cka/course/19/de.md). Studieren Sie als Nächstes
 [Kapitel 32](../32/de.md) über Kubernetes-Audit-Logs.

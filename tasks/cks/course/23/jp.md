@@ -48,7 +48,7 @@ node 間の traffic では、これらの mechanism を組み合わせること�
 > 🎯 変更前に、CNI、versions、firewall、MTU、テスト用 Pod の cross-node placement を記録してください。
 
 
-ここでの **記録する** とは、configuration を変更することではなく、baseline — 動作している状態のスナップショットを保存することを意味します。それにより rollout 後の結果と比較できます。確認の出力を change/incident のメモや学習用の記録に書き留めてください。どの CNI が既に network を提供しているか、その version、どの Kubernetes/kernel/Cilium の version が関わっているか、firewall が必要な node 間 protocol を許可しているか、path 上でどの MTU が利用可能かです。**Cross-node placement** とは、二つのテスト用 Pod が実際に **異なる** nodes にスケジュールされていることを意味します。これは重要です。そのような flow だけが、WireGuard/IPsec を証明できる node-to-node の outer packet を作り出します。変更後に traffic が動作しなくなった場合、baseline は新しい defect と以前の firewall/MTU/placement の制限を区別する助けになります。
+ここでの **記録する** とは、configuration を変更することではなく、baseline - 動作している状態のスナップショットを保存することを意味します。それにより rollout 後の結果と比較できます。確認の出力を change/incident のメモや学習用の記録に書き留めてください。どの CNI が既に network を提供しているか、その version、どの Kubernetes/kernel/Cilium の version が関わっているか、firewall が必要な node 間 protocol を許可しているか、path 上でどの MTU が利用可能かです。**Cross-node placement** とは、二つのテスト用 Pod が実際に **異なる** nodes にスケジュールされていることを意味します。これは重要です。そのような flow だけが、WireGuard/IPsec を証明できる node-to-node の outer packet を作り出します。変更後に traffic が動作しなくなった場合、baseline は新しい defect と以前の firewall/MTU/placement の制限を区別する助けになります。
 ## 23.2. 変更前に: scope、互換性、初期状態
 
 CNI と service mesh の暗号化は、cluster-wide または namespace-wide な変更です。production で盲目的に有効化しないでください。誤った MTU、古い kernel、firewall、legacy client に対する strict な mTLS は traffic を停止させる可能性があります。まず現在の CNI、versions、テスト用 Pod の配置、packet の path を記録してください。
@@ -188,7 +188,7 @@ encryption:
 
 ### WireGuard の key のローテーションとインシデント
 
-Cilium は keys の lifecycle を自動化しますが、security design は依然として、誰が Cilium resources を読み/変更できるか、node の compromise にどう対応するかを記述する必要があります。private key を node から ticket、chat、Git にコピーしないでください。compromise の疑いがある場合。
+Cilium は keys の lifecycle を自動化しますが、security design は依然として、誰が Cilium resources を読み/変更できるか、node の compromise にどう対応するかを記述する必要があります。private key を node から ticket、chat、Git にコピーしないでください。compromise の疑いがある場合は、次の手順を実行してください。
 
 1. node を isolate してください（DaemonSet と PDB を考慮した `cordon`/`drain`）。evidence を保存してください。
 2. 他の nodes で Cilium agent logs、health、peers を確認してください。
@@ -257,7 +257,7 @@ Secret を一つのランダムな文字列で手動で置き換えることは�
 
 > 🎯 Istio mTLS は certificate を workload identity に結び付けます。`PeerAuthentication: STRICT` と `ISTIO_MUTUAL` を持つ `DestinationRule` を区別し、proxy/injection を確認してください。
 
-> 🔬 **Upstream identity primitive。** Kubernetes v1.37 は Pod Certificates と ClusterTrustBundles を stable にしました。それらは Kubernetes level の X.509 primitives を提供しますが、Istio/SPIFFE identity plane を自動的に不要にするわけではありません。signer、trust model、mesh enforcement は別個の architectural な決定です。[Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_JP.md) を参照してください。
+> 🔬 **Upstream identity primitive。** Kubernetes v1.37 は Pod Certificates と ClusterTrustBundles を stable にしました。それらは Kubernetes level の X.509 primitives を提供しますが、Istio/SPIFFE identity plane を自動的に不要にするわけではありません。signer、trust model、mesh enforcement は別個の architectural な決定です。[Kubernetes v1.37 Security Delta (ロシア語版のみ)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)を参照してください。
 
 ## 23.6. Istio: sidecar、SPIFFE workload identity、`PeerAuthentication`
 
@@ -280,7 +280,7 @@ Istio は問題の別の部分を解決します。workload の proxy は certif
 Cilium は、threat model が node-to-node の underlay の保護を要求する場合に、別個の価値を追加します。inner Pod IP/port や他の L3/L4 metadata を物理 network から隠すこと、mesh 外の敏感な cross-node flow をカバーすること、または node 間の暗号化に関する policy/compliance の要件を満たすことです。両方の layer が必要なのは、**両方** の目的、workload identity/mTLS **と** underlay または non-mesh traffic の保護が当てはまる場合だけです。application が workload identity や mesh-compatible な behavior を要求しない場合、Istio は自動的には有効化されません。まず threat model、互換性、overhead を評価します。
 Istio の sidecar（`istio-proxy`、Envoy）は inbound/outbound の workload traffic を intercept します。Istiod は Kubernetes ServiceAccount に基づいて workload certificate を発行します。proxy は mTLS を確立し、peer の identity を検証します。Workload identity は SPIFFE ID の形式を持ちます: `spiffe://<trust-domain>/ns/<namespace>/sa/<service-account>`。application は通常、通常の HTTP port を listen し続けます。TLS は app container ではなく sidecar で終端されるためです。
 
-**ambient mode** では、Istio は各 Pod に個別の sidecar を追加しません。代わりに、各 node で `ztunnel`（**Zero Trust Tunnel**）— 特別な node-level proxy が動作します。それは mTLS と authentication を含む mesh の L3/L4 タスクを実行し、application 自身に TLS を扱わせません。
+**ambient mode** では、Istio は各 Pod に個別の sidecar を追加しません。代わりに、各 node で `ztunnel`（**Zero Trust Tunnel**）- 特別な node-level proxy が動作します。それは mTLS と authentication を含む mesh の L3/L4 タスクを実行し、application 自身に TLS を扱わせません。
 
 `HBONE`（**HTTP-Based Overlay Network Environment**）は、mesh のコンポーネント間の保護された Istio tunnel です。それは複数の TCP streams を一つの mTLS connection で運びます。そのため、Pod の containers の list に `istio-proxy` がなくても workload traffic は保護される場合があります。ambient mode で `istio-proxy` が存在しないことは、plaintext client を意味しません。両方のモデルで、`STRICT` を持つ `PeerAuthentication` は plaintext inbound traffic を許しません。ambient mode では、server は保護された HBONE/mTLS の flow を期待します。
 
@@ -655,7 +655,7 @@ done
 
 WireGuard port 上での node-a ↔ node-b の一連の UDP datagram が期待されます。`-vv` は protocol headers の解析の詳細度を上げますが、payload の ASCII を出力しないため、そのような出力に `GET /`、`Host:`、`server-ok` がないことは何も証明しません。port 上に UDP が存在することも、それがまさに必要な Pod flow であることをまだ証明しません。capture の時刻、node pair、Cilium encryption の counters/status の増加を照合してください。
 
-disposable lab で payload をまさに比較する必要がある場合、`-A` または `-X` と十分な snaplen を使って、期待される inner のポイントで、制御された非機密の flow の短い capture を行ってください。payload capture を敏感な production traffic に適用しないでください。
+disposable lab で payload をまさに比較する必要がある場合、`-A` または `-X` と十分な snaplen を使って、期待される inner のポイントで、制御された非機密の flow の短い capture を行ってください。payload capture をセンシティブな production traffic に適用しないでください。
 
 ### IPsec capture
 
@@ -695,7 +695,7 @@ done
 
 一つの症状 `connection reset` は複数の level で発生する可能性があります。`STRICT` や encryption の一時的な無効化を永続的な bypass に変えることなく、下から上に向かって診断してください。
 
-| Symptom | 考えられる layer | 最初の確認 | 安全な修正 |
+| 症状 | 考えられる layer | 最初の確認 | 安全な修正 |
 |---|---|---|---|
 | rollout 後、異なる node の Pod が traffic を交換しない | Cilium/underlay | `cilium-dbg encrypt status`、agent logs、UDP/ESP firewall、MTU | rollback plan に従って互換性のある values/network を復元する |
 | DNS Service が解決しない | CoreDNS/Service。mTLS ではない | `nslookup`、Endpoints、CKA 第31章 | TLS の分析の前に DNS/Service を修正する |
@@ -765,7 +765,7 @@ production のための良い layered policy は次のようになります。Ne
 
 ## 23.15. これは production でどのように適用されるか
 
-production では、Cilium encryption と mesh mTLS は、flows の inventory、canary namespace、MTU と firewall の control、RBAC 権限による key material の保護、確認可能な rotation/rollback runbook を通じて導入されます。観察可能な証拠 — `cilium-dbg encrypt status`、policy events、成功した mTLS requests — は、scope を拡大する前に収集されます。
+production では、Cilium encryption と mesh mTLS は、flows の inventory、canary namespace、MTU と firewall の control、RBAC 権限による key material の保護、確認可能な rotation/rollback runbook を通じて導入されます。観察可能な証拠 - `cilium-dbg encrypt status`、policy events、成功した mTLS requests - は、scope を拡大する前に収集されます。
 
 ## 23.16. これが役立つ場面: 試験と実務
 
@@ -773,7 +773,7 @@ production では、Cilium encryption と mesh mTLS は、flows の inventory、
 
 **実務では。** 最も価値のある結果は、有効化された flag ではなく、確認可能な trust boundary です。固定された Cilium/mesh release、key material への制限された RBAC、rotation runbook、rollback、MTU/firewall design、legacy clients の migration、各変更後の観察可能な evidence です。mTLS は authorization のための identity を提供し、node encryption は application protocol が変更されていなくても underlay を保護します。
 
-## 23.17. Self-check question
+## 23.17. 自己確認の質問
 
 <details>
 <summary>1. Cilium WireGuard/IPsec が workload 間の mTLS を代替しないのはなぜですか？</summary>
@@ -790,7 +790,7 @@ WireGuard は known な public key/allowed peer の暗号学的な検証の後�
 <details>
 <summary>3. node 間で許可する必要がある firewall protocols は何ですか。Cilium WireGuard 用の UDP/51871 と、Cilium IPsec 用の ESP（IP protocol 50）ですか？</summary>
 
-worker nodes 間の WireGuard の場合、Cilium の UDP port（default `51871`）を許可しますが、実際の値はインストールされている configuration で確認します。Cilium IPsec の場合、ESP — IP protocol 50 — を許可します。典型的な IKE/NAT-T の UDP/4500 は、ここで説明する Cilium IPsec の mechanism には関係しません。
+worker nodes 間の WireGuard の場合、Cilium の UDP port（default `51871`）を許可しますが、実際の値はインストールされている configuration で確認します。Cilium IPsec の場合、ESP - IP protocol 50 - を許可します。典型的な IKE/NAT-T の UDP/4500 は、ここで説明する Cilium IPsec の mechanism には関係しません。
 </details>
 
 <details>
@@ -841,7 +841,7 @@ peers が異なる keys を持つことになり、packet loss と cross-node �
 これは一つの CNI の二つの独立した機能です。NetworkPolicy は、どの ingress/egress flow が許可されるかを決定し、WireGuard/IPsec は node-to-node の transport を保護します。policy は、transparent encryption が暗号化しない same-node flow を許可できます。また、encryption が無効な cross-node flow も許可できます。逆に、encryption は underlay 上の packet を保護できますが、allow/deny policy を代替せず、flow を許可されたものにするわけでもありません。
 </details>
 
-## Practice
+## 演習
 
 主な practice は **CKS Lab 110: gVisor、Cilium と Istio** です。そこで CNI/mesh の安全な変更を練習し、mesh 内の workload からの service flow を確認し、`check_result` の結果を記録してください。
 [ tasks/cks/labs/110 ](../../labs/110/README_JP.MD)。
@@ -850,9 +850,9 @@ lab の前に、CKA の基礎を復習すると有用です。[CKA 第30章 - CN
 
 Istio sidecar なしの native Cilium mTLS に特化した続き課題として、**ラボ 115: SPIRE による
 Cilium Mutual Authentication**（advanced/production トラック、CKS Core exam の正式スコープ外）
-があります: [tasks/cks/labs/115](../../labs/115/README_RU.MD)。
+があります: [tasks/cks/labs/115](../../labs/115/README_JP.MD)。
 
-自主的なテストには disposable cluster と専用の namespace を使用してください。production の sidecar を無効化したり、共有 node で敏感な payload の packet capture を行うことで `STRICT` を確認しないでください。
+自主的なテストには disposable cluster と専用の namespace を使用してください。production の sidecar を無効化したり、共有 node でセンシティブな payload の packet capture を行うことで `STRICT` を確認しないでください。
 
 ## 参考資料
 
@@ -872,7 +872,7 @@ Supply Chain Security に進む前に、Minimize Microservice Vulnerabilities do
 1. `enforce=restricted` の PSA label をテスト namespace に適用し、明らかに privileged な Pod が admission rejection を受け、安全な Pod は作成されることを示してください（第18～19章）。
 2. `privileged: true` を block する一つの admission policy（native VAP または Kyverno）を書くか適用し、`Audit` と `Enforce` の違いを説明してください（第20章）。
 3. `Secret` を作成し、それを Pod に volume としてマウントし、これが環境変数よりなぜ安全なのかを説明してください（第21章）。
-4. **混合課題。** RBAC（第10章、Cluster Hardening domain）と PSA（第18～19章、この domain）を取り上げてください。user が labels の制限なしに `create namespaces` の権利を持つ場合、`enforce=restricted` のない namespace を作成し PSA を完全に bypass するにはどうすればよいか。第10章の具体的にどの RBAC の制限がこの path を閉じるか？
+4. **混合課題。** RBAC（第10章、Cluster Hardening domain）と PSA（第18～19章、この domain）を取り上げてください。user が labels の制限なしに `create namespaces` の権利を持つ場合、`enforce=restricted` のない namespace を作成し PSA を完全に bypass するにはどのようにすればよいですか。第10章の具体的にどの RBAC の制限がこの path を閉じますか？
 5. pod-to-pod encryption（第23章）が保護するが、NetworkPolicy（第04章、Cluster Setup domain）が保護しない具体的な攻撃を一つ挙げてください。
 
 課題4で困った場合は、第10章と第18～19章に一緒に戻ってください。

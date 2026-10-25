@@ -25,7 +25,7 @@
 ## 28.1. CVE image-ებში: რას ცხადყოფს scanner ზუსტად
 
 **CVE** - ცნობილი vulnerability-ის საჯარო იდენტიფიკატორია. Container image-ში ის
-ჩვეულებრივ არ მდებარეობს „Docker-ში", არამედ ერთ-ერთ კომპონენტში: OS-package-ში
+ჩვეულებრივ არ მდებარეობს „Docker-ში“, არამედ ერთ-ერთ კომპონენტში: OS-package-ში
 (`openssl`, `curl`, `glibc`), language dependency-ში ან თავად აპლიკაციაში. Scanner
 ადარებს კომპონენტის სახელსა და version-ს image-იდან თავისი vulnerability database-თან
 და აცხადებს ნაპოვნ CVE-ს, severity-ს, დაინსტალირებულ version-ს და, თუ ცნობილია,
@@ -74,21 +74,21 @@ impact-თან და გარემოს კონტექსტთან 
 compensating controls. არც KEV და არც EPSS არ არის exam gate და არ ცვლის კონკრეტული
 workload-ის მისაწვდომობის ან exposure-ის ანალიზს.
 
-> 🔬 Severity დამოკიდებულია vulnerability intelligence-ის წყაროზე: OS-package-ისთვის vendor advisory-ს და backport-ის fix-ს შესაძლოა უფრო ზუსტი იქნებოდეს, ვიდრე ზოგადი NVD-შეფასება.
+> 🔬 Severity დამოკიდებულია vulnerability intelligence-ის წყაროზე: OS-package-ისთვის vendor advisory და backport-ის fix შესაძლოა უფრო ზუსტი იყოს, ვიდრე ზოგადი NVD-შეფასება.
 
 ### რატომ შესაძლოა Trivy-ის severity განსხვავდებოდეს NVD-სგან
 
 OS-packages-ისთვის Trivy ანიჭებს პრიორიტეტს დისტრიბუციის vendor-ის advisory-ს:
-დისტრიბუციამ შესაძლოა backport-ი fix-ისა გააკეთოს, „upstream" version-ის შეუცვლელად
+დისტრიბუციამ შესაძლოა backport-ი fix-ისა გააკეთოს, „upstream“ version-ის შეუცვლელად
 ისე, როგორც NVD ელოდება. ამიტომ `NVD HIGH` და უფრო დაბალი (ან უკვე დახურული) vendor-ის
 შეფასება არ ეწინააღმდეგება ერთმანეთს აუცილებლად. JSON-შედეგში ხედავთ `SeveritySource`-ს
 და `VendorSeverity`-ს `InstalledVersion`-თან და `FixedVersion`-თან ერთად, ხოლო
-დაუზუსტების შემთხვევაში ამოწმეთ ზუსტად ამ package source-ის advisory. Packages-ისთვის,
+უთანხმოების შემთხვევაში ამოწმეთ ზუსტად ამ package source-ის advisory. Packages-ისთვის,
 დაინსტალირებული დისტრიბუციის ჩვეული repositories-ის გარეთ, matching შესაძლოა არასრული
 იყოს: finding-ის არარსებობა vulnerability-ის არარსებობას არ ამტკიცებს.
 
 Image რეგულარულად უნდა სკანირდეს, თუნდაც Dockerfile არ შეცვლილიყო: CVE-ის ბაზები
-განახლდება, ხოლო გუშინდელ „სუფთა" digest-ს დღეს ახალი ჩანაწერი შესაძლოა მიენიჭოს.
+განახლდება, ხოლო გუშინდელ „სუფთა“ digest-ს დღეს ახალი ჩანაწერი შესაძლოა მიენიჭოს.
 მინიმალური საკონტროლო წერტილები: build-ის შემდეგ, push-ის ან promotion-ის წინ,
 deploy-ის წინ და გრაფიკის მიხედვით უკვე გამოქვეყნებული images-ისთვის. შედეგი უნდა
 იქნეს მიბმული digest-ზე ან runtime-resolved identifier-ზე, vulnerability database-ის
@@ -119,15 +119,15 @@ trivy image \
 
 `--scanners vuln` ამ gate-ს ზუსტად CVE/vulnerability control-ად ხდის: აქტუალურ
 `trivy image`-ს default-ად ჩართული აქვს ასევე secret scanner, რომლის HIGH/CRITICAL
-findings-ს სხვაგვარად შესაძლოა თავადაც `--exit-code 1` დააბრუნოს. Secret scanning
+findings-მა სხვაგვარად შესაძლოა თავადაც `--exit-code 1` დააბრუნოს. Secret scanning
 დატოვეთ ცალკე ცალსახა control-ად, output-ის უსაფრთხო შენახვით. `--severity
 HIGH,CRITICAL` ფილტრავს vulnerability report-ს severity-ის მიხედვით.
-`--ignore-unfixed` გამორიცხავს CVE-ს, რომლისთვისაც ბაზას fixed version არ სცოდნია;
+`--ignore-unfixed` გამორიცხავს CVE-ს, რომლისთვისაც ბაზაში fixed version ცნობილი არ არის;
 ეს არ ნიშნავს, რომ რისკი გაქრა. ისინი ცალკე ტრეკდება: base image-ის განახლება,
 vendor-ის backport-ის გამოყენება, controls-ით კომპენსირება ან ვადით შეზღუდული
 exception-ის მიღება. `--exit-code 1` აძალებს Trivy-ს დააბრუნოს nonzero exit code
-შესატყვისი vulnerability finding-ის შემთხვევაში; მის გარეშე pipeline წარმატებით
-დაასრულებს, მხოლოდ CVE-ის დაბეჭდვით. არ გამოიყენოთ ეს flag exploratory report-ისთვის,
+ფილტრებს შესატყვისი vulnerability finding-ის შემთხვევაში; მის გარეშე pipeline წარმატებით
+შესაძლოა დასრულდეს, მხოლოდ CVE-ის დაბეჭდვით. არ გამოიყენოთ ეს flag exploratory report-ისთვის,
 თუ nonzero exit code job-ს არ უნდა აჩერებდეს.
 
 Სასარგებლო ფორმატია artifact CI-სთვის JSON. მასში შესაძლებელია შედეგის შენახვა,
@@ -214,7 +214,7 @@ promotion-ის წინ ამოწმებენ მათ provenance-ს.
 ერთი OCI index digest არ ნიშნავს ერთ filesystem-ს. Trivy `--platform`-ის გარეშე
 default-ად ჩამოტვირთავს `linux/amd64`-ს; multi-platform image-ისთვის ჩამოთვალეთ
 ფაქტობრივად მიწოდებული platform, გადაასკანირეთ და შექმენით SBOM თითოეულისთვის
-(ან გადააასკანირეთ მისი platform-manifest digest):
+(ან გადაასკანირეთ მისი platform-manifest digest):
 
 ```bash
 for platform in linux/amd64 linux/arm64; do
@@ -228,7 +228,7 @@ Heterogeneous cluster-ში დააკავშირეთ node-ის archi
 platform-manifest digest-თან; root index-ის scan მხოლოდ ერთი default platform-ისთვის
 არ არის evidence დანარჩენებისთვის.
 
-SBOM-ზე gate-ისთვის იმავე thresholds-ს გამოიყენებენ, მაგრამ ცალსახად გამიჯნავს audit-ს
+SBOM-ზე gate-ისთვის იმავე thresholds-ს გამოიყენებენ, მაგრამ ცალსახად გამიჯნავენ audit-ს
 block-ისგან:
 
 ```bash
@@ -243,7 +243,7 @@ trivy sbom \
 
 თუ Trivy ცხადყოფს CVE-ს package-ისთვის, თავდაპირველად ამოწმეთ `InstalledVersion`
 და `FixedVersion` შედეგში, ხოლო შემდეგ შესატყვისი ჩანაწერი SBOM-ში. არ ჩაასწოროთ
-SBOM, „CVE-ის მოსაშორებლად": გამოსწორდება source dependency, base image ან შეკრებილი
+SBOM, „CVE-ის მოსაშორებლად“: გამოსწორდება source dependency, base image ან შეკრებილი
 artifact, ხოლო SBOM ხელახლა გენერირდება.
 
 **VEX** ავსებს finding-ს და არ ხსნის CVE-ს საწყისი scan-იდან. ყოველი
@@ -312,10 +312,10 @@ grype registry.example.com/payments/api:1.4.2
 grype sbom:api.spdx.json
 ```
 
-**Trivy Operator** ავტომატურად აღმოაჩენს images-ს, უკვე გამოყენებულ workload-ს, და
+**Trivy Operator** ავტომატურად აღმოაჩენს უკვე გამოყენებული workload-ების images-ს და
 ქმნის `VulnerabilityReport`-ს მათი controller revision-ისთვის. ეს არის continuous
 post-admission detection: ახალი ან განახლებული workload იღებს report-ს, მაგრამ
-თავად Operator არ არის admission enforcement. არ ღირს ერთდროულად ჩამოტვირთვა და
+თავად Operator არ არის admission enforcement. არ ღირს სინქრონულად ჩამოტვირთვა და
 სკანირება ყოველი image-ის admission webhook-ის შიგნით: ეს ხდის API server-ს
 დამოკიდებულს registry-ზე, ბაზაზე და ხანგრძლივ scan-ზე, ქმნის timeout-ს და შესაძლოა
 დაბლოკოს cluster, თუ scanner მიუწვდომელია. Enforcement-ისთვის საჭირო ცალკე
@@ -333,7 +333,7 @@ verification განხილულია [26-ე თავში](../26/ge.md
 ## 28.6. CI/CD და cluster: სად განთავსდეს gates
 
 Სკანირება სასარგებლოა მხოლოდ იმ შემთხვევაში, თუ შედეგი გავლენას ახდენს delivery-ზე და
-არ ატანს ჩვეულ release-ის გზას. მიმდევრობის მაგალითი:
+არ უვლის გვერდს ჩვეულ release-ის გზას. მიმდევრობის მაგალითი:
 
 ```mermaid
 flowchart TB
@@ -365,7 +365,7 @@ flowchart TB
     style rescan fill:#673ab7,color:#fff
 ```
 
-GitHub Actions-ის ტიპის shell step-ის მაგალითი, რომელი აჩერებს job-ს ფიქსირებად HIGH ან
+GitHub Actions-style shell step-ის მაგალითი, რომელიც აჩერებს job-ს ფიქსირებად HIGH ან
 CRITICAL CVE-ზე:
 
 ```bash
@@ -390,7 +390,7 @@ trivy image --format cyclonedx --output sbom.cdx.json "$immutable_image"
 ```
 
 Digest უნდა მოვიდეს პირდაპირ build/push-ის შედეგიდან (მაგალითად, Buildx-ის
-metadata-დან ან ეკვივალენტური CI-output-იდან), და არ იქნას ცალკე lookup-ით tag-ის
+metadata-დან ან ეკვივალენტური CI-output-იდან), და არა tag-ის ცალკე lookup-იდან
 push-ის შემდეგ: ეს გამორიცხავს TOCTOU-ს tag-ის პარალელური ხელახალი მინიჭებისას.
 შემდეგ scan, SBOM, signature და deploy იყენებენ მხოლოდ შენახულ digest-ს. შეინახეთ
 `trivy-db-update.log`, scan-ის timestamp და ბაზის იდენტიფიკატორი ან version log-იდან
@@ -407,11 +407,11 @@ Cluster-ში სასარგებლოა ორი დამოუკი
    artifact-ისთვის დააკავშირეთ node architecture და workload platform manifest-თან;
    Trivy Operator ქმნის post-admission reports-ს და აღმოაჩენს ახალ CVE-ს ახალი
    deployment-ის გარეშე.
-2. **Admission.** დაუშვათ შემოწმებული registry/digest-ის აკრძალვა ან
-   signature/scan evidence-ის არარსებობის აკრძალვა. Policy-ს უნდა ჰქონდეს
+2. **Admission.** აკრძალეთ შეუმოწმებელი registry/digest ან
+   signature/scan evidence-ის არარსებობა. Policy-ს უნდა ჰქონდეს
    პროგნოზირებადი exceptions და audit mode enforce-ის წინ.
 
-არ ისვინდობდეთ `imagePullPolicy: Always`-ს, როგორც security control-ს. ის არ
+ნუ დაეყრდნობით `imagePullPolicy: Always`-ს, როგორც security control-ს. ის არ
 ამოწმებს CVE-ს, არ ფიქსირებს artifact-ს და შესაძლოა მოიტანოს სხვა digest mutable
 tag-ის ქვეშ. Deploy უნდა მიუთითებდეს შემოწმებულ digest-ს.
 
@@ -434,7 +434,7 @@ tag-ის ქვეშ. Deploy უნდა მიუთითებდეს �
    მიხედვით, აირჩიეთ `CRITICAL`, შეისწავლეთ package, installed/fixed versions,
    exposure და სერვისის owner.
 3. **გამოასწორეთ წყარო.** განაახლეთ base image ან dependency fix-ის მქონე
-   version-მდე. თუ upstream-მა jer fix არ გამოსცა, გააფორმეთ ვადიანი exception
+   version-მდე. თუ upstream-მა ჯერ fix არ გამოსცა, გააფორმეთ ვადიანი exception
    და შემცირეთ exposure, მაგრამ არ გამოაცხადოთ CVE გამოსწორებულად.
 4. **ხელახლა შეაკრიბეთ.** ახალი tag მარტო არასაკმარისია: image build და SBOM
    უნდა ეკუთვნოდეს ახალ digest-ს.
@@ -450,7 +450,7 @@ tag-ის ქვეშ. Deploy უნდა მიუთითებდეს �
 ```bash
 namespace=payments
 deployment=api
-# ეს კომპაქტური მაგალითი განზრახ amd64-only-ია. Heterogeneous deployment-ს rollout-ის წინ
+# ეს კომპაქტური მაგალითი განზრახ amd64-only-ია. Heterogeneous deployment-მა rollout-ის წინ
 # უნდა გაუშვას scan/SBOM ყოველი ფაქტობრივად გამოყენებული platform-ისთვის (იხილეთ §28.3).
 platform=linux/amd64
 required_arch="${platform#linux/}"
@@ -488,12 +488,12 @@ trivy sbom --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
 
 Remediation-ის ტესტი მინიმუმ სამი ნაწილისგან შედგება: scan უკვე არ შეიცავს
 სამიზნე CVE-ს ან ცხადყოფს მოსალოდნელ fixed version-ს; `rollout status` წარმატებულია;
-ყველა ახალი Pods შერჩეული selector workload-ისთვის ჰყოფს მოსალოდნელ runtime
-`imageID`-ს, შედარებულს შემოწმებულ platform-manifest digest-თან. Multi-platform
+workload-ის selector-ით შერჩეულ ყველა ახალ Pod-ს აქვს მოსალოდნელი runtime
+`imageID`, რომელიც შედარებულია შემოწმებულ platform-manifest digest-თან. Multi-platform
 artifact-ისთვის platform scan/SBOM უნდა ემთხვეოდეს node-ის architecture-ს,
 რომელზეც workload მუშაობს. დაამატეთ აპლიკაციური smoke-test, მაგალითად, `curl`
 health endpoint-ისთვის test job-იდან. სხვაგვარად შესაძლებელია CVE-ის დახურვა
-გატეხილი TLS-ის, migration-ის ან შეუთანხმებელი ABI-ის ფასად.
+გატეხილი TLS-ის, migration-ის ან შეუთავსებელი ABI-ის ფასად.
 
 > 🏭 გაზომვადი vulnerability-management პროგრამა აკავშირებს digest-ს, scan evidence-ს, remediation-ის SLA-ს, VEX/exceptions-ს expiry-ით და continuous detection-ს cluster-ში.
 
@@ -512,7 +512,7 @@ health endpoint-ისთვის test job-იდან. სხვაგვა�
   ignore-ების საწყობი.
 - **განაახლეთ base images რეგულარულად.** დამოკიდებული აპლიკაციების პერიოდული
   rebuild საჭიროა, თუნდაც application code არ შეცვლილიყო.
-- **არ შეიზღუდოთ scanner-ით.** მინიმალური image, non-root, read-only filesystem,
+- **არ შემოიფარგლოთ scanner-ით.** მინიმალური image, non-root, read-only filesystem,
   signature, registry-ის allowlist, admission policy და runtime detection
   ამცირებს ზარალს, თუ CVE მაინც ექსპლუატირდება.
 
@@ -530,7 +530,7 @@ health endpoint-ისთვის test job-იდან. სხვაგვა�
 - **Grype** - scanner images-ისა და SBOM-ისთვის Anchore ecosystem-იდან.
 - **Clair** - სერვისზე ორიენტირებული scanner და indexer container images-ის
   vulnerabilities-ისთვის.
-- **admission scan** - control workload-ის შექმნის ეტაპზე, რომელი იყენებს scan-ის
+- **admission scan** - control workload-ის შექმნის ეტაპზე, რომელიც იყენებს scan-ის
   შედეგებს ან დაკავშირებულ attestations-ს.
 - **remediation** - რისკის აღმოფხვრა: artifact-ის, dependency-ის ან base
   image-ის განახლება და შედეგის დადასტურება.
@@ -539,15 +539,15 @@ health endpoint-ისთვის test job-იდან. სხვაგვა�
 
 - CVE მდებარეობს კონკრეტულ component/version-ში; severity ეხმარება
   პრიორიტიზაციაში, მაგრამ არ ცვლის ექსპლუატაციისა და ownership-ის კონტექსტს.
-- `trivy image`-ის CVE gate-ს ცალსახად უნდა გამოიყენოს `--scanners vuln`;
+- `trivy image`-ის CVE gate-მა ცალსახად უნდა გამოიყენოს `--scanners vuln`;
   `--severity HIGH,CRITICAL`, `--ignore-unfixed` და `--exit-code 1` საშუალებას
   აძლევს გახდეს მართული CI control, ხოლო secret scanning რჩება ცალკე policy.
 - Namespace-ის inventory უნდა შეიცავდეს ჩვეული, init და ephemeral containers-ის
   statuses-ს, ასევე `spec.volumes[].image.reference`-ს; remediation-ისთვის
-  runtime `imageID` ან volume reference ადარდება შემოწმებულ platform-manifest
-  digest-თან და არ ეყრდნობა tag-ს.
+  runtime `imageID`-ს ან volume reference-ს ადარებენ შემოწმებულ platform-manifest
+  digest-თან და არ ეყრდნობიან tag-ს.
 - Trivy ქმნის SBOM-ს CycloneDX-ში (`--format cyclonedx`) და SPDX JSON-ში
-  (`--format spdx-json`); multi-platform image-ისთვის scan და SBOM ქმნიან
+  (`--format spdx-json`); multi-platform image-ისთვის scan-ს და SBOM-ს ქმნიან
   თითოეული ფაქტობრივად მიწოდებული platform-ისთვის. `trivy sbom` ხელახლა
   ასკანირებს შენახულ შემადგენლობას, როგორც production extension-ს და არა
   exam-ის გარანტირებულ CLI-task-ს.
@@ -566,12 +566,12 @@ health endpoint-ისთვის test job-იდან. სხვაგვა�
 სტრატეგია არ ააგოთ Trivy-ის ან კონკრეტული ბრძანების გარანტირებულ
 ხელმისაწვდომობაზე. CycloneDX/SPDX და `trivy sbom` - production extension-ია
 და არა exam-ის გარანტირებული CLI-task. მნიშვნელოვანია არ ავურიოთ image-ის
-scan `trivy fs`-სა და `trivy config`-ს.
+scan `trivy fs`-სა და `trivy config`-თან.
 
 **რეალურ სამუშაოში.** Scanner CVE feed-ს მართულ პროცესად ხდის მხოლოდ
 inventory-სთან, digest-ის provenance-თან, CI-policy-სთან, exception-ის
 SLA-თან, admission control-თან და regular rescan-თან ერთად. ნამდვილი მიზანი
-არ არის „ნული სტრიქონი report-ში", არამედ დაუცველი artifact-ის სწრაფად
+არ არის „ნული სტრიქონი report-ში“, არამედ დაუცველი artifact-ის სწრაფად
 აღმოჩენა, უსაფრთხოდ შეცვლა და დამტკიცება, რომ production იყენებს
 გამოსწორებულ digest-ს.
 
@@ -580,7 +580,7 @@ SLA-თან, admission control-თან და regular rescan-თან ე�
 <details>
 <summary>1. რატომ არ ამტკიცებს გუშინდელი წარმატებული scan CVE-ის არარსებობას დღეს?</summary>
 
-Vulnerability database მუდმივად განახლდება, ამიტომ გუშინდელ სუფთა digest-ს დღეს შესაძლოა ახალი CVE-ჩანაწერი მიენიჭოს Dockerfile-ის შეცვლის გარეშე. Scan - snapshot-ია შემადგენლობისა და ბაზისა შემოწმების მომენტში. ამიტომ images-ს რეგულარულად ხელახლა ასკანირებენ build-ის შემდეგ, promotion/deploy-ის წინ და გრაფიკის მიხედვით უკვე გამოქვეყნებული digest-ისთვის.
+Vulnerability database მუდმივად განახლდება, ამიტომ გუშინდელ სუფთა digest-ს დღეს შესაძლოა ახალი CVE-ჩანაწერი მიენიჭოს Dockerfile-ის შეცვლის გარეშე. Scan - შემადგენლობისა და ბაზის snapshot-ია შემოწმების მომენტში. ამიტომ images-ს რეგულარულად ხელახლა ასკანირებენ build-ის შემდეგ, promotion/deploy-ის წინ და გრაფიკის მიხედვით უკვე გამოქვეყნებული digest-ისთვის.
 </details>
 
 <details>
@@ -598,11 +598,11 @@ Vulnerability database მუდმივად განახლდება, 
 <details>
 <summary>4. რით განსხვავდება `trivy image`, `trivy fs` და `trivy config`?</summary>
 
-`trivy image` აანალიზებს შეკრებილ image-ს, base image-ისა და packages-ის ჩათვლით, რომლებმაც artifact-ში მოხვდნენ. `trivy fs` ასკანირებს filesystem checkout-ს dependencies-ზე, secrets-ზე და, ჩართული scanners-ის შემთხვევაში, misconfiguration-ზე. `trivy config` ამოწმებს IaC-ს და configuration-ს, მაგალითად Kubernetes YAML, Helm, Terraform და Dockerfile; ორივე პირველი არ ცვლის დანარჩენებს.
+`trivy image` აანალიზებს შეკრებილ image-ს, base image-ისა და packages-ის ჩათვლით, რომლებიც artifact-ში მოხვდნენ. `trivy fs` ასკანირებს filesystem checkout-ს dependencies-ზე, secrets-ზე და, ჩართული scanners-ის შემთხვევაში, misconfiguration-ზე. `trivy config` ამოწმებს IaC-ს და configuration-ს, მაგალითად Kubernetes YAML, Helm, Terraform და Dockerfile; ორივე პირველი არ ცვლის დანარჩენებს.
 </details>
 
 <details>
-<summary>5. როგორ შევქმნათ CycloneDX და SPDX JSON SBOM Trivy-ით და როცა საჭირო არის `trivy sbom`?</summary>
+<summary>5. როგორ შევქმნათ CycloneDX და SPDX JSON SBOM Trivy-ით და როდის არის საჭირო `trivy sbom`?</summary>
 
 Single-platform image-ისთვის გამოიყენება `trivy image --platform linux/amd64 --format cyclonedx --output api-amd64.cdx.json "$image"` და `trivy image --platform linux/amd64 --format spdx-json --output api-amd64.spdx.json "$image"`. OCI index-ისთვის ეს გამეორდება ფაქტობრივად მიწოდებული ყოველი platform-ისთვის. `trivy sbom` ხელახლა ასკანირებს უკვე შენახულ SBOM-ს, მაგალითად, CVE database-ის განახლების შემდეგ ან registry-ზე წვდომის გარეშე. SBOM დაკავშირებულია platform-manifest digest-თან და არ ჩასწორდება CVE-ის მოსაშორებლად: გამოსწორდება dependency/base image, ხოლო ის ხელახლა გენერირდება.
 </details>
@@ -616,11 +616,11 @@ Single-platform image-ისთვის გამოიყენება `triv
 <details>
 <summary>7. რომელი სამი შემოწმება ამტკიცებს, რომ CVE-ის remediation ფაქტობრივად დასრულებულია?</summary>
 
-Replacement image-ის ხელახალი scan-ს არ უნდა ჰქონდეს სამიზნე CVE ან უნდა ცხადყოს მოსალოდნელი fixed version. `kubectl rollout status`-ს უნდა დაადასტუროს წარმატებული rollout. და ბოლოს, ყველა ახალი Pod-ის status შერჩეული workload-ისთვის უნდა ცხადყოს runtime `imageID`, შედარებული შემოწმებულ platform-manifest digest-თან; multi-platform image-ისთვის scan/SBOM უნდა ფარავდეს ამ Pod-ების architecture-ს. თავი ასევე გვირჩევს აპლიკაციურ smoke test-ს.
+Replacement image-ის ხელახალ scan-ს არ უნდა ჰქონდეს სამიზნე CVE ან უნდა ცხადყოს მოსალოდნელი fixed version. `kubectl rollout status`-მა უნდა დაადასტუროს წარმატებული rollout. და ბოლოს, ყველა ახალი Pod-ის status-მა შერჩეული workload-ისთვის უნდა ცხადყოს runtime `imageID`, შედარებული შემოწმებულ platform-manifest digest-თან; multi-platform image-ისთვის scan/SBOM უნდა ფარავდეს ამ Pod-ების architecture-ს. თავი ასევე გვირჩევს აპლიკაციურ smoke test-ს.
 </details>
 
 <details>
-<summary>8. **Flashback (29-ე თავი).** ამ თავის 1-ლი კითხვა უკვე მიუთითებს, რომ გუშინდელი წარმატებული scan არ ამტკიცებს CVE-ის არარსებობას დღეს - ესე იგი vulnerability scanning - snapshot-ია შემოწმების მომენტში, არა continuous monitoring. Falco 29-ე თავიდან სხვა პრინციპით მუშაობს (runtime behavior detection). რომელ კონკრეტულ კლასის შეტევებს დაიჭერს Falco, მაგრამ არც ერთი, ყველაზე ახალი `trivy image` scan-იც, და რატომ?</summary>
+<summary>8. **Flashback (29-ე თავი).** ამ თავის 1-ლი კითხვა უკვე მიუთითებს, რომ გუშინდელი წარმატებული scan არ ამტკიცებს CVE-ის არარსებობას დღეს - ესე იგი vulnerability scanning - snapshot-ია შემოწმების მომენტში, არა continuous monitoring. Falco 29-ე თავიდან სხვა პრინციპით მუშაობს (runtime behavior detection). რომელი კონკრეტული კლასის შეტევებს დაიჭერს Falco, მაგრამ ვერც ყველაზე ახალი `trivy image` scan დაიჭერს, და რატომ?</summary>
 
 Falco-ს ძალუძს აღმოაჩინოს პროცესის runtime-ქმედება: მაგალითად, ინტერაქტიული shell container-ში, მგრძნობიარე ფაილის გახსნა, package manager-ის გაშვება ან `/dev/mem`-ის გახსნის მცდელობა. თუნდაც ახალი `trivy image` scan ხედავს ცნობილ vulnerabilities-ს და bytes-ის შემადგენლობას, მაგრამ არ იცის, პროცესმა ფაქტობრივად რა გააკეთა გაშვების შემდეგ. ამიტომ scan ამცირებს ცნობილი რისკის მიწოდების ალბათობას, ხოლო Falco აკვირდება RCE-ის გამოყენებას ან სხვა post-compromise behaviour-ს.
 </details>
@@ -634,7 +634,7 @@ SBOM-ს, ხელმოწერასა და artifact-ის allowlist-ს
 🧪 ლაბა 111 (Supply chain: Trivy, SBOM, signing): [tasks/cks/labs/111](../../labs/111/README_GE.MD)
 🌐 დამატებითი ინტერაქტიული პრაქტიკა (killer.sh/killercoda, გარეშე რესურსი): [image-vulnerability-scanning-trivy](https://killercoda.com/killer-shell-cks/scenario/image-vulnerability-scanning-trivy)
 
-სასარგებლო documentation: [Trivy image](https://trivy.dev/latest/docs/target/container_image/)
+სასარგებლო დოკუმენტაცია: [Trivy image](https://trivy.dev/latest/docs/target/container_image/)
 · [Trivy SBOM](https://trivy.dev/latest/docs/target/sbom/) · [Trivy databases](https://trivy.dev/latest/docs/configuration/db/)
 · [Trivy VEX](https://trivy.dev/latest/docs/supply-chain/vex/) · [Trivy Operator reports](https://aquasecurity.github.io/trivy-operator/latest/docs/vulnerability-scanning/)
 
@@ -647,7 +647,7 @@ SBOM-ს, ხელმოწერასა და artifact-ის allowlist-ს
    რომელი კონკრეტული post-exploitation ტექნიკა ეს ართმევს თავდამსხმელს RCE-ით
    (24-ე თავი).
 2. გენერირეთ SBOM (SPDX ან CycloneDX) `syft`-ით ან `trivy image --format
-   spdx-json` / `trivy image --format cyclonedx`-ით და ნაპოვნეთ მასში ერთი
+   spdx-json` / `trivy image --format cyclonedx`-ით და იპოვეთ მასში ერთი
    კონკრეტული package version-ით (25-ე თავი).
 3. ხელი მოაწერეთ ტესტურ image-ს `cosign`-ით და აუხსენით, რატომ `cosign verify`
    CI-ში არ ხდის დაბრკოლებას პირდაპირი `kubectl apply`-სთვის ხელმოუწერელი
@@ -661,7 +661,7 @@ SBOM-ს, ხელმოწერასა და artifact-ის allowlist-ს
    და აუხსენით, რატომ არ ამტკიცებს გუშინდელი წარმატებული scan CVE-ის
    არარსებობას დღეს (28-ე თავი).
 
-თუ დავალება 4-მა გაგიჭირდათ - დაბრუნდით 20-ე და 26-ე თავებთან ერთად.
+თუ დავალება 4-მა გაგიჭირდათ - დაუბრუნდით 20-ე და 26-ე თავებს ერთად.
 
 ---
 [სარჩევი](../README_GE.md) · [თავი 27](../27/ge.md) · [თავი 29](../29/ge.md)

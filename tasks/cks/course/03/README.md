@@ -70,11 +70,11 @@ flowchart TB
 
 The engineer's task is to remove unnecessary privileges, limit the impact of DoS, and make an escape attempt observable or impossible. The `securityContext` field is the Kubernetes interface to some of these mechanisms, but its basic syntax is already covered in the [CKA chapter on SecurityContext](../../../cka/course/20/README.md).
 
-> 🧠 A Namespace changes a resource's visibility, but does not remove it from the node or revoke explicitly granted access.
+> 🧠 A namespace changes a resource's visibility, but does not remove it from the node or revoke explicitly granted access.
 
 ## 03.2. Linux namespaces: what a container sees and does not see
 
-A Namespace gives a process a separate view of a kernel resource. The process does not disappear from the node, but through the kernel API it sees only the objects in its Namespace. Kubernetes and the runtime create the required namespaces when starting a Pod sandbox.
+A namespace gives a process a separate view of a kernel resource. The process does not disappear from the node, but through the kernel API it sees only the objects in its namespace. Kubernetes and the runtime create the required namespaces when starting a Pod sandbox.
 
 **A short reminder about starting an ordinary Pod.** A user or controller sends its specification to the API server, the scheduler selects a node, and the kubelet on that node passes the Pod to the container runtime. The runtime creates a pod sandbox (including the necessary namespaces) and then starts the Pod containers in it. The complete Pod-creation path, the pause container's role, and the sandbox are explained in [CKA chapter 4](../../../cka/course/04/README.md).
 
@@ -226,11 +226,11 @@ Do not confuse a container's PID 1 with the host PID 1. A PID namespace hides pr
 kubectl get pod -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.metadata.name}{" hostPID="}{.spec.hostPID}{" hostNetwork="}{.spec.hostNetwork}{" hostIPC="}{.spec.hostIPC}{"\n"}{end}'
 ```
 
-> 🧠 A Namespace limits visibility, a cgroup limits consumption; `limits` create a resource boundary, while `requests` help scheduling.
+> 🧠 A namespace limits visibility, a cgroup limits consumption; `limits` create a resource boundary, while `requests` help scheduling.
 
 ## 03.3. cgroups: resource limits as protection from DoS
 
-If a Namespace answers the question “what does a process see?”, a cgroup answers “how much resource can it consume?”. The container runtime places container processes in a cgroup, and the kubelet applies limits and requests from the Pod specification.
+If a namespace answers the question “what does a process see?”, a cgroup answers “how much resource can it consume?”. The container runtime places container processes in a cgroup, and the kubelet applies limits and requests from the Pod specification.
 
 Without a memory limit, a process can occupy node memory and cause memory pressure, eviction of other Pods, or a kernel OOM. Without a PID limit, a fork bomb can exhaust the PID table. A CPU request participates in scheduling and CPU distribution, while a CPU limit sets a hard ceiling through throttling; an excessively low CPU limit can worsen latency even when CPU is available. Therefore, memory/PID limits provide a more direct DoS boundary, while a CPU limit should be chosen deliberately for the workload profile. This is cluster availability and therefore a security scenario, not merely a performance question.
 
@@ -326,7 +326,7 @@ Remember these boundaries separately:
 - **At Namespace level: `ResourceQuota` and `LimitRange`.** One Pod's resources do not protect a Namespace from aggregate consumption. `ResourceQuota` limits its total budget, while `LimitRange` sets defaults and allowed boundaries for each workload. Together, they prevent one team from displacing others with an incomplete manifest.
 - **PID: the node administrator sets the limit.** You cannot state in an ordinary Pod YAML, “this workload is allowed N processes.” Instead, the administrator configures the kubelet `podPidsLimit` parameter - the maximum number of PIDs **for one Pod** on that node. The kubelet applies it through the PID cgroup. Therefore, verification has two steps: first find `podPidsLimit` in kubelet configuration, then check `pids.max` in the cgroup of an already running Pod.
 - **Under memory pressure: OOM in the cgroup.** The kernel can terminate a container process in the corresponding cgroup. If the main process ends, the kubelet restarts the container according to `restartPolicy`.
-- **Verify safely.** Do not prove a memory limit by causing an intentional OOM on a production node.
+- **Verify safely.** Do not prove that a memory limit works by deliberately causing an OOM on a production node.
 
 > 🎯 Remove `privileged`, host namespaces, excessive capabilities, and `allowPrivilegeEscalation: true`; set `capabilities.drop: [ALL]`, `RuntimeDefault`, and the required MAC profile.
 
@@ -368,7 +368,7 @@ There is an important Kubernetes exception: `allowPrivilegeEscalation` is effect
 
 With `allowPrivilegeEscalation: true` (the default), Kubernetes does not set `no_new_privs`. `true` itself does not grant a capability or make a container privileged, but it leaves a privilege-escalation path: a compromised unprivileged process can execute a setuid/setgid program or a file with capabilities from the image and obtain the UID/GID or capability offered by that file. Thus, an RCE as the application user can become root or a process with additional capabilities **inside the container**, expanding the attack's impact and possible escape chains. If the application does not need such an exec, setting `false` is safer.
 
-This is an important, but not the only, boundary; it does not replace dropping capabilities, seccomp, or MAC. In Kubernetes, a safe starting point is to remove everything and add one capability only when a documented need exists. Only if the sysctl setting and application requirements confirm it, a legacy application may need `NET_BIND_SERVICE` for TCP 80:
+This is an important, but not the only, boundary; it does not replace dropping capabilities, seccomp, or MAC. In Kubernetes, a safe starting point is to remove everything and add one capability only when a documented need exists. A legacy application may need `NET_BIND_SERVICE` for TCP 80 only if the sysctl setting and application requirements confirm it:
 
 ```yaml
 apiVersion: v1
@@ -475,7 +475,7 @@ Ordinary Linux DAC checks the UID, GID, and mode bits of a file. In the DAC mode
 | AppArmor | profile-based, file paths and operations | Ubuntu, Debian, and some managed nodes | `aa-status`, loaded profile, `DENIED` in the audit log |
 | SELinux | labels and type enforcement | RHEL, Fedora, OpenShift, and compatible OSs | `getenforce`, labels, AVC denial in the audit log |
 
-Both mechanisms solve the same task, but their profiles and operation are not interchangeable. You cannot copy an AppArmor profile to a SELinux node and expect it to be applied. Before designing a policy, determine what is actually enabled in the node image:
+Both mechanisms solve the same task, but their profiles and operation are not interchangeable. You cannot copy an AppArmor profile to an SELinux node and expect it to be applied. Before designing a policy, determine what is actually enabled in the node image:
 
 ```bash
 sudo aa-status || true
@@ -524,7 +524,7 @@ Practical checklist for investigating a suspicious Pod:
 NAMESPACE="${NAMESPACE:?set target namespace}"
 POD="${POD:?set target pod name}"
 
-# 1. Find explicit Namespace bypasses and privileged mode.
+# 1. Find explicit namespace bypasses and privileged mode.
 kubectl get pod -n "$NAMESPACE" "$POD" -o yaml | \
   grep -E 'privileged:|hostPID:|hostIPC:|hostNetwork:|hostPath:|allowPrivilegeEscalation:'
 
@@ -589,7 +589,7 @@ Typical errors:
 - **PID namespace** - isolation of the process list and PIDs.
 - **network namespace** - isolation of interfaces, routes, and the network stack.
 - **cgroup** - a group of processes with resource limits and accounting.
-- **capability** - an individual Linux privilege separated from the traditional all-powerful root privilege set.
+- **capability** - an individual Linux privilege separated from root's authority.
 - **CAP_SYS_ADMIN** - an excessively broad capability that is dangerous for an ordinary workload.
 - **syscall** - a system call through which a process accesses the kernel.
 - **seccomp** - a syscall filter applied by the kernel to a process.

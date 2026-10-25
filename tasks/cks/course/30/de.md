@@ -53,8 +53,8 @@ Ersetzen Sie Quellen nicht gegenseitig. Falco beweist gewöhnlich nicht, **wer**
 ## 30.1a. Physical infrastructure: was das für Kubernetes bedeutet und was prüfbar ist
 
 Die offizielle Formulierung des CNCF-Curriculums für diese Domain - „Detect threats within
-physical infrastructure, apps, networks, data, users, and workloads" - erwähnt physical
-infrastructure gesondert von den oben aufgeführten Schichten. Die Zeile „Infrastruktur" in der
+physical infrastructure, apps, networks, data, users, and workloads“ - erwähnt physical
+infrastructure gesondert von den oben aufgeführten Schichten. Die Zeile „Infrastruktur“ in der
 Tabelle aus Abschnitt 30.1 bezieht sich auf den Node/Host **innerhalb** des Clusters (Falco,
 kernel warning, container runtime socket), nicht auf die physische Ebene des Rechenzentrums.
 Klären wir, was hinter diesem Begriff im Cloud-native-Kontext tatsächlich steht (nach dem
@@ -66,9 +66,9 @@ Verantwortung eines Engineers liegt, der nur über `kubectl`/API arbeitet.
 der Hardware, Strom-/Kühlversorgung, Co-Location Security, die physische Lieferkette von
 Servern/Disks - das liegt in der Verantwortung des Cloud Providers (bei managed Kubernetes)
 oder eines separaten Infrastruktur-Teams (on-prem), nicht der Kubernetes API. Die offizielle
-CKS-Kompetenz ("Detect threats within physical infrastructure, apps, networks, data, users
-and workloads" in der Domain Monitoring, Logging and Runtime Security) schließt die physische
-Ebene nicht ausdrücklich aus. Eine konkrete Aussage der Art "CKS prüft dies nicht direkt"
+CKS-Kompetenz („Detect threats within physical infrastructure, apps, networks, data, users
+and workloads“ in der Domain Monitoring, Logging and Runtime Security) schließt die physische
+Ebene nicht ausdrücklich aus. Eine konkrete Aussage der Art „CKS prüft dies nicht direkt“
 haben wir in offiziellen LF-Quellen nicht gefunden - bei der performance-basierten Prüfung ohne
 physischen Zugang zum Rechenzentrum ist eine direkte Interaktion mit der physischen
 Infrastruktur unwahrscheinlich, aber das ist eine Beobachtung zum Prüfungsformat, kein
@@ -101,8 +101,8 @@ Kubernetes/Node konfigurieren:**
   self-managed Deployments (`kubeadm`) automatisiert dies teilweise den TLS-Bootstrap-
   Token/CSR-Prozess beim Beitritt des Node; managed Cloud Provider können zusätzlich ein
   cloud instance identity document oder provider-spezifische Attestation nutzen. Doch eine
-  vollständige physische Attestation ("diese VM läuft tatsächlich auf Hardware mit TPM X im
-  Rechenzentrum Y") ist Sache des Cloud Providers/Infrastruktur-Teams, nicht des Clusters.
+  vollständige physische Attestation („diese VM läuft tatsächlich auf Hardware mit TPM X im
+  Rechenzentrum Y“) ist Sache des Cloud Providers/Infrastruktur-Teams, nicht des Clusters.
 - **HSM (Hardware Security Module) für kritische Keys.** Der CA private key des
   kube-apiserver, der etcd encryption key oder der KMS master key für
   `EncryptionConfiguration` (Kapitel 21) sollten in Production nicht als Datei auf der
@@ -114,7 +114,7 @@ Kubernetes/Node konfigurieren:**
   HSM-Cluster) und den external key store (XKS, key material und ein Teil der
   kryptografischen Operationen in einem externen Key-Management-System außerhalb von AWS, das
   sowohl ein physisches/virtuelles HSM als auch ein Software-Key-Manager sein kann). Das
-  heißt, "HSM-backed für alle Keys" trifft für den Standard-Key-Store zu, ist aber keine
+  heißt, „HSM-backed für alle Keys“ trifft für den Standard-Key-Store zu, ist aber keine
   universelle Garantie für custom/external key stores. In Google Cloud KMS ist HSM ein
   eigener auswählbarer `ProtectionLevel` (`HSM`/`HSM_SINGLE_TENANT`) neben `SOFTWARE`
   (Software-Implementierung ohne physisches HSM) und `EXTERNAL`/`EXTERNAL_VPC` - das heißt,
@@ -131,7 +131,7 @@ Kubernetes/Node konfigurieren:**
 **Was davon über `kubectl`/`crictl` prüfbar ist und was nicht.** Nichts vom oben Genannten
 wird direkt über die Kubernetes API geprüft - das ist eine bewusste architektonische
 Trennung: Kubernetes verwaltet den Workload und dessen Admission, nicht aber die
-Hardware-Vertrauenskette darunter. Maximal sichtbar "von außen" über die API sind `Node`
+Hardware-Vertrauenskette darunter. Maximal sichtbar „von außen“ über die API sind `Node`
 labels/taints, mit denen der Provider gelegentlich Hardware-Fähigkeiten des Node markiert
 (z. B. Labels im Stil `feature.node.kubernetes.io/` für Confidential Computing oder
 TPM-Präsenz aus Node Feature Discovery), doch die eigentliche Integritätsprüfung findet
@@ -142,7 +142,7 @@ Interaktion zu erwarten sind; die praktische Abdeckung dieser Kompetenz zeigt si
 wahrscheinlicher über Infrastruktur-/Node-Signale und die korrekte Klassifizierung der
 Bedrohung, wie oben gezeigt. Erfordert eine Aufgabe ein vollwertiges physisches
 Security-Programm (Zutrittskontrolle, Audit von Hardware-Lieferanten), ist das Gegenstand
-eines separaten ISO-27001-/SOC-2-artigen Programms, das in diesem Kurs nicht weiter behandelt
+eines separaten ISO-27001-/SOC-2-style Programms, das in diesem Kurs nicht weiter behandelt
 wird - kennt man jedoch die oben genannten Begriffe, klassifiziert man die Bedrohung zumindest
 korrekt und sucht nicht nach einer nicht existierenden Kubernetes-Kontrolle dafür.
 
@@ -201,7 +201,7 @@ Wenn eine bestehende Regel verschärft werden muss, verwenden Sie ihren Namen un
 
 ### Eigene Regel: Container-Zugriff auf `/dev/mem`
 
-Die folgende Regel erkennt den Versuch eines Container-Prozesses, `/dev/mem` zu öffnen. Ein solcher Zugriff ist für einen Application Workload ein starker Indikator für eine gefährliche Konfiguration oder einen Versuch, die Isolation zu umgehen. Die Regel dient dem Lernen: In Production werden Ausnahmen und Severity erst nach einem Baseline der normalen Aktivität festgelegt.
+Die folgende Regel erkennt den Versuch eines Container-Prozesses, `/dev/mem` zu öffnen. Ein solcher Zugriff ist für einen Application Workload ein starker Indikator für eine gefährliche Konfiguration oder einen Versuch, die Isolation zu umgehen. Die Regel dient dem Lernen: In Production werden Ausnahmen und Severity erst nach einer Baseline der normalen Aktivität festgelegt.
 
 ```yaml
 # /etc/falco/falco_rules.local.yaml
@@ -271,7 +271,7 @@ output: >
   k8s_ns=%k8s.ns.name k8s_pod=%k8s.pod.name k8s_pod_uid=%k8s.pod.uid)
 ```
 
-Fügen Sie nicht "vorsichtshalber" alle Felder hinzu. `proc.cmdline`, Environment und Request Body können Passwörter, Bearer Token und PII offenlegen. Legen Sie eine Redact Policy fest, beschränken Sie den Zugriff auf SIEM und Falco-Log, die Aufbewahrungsdauer und das Verfahren zur Übergabe von Evidence. Dabei dürfen Container-ID, Pod-UID, Node, UTC-Zeit und, sofern der Runtime ihn liefert, der Image-Digest nicht entfernt werden: Ohne sie lässt sich ein Alert kaum zuverlässig mit anderen Quellen verknüpfen. Ist der Digest oder `container_full_id` leer, bewahren Sie den ursprünglichen Alert auf und ergänzen Sie ihn mit den Ergebnissen von `kubectl get pod` und `crictl inspect`, statt eine Vermutung einzusetzen. Für die Attribution gleichen Sie primär Pod-UID, exakte Container-ID, Node und Timestamp ab. `status.containerStatuses[].imageID` ist ein runtime-spezifischer Identifier/Hinweis, kein übertragbarer Beweis für die Gleichheit mit `%container.image.digest`; ein stärkeres Evidence liefert das digest-gepinnte `spec.containers[].image`. Berücksichtigen Sie bei einem Multi-Arch-Image die Auflösung des Index im Platform Manifest der gewählten Node-Architektur; `crictl inspect` oder `crictl images --digests` sind zusätzliches Evidence.
+Fügen Sie nicht „vorsichtshalber“ alle Felder hinzu. `proc.cmdline`, Environment und Request Body können Passwörter, Bearer Token und PII offenlegen. Legen Sie eine Redact Policy fest, beschränken Sie den Zugriff auf SIEM und Falco-Log, die Aufbewahrungsdauer und das Verfahren zur Übergabe von Evidence. Dabei dürfen Container-ID, Pod-UID, Node, UTC-Zeit und, sofern der Runtime ihn liefert, der Image-Digest nicht entfernt werden: Ohne sie lässt sich ein Alert kaum zuverlässig mit anderen Quellen verknüpfen. Ist der Digest oder `container_full_id` leer, bewahren Sie den ursprünglichen Alert auf und ergänzen Sie ihn mit den Ergebnissen von `kubectl get pod` und `crictl inspect`, statt eine Vermutung einzusetzen. Für die Attribution gleichen Sie primär Pod-UID, exakte Container-ID, Node und Timestamp ab. `status.containerStatuses[].imageID` ist ein runtime-spezifischer Identifier/Hinweis, kein übertragbarer Beweis für die Gleichheit mit `%container.image.digest`; ein stärkeres Evidence liefert das digest-gepinnte `spec.containers[].image`. Berücksichtigen Sie bei einem Multi-Arch-Image die Auflösung des Index im Platform Manifest der gewählten Node-Architektur; `crictl inspect` oder `crictl images --digests` sind zusätzliches Evidence.
 
 ### Verfügbare Felder und tatsächliches Enrichment prüfen
 
@@ -317,20 +317,20 @@ sequenceDiagram
 
 | Zeit/Signal | Mögliche Phase | Was vor dem Schluss zu prüfen ist | Untersuchungsschritt |
 | --------------------------------------------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| App-Access-Log: ungewöhnlicher Request; danach Falco-Shell | initial access → execution | Endpoint, Deployment/Version, war die Shell eine reguläre Debug-Aktion | Request-Metadata, Pod-UID, Image-Digest, Process Tree sichern |
+| App-Access-Log: ungewöhnlicher Request; danach Falco-Shell | initial access → execution | Endpoint, Deployment/Version, ob die Shell eine reguläre Debug-Aktion war | Request-Metadata, Pod-UID, Image-Digest, Process Tree sichern |
 | Falco: Lesen eines token oder einer credentials file | credential access / preparation for lateral movement | Pfad, UID, erwarteter Prozess und ServiceAccount-Automount | `automountServiceAccountToken`, RBAC und Zugriff auf das Secret prüfen |
 | API-Audit: `system:serviceaccount:ns:sa` liest ein Secret oder erstellt einen Pod | lateral movement oder persistence | `verb`, `objectRef`, Response Code, Source-IP, frühere normale Aktionen des SA | Rechte entziehen/einschränken, alle Aktionen dieser Identity finden |
 | API-Audit: neues `CronJob`, `DaemonSet`, RoleBinding | persistence oder privilege escalation | Owner, Manifest-Diff, `escalate`/`bind`, wer die API aufgerufen hat | Controller stoppen, Manifest und Audit-Evidence sichern |
 | Falco: `/dev/mem`, runtime socket, host mount | privilege escalation / defense evasion attempt | Pod `privileged`, Capabilities, `hostPID`, `hostPath`, Ergebnis der Operation | Node/Pod gemäß Runbook isolieren, Host-Integrität prüfen |
-| Flow/DNS: großer Egress zu einer externen Destination | exfiltration | Destination Ownership, Byte-Anzahl, welche Data-Events zuvor stattfanden | Egress blockieren, Flow sichern und Credentials einschränken |
+| Flow/DNS: großer Egress zu einer externen Destination | exfiltration | Destination Ownership, Byte-Anzahl, welche Data-Events zuvor stattfanden | Egress blockieren, Flow und Scope der Credentials sichern |
 
-Die Abfolge „Falco-Shell → Audit `create CronJob` → Network Egress" ist stärker als drei einzelne Alerts. Verwenden Sie für die Korrelation ein Zeitfenster unter Berücksichtigung von Clock Skew, und nutzen Sie als Keys Pod-UID, Container-ID, Node, ServiceAccount, Image-Digest und API-Request-UID. Ein `Pod`-Name ohne UID gilt nicht als eindeutig.
+Die Abfolge „Falco-Shell → Audit `create CronJob` → Network Egress“ ist stärker als drei einzelne Alerts. Verwenden Sie für die Korrelation ein Zeitfenster unter Berücksichtigung von Clock Skew, und nutzen Sie als Keys Pod-UID, Container-ID, Node, ServiceAccount, Image-Digest und API-Request-UID. Ein `Pod`-Name ohne UID gilt nicht als eindeutig.
 
 > 🏭 Containment wird nach Risiko und Runbook gewählt: Zuerst wird das verfügbare volatile Evidence gesichert, dann wird isoliert. Man darf die Untersuchung nicht der Bequemlichkeit opfern, aber auch den Schutz bei aktiver Bedrohung nicht aufschieben.
 
 ### Containment darf Beweise nicht zerstören
 
-Bei bestätigtem aktivem Risiko hat Sicherheit Vorrang vor dem Erhalt des Prozesses, die Aktion muss aber protokollierbar und proportional zum Runbook sein. Sichern Sie vor dem Löschen des Pod, falls dies sicher und vom Verfahren erlaubt ist, `kubectl get pod -o yaml`, die Falco-Zeile, Audit-/Flow-IDs, `crictl inspect`, Process-/Cgroup-/Namespace-Angaben. Führen Sie keine Befehle des Angreifers "zur Prüfung" aus, führen Sie `kubectl exec` nicht ohne Notwendigkeit aus und kopieren Sie kein Secret in das Ticket.
+Bei bestätigtem aktivem Risiko hat Sicherheit Vorrang vor dem Erhalt des Prozesses, die Aktion muss aber protokollierbar und proportional zum Runbook sein. Sichern Sie vor dem Löschen des Pod, falls dies sicher und vom Verfahren erlaubt ist, `kubectl get pod -o yaml`, die Falco-Zeile, Audit-/Flow-IDs, `crictl inspect`, Process-/Cgroup-/Namespace-Angaben. Führen Sie keine Befehle des Angreifers „zur Prüfung“ aus, führen Sie `kubectl exec` nicht ohne Notwendigkeit aus und kopieren Sie kein Secret in das Ticket.
 
 ```bash
 # Desired state und owner für den incident case vor der remediation sichern.
@@ -347,7 +347,7 @@ kubectl get pod -n "$NAMESPACE" "$POD" \
 
 ### Integrität und chain of custody (Kette der Aufbewahrung und Übergabe von Beweisen)
 
-Notieren Sie für jede Evidence-Datei die Case-ID, den UTC-Zeitpunkt der Erfassung, den Node, den Sammler, die Quelle und den Befehl. Berechnen Sie sofort SHA-256, bewahren Sie das Manifest zusammen mit dem Evidence in einem Storage mit Schreibbeschränkung und Übergabeprotokoll auf. Notieren Sie bei der Übergabe die UTC-Zeit, Absender, Empfänger und Hash: Dies erlaubt die Prüfung der Integrität, ersetzt aber kein genehmigtes Aufbewahrungsverfahren.
+Notieren Sie für jede Evidence-Datei die Case-ID, den UTC-Zeitpunkt der Erfassung, den Node, den Sammler, die Quelle und den Befehl. Berechnen Sie sofort SHA-256, bewahren Sie das Manifest zusammen mit dem Evidence in einem Storage mit Schreibbeschränkung und Übergabeprotokoll auf. Notieren Sie bei der Übergabe die UTC-Zeit, den Absender, den Empfänger und den Hash: Dies erlaubt die Prüfung der Integrität, ersetzt aber kein genehmigtes Aufbewahrungsverfahren.
 
 ```bash
 CASE="IR-$(date -u +%Y%m%dT%H%M%SZ)"
@@ -384,7 +384,7 @@ sudo crictl inspect "$CONTAINER_ID" > "$EVIDENCE/crictl-inspect.json"
 
 Der obige Abschnitt baut die Beweiskette vom Alert bis zum Workload auf, doch die Untersuchung allein
 stoppt den Angreifer nicht. Nachdem Pod, Node und Identity bestimmt sind, ist ein
-konkreter Reaktionsschritt nötig - kein abstraktes "isolieren", sondern einer der prüfbaren
+konkreter Reaktionsschritt nötig - kein abstraktes „isolieren“, sondern einer der prüfbaren
 Mechanismen unten. Dies ist eine Brücke zu [Kapitel 32](../32/de.md): Dort werden Kubernetes
 Audit Logs behandelt, und Containment-Aktionen erzeugen eigene Audit-Events, die ebenfalls
 als Evidence des Incidents festgehalten werden müssen.
@@ -394,7 +394,7 @@ als Evidence des Incidents festgehalten werden müssen.
 | Aktion | Was sie tut | Wann angemessen | Was Sie verlieren/was nicht garantiert wird |
 | --- | --- | --- | --- |
 | **NetworkPolicy Quarantine** | additive L3/L4-Isolation des ausgewählten Pod bei einer CNI, die NetworkPolicy tatsächlich enforced | reversibler erster Schritt: beschränkt neue erlaubte TCP-/UDP-/SCTP-Connections, während Pod und Evidence erhalten bleiben | kein priority deny: Alle selektierenden Policies summieren allow; Traffic auf dem Resident Node, non-L4 und bestehende Verbindungen unterliegen Einschränkungen/hängen von der CNI ab |
-| **Cordon des Node** | `kubectl cordon <node>` — Scheduling Freeze: blockiert das Scheduling neuer gewöhnlicher Pods; bestehende Pods laufen weiter | zusätzlicher vorbereitender Schritt bei Verdacht auf Node-Kompromittierung | isoliert nicht kompromittierten Node, kubelet, Host-Prozess, Netzwerk oder Credentials; nötig ist ein Infrastructure-Isolation-Runbook |
+| **Cordon des Node** | `kubectl cordon <node>` - Scheduling Freeze: blockiert das Scheduling neuer gewöhnlicher Pods; bestehende Pods laufen weiter | zusätzlicher vorbereitender Schritt bei Verdacht auf Node-Kompromittierung | isoliert nicht den kompromittierten Node, kubelet, Host-Prozess, Netzwerk oder Credentials; nötig ist ein Infrastructure-Isolation-Runbook |
 | **Stoppen des owning Workload** | Owner/Controller bestimmen und den Source Desired State ändern, z. B. `kubectl scale deployment --replicas=0` | bestätigtes aktives Risiko, Evidence ist bereits gesichert | ein einfaches `kubectl delete pod` erstellt gewöhnlich einen Replacement und verliert den Live-Prozess, den `/proc`-Kontext und die Möglichkeit eines erneuten `strace` |
 
 Die Reihenfolge ist gewöhnlich diese: Zuerst prüft man die Fähigkeiten der CNI und alle Policies, die den Pod auswählen, dann wendet man bei Bedarf NetworkPolicy als reversible Beschränkung neuer Verbindungen an. `cordon` wird nur als Scheduling Freeze verwendet. Bei Verdacht auf eine Host-/Node-Kompromittierung wird das eigentliche Containment nach einem Infrastructure-Runbook durchgeführt: Node aus LB/Service Paths entfernen, Cloud Firewall/Security Group/NAC/EDR Host Isolation anwenden, Node- und Workload-Credentials einschränken, dann den Node kontrolliert ersetzen/rebuilden. Nach dem Sichern des Evidence wird der owning Workload gestoppt, nicht nur ein einzelner Pod. Auch das automatische **Evict** eines Node (`kubectl drain`) erstellt den Workload auf einem anderen Node neu, sofern der Controller nicht gestoppt ist.
@@ -498,7 +498,7 @@ Production-Erweiterung, kein Prüfungsstoff von CKS.
 
 Automatisieren Sie das bedingungslose Löschen eines Pod nicht durch eine einzige general-purpose
 Regel: Ein False Positive bei breiter Severity verwandelt Rauschen in einen eigenständigen
-Outage. Aktivieren Sie automatische Reaktion nur für enge, auf Staging geprüfte Bedingungen mit
+Outage. Aktivieren Sie die automatische Reaktion nur für enge, auf Staging geprüfte Bedingungen mit
 klarem Owner und Rollback.
 
 > 🔬 Der Weg von der CRI zu Host-PID und Syscall-Trace für einen controlled incident mit volatile Evidence und Production Access.
@@ -524,7 +524,7 @@ CONTAINER_ID="${CONTAINER_ID:?set CONTAINER_ID to the exact CRI container ID}"
 sudo cat /etc/crictl.yaml 2>/dev/null || true
 sudo crictl --runtime-endpoint "$CRI_ENDPOINT" --image-endpoint "$CRI_ENDPOINT" pods --name "$POD" -o json
 
-# Genau den sandbox dieses namespace und Pod UID auswählen und dann dessen vollständige ID ermitteln.
+# Genau die sandbox dieses namespace und Pod UID auswählen und dann deren vollständige ID ermitteln.
 SANDBOX_ID=$(sudo crictl --runtime-endpoint "$CRI_ENDPOINT" pods --name "$POD" -o json | \
   jq -er --arg ns "$NAMESPACE" --arg uid "$POD_UID" \
   '.items[] | select(.metadata.namespace == $ns and .metadata.uid == $uid) | .id')
@@ -535,11 +535,11 @@ sudo crictl --runtime-endpoint "$CRI_ENDPOINT" inspect "$CONTAINER_ID" | \
   jq '{id: .status.id, image: .status.image, labels: .status.labels, info: .info}'
 ```
 
-Wählen Sie in einem Multi-Container-Pod nicht "die erste ID aus `grep`": Sidecar, Init, Ephemeral und der Haupt-Container haben unterschiedliche PID und Image. Gleichen Sie `%container.id`/`%container.full_id`, `%container.name`, Pod-UID, Container-Status-Typ und Timestamp ab. Ist die Falco-ID gekürzt, gleichen Sie ihr eindeutiges Prefix mit der `crictl`-Ausgabe ab. `crictl ps -a` kann noch nicht bereinigte stopped records zeigen, das sind jedoch operative Daten des Runtime, kein dauerhaftes forensisches Archiv: Sichern Sie Falco, Audit, CRI Inspect und Logs separat, bevor sie bereinigt werden.
+Wählen Sie in einem Multi-Container-Pod nicht „die erste ID aus `grep`“: Sidecar, Init, Ephemeral und der Haupt-Container haben unterschiedliche PID und Image. Gleichen Sie `%container.id`/`%container.full_id`, `%container.name`, Pod-UID, Container-Status-Typ und Timestamp ab. Ist die Falco-ID gekürzt, gleichen Sie ihr eindeutiges Prefix mit der `crictl`-Ausgabe ab. `crictl ps -a` kann noch nicht bereinigte stopped records zeigen, das sind jedoch operative Daten des Runtime, kein dauerhaftes forensisches Archiv: Sichern Sie Falco, Audit, CRI Inspect und Logs separat, bevor sie bereinigt werden.
 
 ### 2. `/proc`-Kontext des Prozesses festhalten
 
-Das Feld `.info` in der `crictl inspect`-Ausgabe ist runtime-spezifisch: Die CRI standardisiert dessen interne Struktur nicht. Bei containerd enthält es oft `.info.pid`, doch ein anderer Runtime stellt diesen Pfad oder die PID möglicherweise nicht bereit. Prüfen und sichern Sie zuerst die Struktur und extrahieren Sie die PID nur, wenn sie tatsächlich vorhanden ist. Auch eine gefundene PID bezieht sich gewöhnlich auf den Root-Prozess des Container, nicht unbedingt auf den Prozess, der den Alert ausgelöst hat.
+Das Feld `.info` in der `crictl inspect`-Ausgabe ist runtime-spezifisch: Die CRI standardisiert dessen interne Struktur nicht. Bei containerd enthält es oft `.info.pid`, doch ein anderer Runtime stellt diesen Pfad oder die PID möglicherweise nicht bereit. Prüfen und sichern Sie zuerst die Struktur und extrahieren Sie die PID nur, wenn sie tatsächlich vorhanden ist. Auch eine gefundene PID bezieht sich gewöhnlich auf den Root-Prozess des Containers, nicht unbedingt auf den Prozess, der den Alert ausgelöst hat.
 
 ```bash
 # Zuerst die runtime-specific Struktur prüfen und als evidence sichern.
@@ -575,7 +575,7 @@ sudo sed -n '1,80p' "/proc/$PID/mountinfo"
 SUSPICIOUS_HOST_PID="${SUSPICIOUS_HOST_PID:?set SUSPICIOUS_HOST_PID to the host PID from the Falco alert}"
 sudo test -d "/proc/$SUSPICIOUS_HOST_PID" || { echo 'suspicious process has exited'; exit 1; }
 # Im containerd + systemd cgroup scope enthält der Application Container CONTAINER_ID, nicht SANDBOX_ID:
-# der sandbox wird für die Verbindung zum Pod benötigt, ist aber eine eigene cgroup vom application container.
+# die sandbox wird für die Verbindung zum Pod benötigt, ist aber eine eigene cgroup vom application container.
 sudo grep -F "$CONTAINER_ID" "/proc/$SUSPICIOUS_HOST_PID/cgroup" || {
   echo 'cgroup bestätigt CONTAINER_ID nicht; korrelieren Sie Pod UID, container identity und host PID vor dem attach erneut'
   exit 1
@@ -590,15 +590,15 @@ sudo grep -E 'openat|openat2|connect|execve|clone' \
   "/var/tmp/incident-${SUSPICIOUS_HOST_PID}.strace"* 2>/dev/null
 ```
 
-`strace -f` folgt nur `fork`/`vfork`/`clone`, die **nach** dem Attach an einen bereits getracten Prozess erzeugt werden; `-ff` tut dasselbe und schreibt eine separate Datei pro Prozess. Bereits vorhandene Descendants findet es nicht. Deshalb erfolgt der Attach an die exakte lebende Host-PID `%proc.pid` aus dem Alert; die PID 1 des Container wird nur für den grundlegenden `/proc`-Kontext verwendet.
+`strace -f` folgt nur `fork`/`vfork`/`clone`, die **nach** dem Attach an einen bereits getracten Prozess erzeugt werden; `-ff` tut dasselbe und schreibt eine separate Datei pro Prozess. Bereits vorhandene Descendants findet es nicht. Deshalb erfolgt der Attach an die exakte lebende Host-PID `%proc.pid` aus dem Alert; die PID 1 des Containers wird nur für den grundlegenden `/proc`-Kontext verwendet.
 
 **Wenn der Container bereits beendet oder neu gestartet wurde:** Das Fehlen der aktuellen PID widerlegt den Alert nicht.
-Sichern Sie sofort durables Evidence — die ursprüngliche Falco-Zeile, Audit-/Flow-IDs, Timestamps, Pod-UID,
+Sichern Sie sofort durables Evidence - die ursprüngliche Falco-Zeile, Audit-/Flow-IDs, Timestamps, Pod-UID,
 Image-Digest, `kubectl get pod -o yaml`, `kubectl logs --previous` (falls zutreffend), CRI-/Journal-
 Logs und den Restart Count. `/proc/<pid>`, die aktuelle Cgroup und der Runtime Record sind volatile Evidence und
 können beim Cleanup verschwinden; Falco-/Audit-/Application-Logs und der gesicherte CRI Inspect müssen
 vor destruktivem Containment gesichert werden. Versuchen Sie nicht, die schädliche Aktion in
-Production zu "wiederholen".
+Production zu „wiederholen“.
 
 ### Kurze Diagnose-Reihenfolge
 
@@ -741,7 +741,7 @@ Fehlt der Alert, erhöhen Sie nicht blind die Priority und schreiben Sie nicht b
 - **Kill Chain** - Abfolge der Angriffsphasen vom initial access bis zum Ziel, z. B. Exfiltration.
 - **Pod-UID** - unveränderliche UID einer konkreten Pod-Instanz, zuverlässiger als der Name bei der Korrelation.
 - **Runtime Detection** - Erkennung der Aktionen eines bereits laufenden Prozesses anhand von Syscall/eBPF und Runtime-Metadata.
-- **`strace`** - diagnostische Trace von Syscalls eines Prozesses; ein Werkzeug für die gezielte Untersuchung, kein dauerhaftes Monitoring.
+- **`strace`** - diagnostischer Trace von Syscalls eines Prozesses; ein Werkzeug für die gezielte Untersuchung, kein dauerhaftes Monitoring.
 
 ## 30.10. Zusammenfassung des Kapitels
 
@@ -817,7 +817,7 @@ Vor dem Löschen werden die ursprüngliche Falco-Zeile, Audit-/Flow-IDs, Timesta
 </details>
 
 <details>
-<summary>9. **Flashback (Kapitel 11).** In Kapitel 11 verringert ein bound projected token die Folgen eines Token-Diebstahls im Vergleich zu einem legacy Secret Token. Entwerfen Sie ein Investigation-Szenario für dieses Kapitel: Wie unterscheidet man über `%user.name`/Audit-Log einen legitimen Request von einem Pod mit eigenem ServiceAccount von einem Request, der ein **gestohlenes** Token desselben SA von einer anderen Quelle verwendet (z. B. von einem Host außerhalb des Cluster)?</summary>
+<summary>9. **Flashback (Kapitel 11).** In Kapitel 11 verringert ein bound projected token die Folgen eines Token-Diebstahls im Vergleich zu einem legacy Secret Token. Entwerfen Sie ein Investigation-Szenario für dieses Kapitel: Wie unterscheidet man über `%user.name`/Audit-Log einen legitimen Request von einem Pod mit eigenem ServiceAccount von einem Request, der ein **gestohlenes** Token desselben SA von einer anderen Quelle verwendet (z. B. von einem Host außerhalb des Clusters)?</summary>
 
 `%user.name` zeigt nur den Linux-User des Prozesses und beweist nicht, woher der Kubernetes-API-Request kam. Im Audit sucht man `.user.username` des ServiceAccount, Zeit, Verb, objectRef, responseStatus, Audit-/Request-UID, `.sourceIPs`, `userAgent` und Annotations und gleicht dann IP/Agent mit vertrauenswürdigen Proxies, IdP-/Cloud-/Network-Telemetry ab. Ein Request mit demselben SA, aber aus einer ungewöhnlichen externen Quelle, zu untypischer Zeit oder mit untypischem Scope wird als mögliche Verwendung eines gestohlenen Token untersucht; `sourceIPs` und userAgent allein sind kein Beweis.
 

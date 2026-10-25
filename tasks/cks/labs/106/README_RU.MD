@@ -1,3 +1,5 @@
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
+
 # Лаба 106 - AppArmor и seccomp: node-local policy и проверяемые отказы
 
 ## Цель
@@ -17,16 +19,16 @@ placement Pod и фактическое поведение процесса.
 
 Предположим RCE в контейнере. Вопрос после compromise - не «мог ли атакующий получить shell», а «что этот shell может сделать дальше» и насколько велик его blast radius.
 
-AppArmor в заданиях 1–2 ограничивает объекты и операции: профиль переводится в enforce и затем доказывается отказ записи. Так уже скомпрометированный процесс не получает неограниченное действие только потому, что он выполняется в контейнере.
+AppArmor в заданиях 1–3 ограничивает объекты и операции: профиль переводится в enforce и затем доказывается отказ записи. Так уже скомпрометированный процесс не получает неограниченное действие только потому, что он выполняется в контейнере.
 
-seccomp в заданиях 3–5 ограничивает доступный системный вызов: сначала применяется baseline, затем custom profile, а затем проверяется реальный отказ `unshare(2)`. Задание 5 уже содержит negative control через Pod `sysadmin-control`: при той же capability без seccomp filter вызов проходит, поэтому сравнение показывает именно границу после compromise.
+seccomp в заданиях 4–6 ограничивает доступный системный вызов: сначала применяется baseline, затем custom profile, а затем проверяется реальный отказ `unshare(2)`. Задание 6 уже содержит negative control через Pod `sysadmin-control`: при той же capability без seccomp filter вызов проходит, поэтому сравнение показывает именно границу после compromise.
 
 ## Проверьте себя перед стартом
 
 <details>
 <summary>1. Чем `complain` отличается от `enforce` в AppArmor, и почему `complain` нельзя показывать как доказательство защиты?</summary>
 
-В режиме `complain` AppArmor только логирует нарушения профиля, но НЕ блокирует их - операция, которая должна быть запрещена, всё равно выполнится, просто появится запись в журнале. В `enforce` операция реально блокируется. Задание 1 явно требует перевести профиль в `enforce`, потому что демонстрация "вот нарушение в логе" при `complain` не доказывает защиту - процесс всё равно смог выполнить действие.
+В режиме `complain` AppArmor только логирует нарушения профиля, но НЕ блокирует их - операция, которая должна быть запрещена, всё равно выполнится, просто появится запись в журнале. В `enforce` операция реально блокируется. Задание 2 явно требует перевести профиль в `enforce`, потому что демонстрация "вот нарушение в логе" при `complain` не доказывает защиту - процесс всё равно смог выполнить действие.
 </details>
 
 <details>
@@ -61,7 +63,7 @@ Kubelet сам разрешает относительный путь относ
 Для экономии ресурсов control-plane является единственной workload-нодой: с неё снят
 `NoSchedule` taint. Она помечена label
 `security.cks.io/localhost-profiles-106=true`. Все Pod этой лабы должны выбирать именно
-эту ноду - plan-профиль не переносится планировщиком (scheduler) на другую ноду.
+эту ноду - Localhost-профиль существует только на ней, и планировщик (scheduler) не переносит его на другую ноду.
 
 Bootstrap подготовил **только**:
 
@@ -129,7 +131,7 @@ ls -la /opt/lab106-fixtures/
 Не используйте `aa-enforce`/`aa-complain` для этого профиля, пока не выполнено задание 9:
 эти Python-инструменты из `apparmor-utils` перед своей основной работой разбирают
 (парсят) **все** файлы в `/etc/apparmor.d/`, включая ещё сломанный `k8s-106-broken-profile`
-из задания 8, и падают с ошибкой парсера на чужом файле. Правьте флаг `complain` в файле
+из задания 9, и падают с ошибкой парсера на чужом файле. Правьте флаг `complain` в файле
 профиля напрямую (`sed`) и перезагружайте именно ЭТОТ файл через `apparmor_parser -r` -
 этот бинарник, в отличие от `aa-enforce`, разбирает только переданный ему файл.
 </details>
@@ -137,8 +139,8 @@ ls -la /opt/lab106-fixtures/
 ---
 | **3** | **Localhost AppArmor Pod и блокировка записи** |
 | :---: | :--- |
-| Что делаем | Создайте namespace `security-106` и Pod `apparmor-writer`. Pod должен выбрать label ноды из инфраструктуры, отключить automount ServiceAccount token и на уровне Pod задать `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Используйте `busybox:1.36`, контейнер `app`, команду сна `sleep 3600` и `emptyDir`, смонтированный в `/work`. После запуска подтвердите эффективный profile командой `cat /proc/1/attr/current` (если интерфейс доступен), выполните разрешённую операцию чтения, например `cat /etc/hostname >/dev/null`, и затем попытайтесь записать файл в `/work`; операция обязана завершиться отказом. На ноде зафиксируйте AppArmor denial для profile/process из `journalctl -k | grep -i apparmor` либо `dmesg | grep -i apparmor`. |
-| Критерии приёмки | Pod запущен, использует именно Localhost profile и правильный nodeSelector; effective profile процесса показывает `k8s-106-deny-write` в enforce mode (когда `/proc/.../attr/current` доступен); разрешённая операция чтения в `/work` проходит, а checker independently пишет свой собственный уникальный (per-run) файл в `/work` и получает AppArmor-отказ. В kernel journal/audit log есть относящееся именно к ЭТОЙ попытке (по уникальному имени файла) событие `apparmor="DENIED"` с этим profile - это исключает false pass от устаревшего denial-события в журнале. |
+| Что делаем | Создайте namespace `security-106` и Pod `apparmor-writer`. Pod должен выбрать label ноды из инфраструктуры, отключить automount ServiceAccount token и на уровне Pod задать `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Используйте `busybox:1.36`, контейнер `app`, команду сна `sleep 3600` и `emptyDir`, смонтированный в `/work`. После запуска подтвердите эффективный profile командой `cat /proc/1/attr/current` (если интерфейс доступен), выполните разрешённую операцию чтения, например `cat /etc/hostname >/dev/null`, и затем попытайтесь записать файл в `/work`; операция обязана завершиться отказом. На ноде зафиксируйте AppArmor denial для profile/process из `journalctl -k \| grep -i apparmor` либо `dmesg \| grep -i apparmor`. |
+| Критерии приёмки | Pod запущен, использует именно Localhost profile и правильный nodeSelector; effective profile процесса показывает `k8s-106-deny-write` в enforce mode (когда `/proc/.../attr/current` доступен); разрешённая операция чтения (например, `cat /etc/hostname` или `ls /work`) проходит, а checker независимо записывает свой собственный уникальный (per-run) файл в `/work` и получает AppArmor-отказ. В kernel journal/audit log есть относящееся именно к ЭТОЙ попытке (по уникальному имени файла) событие `apparmor="DENIED"` с этим profile - это исключает false pass от устаревшего denial-события в журнале. |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
@@ -155,7 +157,7 @@ ls -la /opt/lab106-fixtures/
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
 
-`Seccomp: 2` в `/proc/1/status` означает "filter mode активен" (SECCOMP_MODE_FILTER) - это то, что вы должны увидеть. `Seccomp: 0` означало бы отсутствие seccomp filter вообще (`Unconfined`). Это самое простое задание из пяти в этой группе - если оно не проходит, скорее всего проблема в nodeSelector, а не в самом seccompProfile.
+`Seccomp: 2` в `/proc/1/status` означает "filter mode активен" (SECCOMP_MODE_FILTER) - это то, что вы должны увидеть. `Seccomp: 0` означало бы отсутствие seccomp filter вообще (`Unconfined`). Это самое простое из трёх seccomp-заданий (4-6) - если оно не проходит, скорее всего проблема в nodeSelector, а не в самом seccompProfile.
 </details>
 
 ---
@@ -185,7 +187,7 @@ BusyBox `unshare -m` после успешного `unshare(2)` дополнит
 самостоятельный `mount(2)` syscall (`mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL)`
 для принудительной private propagation - это поведение unshare, активное по умолчанию,
 если явно не передан `--propagation unchanged`, и даже тогда `mount()` всё равно
-вызывается, просто с нулевыми флагами). containerd's default AppArmor-профиль (`RuntimeDefault`,
+вызывается, просто с нулевыми флагами). Стандартный AppArmor-профиль containerd (`RuntimeDefault`,
 который получает Pod без явного `securityContext.appArmorProfile`) содержит `deny mount,`
 БЕЗ каких-либо условий на флаги - этот запрет действует независимо от capabilities и от
 seccomp. Поэтому `unshare -m true` может провалиться с `EPERM` из-за AppArmor ДАЖЕ когда
@@ -225,7 +227,7 @@ file capabilities), но не удаляет `SYS_ADMIN`, уже добавле�
 <details>
 <summary>💡 Подсказка к заданию 8</summary>
 
-Ключевое требование - Pod ДЕЙСТВИТЕЛЬНО не должен упоминать `seccompProfile` вообще, ни на уровне Pod, ни на уровне контейнера. Если вы скопируете манифест из задания 3 и просто забудете удалить это поле - тест не докажет то, что должен: что именно node-level `seccompDefault` (а не явное указание в манифесте) обеспечило `Seccomp: 2`.
+Ключевое требование - Pod ДЕЙСТВИТЕЛЬНО не должен упоминать `seccompProfile` вообще, ни на уровне Pod, ни на уровне контейнера. Если вы скопируете манифест из заданий 4–6 и просто забудете удалить это поле - тест не докажет то, что должен: что именно node-level `seccompDefault` (а не явное указание в манифесте) обеспечило `Seccomp: 2`.
 
 Проверка ориентируется на РЕАЛЬНО ПРИМЕНЁННУЮ конфигурацию kubelet, а не на текст файла на
 диске: `curl`/`kubectl get --raw /api/v1/nodes/<node>/proxy/configz | jq .kubeletconfig.seccompDefault`.
@@ -255,11 +257,14 @@ file capabilities), но не удаляет `SYS_ADMIN`, уже добавле�
 разделитель правил внутри блока - изучите вывод парсера, чтобы найти, какого символа не
 хватает и где именно.
 
-Всегда запускайте `apparmor_parser`, даже с `-Q`/`-d`, через `sudo` - несмотря на то, что
-эти режимы не загружают профиль в ЯДРО, сам парсер при каждом запуске всё равно пытается
-настроить policy cache в `/var/cache/apparmor`. Без привилегий это падает с "Failed
-setting up policy cache: Permission denied" ДО проверки синтаксиса, и вы получите
-обманчивую ошибку о правах вместо реальной синтаксической ошибки профиля.
+Запускайте `apparmor_parser` через `sudo`, даже с `-Q`/`-d`: на ноде лабы (apparmor 3.0.4,
+Ubuntu) без привилегий парсер при каждом запуске пытается настроить policy cache в
+`/var/cache/apparmor` и падает с "Failed setting up policy cache: Permission denied" ДО
+проверки синтаксиса - вы получите обманчивую ошибку о правах вместо реальной синтаксической
+ошибки профиля. Это проверено на самой ноде (в том числе на заведомо сломанном профиле).
+Если нужен запуск без `sudo`, добавьте `-K` (`--skip-cache`: никакого кэширования) -
+`apparmor_parser -Q -K` без привилегий доходит до разбора профиля и показывает реальную
+ошибку. Загрузка и reload (`-r`) в любом случае требуют привилегий.
 </details>
 
 ## Проверка

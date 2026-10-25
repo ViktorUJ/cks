@@ -4,7 +4,7 @@
 
 > **The problem.** A cluster is rarely compromised through a vulnerability in Kubernetes itself. More often, an attacker who already obtained access to a Pod or node finds an unsafe detail nearby - an unnecessary open port, weak component flag, or key readable by everyone. Individually these details go unnoticed; together they create a path to the API without verification, secrets in etcd, or privilege escalation on a node - and none are visible from application code.
 
-> **What comes next.** Network policies limit an attacker's path between workloads. Now we check how securely the control plane and nodes themselves are configured. The **CIS Kubernetes Benchmark** turns hardening guidance into verifiable items, and `kube-bench` automatically compares them with cluster configuration. This belongs to the **Cluster Setup** domain (CKS, 15%): you need not only find an unsafe setting but also fix it without losing cluster functionality.
+> **What comes next.** Network policies limit an attacker's path between workloads. Now we check how securely the control plane and nodes themselves are configured. The **CIS Kubernetes Benchmark** turns hardening guidance into verifiable items, and `kube-bench` automatically compares them with cluster configuration. This belongs to the **Cluster Setup** domain (CKS, 15%): you need not only to find an unsafe setting but also to fix it without losing cluster functionality.
 
 > **What you need from CKA.** This chapter does not repeat how `kubeadm`, static Pod objects, and PKI work. Before proceeding, recall [kubeadm and control-plane files](../../../cka/course/35/README.md) and [Kubernetes certificates](../../../cka/course/39/README.md).
 
@@ -86,7 +86,7 @@ Read a result in this order: record the recommendation ID, path or flag, effecti
 | `FAIL` | determine which component and configuration source the cluster uses, then remediate and verify |
 | `WARN` | read the recommendation text; confirm manually, document an exception, or remediate it |
 
-This cycle - run `kube-bench`, find the particular `FAIL`/`WARN` in your report, remediate it, and check again - is the workflow used throughout this chapter. Each cluster has different findings, based on deployment method, kubeadm distribution, component versions, and existing hardening. Therefore, the remainder of this chapter does not work through CIS recommendations in numeric order. It covers one section for each control-plane component and node (`kube-apiserver`, `kube-controller-manager`, `kube-scheduler`, `kubelet`, and `etcd`), which are the most common categories in real `kube-bench` reports, and explains how to remediate them safely rather than list every possible benchmark item.
+This cycle - run `kube-bench`, find the particular `FAIL`/`WARN` in your report, remediate it, and check again - is the workflow used throughout this chapter. Each cluster has different findings, based on deployment method, kubeadm distribution, component versions, and existing hardening. Therefore, the remainder of this chapter does not work through CIS recommendations in numeric order. It covers one section for each control-plane component and node (`kube-apiserver`, `kube-controller-manager` and `kube-scheduler`, `kubelet`, and `etcd`), which are the most common categories in real `kube-bench` reports, and explains how to remediate them safely rather than list every possible benchmark item.
 
 ## 07.3. Example: find and remediate a kube-apiserver FAIL
 
@@ -134,7 +134,7 @@ The check for disabling profiling exists for all three primary control-plane com
 - `1.3.2` - `kube-controller-manager`;
 - `1.4.1` - `kube-scheduler`.
 
-All three belong to target `master`, not `node`. For scheduler, for example:
+All three belong to target `master`, not `node`. For the scheduler, for example:
 
 ```text
 [FAIL] 1.4.1 Ensure that the --profiling argument is set to false (Automated)
@@ -222,7 +222,7 @@ If your installation passes a parameter as a flag, add it to the actually connec
 --protect-kernel-defaults=true
 ```
 
-Check sysctl before restarting. For Kubernetes 1.36, expected kubelet values are `1`, `0`, `10`, `1`, `1000000`, and `25000000` respectively. Do not change them blindly: first determine which sysctl source manages the node, then bring it to a consistent baseline, and only then restart kubelet.
+Check sysctl before restarting. For Kubernetes 1.36, the values that kubelet expects are `1`, `0`, `10`, `1`, `1000000`, and `25000000` respectively. Do not change them blindly: first determine which sysctl source manages the node, then bring it to a consistent baseline, and only then restart kubelet.
 
 ```bash
 # Kubernetes 1.36: parameters kubelet checks in setupKernelTunables().
@@ -285,7 +285,7 @@ The remediation states it directly: first determine the actual data directory wi
 
 Separate this requirement from the runtime identity of a particular installation. In a normal kubeadm control plane, static Pod objects run as `root` by default; with `RootlessControlPlane`, kubeadm uses a separate non-root identity (`kubeadm-etcd` for etcd). Before changing ownership, check the actual data directory, applicability of the selected CIS profile to your installation, and the required `etcd`/`etcd` account/group mapping on the host. Do not substitute the benchmark's literal requirement with the process user.
 
-If the environment must comply with this check and `etcd:etcd` mapping is valid for the host, apply minimal remediation to that directory and repeat exactly that check:
+If the environment must comply with this check and the `etcd:etcd` mapping is valid for the host, apply minimal remediation to that directory and repeat exactly that check:
 
 ```bash
 # Determine the actual --data-dir from the process/manifest.
@@ -433,7 +433,7 @@ The CIS check defines its own expected ownership (`etcd:etcd`), while `ps` in th
 <details>
 <summary>6. Which permissions suit a TLS private key, and why can a certificate be read more broadly?</summary>
 
-A private key is secret material, so it needs the most restrictive access possible; a typical baseline is mode `0600`. Owner is not universal: in a normal root-run kubeadm installation it is often `root:root`, while in a non-root control plane the key must belong to the service identity that really needs it. Changing ownership mechanically to `root:root` without checking runtime identity can prevent such a process from accessing its own key.
+A private key is secret material, so it needs the most restrictive access possible; a typical baseline is mode `0600`. The owner is not universal: in a normal root-run kubeadm installation it is often `root:root`, while in a non-root control plane the key must belong to the service identity that really needs it. Changing ownership mechanically to `root:root` without checking runtime identity can prevent such a process from accessing its own key.
 
 When a particular CIS control is checked, compare its literal requirement separately: for example, `cis-1.12` check `1.1.19` expects `root:root` for Kubernetes PKI. This is a requirement of that benchmark, not a universal rule for every runtime model.
 

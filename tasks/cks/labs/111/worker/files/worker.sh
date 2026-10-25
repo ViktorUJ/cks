@@ -401,6 +401,12 @@ spec:
 EOF
 done
 kubectl -n cks-111 wait --for=condition=Available deployment -l cks.io/task=1c --timeout=180s
+# Immutable root-owned snapshot of the four bootstrap-created Deployments (UID + images).
+# Students can scale them, but cannot substitute arbitrary unscanned images/objects.
+kubectl -n cks-111 get deployments -l cks.io/task=1c -o json > "$CHECKER/task1c-deployments.json"
+jq -e '.items | length == 4 and all(.[]; (.metadata.uid | length > 0) and
+  (.spec.template.spec.containers | length == 1) and
+  (.spec.template.spec.containers[0].image | test("@sha256:[a-f0-9]{64}$")))'   "$CHECKER/task1c-deployments.json" >/dev/null
 
 # ---------------------------------------------------------------------------
 # Task 5b fixture: package-version workload remediation. Discover, from the
@@ -492,7 +498,14 @@ CLEAN_CONTAINER=c3
 OFFENDING_IMAGE_1=${PKG_REF[${OFFENDING_TAGS[0]}]}
 OFFENDING_IMAGE_2=${PKG_REF[${OFFENDING_TAGS[1]}]}
 CLEAN_IMAGE=${PKG_REF[$CLEAN_TAG]}
+DEPLOYMENT_UID=$(kubectl -n cks-111 get deployment pkg-audit-app -o jsonpath='{.metadata.uid}')
 EOF
+
+# Every name=version pair present in BOTH offending images and absent from the clean one is a
+# valid answer (the two images share many OS packages, so the task has no single "right" package).
+comm -12 <(printf '%s\n' "${PKG_SBOM[${OFFENDING_TAGS[0]}]}") <(printf '%s\n' "${PKG_SBOM[${OFFENDING_TAGS[1]}]}") \
+  | grep -vxFf <(printf '%s\n' "${PKG_SBOM[$CLEAN_TAG]}") > "$CHECKER/task5b-valid-pairs.txt"
+grep -qxF "${TARGET_PACKAGE}=${TARGET_VERSION}" "$CHECKER/task5b-valid-pairs.txt"
 
 chown -R root:root "$CHECKER"
 chmod 0400 "$CHECKER"/*

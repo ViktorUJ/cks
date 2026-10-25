@@ -644,10 +644,10 @@ that is a cluster-administrator task, not part of the CNP you apply.
 
 > 🎯 Generate expected allowed and denied traffic, then observe Hubble flows with a namespace, verdict, or protocol filter.
 
-Before testing, make sure the Cilium agents are healthy. Commands are normally run on a worker
+Before testing, make sure the Cilium agents are healthy. Commands are normally run on a local
 machine with the `cilium` CLI available; the exact method of enabling Hubble depends on the Cilium installation.
 
-`hubble` is a separate binary, not part of the `cilium` CLI. Install it once on the worker
+`hubble` is a separate binary, not part of the `cilium` CLI. Install it once on the local
 machine by downloading the appropriate release from GitHub; platform-specific steps are in the official
 [Install the Hubble Client](https://docs.cilium.io/en/stable/observability/hubble/setup/#install-the-hubble-client)
 instructions. After installation, check the binary with `hubble help`.
@@ -849,7 +849,7 @@ policy order rather than trying to debug all layers at once.
 
 🧪 Lab 102 (Cilium NetworkPolicy L3/L4/L7): [tasks/cks/labs/102](../../labs/102/README.MD)
 
-🧪 Lab 115 (bootstrapping Cilium from scratch: kube-proxy replacement, WireGuard and SPIRE-based Mutual Authentication - advanced/production track, not part of the formal CKS Core exam requirement): [tasks/cks/labs/115](../../labs/115/README_RU.MD)
+🧪 Lab 115 (bootstrapping Cilium from scratch: kube-proxy replacement, WireGuard and SPIRE-based Mutual Authentication - advanced/production track, not part of the formal CKS Core exam requirement): [tasks/cks/labs/115](../../labs/115/README.MD)
 
 🎮 Cilium Hubble (documentation and interactive examples):
 [Hubble observability](https://docs.cilium.io/en/stable/observability/hubble/) ·

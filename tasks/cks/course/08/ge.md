@@ -20,7 +20,7 @@
 > აქ განვიხილავთ ამ მექანიზმების უსაფრთხო გამოყენებას საჯარო შესასვლელზე და არა
 > მათი საფუძვლების გამეორებას.
 
-> 🧠 TLS იცავს მხოლოდ კლიენტიდან TLS termination-მდე გზას; controller → Service → Pod — ცალკე საზღვარია.
+> 🧠 TLS იცავს მხოლოდ კლიენტიდან TLS termination-მდე გზას; controller → Service → Pod - ცალკე საზღვარია.
 
 ## 08.1. საფრთხის მოდელი: რატომ არ არის საკმარისი HTTP Ingress-ზე
 
@@ -31,7 +31,7 @@ Wi-Fi წერტილი ან შუალედური proxy შეძ�
 
 TLS იცავს არხს კლიენტიდან **TLS termination**-ის წერტილამდე - ingress controller-მდე.
 Controller წარადგენს სერტიფიკატს host-ის სახელისთვის, ასრულებს TLS handshake-ს,
-შიფრავს მოთხოვნას და მარშრუტიზაციას უკეთებს ჩვეულებრივი HTTP-ტრაფიკის backend-თან.
+გაშიფრავს მოთხოვნას და მარშრუტიზაციას უკეთებს ჩვეულებრივი HTTP-ტრაფიკის backend-თან.
 ამიტომ TLS გარე შესასვლელზე არ ნიშნავს, რომ controller -> Service -> Pod გზა
 ავტომატურად დაშიფრულია. მგრძნობიარე შიდაკლასტერული ტრაფიკისთვის საჭიროა ცალკე
 ზომები: TLS აპლიკაციაში, service mesh ან Cilium transparent encryption, რომელიც
@@ -61,7 +61,7 @@ flowchart TB
 Secret-ში: Secret ინახავს გასაღებსა და სერტიფიკატს, მაგრამ თავისთავად არ ჩართავს
 TLS-ს, სანამ Ingress მას არ მიმართავს.
 
-> 🎯 ტესტური certificate-ის გამოშვება მოცემული host-ისთვის SAN-ით, certificate/key-ის შედარება და `--cacert`-ის გამოყენება `-k`-ის ნაცვლად — TLS-ამოცანის პრაქტიკული მინიმუმია.
+> 🎯 ტესტური certificate-ის გამოშვება მოცემული host-ისთვის SAN-ით, certificate/key-ის შედარება და `--cacert`-ის გამოყენება `-k`-ის ნაცვლად - TLS-ამოცანის პრაქტიკული მინიმუმია.
 
 ## 08.2. სერტიფიკატი და გასაღები: ტესტური self-signed და production-მიდგომა
 
@@ -251,7 +251,7 @@ bare-metal, `hostNetwork`, port-forward ან ზოგიერთ ლოკ�
 ## 08.5. ingress-nginx: retired-controller და annotations-ის საზღვრები
 
 > **NGINX Ingress Controller retired.** 2026 წლის მარტიდან პროექტი `ingress-nginx` retired
-> არის და აღარ იღებს რელიზებსა და security-fix-ებს ([announcement](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/)).
+> არის და აღარ იღებს რელიზებსა და security-fix-ებს ([განცხადება](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/)).
 > CKS მოითხოვს სწორად კონფიგურირებულ Ingress-ს TLS-ით, მაგრამ საჯარო კომპეტენცია არ
 > იძლევა გარანტიას კონკრეტულ controller-ზე ან nginx-specific annotations-ზე. გამოცდაზე
 > ჯერ შეამოწმეთ ლაბორატორიის მიერ მოცემული controller; სინტაქსი `ingressClassName: nginx`
@@ -321,10 +321,10 @@ policy-ს domain-ებისა და subdomain-ებისთვის.
 
 ### Gateway API: მიმდინარე production-გზა
 
-Gateway API აღწერს სამ TLS-მოდელს: **edge termination** (HTTPS listener შიფრავს
+Gateway API აღწერს სამ TLS-მოდელს: **edge termination** (HTTPS listener გაშიფრავს
 ტრაფიკს Gateway-ზე), **TLS passthrough** (Gateway გადასცემს TLS-handshake-ს backend-ს
 termination-ის გარეშე) და TLS backend-მდე termination-ის შემდეგ (re-encryption).
-ბოლო მოდელისთვის `BackendTLSPolicy` Gateway API v1.4.0-დან — GA Standard Channel-ში —
+ბოლო მოდელისთვის `BackendTLSPolicy` Gateway API v1.4.0-დან - GA Standard Channel-ში -
 ადგენს SNI-სა და backend-ის certificate-ის შემოწმებას. კონკრეტული მოდელის მხარდაჭერა
 დამოკიდებულია Gateway controller-ზე.
 
@@ -383,7 +383,7 @@ backend-ისკენ.
 ### TLS passthrough: `TLSRoute`
 
 Backend-ისთვის, რომელიც თავად ასრულებს TLS-ს (მაგალითად, საჭიროებს საკუთარ
-certificate-ს ან mTLS-ს), Gateway არ შიფრავს კავშირს: listener-ს აქვს `protocol: TLS`
+certificate-ს ან mTLS-ს), Gateway არ გაშიფრავს კავშირს: listener-ს აქვს `protocol: TLS`
 და `tls.mode: Passthrough`, ხოლო route ირჩევა SNI-ის მიხედვით. `TLSRoute` არის GA
 Standard Channel Gateway API v1.5.0-ში. ქვემოთ მოცემული მინიმალური მაგალითი გადასცემს
 TLS-ს `app.example.test`-ისთვის Service `web-tls`-ს პორტ 443-ზე; controller-მა უნდა
@@ -467,7 +467,7 @@ flowchart TB
 TLS handshake-ის დროს, ამიტომ რეალიზაციას შეუძლია უარყოს თავად TLS-კავშირი
 HTTP-პასუხის გარეშე - controller-neutral მოდელი «ყოველთვის 400/403» აქ არ არსებობს.
 
-> 🔬 `auth-tls-*` — retired ingress-nginx API; გადატანადი მოდელია ვალიდური client certificate edge-ზე.
+> 🔬 `auth-tls-*` - retired ingress-nginx API; გადატანადი მოდელია ვალიდური client certificate edge-ზე.
 
 ### ingress-nginx: annotations `auth-tls-*`
 
@@ -628,7 +628,7 @@ ingress-nginx-ის - არ არის path/method authorization: ის მ
 
 ნუ გადაიტანთ `ssl-client-verify`-ს ingress-nginx-იდან Gateway API-ზე, როგორც
 საერთო contract-ს. Ingress-nginx აღწერს `ssl-client-*` headers-ს, ხოლო Gateway API
-standardizes-ს frontend certificate validation-ს, მაგრამ არა საერთო ფორმატს
+ადგენს frontend certificate validation-ის სტანდარტს, მაგრამ არა საერთო ფორმატს
 client identity-ის backend-ისთვის გადაცემისთვის. თუ backend-მა უნდა მიიღოს ეს
 identity, ცალკე შეამოწმეთ კონკრეტული Gateway implementation-ის მექანიზმი.
 
@@ -636,7 +636,7 @@ identity, ცალკე შეამოწმეთ კონკრეტუ�
 ჩანაცვლებად: სერტიფიკატის შემოწმება კლასტერის საზღვარზე ადასტურებს TLS-კლიენტის
 identity-ს და არა კონკრეტული მოქმედების ავტორიზაციას აპლიკაციის შიგნით.
 
-> 🎯 `curl --resolve` `--cacert`-თან ერთად ამოწმებს HTTPS-ს, ხოლო `openssl s_client -servername` — controller-ის მიერ გაცემულ certificate-ს.
+> 🎯 `curl --resolve` `--cacert`-თან ერთად ამოწმებს HTTPS-ს, ხოლო `openssl s_client -servername` - controller-ის მიერ გაცემულ certificate-ს.
 
 ## 08.7. შემოწმება: controller-neutral HTTPS, host და სერტიფიკატი
 
@@ -702,7 +702,7 @@ Certificate-ისთვის, რომელსაც ენდობა ს�
 შეამოწმოს ჯაჭვი და სახელი სისტემური სანდო CA-ების მეშვეობით. თუ გამოიყენება
 შიდა/private CA, გადაეცით სანდო CA bundle `--cacert <ca-bundle.pem>`-ის მეშვეობით
 და არ გამორთოთ verification `-k`-ის მეშვეობით. თუ `curl` აბრუნებს
-`SSL certificate problem`-ს, ნუ ავუვლით პრობლემას production-ში. შეამოწმეთ ვადის
+`SSL certificate problem`-ს, ნუ აუვლით გვერდს პრობლემას production-ში. შეამოწმეთ ვადის
 ამოწურვა, SAN, CA-ჯაჭვი, `secretName`, namespace და ის, რომ controller-მა
 ნამდვილად ხელახლა წაიკითხა განახლებული Secret.
 
@@ -799,7 +799,7 @@ Certificate-ისთვის, რომელსაც ენდობა ს�
 host/SNI/SAN-ის შედარება, დარწმუნება, რომ არჩეული controller და backend endpoints
 არსებობს, და წარმატებული HTTPS-გამოძახება `curl --resolve`-ის მეშვეობით. ყოველთვის
 შეამოწმეთ namespace, `secretName`, `hosts` და `ingressClassName` ან Gateway route.
-`308`, `ssl-redirect` და `force-ssl-redirect` — დეტალებია **მხოლოდ ingress-nginx-იან
+`308`, `ssl-redirect` და `force-ssl-redirect` - დეტალებია **მხოლოდ ingress-nginx-იან
 fixture-ში**: გამოიყენეთ ისინი მხოლოდ თუ ამოცანა ცხადად გაძლევთ ამ controller-ს
 და მოითხოვს შესაბამის topology-ს.
 
@@ -828,14 +828,14 @@ TLS იცავს არხს კლიენტიდან ingress controll
 <details>
 <summary>3. რა ტიპი და რა გასაღებები უნდა ჰქონდეს TLS Secret-ს Ingress-ისთვის?</summary>
 
-სტანდარტული ვარიანტია Secret ტიპით `kubernetes.io/tls` certificate-ით `tls.crt`-ში და private key-ით `tls.key`-ში. საიმედოა მისი შექმნა `kubectl create secret tls ... --cert=tls.crt --key=tls.key`-ის მეშვეობით. გადატანადი კონფიგურაციისთვის მთავარია სწორი `tls.crt`, `tls.key` და არჩეული Ingress controller-ის მხარდაჭერა.
+სტანდარტული ვარიანტია Secret ტიპით `kubernetes.io/tls` certificate-ით `tls.crt`-ში და private key-ით `tls.key`-ში. უფრო საიმედოა მისი შექმნა `kubectl create secret tls ... --cert=tls.crt --key=tls.key`-ის მეშვეობით. გადატანადი კონფიგურაციისთვის მთავარია სწორი `tls.crt`, `tls.key` და არჩეული Ingress controller-ის მხარდაჭერა.
 
 </details>
 
 <details>
 <summary>4. რატომ უნდა იყოს Ingress და მისი TLS Secret ერთსა და იმავე namespace-ში?</summary>
 
-Secret — namespaced ობიექტია, და Ingress `web`-იდან ვერ მიმართავს Secret-ს `default`-იდან ან სხვა namespace-იდან. ამიტომ `secretName` `spec.tls`-ში უნდა მიმართავდეს Secret-ს, შექმნილს იმავე namespace-ში, სადაც Ingress-ია.
+Secret - namespaced ობიექტია, და Ingress `web`-იდან ვერ მიმართავს Secret-ს `default`-იდან ან სხვა namespace-იდან. ამიტომ `secretName` `spec.tls`-ში უნდა მიმართავდეს Secret-ს, შექმნილს იმავე namespace-ში, სადაც Ingress-ია.
 
 </details>
 
@@ -849,7 +849,7 @@ ingress-nginx-ისთვის ბლოკი `spec.tls` ნაგული�
 <details>
 <summary>6. რა ორ შედეგს ველოდებით `curl`-გან HTTP-სა და HTTPS-ისთვის redirect-ის დაყენების შემდეგ?</summary>
 
-HTTPS-გამოძახება სწორი SNI-ითა და Host-ით, მაგალითად `curl --resolve`-ის მეშვეობით, უნდა წარმატებით მიაღწიოს backend-ს, მაგალითში — HTTP 200. ლაბორატორიული self-signed certificate-ისთვის გადაეცით ის, როგორც სანდო certificate, `--cacert tls.crt`-ის მეშვეობით; `-k` გამოიყენეთ მხოლოდ როგორც ცალკე diagnostic bypass, მისი წარმატება ადასტურებს კავშირს, მაგრამ არ ადასტურებს certificate-ის, SAN-ის ან ჯაჭვის სისწორეს. მხოლოდ ingress-nginx-იანი და `spec.tls`-იანი fixture-ისთვის ცალკე HTTP-მოთხოვნა მოსალოდნელად აბრუნებს redirect-ს, ჩვეულებრივ 308-ს, `Location`-ით; სტატუსი არ არის Ingress API-ის გადატანადი სემანტიკა.
+HTTPS-გამოძახება სწორი SNI-ითა და Host-ით, მაგალითად `curl --resolve`-ის მეშვეობით, უნდა წარმატებით მიაღწიოს backend-ს, მაგალითში - HTTP 200. ლაბორატორიული self-signed certificate-ისთვის გადაეცით ის, როგორც სანდო certificate, `--cacert tls.crt`-ის მეშვეობით; `-k` გამოიყენეთ მხოლოდ როგორც ცალკე diagnostic bypass, მისი წარმატება ადასტურებს კავშირს, მაგრამ არ ადასტურებს certificate-ის, SAN-ის ან ჯაჭვის სისწორეს. მხოლოდ ingress-nginx-იანი და `spec.tls`-იანი fixture-ისთვის ცალკე HTTP-მოთხოვნა მოსალოდნელად აბრუნებს redirect-ს, ჩვეულებრივ 308-ს, `Location`-ით; სტატუსი არ არის Ingress API-ის გადატანადი სემანტიკა.
 
 </details>
 
@@ -863,7 +863,7 @@ Certificate-ის public key-ის ჰეში მიიღება `openssl
 <details>
 <summary>8. რატომ არ შეიძლება `curl -k`-ის გამოყენება სწორი TLS-კონფიგურაციის მტკიცებულებად თუნდაც self-signed certificate-თან?</summary>
 
-`-k` გამორთავს certificate-ის შემოწმებას და ამიტომ გამოსადეგია მხოლოდ დიაგნოსტიკისთვის. თუ ლაბორატორიის self-signed certificate ლოკალურად ხელმისაწვდომია, სჯობს გამოიყენოთ `--cacert tls.crt`: ასე curl ენდობა სწორედ ამ certificate-ს, მაგრამ განაგრძობს TLS-ისა და host-ის სახელის შემოწმებას. Production-ში `-k` მალავს ნდობის, SAN-ის, ჯაჭვის შეცდომებს და შესაძლო შეცვლას; პრობლემა უნდა გასწორდეს და არა აიხვიოს.
+`-k` გამორთავს certificate-ის შემოწმებას და ამიტომ გამოსადეგია მხოლოდ დიაგნოსტიკისთვის. თუ ლაბორატორიის self-signed certificate ლოკალურად ხელმისაწვდომია, სჯობს გამოიყენოთ `--cacert tls.crt`: ასე curl ენდობა სწორედ ამ certificate-ს, მაგრამ განაგრძობს TLS-ისა და host-ის სახელის შემოწმებას. Production-ში `-k` მალავს ნდობის, SAN-ის, ჯაჭვის შეცდომებს და შესაძლო შეცვლას; პრობლემა უნდა გაასწოროთ და არა გვერდი აუაროთ.
 
 </details>
 

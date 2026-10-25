@@ -175,7 +175,7 @@ workload を段階的に read-only root に移行してください:
 
 1. staging で flag を付けたレプリカを起動し、log から `Read-only file system` エラーを収集する。
 2. write の**正確な**path と原因を見つける: cache、PID、log、generated config、trust store。
-3. write が正当なら、その ディレクトリだけを適切な volume に切り出す。1つの file のために広い `/` や
+3. write が正当なら、そのディレクトリだけを適切な volume に切り出す。1つの file のために広い `/` や
    `/app` をマウントしないこと。
 4. non-root ユーザーのための owner/mode と、可能な場合は `sizeLimit` を設定する。
 5. startup、readiness、workload traffic、Pod の restart を確認し、その後 policy を audit に、修正後
@@ -310,7 +310,7 @@ application の暗黙の前提であることが多いです。以下は典型�
 ### write failure の迅速な診断
 
 ```bash
-# まず spec とすべての securityContext を確認し、main コンテナだけではありません。
+# まず spec とすべての securityContext を確認します（main コンテナだけではありません）。
 kubectl get pod api-7d9d6f4d5c-x2m7q -n payments -o yaml
 
 # エラーは application log や crash の原因にしばしば表れます。
@@ -447,7 +447,7 @@ spec:
 ```
 
 この例では、application configuration は `/etc/api/config.yaml` から、TLS files は
-`/var/run/secrets/api-tls` から読み取られ、`/tmp` が唯一の scratch-場所です。`fsGroup: 10001` は
+`/var/run/secrets/api-tls` から読み取られ、`/tmp` が唯一の scratch space です。`fsGroup: 10001` は
 `defaultMode: 0440` と共に、group `10001` を持つ non-root process に Secret の読み取り権限を与え、
 world-readable にはしません。rollout 後、application の立場からこれを確認する必要があります:
 
@@ -689,7 +689,7 @@ spec:
 > VAP/resourceRules と CEL paths を追加するか、次のsectionの明示的に検証された Kyverno の autogen を
 > 使ってください。native VAP は自動的にこのcoverageを得るわけではありません。
 
-audit の清潔な期間の後、**Policy** ではなく **Binding** で action を `Deny` に置き換えます:
+audit で問題が検出されなかった期間の後、**Policy** ではなく **Binding** で action を `Deny` に置き換えます:
 
 ```bash
 kubectl apply -f require-readonly-rootfs.yaml
@@ -741,7 +741,7 @@ spec:
       allowPrivilegeEscalation: false
       capabilities:
         drop: ["ALL"]
-      # 唯一の意図的な違反 — readOnlyRootFilesystem がありません。
+      # 唯一の意図的な違反 - readOnlyRootFilesystem がありません。
 YAML
 }
 
@@ -955,7 +955,7 @@ destructive containment の前の調査を必要とします。
 `/var/log/<app>`、`/home/<user>`、生成される `/etc/<app>` を挙げています; 具体的な3つは log と
 application の動作から確立する必要があります。正当な各 path は writable な `/` や `/app` ではなく、
 目的、owner、size limit を持つ狭い named volume に切り出されます。不要な write（runtime install や
-file log など)は排除するか、stdout/stderr に置き換えます。
+file log など）は排除するか、stdout/stderr に置き換えます。
 
 </details>
 
@@ -1033,7 +1033,7 @@ network 経由で送信できるため、NetworkPolicy、最小限の ServiceAcc
 
 </details>
 
-## Practice
+## 演習
 
 🧪 ラボ112（Falco、audit-logs、コンテナのイミュータビリティ）:
 [tasks/cks/labs/112](../../labs/112/README_JP.MD)。そこで CKS に近い条件で runtime-制限の検知と

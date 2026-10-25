@@ -135,7 +135,7 @@ profiling 與 metrics 是不同的 endpoint。
 ## 09.3. 該在哪裡變更設定,以及如何安全地重新啟動
 
 安全編輯 control plane static Pod 的一般流程(backup、最小變更、健康檢查、失敗後
-還原)已在第 07 章說明——這裡不重複,而是補充本章特有的一項技巧,以及
+還原)已在第 07 章說明-這裡不重複,而是補充本章特有的一項技巧,以及
 kubelet/scheduler/controller-manager discovery 設定的細節,這些對下面 09.4 的
 TLS 與 cipher 修改特別重要。
 
@@ -220,7 +220,7 @@ sudo crictl logs "$(sudo crictl ps -aq --name kube-apiserver | head -n1)"
 對 kubelet,請先檢查 sysctl 值與設定,然後只重新啟動它。一般的
 `systemctl restart kubelet` 本身並不會停止已經在執行的 Pod 與容器:
 container runtime 會繼續執行它們,而 kubelet 啟動後會重新恢復 reconciliation。
-儘管如此,在 control-plane 上仍要逐節點變更 kubelet,並控制 Node heartbeat、
+儘管如此,在 control-plane 上仍要逐節點變更 kubelet,並監控 Node heartbeat、
 kubelet logs 與 `/readyz`:設定錯誤可能讓節點停在 `NotReady`,或妨礙後續對
 static Pod 的管理。
 
@@ -284,11 +284,11 @@ TLS 1.3 suites 通常不受 `--tls-cipher-suites` 控制:它們由 TLS 實作本
 
 對 Kubernetes 元件而言,flag 允許的字串值通常是 `VersionTLS12` 和
 `VersionTLS13` 這種形式。對 etcd 而言,值的名稱依 etcd 版本而異:目前的 help
-常使用 `TLS1.2`/`TLS1.3`。不要憑猜測在不同程式之間搬用值——變更前請檢查該版本
+常使用 `TLS1.2`/`TLS1.3`。不要憑猜測在不同程式之間搬用值-變更前請檢查該版本
 實際執行 binary 的 `--help`,而不是憑記憶或其他 release 的文件。
 
 在考試中,取得 flag 與允許值精確清單最快的方式,是問實際執行中的程序本身,而不是
-在網路上搜尋——所需版本的文件頁面可能無法存取,或需要花時間搜尋。如果元件在
+在網路上搜尋-所需版本的文件頁面可能無法存取,或需要花時間搜尋。如果元件在
 static Pod 中執行,且其 container 處於 `Running` 狀態,可以先使用
 `kubectl exec`。`Ready=False` 本身並不禁止 exec:exec 需要的是 running container
 與可用的 API/RBAC/streaming 路徑。Readiness 決定 Pod 的 `Ready` state,用於將
@@ -362,12 +362,12 @@ tlsMinVersion: VersionTLS12
 apiserver 的客戶端包括 kubelet、controller-manager、scheduler、kubectl、
 webhooks 與 automation。請先收集實際的 certificates/keys、監聽位址與客戶端;
 然後在測試節點或單一 HA 節點上套用變更。轉換到 `VersionTLS13` 時,請預期舊的
-TLS 1.2 客戶端會被拒絕——這不能證明伺服器有錯,但需要客戶端的遷移計畫。
+TLS 1.2 客戶端會被拒絕-這不能證明伺服器有錯,但需要客戶端的遷移計畫。
 
 TLS minimum 的檢查必須包含兩個不同的面向:
 
-1. protocol evidence——允許的版本能成功協商,而低於設定 minimum 的版本會被拒絕;
-2. application health——元件變更後仍保持可運作。
+1. protocol evidence-允許的版本能成功協商,而低於設定 minimum 的版本會被拒絕;
+2. application health-元件變更後仍保持可運作。
 
 對 apiserver,只需檢查 `6443` 上的 handshake;對 kubelet,`10250` 常在
 handshake 之後還需要 client certificate 與 authorization;對 etcd,
@@ -413,7 +413,7 @@ rm -f "$OUT"
 
 # apiserver,negative test:TLS 1.1 應被伺服器拒絕。
 # 單純用 "protocol|alert" 做 grep 無法區分伺服器端拒絕,和本機
-# OpenSSL/crypto policy 在送出 ClientHello 之前就先禁止——這兩個事實都需要證明。
+# OpenSSL/crypto policy 在送出 ClientHello 之前就先禁止-這兩個事實都需要證明。
 # 寫成函式:所有 non-PASS 分支都 return 1,讓 exit status 與文字 verdict 一致,
 # 不會破壞 automation(cmd && echo PASS、CI wrapper、$?)。
 check_tls11_rejected() {
@@ -462,7 +462,7 @@ check_tls11_rejected() {
 }
 check_tls11_rejected "$API" kubernetes
 
-# etcd:先用 mTLS 檢查允許的 TLS 1.2 handshake——與 apiserver 相同的模型:
+# etcd:先用 mTLS 檢查允許的 TLS 1.2 handshake-與 apiserver 相同的模型:
 # s_client 的 exit status、-verify_return_error,並檢查實際協商出的 cipher,
 # 不只看 Verify return code。
 OUT="$(mktemp)"
@@ -630,7 +630,7 @@ sha256sum /usr/bin/kubelet
 Cluster Setup。這些控制的實作請見[第 24-28 章](../24/tw.md);這裡只驗證
 Kubernetes 平台本身的 release artifacts 與 binaries。
 
-container image 的詳細檢查,包括 digest、signing 與 SBOM,這裡不再重複:那是
+container image 的詳細檢查,包括 digest、signing 與 SBOM,這裡刻意不再重複:那是
 Supply Chain Security 的內容,見[第 24-28 章](../24/tw.md)。
 
 ## 09.6. 實務情境:在造成損害前發現替換
@@ -661,7 +661,7 @@ sudo sha256sum --check /root/approved-kubelet.sha256
 版本與預期的 approved baseline,排除 inventory 錯誤或更新了錯誤檔案的可能;
 (2)透過 `cosign verify-blob` 以預期的 certificate identity/issuer 檢查
 release 的 provenance,並核對 package/release metadata;(3)尋找 authorized
-change——change record、rollout、package-manager 與 CI 的 logs——並核對時間、
+change-change record、rollout、package-manager 與 CI 的 logs-並核對時間、
 負責人與 digest;(4)與先前已知良好的 baseline 比較,並確認其他節點上的 scope。
 不要透過改動參考 hash 來「修正」不一致。
 
@@ -789,7 +789,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 - **Drift detection。** 定期執行 `kube-bench`,檢查 effective process args
   與設定。對 kubelet,任何 `10255` 的 listener 都需要 alert。對 etcd,
   `2379/2380` 本身出現 `LISTEN` 是正常的:alert 是針對偏離經核准的
-  bind/exposure baseline 而建立的——例如意外的介面或程序、來自不允許網路的
+  bind/exposure baseline 而建立的-例如意外的介面或程序、來自不允許網路的
   存取、缺少必要的 mTLS/firewall,或其他與叢集拓樸不符的 drift。
 - **可驗證的交付。** Pipeline 檢查 binary 的 keyless signature/certificate
   是否符合預期 identity/issuer,並用 SHA-256 做 integrity check,另外保存
@@ -830,7 +830,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   才固定 suites 清單,並與 certificate key algorithm 及客戶端一起檢查。
 - `cosign verify-blob` 搭配預期的 certificate identity/issuer 驗證
   Kubernetes binary 的來源;`sha256sum --check` 另外將位元組與受信任的
-  checksum 比較。Image digest、signing 與 SBOM 屬於 Supply Chain Security——
+  checksum 比較。Image digest、signing 與 SBOM 屬於 Supply Chain Security-
   第 24-28 章。
 - hardening 的證明包括 active arguments、對危險行為的否定測試、TLS
   handshake、control plane 的健康狀態,以及再次執行的 `kube-bench`。
@@ -852,13 +852,13 @@ service;將 backup 存放在 `/etc/kubernetes/manifests` 之外;只做一次變�
 壓力下很容易憑記憶帶錯格式。如果你對所安裝版本的確切值有疑慮,透過執行中
 binary 本身的 `--help` 檢查(09.4 的方法)會比上網搜尋更快。變更後請等待
 static Pod 重新建立,並證明兩個方向:允許的版本能通過 handshake,而低於
-minimum 的版本會被拒絕——正是這一點,而不只是成功的 `/readyz`,才能證明
+minimum 的版本會被拒絕-正是這一點,而不只是成功的 `/readyz`,才能證明
 policy 已生效。
 
 **在實際工作中。** 元件強化是平台契約的變更,不是一次性的 CIS 打勾項目。
 它需要客戶端 inventory、IaC source of truth、rolling 導入與 telemetry。
 digest 與 provenance 的檢查,把信任從可變的 artifact 名稱轉移到具體的
-位元組上,但只有搭配受保護的來源、簽章與存取控制才有效。
+位元組上,但只有搭配受保護的來源、簽章與 admission control 才有效。
 
 ## 09.12. 自我檢查問題
 
@@ -972,13 +972,13 @@ SHA-256 確認的是與所選 digest 位元組相符,但若 digest 是與同一�
    的 workload 建立 `hostNetwork: true` 的 Pod,以及為什麼一般 Kubernetes
    `NetworkPolicy` 不能被視為 host-network/node traffic 的可移植 firewall
    (第 04 章與第 05 章是同一領域中不同的章節,但請檢查自己是否混淆了層級)?
-4. **混合任務。** 拿第 08 章的 Secure Ingress with TLS 為例,說明如果 backend
+4. **混合任務。** 拿第 08 章的 Secure Ingress 搭配 TLS 為例,說明如果 backend
    Pod 沒有 NetworkPolicy 會發生什麼:如果 TLS 在 Ingress 上終止,而 Ingress
    到叢集內 Pod 的流量不受限制,會出現什麼樣的繞過?
 5. 不看提示,說出你會用來檢查節點上 platform binary 的 sha256/簽章的命令
    (第 09 章),並說明為什麼綁定到具體的 release-artifact digest,比透過
    `latest` 這類可變版本連結下載更可靠(這是與 container image tag/digest
-   不同的另一種身分模型——這裡談的是來自 dl.k8s.io 的 release binary,不是
+   不同的另一種身分模型-這裡談的是來自 dl.k8s.io 的 release binary,不是
    container registry)。
 
 如果任務 4 造成困難,請一起回到第 04 章與第 08 章,而不是分開複習。

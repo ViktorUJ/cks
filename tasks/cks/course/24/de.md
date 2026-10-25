@@ -1,15 +1,15 @@
 [Русская версия](ru.md) · [Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
-# Kapitel 24. Minimierung der Base Image
+# Kapitel 24. Minimierung des Base Images
 
 > **Das Problem.** Nach einem RCE liefert eine vollständige Runtime-Image dem Angreifer nicht nur den
 > Anwendungsprozess, sondern auch shell, package manager, compiler, source und überflüssige libraries.
 > Jede dieser Komponenten fügt ein CVE hinzu oder ein fertiges Werkzeug zum Herunterladen von payload,
-> für reconnaissance und persistence. Gelangt der gesamte builder in die final image, wiederholt sich
+> für reconnaissance und persistence. Gelangt der gesamte builder in das finale image, wiederholt sich
 > das Risiko auf jedem node, der dieses artifact herunterlädt und ausführt.
 
 > **Was folgt.** In [Kapitel 23](../23/de.md) haben wir den Traffic zwischen Pod verschlüsselt und die
-> Identity des Peer bestätigt. Jetzt schützen wir, was im Pod läuft: die Image und ihren build context.
+> Identity des Peer bestätigt. Jetzt schützen wir, was im Pod läuft: das Image und seinen build context.
 > Das ist die Domain **Supply Chain Security** von CKS (20 %). Eine kleinere und reproduzierbare Image
 > enthält weniger Komponenten, CVE und fertige Werkzeuge für den Angreifer, ersetzt aber selbst nicht
 > SBOM, Signatur, policy und scanning - diese folgen in den Kapiteln 25-28.
@@ -17,15 +17,15 @@
 > **Was Sie aus CKA wissen müssen.** Die Grundbegriffe image, Dockerfile, layers, tags und multi-stage
 > build werden in [CKA-Kapitel 23](../../../cka/course/23/de.md) behandelt, `runAsNonRoot`, capabilities
 > und read-only root filesystem in [CKA-Kapitel 20](../../../cka/course/20/de.md). Hier wenden wir diese
-> auf die Supply-Chain-Bedrohung an: Wir machen die Image nicht nur klein, sondern schließen Überflüssiges
+> auf die Supply-Chain-Bedrohung an: Wir machen das Image nicht nur klein, sondern schließen Überflüssiges
 > aus dem final artifact aus.
 
 > 🧠 Eine minimale final image reduziert CVE und post-exploitation tools, ersetzt aber nicht RCE-Schutz, `SecurityContext`, Netzwerk oder detection.
 
-## 24.1. Bedrohungsmodell: Überflüssiges in der Image wird zur Fähigkeit des Angreifers
+## 24.1. Bedrohungsmodell: Überflüssiges im Image wird zur Fähigkeit des Angreifers
 
-Eine Image ist Teil des ausgelieferten software artifact. Alles, was in ihren final stage gelangt,
-gelangt auf jeden node, der die Image herunterlädt: package manager, shell, compiler, source, test
+Ein Image ist Teil des ausgelieferten software artifact. Alles, was in seinen final stage gelangt,
+gelangt auf jeden node, der das Image herunterlädt: package manager, shell, compiler, source, test
 keys, layer-Historie und transitive libraries. Eine Schwachstelle in jeder dieser Komponenten ist ein
 zusätzliches CVE; ein utility wie `curl`, `wget` oder `sh` ist ein fertiges Werkzeug für Aktionen nach
 der Kompromittierung der Anwendung.
@@ -67,13 +67,13 @@ tatsächlich benötigt.
 
 ## 24.2. `scratch`, distroless und Alpine: Runtime nach Bedarf wählen
 
-Die base image legt fest, welche Dateien vor `COPY` existieren. Der final stage muss dem builder nicht
+Das base image legt fest, welche Dateien vor `COPY` existieren. Der final stage muss dem builder nicht
 ähneln. Wählen Sie sie erst, nachdem Sie verstanden haben, ob das artifact ein statisches Binary ist, ob
 ein language runtime benötigt wird und ob Diagnose oder native libraries erforderlich sind.
 
 | Runtime base | Inhalt | Gut geeignet für | Einschränkungen und Risiko |
 |---|---|---|---|
-| `scratch` | leere base image: in der Image selbst gibt es keine Runtime-Dateien | statisches Go/Rust/C++ Binary, das keine fehlenden Runtime-libraries benötigt | keine shell, kein CA bundle, keine timezone data und kein dynamic loader; Kubernetes/Runtime stellt dem Pod meist `/etc/resolv.conf` bereit, doch die Anwendung muss dennoch einen kompatiblen DNS resolver und benötigte Runtime-Daten mitbringen |
+| `scratch` | leere base image: im Image selbst gibt es keine Runtime-Dateien | statisches Go/Rust/C++ Binary, das keine fehlenden Runtime-libraries benötigt | keine shell, kein CA bundle, keine timezone data und kein dynamic loader; Kubernetes/Runtime stellt dem Pod meist `/etc/resolv.conf` bereit, doch die Anwendung muss dennoch einen kompatiblen DNS resolver und benötigte Runtime-Daten mitbringen |
 | distroless | nur ausgewählter Runtime/libraries, ohne shell und package manager | Go/Java/Node/Python-Anwendungen, wenn ein minimal unterstützter Runtime nötig ist | gewöhnliches `kubectl exec -- sh` ist unmöglich; Debugging über logs, metrics und `kubectl debug` |
 | Alpine | minimales Linux mit BusyBox und `apk` | Anwendung oder Diagnose, die tatsächlich shell/packages benötigt | shell und package manager bleiben erhalten; `musl` statt glibc kann mit native dependency inkompatibel sein |
 
@@ -111,7 +111,7 @@ Sie zusätzlich den immutable digest, den Ihre registry ermittelt und geprüft h
 registry.example.com/payments/api:1.4.2@sha256:<geprüfter-64-Zeichen-digest>
 ```
 
-Der digest wird nach der Prüfung der Image in GitOps/manifest eingetragen, nicht aus einem beliebigen
+Der digest wird nach der Prüfung des Images in GitOps/manifest eingetragen, nicht aus einem beliebigen
 Post übernommen. Der tag ist für Menschen bequem, der digest garantiert die Bytes, die gescannt und
 signiert wurden. In Kubernetes wird derselbe Wert in `image:` angegeben.
 
@@ -157,8 +157,8 @@ Eine numerische UID/GID erlaubt dem Runtime, den Prozess ohne Benutzereintrag in
 starten, garantiert aber nicht die Funktionsfähigkeit der Anwendung: Sie kann user- oder group-lookup,
 `HOME`, timezone data, CA bundle, NSS oder andere Runtime-Dateien benötigen.
 
-`USER` in der Image ist die erste Barriere: Der Prozess ist standardmäßig nicht root, auch bei lokalem
-`docker run`. Verankern Sie dies in Pod-level policy und SecurityContext, damit der Konsument der Image
+`USER` im Image ist die erste Barriere: Der Prozess ist standardmäßig nicht root, auch bei lokalem
+`docker run`. Verankern Sie dies in Pod-level policy und SecurityContext, damit der Konsument des Images
 die Entscheidung nicht durch ein zufälliges manifest aufhebt:
 
 ```yaml
@@ -183,7 +183,7 @@ spec:
         drop: ["ALL"]
 ```
 
-`runAsNonRoot: true` erzeugt keinen Benutzer in der Image und korrigiert kein ownership von Dateien. Es
+`runAsNonRoot: true` erzeugt keinen Benutzer im Image und korrigiert kein ownership von Dateien. Es
 verhindert nur den Start, wenn der Runtime root erkennt. Stellen Sie sicher, dass Binary und Verzeichnisse,
 in die die Anwendung schreibt, für UID `65532` zugänglich sind; verlagern Sie bei
 `readOnlyRootFilesystem: true` temporäre Daten in ein `emptyDir`, statt ein writable root zurückzugeben.
@@ -195,7 +195,7 @@ in die die Anwendung schreibt, für UID `65532` zugänglich sind; verlagern Sie 
 Beide Befehle verwenden ein Dockerfile und einen build context. Docker arbeitet gewöhnlich über einen
 daemon; Podman ist daemonless und kann rootless laufen, was dort nützlich ist, wo der build keinen
 root-Zugriff auf den host Docker socket erhalten soll. Rootless Podman macht ein unsicheres Dockerfile
-nicht sicher: secret und überflüssige Dateien können trotzdem in die Image gelangen.
+nicht sicher: secret und überflüssige Dateien können trotzdem in das Image gelangen.
 
 ```bash
 # Docker: BuildKit wird für secret mount im nächsten Abschnitt benötigt.
@@ -224,7 +224,7 @@ modules/packages und die Quelle der Abhängigkeiten; lassen Sie den build nicht 
 mutable externen Repositories abhängen. Übergeben Sie secrets für private dependencies nur über
 BuildKit/Podman secret mounts.
 
-Verwenden Sie `--no-cache` nicht als dauerhafte „security-Prüfung": Es schaltet nur das cache ab,
+Verwenden Sie `--no-cache` nicht als dauerhafte „security-Prüfung“: Es schaltet nur das cache ab,
 erhöht Zeit und Traffic, macht Abhängigkeiten aber nicht reproduzierbar. Prüfen Sie anschließend den
 erzeugten digest vor der Veröffentlichung.
 
@@ -242,12 +242,12 @@ USER 65532:65532
 ENTRYPOINT ["/server"]
 ```
 
-> 🎯 `RUN rm` löscht kein secret aus einem vorherigen layer; verwenden Sie secret mount und `.dockerignore`, widerrufen Sie eine Lecke und bauen Sie die Image neu.
+> 🎯 `RUN rm` löscht kein secret aus einem vorherigen layer; verwenden Sie secret mount und `.dockerignore`, widerrufen Sie das geleakte secret und bauen Sie das Image neu.
 
 ## 24.4. Layers, secrets und build context
 
 Jede filesystem-ändernde Dockerfile-Instruktion kann einen layer erzeugen. Ein layer ist immutable: Wird
-ein secret in einem layer eines stage erstellt, der in die veröffentlichte Image eingeht, löscht
+ein secret in einem layer eines stage erstellt, der in das veröffentlichte Image eingeht, löscht
 `RUN rm /tmp/token` im nächsten layer dessen Bytes nicht aus dem unteren layer. Deshalb darf ein secret
 nicht über `COPY`, `ADD`, `ARG` oder `ENV` übergeben werden.
 
@@ -256,8 +256,8 @@ layers der final runtime image, wenn der final stage mit seinem eigenen `FROM` b
 `COPY --from` nur das benötigte artifact übertragen wird.
 
 Das macht eine unsichere Übergabe von credentials nicht automatisch sicher. Ein secret kann trotzdem
-über ein versehentlich kopiertes artifact, in eine separat veröffentlichte intermediate image oder in
-build logs in die final image gelangen. Wurde ein credential über `ARG`/`ENV` übergeben oder in einem
+über ein versehentlich kopiertes artifact in das finale image, in ein separat veröffentlichtes intermediate image oder in
+build logs gelangen. Wurde ein credential über `ARG`/`ENV` übergeben oder in einem
 filesystem layer gespeichert, kann es auch in build metadata, history oder cache des jeweiligen build
 stage verbleiben. Verwenden Sie für build-time credentials BuildKit/Podman secret mounts anstelle von
 `ARG`, `ENV`, `COPY` oder `ADD`.
@@ -305,9 +305,9 @@ podman build \
   -t registry.example.com/training/web:1.0.0 .
 ```
 
-Wurde ein secret bereits in einer Image veröffentlicht, reicht ein neues `RUN rm` nicht aus. Widerrufen
+Wurde ein secret bereits in einem Image veröffentlicht, reicht ein neues `RUN rm` nicht aus. Widerrufen
 und ersetzen Sie das secret sofort, entfernen/beschränken Sie den Zugriff auf das registry artifact und
-bauen Sie die Image dann aus einem sauberen Dockerfile mit neuem secret neu. Betrachten Sie das alte
+bauen Sie das Image dann aus einem sauberen Dockerfile mit neuem secret neu. Betrachten Sie das alte
 credential als kompromittiert.
 
 ### `.dockerignore` - Grenze des build context
@@ -343,7 +343,7 @@ Zertifikat in einem separaten Verzeichnis auf und kopieren Sie nur dieses. Trenn
 vom repository root, etwa `docker build -f docker/Dockerfile docker/`, wenn das Dockerfile nicht das
 gesamte Monorepo benötigt.
 
-### Layers reduzieren ohne schädliche „Optimierungen"
+### Layers reduzieren ohne schädliche „Optimierungen“
 
 Fassen Sie zusammengehörige install/cleanup-Schritte in einem `RUN` zusammen, damit das cache des
 package manager nicht in einem vorherigen layer verbleibt. Verschmelzen Sie aber nicht das gesamte
@@ -365,7 +365,7 @@ einfacher: den stage mit `apk`, compiler und cache über multi-stage build über
 
 ## 24.5. Inspektion: Größe, layers und Inhalt messen
 
-Nehmen Sie nach dem build nicht an, dass die final image minimal ist: Beweisen Sie es. `docker image ls`
+Nehmen Sie nach dem build nicht an, dass das finale image minimal ist: Beweisen Sie es. `docker image ls`
 zeigt die Gesamtgröße, erklärt aber nicht, welcher layer sie verursacht hat. `history`, `inspect` und
 `dive` helfen, Befehle, Größen und Dateiänderungen zu sehen.
 
@@ -391,16 +391,16 @@ Achten Sie in `dive` auf:
 
 - einen großen layer mit `COPY . .` - meist ist der context zu breit oder die Reihenfolge des Dockerfile
   falsch;
-- package cache, compiler, tests, `.git`, `.env`, private key oder `.npmrc` - Grund, Dockerfile/
+- package cache, compiler, tests, `.git`, `.env`, private key oder `.npmrc` - Grund, Dockerfile und
   .dockerignore zu korrigieren und ein gefundenes secret sofort zu rotieren;
-- „wasted bytes" nach `RUN install` und einem separaten `RUN rm` - die Löschung erfolgte spät, in einem
+- „wasted bytes“ nach `RUN install` und einem separaten `RUN rm` - die Löschung erfolgte spät, in einem
   neuen layer;
-- ein leeres oder auf `root` gesetztes `User` - das Dockerfile hat keinen non-root user festgelegt.
+- ein leerer oder auf `root` gesetzter `User` - das Dockerfile hat keinen non-root user festgelegt.
 
-`dive` sieht nur, was in der Image verfügbar ist. Es ersetzt keinen vulnerability scan, secret scan oder
+`dive` sieht nur, was im Image verfügbar ist. Es ersetzt keinen vulnerability scan, secret scan oder
 SBOM. In CI ist folgende Reihenfolge nützlich: build -> inspect/lint -> SBOM/scan -> push immutable
 digest -> sign/attest digest -> verify -> deploy/admission. Im üblichen Cosign/Sigstore-Workflow wird
-zuerst die Image veröffentlicht und ihr immutable digest ermittelt; anschließend signiert Cosign diesen
+zuerst das Image veröffentlicht und sein immutable digest ermittelt; anschließend signiert Cosign diesen
 digest und erstellt eine attestation in der registry; deployment/admission prüfen diese Verknüpfung. Das
 nächste Kapitel ergänzt SBOM, die Kapitel 26-28 Signatur, policy und scanners.
 
@@ -446,9 +446,9 @@ kubectl get pod minimal-api -o jsonpath='{.spec.securityContext.runAsNonRoot}{"\
 kubectl get pod minimal-api -o jsonpath='{.spec.containers[0].securityContext.allowPrivilegeEscalation}{"\n"}'
 ```
 
-Fügen Sie `busybox` nicht „zum Debuggen" zur production image hinzu: Das hebt einen Teil des Ziels der
+Fügen Sie `busybox` nicht „zum Debuggen“ zur production image hinzu: Das hebt einen Teil des Ziels der
 Minimierung auf. Verwenden Sie bei einem incident logs, metrics, trace, `kubectl describe` und einen
-temporären ephemeral debug container, isoliert von der production image:
+temporären ephemeral debug container, isoliert vom production image:
 
 ```bash
 # Erfordert RBAC-Berechtigung und Unterstützung von ephemeral containers im cluster.
@@ -472,7 +472,7 @@ darf nicht als dauerhafte Umgehung der fehlenden shell verwendet werden.
 | HTTPS funktioniert nicht in `scratch` | CA certificates fehlen | CA bundle in die Anwendung einbetten oder nur das benötigte öffentliche bundle aus einem separaten stage kopieren |
 | Pod startet nicht mit `runAsNonRoot` | image/manifest versucht UID 0 zu verwenden | `USER` im Dockerfile, ownership und explizite numerische UID festlegen; die Prüfung nicht umgehen |
 | `kubectl exec ... /bin/sh` funktioniert nicht | erwartete Abwesenheit von shell in distroless/scratch | logs/endpoint prüfen; zur Untersuchung `kubectl debug` verwenden |
-| secret in `dive`/history gefunden | credential kopiert, über `ARG` übergeben oder in einem späten layer gelöscht | secret widerrufen, ohne es neu bauen, BuildKit/Podman secret mount verwenden |
+| secret in `dive`/history gefunden | credential kopiert, über `ARG` übergeben oder in einem späten layer gelöscht | secret widerrufen, das Image ohne das secret neu bauen, BuildKit/Podman secret mount verwenden |
 | Docker und Podman erzeugten unterschiedliche Ergebnisse | unterschiedlicher builder/cache/platform oder nicht fixierte base image | platform bei Bedarf explizit festlegen, digest fixieren und final digest vergleichen |
 
 > 🏭 Pinned base/release digest, enger context, secret management, non-root Runtime, SBOM/scan/signature und admission; Debugging erfolgt in einer genehmigten ephemeral debug image.
@@ -483,33 +483,33 @@ darf nicht als dauerhafte Umgehung der fehlenden shell verwendet werden.
   artifact, Runtime-libraries und benötigte public data. Stages, dependencies und base images durchlaufen
   Review wie production-code.
 - **Versionen und digest werden fixiert.** `latest` wird per Linter/policy verboten. Release verknüpft
-  einen menschlichen tag mit einem immutable digest; derselbe digest durchläuft SBOM, scan, Signatur und
+  einen menschenlesbaren tag mit einem immutable digest; derselbe digest durchläuft SBOM, scan, Signatur und
   deployment.
-- **Non-root als defence in depth.** `USER` in der Image, `runAsNonRoot`/numerische UID im Pod und
-  admission policy verstärken einander. Fügen Sie `drop: ["ALL"]`, `allowPrivilegeEscalation: false` und
+- **Non-root als defence in depth.** `USER` im Image, `runAsNonRoot`/numerische UID im Pod und
+  admission policy verstärken einander. Man fügt `drop: ["ALL"]`, `allowPrivilegeEscalation: false` und
   read-only root hinzu, wenn die Anwendung kompatibel ist.
 - **Secrets sind keine build arguments.** CI stellt für die Dauer des build ein short-lived credential
   aus; BuildKit/Podman secret mounts, scoped registry permissions und `.dockerignore` verringern das
-  Leckrisiko. Jede Lecke in einem layer bedeutet Rotation, nicht nur einen neuen build.
+  Leckrisiko. Jedes Leck in einem layer bedeutet Rotation, nicht nur einen neuen build.
 - **Debugging ist vom Runtime getrennt.** Observability und genehmigte ephemeral debug images ersetzen
-  die shell innerhalb der application image. So bleibt das production artifact in CI und im cluster
+  die shell innerhalb des application images. So bleibt das production artifact in CI und im cluster
   identisch.
 - **Minimierung ist Teil der pipeline.** Teams messen image size und layer composition, führen beim
-  Review `dive` aus, betreiben SBOM/scan/sign in CI und bauen die Image bei einem base-Update periodisch
-  neu. Eine kleine Image befreit nicht von der Reaktion auf CVE.
+  Review `dive` aus, betreiben SBOM/scan/sign in CI und bauen das Image bei einem base-Update periodisch
+  neu. Ein kleines Image befreit nicht von der Reaktion auf CVE.
 
 ## 24.8. Mini-Glossar
 
 - **Attack surface (Angriffsoberfläche)** - Komponenten, Dateien und Schnittstellen, die eine
   Schwachstelle enthalten oder bei einem Angriff genutzt werden können.
-- **Base image** - die Image in der `FROM`-Instruktion, die den anfänglichen filesystem stage festlegt.
+- **Base image** - das Image in der `FROM`-Instruktion, die den anfänglichen filesystem stage festlegt.
 - **Build context** - Dateien, die an den builder übergeben werden; wird durch `.dockerignore`
   eingeschränkt.
 - **distroless** - minimale Runtime-Image ohne package manager und gewöhnlich ohne shell.
 - **`scratch`** - leere base image ohne filesystem; geeignet für statische artifacts.
 - **Multi-stage build** - Dockerfile mit getrennten build- und Runtime-stages, verbunden durch
   `COPY --from=`.
-- **Layer** - unveränderliche Änderung des filesystem der Image; das Löschen in einem neuen layer
+- **Layer** - unveränderliche Änderung des filesystem des Images; das Löschen in einem neuen layer
   entfernt den Inhalt des alten nicht.
 - **Digest** - unveränderlicher SHA-256-Identifier eines konkreten image manifest/content.
 - **Rootless Podman** - Podman-Modus, in dem build/run von einem normalen Benutzer ausgeführt wird,
@@ -520,12 +520,12 @@ darf nicht als dauerhafte Umgehung der fehlenden shell verwendet werden.
 ## 24.9. Zusammenfassung des Kapitels
 
 - Überflüssige packages, shell, package manager, build tools und secrets vergrößern die attack surface
-  und die Folgen von RCE; eine kleine Image verringert das Risiko, ersetzt aber nicht die übrigen
+  und die Folgen von RCE; ein kleines Image verringert das Risiko, ersetzt aber nicht die übrigen
   security controls.
 - `scratch` eignet sich für ein statisches Binary, distroless bietet einen minimalen Runtime ohne shell,
   Alpine wählt man nur bei tatsächlichem Bedarf an seinem Linux-Userland und unter Berücksichtigung von
   `musl`.
-- Multi-stage build lässt in der final image nur das artifact zurück; builder, source und compiler
+- Multi-stage build lässt im finalen image nur das artifact zurück; builder, source und compiler
   gelangen nicht dorthin.
 - Base images, packages und application releases werden per Version fixiert, das production deployment
   durch einen geprüften immutable digest, nicht durch `latest`.
@@ -542,8 +542,8 @@ darf nicht als dauerhafte Umgehung der fehlenden shell verwendet werden.
 
 **Auf der Prüfung.** Sie müssen schnell `latest`, root user, ein secret im Dockerfile und einen
 überflüssigen runtime stage erkennen; `COPY --from=...`, `USER`, `.dockerignore`, die Befehle
-`docker build`/`podman build` schreiben und die Image prüfen. Die Aufgabe „warum funktioniert
-`kubectl exec ... sh` nicht?" für distroless prüft gewöhnlich das Verständnis des minimalen Runtime,
+`docker build`/`podman build` schreiben und das Image prüfen. Die Aufgabe „warum funktioniert
+`kubectl exec ... sh` nicht?“ für distroless prüft gewöhnlich das Verständnis des minimalen Runtime,
 nicht die Fähigkeit, die shell wieder einzurichten.
 
 **In der Praxis.** Diese Entscheidungen verringern den CVE-Backlog und die rollout-Zeit, doch das
@@ -553,8 +553,8 @@ admission policy - mit einer präzise definierten Image zu arbeiten.
 
 > ### 🔴 Sicht des Angreifers
 > **Asset:** secrets und credentials in build-zeitlichen Dateien, etwa `.npmrc` und token.
-> **Starting foothold:** Zugriff auf Dockerfile/build context oder die Möglichkeit, die gebaute Image zu untersuchen.
-> **Attacker objective:** ein in den intermediate layers der Image vergessenes credential finden.
+> **Starting foothold:** Zugriff auf Dockerfile/build context oder die Möglichkeit, das gebaute Image zu untersuchen.
+> **Attacker objective:** ein in den intermediate layers des Images vergessenes credential finden.
 > **Abuse path:** die layers der veröffentlichten final image untersuchen und das credential extrahieren, falls es in einem ihrer unteren layers erstellt oder versehentlich vom builder kopiert wurde. Separate builder-layers gehören nicht zu einer gewöhnlichen final multi-stage image, doch das credential kann in einer separat veröffentlichten intermediate image, in build logs oder cacheable filesystem output verbleiben, wenn das secret über `ARG`/`ENV`/`COPY` übergeben oder von einem build-Befehl in layer/artifact geschrieben wurde. Ein korrektes BuildKit `--mount=type=secret` speichert den Wert des secret nicht im final layer oder in der provenance attestation.
 > **Expected evidence:** final layers, copied artifacts und verfügbare build outputs enthalten kein credential; provenance enthält keine secret-Werte.
 > **Control:** BuildKit `--mount=type=secret`, `.dockerignore` für Dateien mit credentials und `COPY --from` nur des benötigten artifact; external cache nur ohne credential im cacheable filesystem output verwenden.
@@ -583,12 +583,12 @@ BusyBox/package manager und `musl` erfordern eine eigene Kompatibilitäts- und S
 </details>
 
 <details>
-<summary>3. Was genau verhindert `COPY --from=builder`, und was kann trotzdem versehentlich in die final image gelangen?</summary>
+<summary>3. Was genau verhindert `COPY --from=builder`, und was kann trotzdem versehentlich in das finale image gelangen?</summary>
 
 `COPY --from=builder` überträgt nur das explizit angegebene artifact, nicht das gesamte filesystem des
 builder, weshalb compiler, source, `git`, build cache und die meisten Abhängigkeiten nicht automatisch
 in den Runtime gelangen. Doch ein fehlerhaft breites `COPY`, eine hinzugefügte Runtime-Abhängigkeit oder
-ein secret, das sich bereits im kopierten Pfad befand, können trotzdem in die final image gelangen. Der
+ein secret, das sich bereits im kopierten Pfad befand, können trotzdem in das finale image gelangen. Der
 Inhalt wird mit `history`, `inspect` und `dive` geprüft.
 </details>
 
@@ -604,7 +604,7 @@ geprüften `@sha256:...` digest zu speichern.
 <details>
 <summary>5. Wie hängt `USER` im Dockerfile mit `runAsNonRoot` im Pod zusammen, und warum werden beide benötigt?</summary>
 
-`USER` macht den non-root Start bereits für die Image und für lokales `docker run` zum default;
+`USER` macht den non-root Start bereits für das Image und für lokales `docker run` zum default;
 numerische UID funktioniert auch ohne Eintrag in `/etc/passwd`. `runAsNonRoot` im Pod erzeugt keinen
 Benutzer und korrigiert kein ownership, verhindert aber, dass der Runtime einen bestimmten root-Benutzer
 startet. Der Pod kann außerdem explizit UID/GID festlegen und die Entscheidung durch admission policy
@@ -614,15 +614,15 @@ verstärken.
 <details>
 <summary>6. Warum löscht `RUN rm /secret` das secret nicht aus der image history? Welcher Mechanismus ist für private dependency credential anzuwenden?</summary>
 
-Wurde das secret in einem layer eines stage erstellt, der in die veröffentlichte Image eingeht, löscht
+Wurde das secret in einem layer eines stage erstellt, der in das veröffentlichte Image eingeht, löscht
 die Entfernung im nächsten layer seine Bytes nicht aus dem unteren layer/der history. Bei einem
-gewöhnlichen multi-stage build gelangt ein separater builder nicht von selbst in die final image, doch
+gewöhnlichen multi-stage build gelangt ein separater builder nicht von selbst in das finale image, doch
 `ARG`, `ENV`, `COPY` oder `ADD` sind unsicher: Das credential kann in das kopierte artifact, cache, logs
 oder eine separat veröffentlichte intermediate image gelangen. BuildKit/Podman `--mount=type=secret`
 gibt das secret temporär nur der build instruction und speichert dessen Wert nicht im final layer oder
 in der provenance attestation. Der build-Befehl kann das secret jedoch selbst ausgeben oder in ein
 erzeugtes artifact schreiben, weshalb der output trotzdem geprüft wird. Ist das secret bereits
-veröffentlicht, wird es widerrufen und rotiert, und die Image wird aus einem sauberen Dockerfile neu
+veröffentlicht, wird es widerrufen und rotiert, und das Image wird aus einem sauberen Dockerfile neu
 gebaut.
 </details>
 
@@ -662,12 +662,12 @@ non-zero `kubectl exec` ist kein Nachweis. Für incident diagnosis verwendet man
 Rootless Podman führt build/run als normaler Benutzer ohne root Docker daemon aus, wodurch die
 Notwendigkeit sinkt, der pipeline Zugriff auf den host Docker socket zu geben. Es verwendet dasselbe
 Dockerfile und denselben build context, verhindert aber nicht, dass secret und überflüssige Dateien in
-die Image gelangen. Deshalb bleiben `.dockerignore`, secret mounts und Dockerfile-Review weiterhin
+das Image gelangen. Deshalb bleiben `.dockerignore`, secret mounts und Dockerfile-Review weiterhin
 obligatorisch.
 </details>
 
 <details>
-<summary>11. **Flashback (Kapitel 14).** Die Minimierung der base image (dieses Kapitel: distroless, keine shell/kein package manager) und die Minimierung des host footprint (Kapitel 14: Deaktivierung überflüssiger Dienste/packages auf dem node) sind dasselbe Prinzip „weniger attack surface", angewendet auf zwei verschiedenen Ebenen. Wenn Ihnen vor einer Prüfung/einem incident wenig Zeit bleibt - welche dieser beiden Minimierungsebenen senkt das Risiko für einen **bereits kompromittierten** container schneller, und warum ersetzt keine die andere?</summary>
+<summary>11. **Flashback (Kapitel 14).** Die Minimierung des base images (dieses Kapitel: distroless, keine shell/kein package manager) und die Minimierung des host footprint (Kapitel 14: Deaktivierung überflüssiger Dienste/packages auf dem node) sind dasselbe Prinzip „weniger attack surface“, angewendet auf zwei verschiedenen Ebenen. Wenn Ihnen vor einer Prüfung/einem incident wenig Zeit bleibt - welche dieser beiden Minimierungsebenen senkt das Risiko für einen **bereits kompromittierten** container schneller, und warum ersetzt keine die andere?</summary>
 
 Für einen bereits kompromittierten container verändert die Minimierung der Runtime-Image die dem
 Angreifer verfügbaren Werkzeuge schneller: Es kann sofort keine shell, keinen package manager und

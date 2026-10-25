@@ -129,7 +129,7 @@ Cilium cifra el tráfico en el datapath de los nodes. Cuando un Pod en `node-a` 
 `node-b`, Cilium encapsula/cifra el paquete original, envía un paquete externo entre las
 IP de node, y Cilium en `node-b` verifica el peer, lo descifra y entrega el paquete original
 al Pod objetivo. Esto es transparente para el Kubernetes Service, DNS y la aplicación: no hace falta
-cambiar la URL o el port, ni agregar una biblioteca TLS.
+cambiar la URL o el puerto, ni agregar una biblioteca TLS.
 
 ```mermaid
 sequenceDiagram
@@ -151,7 +151,7 @@ El cifrado tampoco vuelve segura una aplicación insegura: no bloquea SQL inject
 no proporciona autorización de usuario ni limita un Pod comprometido. Estas tareas requieren application security,
 mTLS/authorization, RBAC y NetworkPolicy.
 
-Cilium admite dos backend comunes:
+Cilium admite dos backends comunes:
 
 | Propiedad | WireGuard | IPsec |
 |---|---|---|
@@ -374,7 +374,7 @@ packet loss. El mínimo práctico para una change request:
 - después de la rotación, compruebe la aplicación y physical capture en el par de nodes requerido.
 
 **No confunda la IPsec key con la CA de mTLS.** La IPsec key protege peers de transporte, mientras que
-el certificado mesh confirma workload identity. Su owner, interval de rotación, audit y blast
+el certificado mesh confirma workload identity. Su owner, intervalo de rotación, audit y blast
 radius pueden diferir.
 
 Esto completa la configuración de Cilium transport encryption. Istio se considera deliberadamente
@@ -386,7 +386,7 @@ esas comprobaciones se realizan por separado en la sección siguiente.
 
 > 🎯 Istio mTLS vincula un certificate con workload identity; distinga `PeerAuthentication: STRICT` de `DestinationRule` con `ISTIO_MUTUAL` y compruebe proxy/injection.
 
-> 🔬 **Upstream identity primitive.** Kubernetes v1.37 estabilizó Pod Certificates y ClusterTrustBundles. Proporcionan primitives X.509 a nivel de Kubernetes, pero no hacen automáticamente innecesario el identity plane de Istio/SPIFFE: signer, trust model y mesh enforcement son decisiones arquitectónicas independientes. Consulte [Delta de seguridad de Kubernetes v1.37](../APPENDIX_K8S_137_SECURITY_DELTA_ES.md).
+> 🔬 **Upstream identity primitive.** Kubernetes v1.37 estabilizó Pod Certificates y ClusterTrustBundles. Proporcionan primitives X.509 a nivel de Kubernetes, pero no hacen automáticamente innecesario el identity plane de Istio/SPIFFE: signer, trust model y mesh enforcement son decisiones arquitectónicas independientes. Consulte [Delta de seguridad de Kubernetes v1.37 (solo en ruso)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 23.6. Istio: sidecar, SPIFFE workload identity y `PeerAuthentication`
 
@@ -400,11 +400,11 @@ una identity verificable del Pod/ServiceAccount cliente y por sí solo no obliga
 solo mTLS. Además, Cilium node encryption no crea por diseño un outer tunnel para Pods
 en un mismo node.
 
-Istio resuelve otra parte de la tarea: los proxy de workload obtienen certificates, establecen mTLS
+Istio resuelve otra parte de la tarea: los proxies de workload obtienen certificates, establecen mTLS
 y verifican la identity del peer. `PeerAuthentication: STRICT` puede prohibir el tráfico inbound
 plaintext. Juntos funcionan así: **Istio protege y autentica la conexión workload-to-workload,
 Cilium protege adicionalmente el paquete en el segmento entre nodes no confiable**.
-`NetworkPolicy` sigue siendo la tercera capa: define qué flow está permitido en absoluto.
+`NetworkPolicy` sigue siendo la tercera capa: define qué flow está permitido en primer lugar.
 
 | Pregunta | Cilium WireGuard/IPsec | Istio mTLS |
 |---|---|---|
@@ -424,6 +424,7 @@ sensible fuera del mesh o cumplir un requisito de policy/compliance de cifrado e
 se necesitan solo cuando se aplican **ambos** objetivos: workload identity/mTLS **y** protección del
 underlay o tráfico non-mesh. Si la aplicación no requiere workload identity ni comportamiento compatible
 con mesh, Istio no se habilita automáticamente: primero se evalúan el threat model, la compatibilidad y el overhead.
+
 El sidecar de Istio (`istio-proxy`, Envoy) intercepta tráfico workload inbound/outbound.
 Istiod emite un certificado de workload a partir del ServiceAccount de Kubernetes; los proxies establecen
 mTLS y verifican la identity del peer. Workload identity tiene la forma de SPIFFE ID:
@@ -798,7 +799,7 @@ linkerd -n linkerd-demo viz stat deploy
 Como con Istio, compruebe no solo la anotación, sino también el container proxy real,
 el estado de identity/certificate y una solicitud correcta entre Pods meshed. Es importante
 distinguir mTLS automático de inbound estricto: Linkerd usa mTLS automáticamente entre workloads
-meshed, pero por defecto la autorización inbound acepta plaintext desde una fuente no meshed
+meshed, pero sin autorización inbound configurada acepta por defecto plaintext desde una fuente no meshed
 (`all-unauthenticated`). La mera presencia de mTLS automático no significa que el servidor
 acepte solo mTLS.
 
@@ -836,7 +837,7 @@ paquete externo cifrado en la physical NIC. Para demostrarlo, indique primero *d
 |---|---|---|
 | app container / loopback al proxy | a menudo HTTP plaintext | app↔proxy local puede ser plaintext |
 | veth/CNI antes del cifrado de node | el flujo interno original puede leerse | ciphertext mTLS entre proxies mesh |
-| physical NIC en node-a/node-b | UDP WireGuard o ESP IPsec, sin HTTP | WireGuard/IPsec externo; los payload HTTP y TLS no se pueden leer |
+| physical NIC en node-a/node-b | UDP WireGuard o ESP IPsec, sin HTTP | WireGuard/IPsec externo; los payloads HTTP y TLS no se pueden leer |
 | app de servidor después del proxy | plaintext, porque el proxy ya lo descifró | plaintext desde el proxy local a la app |
 
 Esta es la arquitectura normal de los puntos de terminación. El objetivo de Cilium es eliminar el payload
@@ -1179,7 +1180,7 @@ Antes del lab, es útil repasar los fundamentos de CKA: [Capítulo 30 de CKA - C
 
 Como continuación específica para mTLS nativo de Cilium (sin sidecar de Istio) - **lab
 115: Cilium Mutual Authentication con SPIRE** (nivel avanzado/producción, no forma parte
-del requisito formal del examen CKS Core): [tasks/cks/labs/115](../../labs/115/README_RU.MD).
+del requisito formal del examen CKS Core): [tasks/cks/labs/115](../../labs/115/README_ES.MD).
 
 Para una prueba independiente, use un clúster desechable y namespaces dedicados. No pruebe `STRICT`
 deshabilitando un sidecar de production ni use packet capture con payload sensible en un node compartido.

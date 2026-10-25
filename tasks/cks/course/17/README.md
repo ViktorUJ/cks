@@ -40,7 +40,7 @@ The filter is attached to a process and inherited by child processes. It grants 
 | AppArmor / SELinux | does the MAC policy permit the object and operation? | AppArmor denies reading `/etc/shadow` |
 | RBAC | can the identity call the Kubernetes API? | no `get secrets` |
 
-seccomp does not restrict networking by address or port, does not check Kubernetes RBAC, and does not make an image safe. host namespaces, hostPath, and excessive capabilities make the risk much higher. In particular, `privileged: true` always starts a container with seccomp `Unconfined`: Kubernetes does not apply a profile to such a container. For an ordinary workload, the baseline combination looks like this:
+seccomp does not restrict networking by address or port, does not check Kubernetes RBAC, and does not make an image safe. Host namespaces, hostPath, and excessive capabilities make the risk much higher. In particular, `privileged: true` always starts a container with seccomp `Unconfined`: Kubernetes does not apply a profile to such a container. For an ordinary workload, the baseline combination looks like this:
 
 ```yaml
 securityContext:
@@ -117,6 +117,7 @@ spec:
       capabilities:
         drop: ["ALL"]
 ```
+
 Check the stored specification, state, and effective process mode:
 
 ```bash
@@ -248,7 +249,7 @@ For a privileged container without a filter installed by the application itself,
 
 `Unconfined` disables this layer for a container. It can be used as a short exception, for example for a controlled comparison on a test node, but not as a permanent "solution" to `Operation not permitted`. Record the owner, removal deadline, and specific reason; then restore least privilege.
 
-Old manifests can use the `seccomp.security.alpha.kubernetes.io/pod` or `container.seccomp.security.alpha.kubernetes.io/<container>` annotation. This is a historical interface: since Kubernetes v1.25 these annotations are **non-functional** and do not assign a seccomp profile. Their presence in a modern cluster is an audit signal, not working compatibility; replace them with `securityContext.seccompProfile`. Do not mix the annotation and API field, especially with different values. After migration, test the new Pod and check its effective mode.
+Old manifests can use the `seccomp.security.alpha.kubernetes.io/pod` or `container.seccomp.security.alpha.kubernetes.io/<container>` annotation. This is a historical interface: since Kubernetes v1.27 these annotations are **non-functional** and do not assign a seccomp profile. Their presence in a modern cluster is an audit signal, not working compatibility; replace them with `securityContext.seccompProfile`. Do not mix the annotation and API field, especially with different values. After migration, test the new Pod and check its effective mode.
 
 > 🎯 Build a `Localhost` JSON profile in OCI seccomp format, load it on the required node, and confirm the container's effective mode.
 
@@ -620,7 +621,7 @@ The admission policy checks only YAML before the object is stored and does not c
 
 For ordinary stateless workloads, a platform team sets `seccompProfile.type: RuntimeDefault` in a chart or base manifest and denies `Unconfined` with admission policy. Protection then does not depend on whether each service owner remembered the field, while the manifest still documents the expected baseline explicitly. Together with non-root, `allowPrivilegeEscalation: false`, dropped capabilities, and AppArmor/SELinux, this reduces the impact of an application vulnerability exploit.
 
-Use a custom `Localhost` profile only for a workload with a clear syscall contract, for example an isolated batch worker or a sensitive service. Store the profile in a repository as a versioned artifact, test it on every architecture and runtime version, and have automation deliver it to the entire eligible node pool before rollout. The manifest refers to a profile version through relative `localhostProfile`, while scheduling is constrained to a trusted pool where the file is guaranteed to exist.
+Use a custom `Localhost` profile only for a workload with a clear syscall contract, for example an isolated batch worker or a sensitive service. Store the profile in a repository as a versioned artifact, test it on every architecture and runtime version, and have automation deliver it to the entire eligible node pool before rollout. The manifest refers to a profile version through a relative `localhostProfile`, while scheduling is constrained to a trusted pool where the file is guaranteed to exist.
 
 The change passes through a test node with representative traffic, a canary, and observation of startup, probes, error rate, and `SECCOMP`/runtime events. On a failure, the team first correlates Pod spec, node, `Seccomp: 2`, syscall, and kernel audit record, then makes a narrow justified profile or application change. Do not permanently switch a service to `Unconfined`, add `CAP_SYS_ADMIN`, or edit JSON on a running node: this hides the cause, creates differences between replicas, and weakens protection.
 

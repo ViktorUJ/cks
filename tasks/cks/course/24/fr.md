@@ -13,7 +13,7 @@
 > confirmé l'identité du peer. Nous protégeons maintenant ce qui s'exécute dans un Pod : l'image
 > et son build context. C'est le domaine **Supply Chain Security** de CKS (20 %). Une image plus
 > petite et reproductible contient moins de composants, de CVE et d'outils prêts à l'emploi pour
-> l'attaquant, mais elle ne remplace pas à elle seule SBOM, la signature, les policy ni le
+> l'attaquant, mais elle ne remplace pas à elle seule le SBOM, la signature, les policy ni le
 > scanning - ils suivront dans les chapitres 25-28.
 
 > **Ce qu'il faut connaître de CKA.** Les notions fondamentales d'image, Dockerfile, layers,
@@ -71,7 +71,7 @@ horaire et les dynamic libraries dont l'application a réellement besoin.
 
 ## 24.2. `scratch`, distroless et Alpine : choisir le runtime selon les besoins
 
-L'image de base détermine les fichiers qui existent avant `COPY`. Le final stage ne doit pas
+L'image de base détermine les fichiers qui existent avant `COPY`. Le final stage n'a pas à
 ressembler au builder. Choisissez-le après avoir déterminé si l'artifact est un binary statique,
 s'il nécessite un language runtime et si des diagnostics ou native libraries sont requis.
 
@@ -119,7 +119,7 @@ registry.example.com/payments/api:1.4.2@sha256:<digest-vérifié-de-64-caractèr
 dans une publication aléatoire. Un tag est pratique pour les humains ; un digest garantit les
 octets qui ont été scannés et signés. Kubernetes utilise cette même valeur dans `image:`.
 
-> 🎯 Utilisez un builder et un final stage distincts, avec `COPY --from=builder` uniquement du artifact terminé ; compiler, sources, cache et credentials ne doivent pas entrer dans le runtime.
+> 🎯 Utilisez un builder et un final stage distincts, avec `COPY --from=builder` uniquement de l'artifact terminé ; compiler, sources, cache et credentials ne doivent pas entrer dans le runtime.
 
 ## 24.3. Multi-stage build : le builder ne doit pas devenir le runtime
 
@@ -315,7 +315,7 @@ podman build \
 ```
 
 Si un secret a déjà été publié dans une image, un nouveau `RUN rm` seul ne suffit pas. Révoquez
-et remplacez immédiatement le secret, supprimez/restrictionnez l'accès à l'registry artifact,
+et remplacez immédiatement le secret, supprimez/restrictionnez l'accès au registry artifact,
 puis reconstruisez l'image depuis un Dockerfile propre avec le nouveau secret. Considérez
 l'ancien credential comme compromis.
 
@@ -325,7 +325,7 @@ Avant d'exécuter un Dockerfile, le client envoie le build context au builder. S
 `.dockerignore`, `COPY . .` peut inclure `.git`, le `.env` local, les SSH keys, les test
 artifacts et de grands répertoires. `.dockerignore` réduit le trafic, accélère les builds et
 empêche ces fichiers de devenir disponibles pour les instructions du Dockerfile. C'est une
-protection importante, mais pas un substitut à la secret management : un fichier nécessaire dans
+protection importante, mais pas un substitut au secret management : un fichier nécessaire dans
 le context peut encore être copié par erreur.
 
 ```dockerignore

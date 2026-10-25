@@ -251,7 +251,7 @@ spec:
 
 先確認 CNI 確實實作 `NetworkPolicy`。不論 CNI 能力如何，Kubernetes 都會接受 API 物件；若不支援，物件存在但流量不變。查閱已安裝 CNI 文件，建立受控測試。
 
-> 🎯 以對已確認 listener 的可控 TCP/UDP 允許和禁止請求，證明 policy 的效果。
+> 🎯 以對已確認 listener（使用 workload 參數）的可控 TCP/UDP 允許和禁止請求，證明 policy 的效果。
 
 > 🔬 對 `hostNetwork`、NAT、node traffic 和 ICMP 分別檢查規格邊界與 CNI edge cases。
 
@@ -260,7 +260,7 @@ spec:
 - **它是 Pod 流量過濾，不是完整 tenant 隔離。** NetworkPolicy 縮小網路路徑，但不保護 kernel、node、Kubernetes API/RBAC、Secret、admission 或 scheduler；需搭配 TLS、host firewall 和 CNI 特定工具。
 - **Local-node exception 由 Kubernetes 規格定義。** Pod 與其所在 node 之間的流量，不論 Pod 或 node IP，永遠允許；從本機 node ingress 到隔離 Pod 也允許。這是可攜規則，不是 CNI 差異。
 - **`hostNetwork` 和 host-aware controls 取決於 CNI。** 這類流量常看起來像 node IP，因此 `podSelector` 和 `namespaceSelector` 可能不如預期；請在自己的 CNI 驗證。
-- **所有協定沒有相同的可攜語義。** Core NetworkPolicy 為 TCP、UDP 和 SCTP 定義語義（SCTP 須有 CNI 支援）。ICMP、ARP 等協定的 allow/deny 由實作決定，因此 `ping` 不能可攜地證明 default-deny 生效或失效。
+- **並非所有協定都有相同的可攜語義。** Core NetworkPolicy 為 TCP、UDP 和 SCTP 定義語義（SCTP 須有 CNI 支援）。ICMP、ARP 等協定的 allow/deny 由實作決定，因此 `ping` 不能可攜地證明 default-deny 生效或失效。
 - **不要以內部路由為基礎建立可攜的 `ipBlock` 規則。** NAT 和 policy 順序取決於實作。對 Service `ClusterIP`、pod CIDR 或 SNAT 後位址，使用 Pod selector；`ipBlock` 僅留給有文件記錄的外部位址。
 - **已開啟的連線行為不一致。** policy 或 labels 變更後，CNI 可能中斷連線，也可能讓它持續到關閉。rollout、incident response 和測試時要考慮這點。
 

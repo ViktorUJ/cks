@@ -52,8 +52,8 @@ flowchart TB
 
 ნდობის ჯაჭვი იმდენადაა ძლიერი, რამდენადაც ძლიერია მისი ყველაზე სუსტი რგოლი. თუ CI-მ
 ჩანაცვლებული dependency მიღო, image არასწორი revision-იდან ხელმოწერით გამოეშვა ან CD-მ
-mutable tag განავრცო, Kubernetes-ის შემდგომ შემოწმებას საწყისი artifact-ის დაბრუნება არ
-შესძლო. ამიტომ ერთდროულად მნიშვნელოვანია ამოცნობა **რა** გაშვებულა (digest და SBOM),
+mutable tag განათავსა, Kubernetes-ის შემდგომ შემოწმებას საწყისი artifact-ის დაბრუნება არ
+შეუძლია. ამიტომ ერთდროულად მნიშვნელოვანია ამოცნობა **რა** გაშვებულა (digest და SBOM),
 **საიდან** მოდის ის (provenance) და **რომელი მოქმედებები** ნებადართული ყოველ გადასვლაზე.
 
 Supply chain-ზე ტიპური შეტევები:
@@ -68,7 +68,7 @@ Supply chain-ზე ტიპური შეტევები:
 - tag-ის ჩანაცვლება registry-ში: `app:stable` სხვა byte-ებზე მიმართავს, მიუხედავად
   იმისა, რომ Kubernetes-ის manifest არ შეცვლილა;
 - თავდამსხმელის წვდომა registry-ზე ან CD credentials-ზე და პირდაპირი deploy review-ის
-  გავლით;
+  გვერდის ავლით;
 - secret-ის გაჟონვა CI log-იდან, environment-იდან ან image layer-იდან, ამ credential-ის
   შემდგომი გამოყენებით ხელმოწერისთვის, push-ისთვის ან release-ის შესაცვლელად.
 
@@ -82,7 +82,7 @@ tag-ით, მაგრამ უცხო code-ით.
 2026 წლის 27 თებერვალს თავდამსხმელმა გამოიყენა დაუცველი workflow `pull_request_target`-ით,
 მიღო repository და organization დონის secrets, ხოლო 19 მარტს მოპარული credential-ით
 გაუშვა release workflow და გავრცელა მავნე Trivy `v0.69.4`. ძირეული პრობლემა თავად
-scanner-ში არ იყო, არამედ პრივილეგირებულ CI-ში, რომელმაც შეამოწმებელი PR-code გაუშვა და
+scanner-ში არ იყო, არამედ პრივილეგირებულ CI-ში, რომელმაც შეუმოწმებელი PR-code გაუშვა და
 ჰქონდა წვდომა ჭარბ secrets-ზე; service accounts-ის არასაკმარისმა იზოლაციამ და
 არაეფექტურმა rotation-მა შედეგი გააძლიერა. ეს არ ნიშნავს Trivy-ის ან Kubernetes Pod-ების
 ყველა მომხმარებლის კომპრომეტირებას, მაგრამ SolarWinds-ის გაკვეთილს ადასტურებს: ერთი
@@ -110,13 +110,13 @@ artifact-ში». ეს არც CVE-ის არარსებობის
 | ფორმატი | დანიშნულება და ძალა | სად უფრო ხშირად შეხვდება |
 |---|---|---|
 | **SPDX 2.3 JSON** | Linux Foundation-ის სტანდარტი software-ის შემადგენლობის, licenses-ის, packages-ის და relationships-ისთვის; კარგად შესაფერისი compliance-ისთვის და inventory-ის გაცვლისთვის | OCI artifacts, დისტრიბუციები, CI და Kubernetes ecosystem |
-| **CycloneDX** | Open Worldwide Application Security Project (OWASP)-ის ფორმატი, ორიენტირებული component analysis-სა და security tooling-ზე; ხერხემალია vulnerability management-ისთვის | scanners, dependency analysis, security dashboards |
+| **CycloneDX** | Open Worldwide Application Security Project (OWASP)-ის ფორმატი, ორიენტირებული component analysis-სა და security tooling-ზე; მოსახერხებელია vulnerability management-ისთვის | scanners, dependency analysis, security dashboards |
 
 ორივე ფორმატს ერთი image-ის აღწერა შეუძლია, მაგრამ მათი JSON-ველები განსხვავებულია.
 ქვემოთ ყველა SPDX-ის მაგალითი ეხება **SPDX 2.3 JSON**-ს: ამ schema-ში packages ჩვეულებრივ
 `.packages`-შია, ხოლო ვერსია - `versionInfo`-ში; CycloneDX-ში კომპონენტები
 `.components`-შია, ხოლო ვერსია - `version`-ში. ეს paths SPDX 3.0-ზე არ გადაატანოთ: მას
-სხვა data model გააქვს. არ ჩაწეროთ უნივერსალური `jq`-query, ფაილის ფორმატისა და ვერსიის
+სხვა data model აქვს. არ ჩაწეროთ უნივერსალური `jq`-query, ფაილის ფორმატისა და ვერსიის
 უცნობად: შედეგის არარსებობა შესაძლოა JSON-ის არასწორ path-ს ნიშნავდეს, არა package-ის
 არარსებობას.
 
@@ -133,8 +133,8 @@ SBOM-ს სიზუსტის საზღვრებიც აქვს:
   fix-ის სტატუსთან.
 
 **Runtime SBOM და სრული build ჯაჭვი - სხვადასხვა ინვენტარია.** Final multi-stage
-image-ის SBOM აღწერს იმას, რაც runtime-მდე მიაღწია; გაუთვალისწინდა builder stages-ის
-dependency-ები მასში ბუნებრივად არ ჩანს. `--scope all-layers` ანალიზიც კონეც image-ის
+image-ის SBOM აღწერს იმას, რაც runtime-მდე მიაღწია; გადაგდებული builder stages-ის
+dependency-ები მასში ბუნებრივად არ ჩანს. `--scope all-layers` ანალიზიც საბოლოო image-ის
 layers-ს მოიცავს, არა build-ის ყველა გამქრალ stage-ს. Supply chain-ის სრული inventory-ისთვის
 source, lock files, build attestations და provenance ესაჭიროება: package-ის
 არარსებობა final SBOM-ში არ ამტკიცებს, რომ ის build-ის პროცესში არ იყო.
@@ -153,9 +153,9 @@ digest აიღეთ, რომელიც თქვენმა registry-მ
 IMAGE='registry.example.com/payments/api:1.4.2@sha256:<64-hex-digest>'
 ```
 
-Release-ში დოკუმენტაციიდან შემთხვევითი digest არ ჩასვათ. თავდაპირველად აღებული digest
-გადამოწმებული image-ის სანდო registry-დან მიიღეთ და SBOM-ის გვერდით შეინახეთ.
-გენერატორს შესაძლოა private image-ისთვის registry credential ესაჭიროდეს; parole-ის
+Release-ში დოკუმენტაციიდან შემთხვევითი digest არ ჩასვათ. ჯერ მიიღეთ გადამოწმებული image-ის digest
+სანდო registry-დან და შეინახეთ ის SBOM-ის გვერდით.
+გენერატორს შესაძლოა private image-ისთვის registry credential ესაჭიროდეს; პაროლის
 shell history-ში ან commit-ში გატანა არ შეიძლება.
 
 > 🔬 `syft` SBOM-ს რამდენიმე ფორმატში აწარმოებს.
@@ -171,7 +171,7 @@ syft "$IMAGE" -o spdx-json > api.spdx.json
 syft "$IMAGE" -o cyclonedx-json > api.cyclonedx.json
 ```
 
-თუ reference multi-arch OCI index-ზე მიუთითებს, პლატფორმა ცალსახად აირჩიეთ.
+თუ reference multi-arch OCI index-ზე მიუთითებს, platform ცალსახად აირჩიეთ.
 Heterogeneous cluster-ისთვის ცალკე SBOM შექმენით და დაინდექსეთ ფაქტობრივად გამოყენებული
 ყოველი platform manifest-ისთვის; მის გვერდით ამ manifest-ის platform-ი და digest
 შეინახეთ, არა მხოლოდ index-ის digest:
@@ -219,7 +219,7 @@ JSON-ის. ის ცარიელ output-ს, registry-ის HTML-error-�
 software bill of materials-თან სამუშაოდ. ეს CKS-ის მნიშვნელოვანი პრაქტიკული
 ინსტრუმენტია: მისი დოკუმენტაცია გამოცდაზე დაშვებულია, ხოლო lab 111-ში SPDX 2.3 JSON-ის
 გენერაციისთვის გამოიყენება. აქტუალურ გარემოში ჯერ ხელმისაწვდომ flags-ს დაუკვირდით და
-syntax-ს არ იმხედვდით:
+syntax-ს არ გამოიცნოთ:
 
 ```bash
 bom generate --help
@@ -238,7 +238,7 @@ bom generate --image "$IMAGE" --format json -o sbom.spdx.json
 ```
 
 `--format json` ამ ბრძანებაში SPDX-ის JSON-წარმოდგენას ნიშნავს, არა CycloneDX-ს. ფაილს
-`*.cyclonedx.json`-ად არ დაარეკოთ: სახელს ფაქტობრივი ფორმატი უნდა ატყობინოს, რომ
+`*.cyclonedx.json`-ად არ დაარქვათ: სახელს ფაქტობრივი ფორმატი უნდა ატყობინოს, რომ
 შემდგომმა `jq`, scanner-მა და reviewer-მა სწორი schema შეარჩიონ. მიღებული ფაილი SPDX-ად
 გადაამოწმეთ და მოძებნილი packages დათვალეთ:
 
@@ -298,7 +298,7 @@ jq -r '
 
 თუ package ფაქტობრივად არსებობს, `name`, `versionInfo` და `SPDXID`-ის სტრიქონს
 დაინახავთ. თუ output ცარიელია, deployment ბრმად არ შეცვალოთ. თანმიმდევრობით
-გადაამოწმეთ: სწორი SBOM ხომ არ არჩეულა, ფორმატი ხომ არასწორი არაა, როგორ დაარეკა
+გადაამოწმეთ: სწორი SBOM ხომ არ არჩეულა, ფორმატი ხომ არასწორი არაა, როგორ დაარქვა
 generator-მა package და ხომ არ არის ის სხვა image/sidecar-ში.
 
 სახელის ნაწილით ძებნა საწყისი კვლევისთვის სასარგებლოა, მაგრამ რამდენიმე package-ს
@@ -325,7 +325,7 @@ jq -r '
 `purl` (package URL) სხვადასხვა ecosystem-იდან ერთსახელოვან packages-ის გარჩევაში
 ეხმარება. ნამდვილი გამოკვლევის დროს ticket-ში ეს დაფიქსირეთ: image digest, package-ის
 სახელი/version, SBOM-ის ფაილის სახელი და advisory/CVE. მაშინ სხვა ინჟინერს შედეგის
-გამეორება შესძლებია, ვიდრე «დაახლოებით ასეთი package»-ის სხვა rebuild-ში ძებნა.
+გამეორება შეეძლება და არა «დაახლოებით ასეთი package»-ის სხვა rebuild-ში ძებნა.
 
 კომპონენტის მოძებნის შემდეგ SBOM cluster-თან დააკავშირეთ. Image references, რასაც
 Pod-ები ფაქტობრივად იყენებენ, ასე ჩვენდება:
@@ -360,7 +360,7 @@ registry-ში დაუცველ artifact-ს არ აღმოფხვ�
 
 ## 25.5. CI/CD, artifact repositories, provenance და SLSA
 
-**CI** artifact-ს ატყუპებს, ტესტავს, სკანირებს და აქვეყნებს; **CD** უკვე მომზადებულ
+**CI** artifact-ს აწყობს, ტესტავს, სკანირებს და აქვეყნებს; **CD** უკვე მომზადებულ
 artifact-ს environments-ს შორის ავითარებს ან manifest-ს cluster-ში მოქმედს ხდის. მათ
 შორის საზღვრის გარეშე CI შეუმჩნევლად პრივილეგირებულ deploy shell-ად შეიძლება იქცეს.
 სასარგებლო role-ების გამიჯვნა: CI-ს staging repository-ში publish-ის შეზღუდული უფლება
@@ -443,7 +443,7 @@ SBOM-ისა და მთელი ჯაჭვის source/lock files-ი�
 - release build ephemeral/isolated runner-ში გაშვეთ, არა ერთობლივ სამუშაო მანქანაზე;
 - CI-ს short-lived credential მინიმალური უფლებებით მიაწოდეთ და publish-ის უფლება
   deploy-ის უფლებისგან გამიჯნეთ;
-- image, SBOM და provenance ატომურად გამოაცხადეთ, ყველაფერი immutable digest-თან
+- image, SBOM და provenance ატომურად გამოაქვეყნეთ, ყველაფერი immutable digest-თან
   მიბმული;
 - protected branches, required review და registry/CI-ის audit log გამოიყენეთ;
 - CD-ში digest ავითარეთ, ხელახალ build-ს სხვა environment-იდან არ გაშვათ.
@@ -454,7 +454,7 @@ platform შეარჩიეთ, index მისი manifest-მდე გა�
 მოძებნეთ; შემდეგ in-toto `subject.digest` გადაამოწმეთ. Docker attestation manifest-ს
 root index-ში ინახავს, მაგრამ მისი `subject` target platform manifest-ს უნდა
 მიუთითებდეს (ან მასში მდებარე ობიექტს). Single-platform image release-ისთვის release
-digest და platform-manifest digest დაემთხვევა, მაგრამ ეს ვარაუდი არ შეიძლება.
+digest და platform-manifest digest შეიძლება დაემთხვეს, მაგრამ ეს ვარაუდი არ შეიძლება.
 
 მინიმალური SLSA/in-toto provenance შესატყვის platform manifest-ს მიბმული `subject`-იან
 statement-ია. მაგალითად, სტრუქტურას ასეთი ფორმა ძალუძს:
@@ -501,7 +501,7 @@ image-დან რომლები?»-დან «რომელი digests 
 ამოკლებს. ეს **გვიან აღმოჩენისთვისაც** ესაჭიროება: build-ის ეტაპზე scanner-მა შესაძლოა
 პრობლემა ვერ ეპოვა, რადგან CVE ან affected versions-ის შესახებ ინფორმაცია ჯერ არ
 გამოქვეყნებულა. Scan-ის შედეგი შემოწმების მომენტისთვის ცოდნის ბაზას ასახავს და უკვე
-გაშვებულ image-ში მომავალი advisory-ების არარსებობას არ იძლევა.
+გაშვებულ image-ში მომავალი advisory-ების არარსებობის გარანტიას არ იძლევა.
 
 ამიტომ build pipeline-ის გარეთ **რეგულარულად ხელახლა შეადარეთ შენახული SBOM-ები
 განახლებულ CVE ბაზას**: გრაფიკის მიხედვით და მოულოდნელად ახალი მნიშვნელოვანი CVE-ის ან
@@ -576,7 +576,7 @@ repository-ით, base image-ის release notes-ითა და runtime imag
 ## 25.7. გადამოწმება: SBOM `bom`-ით და მოცემული package/version-ის ძებნა
 
 Lab 111-ში CKS-ის დავალებისთვის საჭირო სრულ მინიმუმს ვამოწმებთ: SBOM-ის გენერაცია
-`bom`-ით, დაჯერება, რომ ეს ვალიდური SPDX 2.3 JSON-ია, და მასში მოცემული
+`bom`-ით, იმაში დარწმუნება, რომ ეს ვალიდური SPDX 2.3 JSON-ია, და მასში მოცემული
 package/version-ის მოძებნა. ლაბორატორიის მიერ გაცემულ training image-ზე ან თქვენს
 ნებადართულ image-ზე იმუშავეთ; mutable `latest`-ს evidence-ად არ გამოიყენოთ.
 
@@ -586,7 +586,7 @@ IMAGE='<image-from-lab-or-registry>@sha256:<64-hex-digest>'
 # 1. SPDX 2.3 JSON-ის შექმნა Kubernetes SIGs bom-ით.
 bom generate --image "$IMAGE" --format json --output out.spdx.json
 
-# 2. SPDX 2.3 sanity-check-ის შესრულება და დაჯერება, რომ packages ცარიელი არაა.
+# 2. SPDX 2.3 sanity-check-ის შესრულება და იმაში დარწმუნება, რომ packages ცარიელი არაა.
 jq -e '
   .spdxVersion == "SPDX-2.3"
   and .SPDXID == "SPDXRef-DOCUMENT"
@@ -710,7 +710,7 @@ sanity-check-ით (სრული conformance-ისთვის - ცალ�
 - დაუცველი კომპონენტის ძებნა package-ს, ზუსტ version-სა და image digest-ს
   ითხოვს. SPDX-ისთვის ეს ჩვეულებრივ `.packages[].name` და `.versionInfo`-ია,
   CycloneDX-ისთვის - `.components[].name` და `.version`.
-- CI image, SBOM და provenance-ს შემოწმებადი digest-chain-ით უნდა გამოაცხადებდეს,
+- CI image, SBOM და provenance-ს შემოწმებადი digest-chain-ით უნდა აქვეყნებდეს,
   ხოლო CD - შერჩეულ digest-ს სანდო artifact repository-დან ხელახალი build-ის გარეშე
   ავითარებდეს.
 - SLSA v1.2 Build Track (L0-L3)-ს და Source Track (L1-L4)-ს გამიჯნავს; SBOM-ის
@@ -749,13 +749,13 @@ SBOM - კონკრეტული artifact-ის კომპონენ�
 <details>
 <summary>3. რატომ ვერ იქნება SBOM `app:1.4.2`-ისთვის digest-ის გარეშე გაშვებული image-ის შემადგენლობის მტკიცებულება?</summary>
 
-Tag ცვალებადია: `app:1.4.2`-ს SBOM-ის გენერაციის შემდეგ სხვა byte-ებზე გადამისამართება ძალუძთ. შემადგენლობის მტკიცებულება immutable `@sha256:...`-თან იბმის; multi-arch-ისთვის დამატებით არჩეული platform manifest და runtime evidence ფიქსირდება. სხვაგვარად SBOM ძველ manifest-ს შესაძლოა ეხებოდეს, ხოლო Pod-ი უკვე სხვა image-ს იყენებდეს.
+Tag ცვალებადია: `app:1.4.2`-ს SBOM-ის გენერაციის შემდეგ სხვა byte-ებზე გადამისამართება ძალუძს. შემადგენლობის მტკიცებულება immutable `@sha256:...`-თან იბმის; multi-arch-ისთვის დამატებით არჩეული platform manifest და runtime evidence ფიქსირდება. სხვაგვარად SBOM ძველ manifest-ს შესაძლოა ეხებოდეს, ხოლო Pod-ი უკვე სხვა image-ს იყენებდეს.
 </details>
 
 <details>
 <summary>4. რომელი JSON paths გამოიყენება package/version-ისთვის SPDX-სა და CycloneDX-ში?</summary>
 
-SPDX 2.3 JSON-ში კომპონენტები `.packages`-ში, ხოლო version `.versionInfo`-ში ინახება, მაგალითად `.packages[]`-ის ელემენტში. CycloneDX-ში `.components[]` და ველი `.version` გამოიყენება; ecosystems-ის გარჩევისთვის `.purl`-იც სასარგებლოა. ეს paths სხვა ფორმატზე ან SPDX 3.0-ზე მექანურად გადატანა არ შეიძლება.
+SPDX 2.3 JSON-ში კომპონენტები `.packages`-ში, ხოლო version `.versionInfo`-ში ინახება, მაგალითად `.packages[]`-ის ელემენტში. CycloneDX-ში `.components[]` და ველი `.version` გამოიყენება; ecosystems-ის გარჩევისთვის `.purl`-იც სასარგებლოა. ამ paths-ის სხვა ფორმატზე ან SPDX 3.0-ზე მექანიკურად გადატანა არ შეიძლება.
 </details>
 
 <details>
@@ -767,25 +767,25 @@ Syft-ისთვის `syft "$IMAGE" -o spdx-json > api.spdx.json` გამ�
 <details>
 <summary>6. რატომ არ არის მხოლოდ სახელით `ca-certificates-bundle`-ის ძებნა საკმარისი CVE-ის შესახებ გადაწყვეტილებისთვის?</summary>
 
-Advisory-ის შესახებ გადაწყვეტილება ზუსტ package-ს, მის version-ს, ecosystem/distribution-ს და fixed version-ის პირობებს ითხოვს, ხოლო სახელი რამდენიმე ვარიანტში შესაძლოა შეხვდეს. საჭიროა სახელის ძებნა `versionInfo`-სთან ერთად და SBOM-ის image digest-თან მიბმა. შემდეგ შედეგი advisory-სთან და runtime imageID-თან შედარდება, ვიდრე workload მხოლოდ სახელის დამთხვევის გამო წაშლა.
+Advisory-ის შესახებ გადაწყვეტილება ზუსტ package-ს, მის version-ს, ecosystem/distribution-ს და fixed version-ის პირობებს ითხოვს, ხოლო სახელი რამდენიმე ვარიანტში შესაძლოა შეხვდეს. საჭიროა სახელის ძებნა `versionInfo`-სთან ერთად და SBOM-ის image digest-თან მიბმა. შემდეგ შედეგი advisory-სთან და runtime imageID-თან შედარდება, და არა workload-ის წაშლა მხოლოდ სახელის დამთხვევის გამო.
 </details>
 
 <details>
 <summary>7. როგორ მიიღება container-ის `imageID` და როგორ გამოიყენება ის runtime evidence-ად?</summary>
 
-ის Pod-ის status-იდან გამოდის: `kubectl get pod <pod> -n <namespace> -o jsonpath='{range .status.containerStatuses[*]}{.name}{"\t"}{.imageID}{"\n"}{end}'`. `imageID` - runtime-specific hint-ია, არა ტრანსფერული registry/index/platform-manifest digest, ამიტომ ის SBOM-ის digest-თან პირდაპირ არ ერიოთ. ძალიან საიმედო შედარებისთვის digest-pinned `spec.containers[].image`, node-ის architecture და registry/index-ის target platform manifest-მდე გახსნა ითვალისწინდება; node-ზე წვდომისას დამატებით `crictl images --digests` შედარდება. Spec-ში tag თავად ამას არ ამტკიცებს.
+ის Pod-ის status-იდან გამოდის: `kubectl get pod <pod> -n <namespace> -o jsonpath='{range .status.containerStatuses[*]}{.name}{"\t"}{.imageID}{"\n"}{end}'`. `imageID` - runtime-specific hint-ია, არა ტრანსფერული registry/index/platform-manifest digest, ამიტომ ის SBOM-ის digest-თან პირდაპირ არ შედარდება. ძალიან საიმედო შედარებისთვის digest-pinned `spec.containers[].image`, node-ის architecture და registry/index-ის target platform manifest-მდე გახსნა ითვალისწინდება; node-ზე წვდომისას დამატებით `crictl images --digests` შედარდება. Spec-ში tag თავად ამას არ ამტკიცებს.
 </details>
 
 <details>
 <summary>8. რატომ არ უნდა აწყობდეს CI ერთ image-ს, ხოლო CD მას შეუმჩნევლად სხვა environment-ში ხელახლა?</summary>
 
-CD-ს უკვე გადამოწმებული immutable digest უნდა ავითარებდეს, ვიდრე განსხვავებული inputs-ით, builder-ითა თუ dependencies-ით ახალ artifact-ს ქმნიდეს. სხვაგვარად CI-ის SBOM, scan და provenance ერთსა და იმავე byte-ებს ეხება, ხოლო production სხვას შესძლებია მიღება. CI-ის publish-ისა და CD-ის deploy-ის გამიჯვნა ამ ჯაჭვს შემოწმებადს ხდის.
+CD-ს უკვე გადამოწმებული immutable digest უნდა ავითარებდეს, ვიდრე განსხვავებული inputs-ით, builder-ითა თუ dependencies-ით ახალ artifact-ს ქმნიდეს. სხვაგვარად CI-ის SBOM, scan და provenance ერთსა და იმავე byte-ებს ეხება, ხოლო production-მა შესაძლოა სხვა მიიღოს. CI-ის publish-ისა და CD-ის deploy-ის გამიჯვნა ამ ჯაჭვს შემოწმებადს ხდის.
 </details>
 
 <details>
 <summary>9. რომელ აზრს ანიჭებს SLSA provenance-ს და იზოლირებულ builder-ს?</summary>
 
-SLSA-ში provenance output-ს build definition-თან, source-თან და builder-თან აკავშირებს. Multi-arch-ისთვის თავდაპირველად release/index-ის digest target platform manifest-მდე იხსნება და მისი `subject.digest` ამ manifest-ის digest-თან (ან მასში მდებარე ნებადართულ ობიექტთან) ერიოთ; root index-თან დამთხვევა ვარაუდი არ არის. Build Track-ში L1 provenance-ის არსებობას ითხოვს, L2 - hosted build platform-ის ხელმოწერილ provenance-ს, ხოლო L3 - hardened build platform-ს. იზოლირებული builder ერთობლივი სამუშაო გარემოს ჩანაცვლების რისკს ამცირებს, მაგრამ დონე track-ისა და მტკიცებულებების მითითებით უნდა გამოცხადდეს.
+SLSA-ში provenance output-ს build definition-თან, source-თან და builder-თან აკავშირებს. Multi-arch-ისთვის თავდაპირველად release/index-ის digest target platform manifest-მდე იხსნება და მისი `subject.digest` ამ manifest-ის digest-თან (ან მასში მდებარე ნებადართულ ობიექტთან) შედარდება; root index-თან დამთხვევა ვარაუდი არ არის. Build Track-ში L1 provenance-ის არსებობას ითხოვს, L2 - hosted build platform-ის ხელმოწერილ provenance-ს, ხოლო L3 - hardened build platform-ს. იზოლირებული builder ერთობლივი სამუშაო გარემოს ჩანაცვლების რისკს ამცირებს, მაგრამ დონე track-ისა და მტკიცებულებების მითითებით უნდა გამოცხადდეს.
 </details>
 
 <details>
@@ -795,7 +795,7 @@ Dependency-ის ან base image-ის განახლების შე
 </details>
 
 <details>
-<summary>11. **Flashback (32-ე თავი).** SBOM/provenance (ეს თავი) კითხვას "რისგან შედგება ეს artifact და როგორ შეიკრიბა ის" პასუხობს. Kubernetes audit log (32-ე თავი) კითხვას "ვინ და როდის ურთიერთქმედებდა API server-თან" პასუხობს. თუ სრული ჯაჭვის "ვინ დააშვევა ზუსტად ეს image, ამ SBOM-ით, ამ დროს" დამტკიცება საჭიროა - რომელი ორი წყაროდან evidence საკმარისი არ არის თავისთავად, და როგორ ხურავს მათი ერთობლივი გამოყენება იმას, რასაც თითოეული ცალკე ვერ ხურავს?</summary>
+<summary>11. **Flashback (32-ე თავი).** SBOM/provenance (ეს თავი) კითხვას "რისგან შედგება ეს artifact და როგორ შეიკრიბა ის" პასუხობს. Kubernetes audit log (32-ე თავი) კითხვას "ვინ და როდის ურთიერთქმედებდა API server-თან" პასუხობს. თუ სრული ჯაჭვის "ვინ გაუშვა ზუსტად ეს image, ამ SBOM-ით, ამ დროს" დამტკიცება საჭიროა - რომელი ორი წყაროდან evidence საკმარისი არ არის თავისთავად, და როგორ ხურავს მათი ერთობლივი გამოყენება იმას, რასაც თითოეული ცალკე ვერ ხურავს?</summary>
 
 მხოლოდ SBOM/provenance საკმარისი არაა: ის digest-ის შემადგენლობასა და build პროცესს ამტკიცებს, მაგრამ არა deployment-ის API-მოქმედებას. მხოლოდ audit log-იც საკმარისი არაა: ის identity-ს, დროსა და API-ობიექტს აჩვენებს, მაგრამ არა image-ის შემადგენლობასა და მისი build-ის სანდოობას. Manifest/audit-იდან image digest-ის შედარება digest-თან, რასაც SBOM და provenance ერთვის, deploy-ის ავტორს კონკრეტულ შემოწმებად artifact-თან აკავშირებს.
 </details>

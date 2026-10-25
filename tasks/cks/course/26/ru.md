@@ -141,9 +141,9 @@ Pod-only policy сама проверяет только Pod. Чтобы Kyverno
 
 ### Kyverno 1.19 (chart 3.9.0, installed release)
 
-> **Compatibility note.** Основной exam/lab track курса -- Kubernetes v1.35: Kyverno
+> **Compatibility note.** Основной exam/lab track курса - Kubernetes v1.35: Kyverno
 > v1.19 официально поддерживает Kubernetes v1.33-v1.35. Общий training baseline курса
-> (lab-инфраструктура, `env.hcl`) -- Kubernetes v1.36, поэтому эта лаба -- forward-looking
+> (lab-инфраструктура, `env.hcl`) - Kubernetes v1.36, поэтому эта лаба - forward-looking
 > вариант вне протестированной support matrix Kyverno 1.19 (см. главу
 > 20 §20.4). Не путайте три независимых контура: exam-версия, training-версия кластера и
 > vendor-supported версия конкретного инструмента могут отличаться одновременно.

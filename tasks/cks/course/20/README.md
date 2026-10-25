@@ -92,7 +92,7 @@ different messages and exceptions will drift apart.
 
 Gatekeeper and Kyverno usually run as admission webhooks: `kube-apiserver` sends them an
 `AdmissionReview` over HTTPS, then awaits `allowed: true/false` and possible JSON patches. A
-webhook has two especially important parameters in `MutatingWebhookConfiguration` or
+webhook has five especially important parameters in `MutatingWebhookConfiguration` or
 `ValidatingWebhookConfiguration`:
 
 | Parameter | Security meaning | Risk |
@@ -107,7 +107,7 @@ Do not blindly change `failurePolicy` on a Helm-chart-installed webhook: the cha
 the change. First ensure the engine has multiple replicas, PodDisruptionBudget, TLS, and an alert
 on errors/latency. A new prohibition is safer when introduced as audit/warn, after existing
 violations are remediated, and only then enforced. A critical mature rule normally uses `Fail`;
-for an initial rollout, preventing a cluster outage matters more than mistaking it for proof that
+for an initial rollout, it is more important not to halt the cluster and not to mistake this for proof that
 protection works.
 
 Minimal webhook configuration must explicitly define an endpoint, TLS trust, and the
@@ -212,7 +212,7 @@ supply-chain checks from chapters 25-28; chapters 29-32 control an already runni
 
 **OPA** (Open Policy Agent) is an engine that can make policy decisions. **Gatekeeper** connects
 it to Kubernetes admission: when someone tries to create or change an object, API server sends
-the object to Gatekeeper for checking. If a rule finds a violation, Gatekeeper reports the result -
+the object to Gatekeeper for checking. If a rule finds a violation, Gatekeeper reports the result: whether to
 record it as an observation, warn, or reject the request. You do not need to write Rego or CEL to
 read the first example; what matters first is understanding **which rule is checked, where it
 applies, and what happens on violation**.
@@ -510,7 +510,7 @@ custom Rego only when you need custom scope, exemptions, or extended logic.
 ### How to read a Kyverno CEL policy
 
 Kyverno is a Kubernetes policy engine: its controllers and admission webhook read policy resources
-from the API and respond to object operations. In the new CEL-based policy types, policy is an
+from the API and respond to object operations. In the new CEL-based policy types, a policy is an
 ordinary YAML resource, while CEL is a short expression language inside an `expression` field. It
 does not replace YAML and is not a shell script: an expression receives input data, such as
 `object` - the object of the current admission request - and evaluates a value.
@@ -527,9 +527,9 @@ Choose the type by result, not CEL syntax: `ValidatingPolicy` checks and, when n
 `MutatingPolicy` adds a secure default; `GeneratingPolicy` creates a related resource;
 `DeletingPolicy` deletes by rule; `ImageValidatingPolicy` checks an image. Cluster-wide types act
 in their defined scope; `Namespaced...` variants exist and act only in their namespace. Do not mix
-these resources with legacy `Policy`/`ClusterPolicy`: they have another API and fields.
+these resources with legacy `Policy`/`ClusterPolicy`: they have a different API and different fields.
 
-Starting with Kyverno 1.19, the main path is separate CEL-based cluster-wide types in group
+Starting with Kyverno 1.19, the main path is separate CEL-based cluster-wide types in the group
 `policies.kyverno.io/v1`: `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`,
 `DeletingPolicy`, and `ImageValidatingPolicy`. Each has a namespaced variant -
 `NamespacedValidatingPolicy`, `NamespacedMutatingPolicy`, `NamespacedGeneratingPolicy`,
@@ -606,7 +606,7 @@ better for security-critical fields. This safe instructional example adds only a
 applies instead of legacy `patchStrategicMerge`:
 
 ```yaml
-# API CEL-based Kyverno policy that changes an object before persistence.
+# API of a CEL-based Kyverno policy that changes an object before persistence.
 apiVersion: policies.kyverno.io/v1
 kind: MutatingPolicy
 metadata:
@@ -1038,9 +1038,9 @@ SUBJECT='system:serviceaccount:team-a:ci'
 kubectl auth can-i get configmap/team-a-replica-limit   -n policy-system --as="$SUBJECT"
 ```
 
-> 🔬 **Deep Dive - Manifest-Based Admission Control.** In the Kubernetes v1.36 training baseline, this feature is Alpha and disabled by default. In upstream Kubernetes v1.37, it moved to Beta and is enabled by default. The primary workflow of this chapter remains tied to v1.36; see the production-current delta in [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA.md).
+> 🔬 **Deep Dive - Manifest-Based Admission Control.** In the Kubernetes v1.36 training baseline, this feature is Alpha and disabled by default. In upstream Kubernetes v1.37, it moved to Beta and is enabled by default. The primary workflow of this chapter remains tied to v1.36; see the production-current delta in [Kubernetes v1.37 Security Delta (Russian original)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 >
-> In v1.36, enable feature gate `ManifestBasedAdmissionControlConfig`; the feature loads webhook and CEL policy manifests from the API server disk. Pass an `AdmissionConfiguration` with a separate absolute `staticManifestsDir` for the required admission plugin through `--admission-control-config-file`. Such policies are active at startup, independent from etcd, and can protect API-based admission configuration from deletion or change. This is an experimental control-plane feature: `metadata.name` of **every** static admission object in v1.36 must end in `.static.k8s.io`; an invalid static manifest during initial load can keep API server from becoming ready. Static manifests are limited to supported admission resources; policy cannot use `paramKind`, and `ValidatingAdmissionPolicyBinding` and `MutatingAdmissionPolicyBinding` prohibit `spec.paramRef`. A static webhook permits `clientConfig.url`, but not `clientConfig.service`. Every HA API server must receive identical files; do not introduce this feature without startup/reload testing and managed configuration delivery.
+> In v1.36, enable the feature gate `ManifestBasedAdmissionControlConfig`; the feature loads webhook and CEL policy manifests from the API server disk. Pass an `AdmissionConfiguration` with a separate absolute `staticManifestsDir` for the required admission plugin through `--admission-control-config-file`. Such policies are active at startup, independent from etcd, and can protect API-based admission configuration from deletion or change. This is an experimental control-plane feature: `metadata.name` of **every** static admission object in v1.36 must end in `.static.k8s.io`; an invalid static manifest during initial load can keep API server from becoming ready. Static manifests are limited to supported admission resources; policy cannot use `paramKind`, and `ValidatingAdmissionPolicyBinding` and `MutatingAdmissionPolicyBinding` prohibit `spec.paramRef`. A static webhook permits `clientConfig.url`, but not `clientConfig.service`. Every HA API server must receive identical files; do not introduce this feature without startup/reload testing and managed configuration delivery.
 
 ### Native CEL and webhook-engine comparison
 
@@ -1205,7 +1205,7 @@ through GitOps/audit.
 
 **On the exam.** The related public curriculum file is now called `CKS_Curriculum v1.34`, whereas
 the CKS exam environment currently uses Kubernetes v1.35. These are different versions:
-curriculum describes topics, while runtime determines available APIs and cluster behavior. Quickly
+the curriculum describes topics, while the runtime determines available APIs and cluster behavior. Quickly
 identify where a control resides, read `ConstraintTemplate` and `Constraint`, create/check policy,
 distinguish `Audit` from `Deny`, and find the reason for `denied the request`. Do not attribute
 course extensions to the exam: Kubernetes 1.36 native MAP and Kyverno 1.19 are

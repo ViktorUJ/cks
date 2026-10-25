@@ -6,7 +6,7 @@
 
 > **この先。** 第07章ではクラスターコンポーネントの設定を確認し強化しました。次にアプリケーションの public entrypoint を保護します。**TLS を持つ Ingress** はクライアントと ingress controller 間の HTTP トラフィックを暗号化し、サーバー名を確認し、傍受者がリクエストを密かに読んだり改ざんしたりすることを防ぎます。これは CKS の Cluster Setup (15%) ドメインです。
 
-> **CKAで必要な知識。** Ingress、Service、host/path によるルーティングの基本構文は[CKA 第32章](../../../cka/course/32/jp.md)で、TLS、certificate、private key、chain 検証は[CKA 第00-3章](../../../cka/course/00-3-tls/jp.md)で扱っています。ここでは基礎を繰り返さず、public entrypoint でこれらを安全に適用します。
+> **CKA で必要な知識。** Ingress、Service、host/path によるルーティングの基本構文は[CKA 第32章](../../../cka/course/32/jp.md)で、TLS、certificate、private key、chain 検証は[CKA 第00-3章](../../../cka/course/00-3-tls/jp.md)で扱っています。ここでは基礎を繰り返さず、public entrypoint でこれらを安全に適用します。
 
 > 🧠 TLS が保護するのはクライアントから TLS termination までの経路だけです。controller → Service → Pod は別の境界です。
 
@@ -43,7 +43,7 @@ flowchart TB
 
 ラボでは self-signed certificate を作成できます。クライアントはデフォルトでこれを信頼しないため、通常の `curl` は chain verification error で終了します。
 
-推奨するテストは、`--cacert tls.crt` でラボ certificate を明示的に信頼することです。これにより curl は certificate と host 名の一致を検証し続けます。`curl -k` は certificate verification を完全に無効化するため、個別の診断確認には使えますが、正しい TLS 設定の証明にはなりません。
+推奨するテストは、`--cacert tls.crt` でラボ certificate を明示的に信頼することです。これにより curl は certificate と host 名の一致を検証し続けます。`curl -k` は certificate verification を完全に無効化するため、個別の診断確認としてのみ許容されますが、正しい TLS 設定の証明にはなりません。
 
 URL の名前は **Subject Alternative Name** (SAN) に存在する必要があります。現代のクライアントは古い Common Name (CN) フィールドだけでなく SAN を検証します。以下の certificate は `app.example.test` 用です。別の名前なら `HOST` と `subjectAltName` の両方を変更します。
 
@@ -79,7 +79,7 @@ Secret 作成前の public key の一致確認により、別発行の certifica
 
 > 🏭 信頼できる CA、自動更新、所有者、有効期限前の alert、検証済み Secret rotation。
 
-production では長期の self-signed certificate を手動で作成しません。通常 `cert-manager` が Let's Encrypt など信頼できる CA から certificate を取得し、Secret に置き、有効期限前に更新します。platform チームは certificate 所有者、有効期限 alert、rotation 手順も定めるべきです。TLS がクラスタ―前段の cloud load balancer で termination する場合は、NGINX までの接続も組織要件に適合することを確認します。その区間にも TLS が必要な場合があります。
+production では長期の self-signed certificate を手動で作成しません。通常 `cert-manager` が Let's Encrypt など信頼できる CA から certificate を取得し、Secret に置き、有効期限前に更新します。platform チームは certificate 所有者、有効期限 alert、rotation 手順も定めるべきです。TLS がクラスター前段の cloud load balancer で termination する場合は、NGINX までの接続も組織要件に適合することを確認します。その区間にも TLS が必要な場合があります。
 
 > 🎯 `tls.crt` と `tls.key` をキーにする `kubernetes.io/tls` Secret を作成し、namespace と名前を確認してください。Ingress は自身と同じ namespace の Secret だけを参照できます。
 
@@ -326,8 +326,8 @@ traffic を移行する前に、`kubectl get gatewayclass` で support されて
 ```mermaid
 flowchart TB
     client["クライアント"] -->|"TLS + client cert"| edge["Ingress/Gateway data<br/>plane が cert を検証"]
-    edge -->|"validation failed"| deny["拒否,<br/>code は API に依存"]
-    edge -->|"接続を受け入れ"| backend["Backend は HTTP を認識;<br/>identity は API を認識"]
+    edge -->|"validation failed"| deny["拒否、<br/>code は API に依存"]
+    edge -->|"接続を受け入れ"| backend["Backend は HTTP を認識、<br/>identity は API を認識"]
     style client fill:#326ce5,color:#fff
     style edge fill:#f4b400,color:#000
     style deny fill:#db4437,color:#fff
@@ -510,17 +510,17 @@ system trust store が信頼する certificate の場合は、通常の `curl` �
 
 ## 08.9. ミニ用語集
 
-- **TLS termination** — ingress controller で TLS handshake を終え、traffic を decrypt すること。
-- **Ingress** — Service への外部 HTTP/HTTPS routing rule を持つ API object。
-- **IngressClass** — NGINX Ingress Controller など、Ingress implementation の選択。class name は install された controller に依存します。
-- **GatewayClass** — Gateway API implementation の選択。その name も implementation-specific です。
-- **TLS Secret** — `tls.crt` と `tls.key` keys を持つ type `kubernetes.io/tls` の Secret。
-- **SAN** — Subject Alternative Name。certificate が有効な DNS names/IP addresses の list。
-- **SNI** — Server Name Indication。certificate を選ぶための、TLS handshake 内の host name。
-- **self-signed certificate** — 信頼する CA ではなく自身の key で署名した certificate。test には適しますが、default では clients に信頼されません。
-- **HTTP -> HTTPS redirect** — encryption されていない request を HTTPS へ恒久的に redirect すること。
-- **入口での mTLS** — controller が TLS handshake 中に client certificate を追加で要求・検証し、request が backend に到達する前に行うもの。mesh mTLS（chapter 23）と混同しないでください。
-- **Gateway frontend client-certificate validation** — `spec.tls.frontend.default.validation` または per-port override `spec.tls.frontend.perPort[].tls.validation` による client certificate verification。backend への TLS を管理する `BackendTLSPolicy` とは別です。
+- **TLS termination** - ingress controller で TLS handshake を終え、traffic を decrypt すること。
+- **Ingress** - Service への外部 HTTP/HTTPS routing rule を持つ API object。
+- **IngressClass** - NGINX Ingress Controller など、Ingress implementation の選択。class name は install された controller に依存します。
+- **GatewayClass** - Gateway API implementation の選択。その name も implementation-specific です。
+- **TLS Secret** - `tls.crt` と `tls.key` keys を持つ type `kubernetes.io/tls` の Secret。
+- **SAN** - Subject Alternative Name。certificate が有効な DNS names/IP addresses の list。
+- **SNI** - Server Name Indication。certificate を選ぶための、TLS handshake 内の host name。
+- **self-signed certificate** - 信頼する CA ではなく自身の key で署名した certificate。test には適しますが、default では clients に信頼されません。
+- **HTTP -> HTTPS redirect** - encryption されていない request を HTTPS へ恒久的に redirect すること。
+- **入口での mTLS** - controller が TLS handshake 中に client certificate を追加で要求・検証し、request が backend に到達する前に行うもの。mesh mTLS（chapter 23）と混同しないでください。
+- **Gateway frontend client-certificate validation** - `spec.tls.frontend.default.validation` または per-port override `spec.tls.frontend.perPort[].tls.validation` による client certificate verification。backend への TLS を管理する `BackendTLSPolicy` とは別です。
 
 ## 08.10. chapter のまとめ
 

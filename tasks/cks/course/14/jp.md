@@ -229,7 +229,6 @@ sudo ss -lxnp | grep -E 'docker|containerd' || true
 | kube-apiserver `6443/tcp` | architecture に応じた control-plane、worker、administrators | allowlist/private endpoint。`0.0.0.0/0` ではない |
 | etcd `2379`, `2380/tcp` | control-plane/etcd peers のみ | worker や external network に公開しない |
 | Docker TCP API（多くは `2375`/`2376`） | justified remote management の場合のみ | `2375` は listen しない。すべての TCP endpoint には explicit exception、mTLS、正確な firewall が必要 |
-
 | containerd/NRI Unix socket | node 上で local | `root` と最小限の許可済み system consumers |
 
 port number だけで判断しないでください。たとえば control-plane の `6443` は想定どおりですが、worker では error の可能性があります。`10250` は kubelet に必要ですが public であってはなりません。network filtering は不要 service の disable を補完しますが、置き換えるものではありません。external access と SSH の詳細な制限は第15章で扱います。
@@ -253,6 +252,7 @@ echo "OK: TCP listener ${PORT} is absent"
 ```
 
 > 🎯 service、package、kernel module、listener を inventory し、不要な object だけを変更します。baseline を保存し、`kubelet`/containerd を確認します。`disable --now`、removal、port closure には異なる verification が必要です。
+
 ## 14.6. containerd と任意の Docker の安全性
 
 modern Kubernetes node では containerd が主要な CRI runtime です。Docker daemon とその socket は CRI baseline ではなく、個別の確認済み task にのみ必要です。runtime daemon は通常 container より大きな privileges を持ちます。containerd、NRI、Docker API に接続できる client は、privileged container を実行し、host filesystem を mount し、node credentials を取得できることが多いです。したがって Unix socket は無害な implementation detail ではなく access boundary です。
@@ -487,7 +487,7 @@ sudo grep -Rns -- '--container-runtime-endpoint\|containerRuntimeEndpoint' \
   /var/lib/kubelet /etc/systemd/system /usr/lib/systemd/system 2>/dev/null || true
 ```
 
-socket だけを保護するのでは不十分です。`/run/containerd` には runtime state と sockets があり、`/var/lib/containerd` には persistent content と metadata があります。containerd の目安は `/var/lib/containerd` に `0700`、`/run/containerd` root に `0711` です。後者は user-namespaced workload に必要な traversal を許しつつ directory contents を開示しません。sensitive subdirectories は `0700`、sockets は unprivileged users のいない system group で `0660` にします。どの path も通常 users や containers に writable であってはなりません。configuration、plugins、CNI も root-owned で unauthorized subjects からの write を防ぐ必要があります。通常は `/etc/containerd`、runtime plugin directories、`/etc/cni/net.d`、CNI binaries の `/opt/cni/bin` です（specific paths は distribution と config で確認します）。wide な `chmod -R` は行わず、ownership と writable bits を個別に確認してください。
+socket だけを保護するのでは不十分です。`/run/containerd` には runtime state と sockets があり、`/var/lib/containerd` には persistent content と metadata があります。containerd の目安は `/var/lib/containerd` に `0700`、`/run/containerd` root に `0711` です。後者は user-namespaced workload に必要となり得る traversal を許しつつ directory contents を開示しません。sensitive subdirectories は `0700`、sockets は unprivileged users のいない system group で `0660` にします。どの path も通常 users や containers に writable であってはなりません。configuration、plugins、CNI も root-owned で unauthorized subjects からの write を防ぐ必要があります。通常は `/etc/containerd`、runtime plugin directories、`/etc/cni/net.d`、CNI binaries の `/opt/cni/bin` です（specific paths は distribution と config で確認します）。wide な `chmod -R` は行わず、ownership と writable bits を個別に確認してください。
 
 ```bash
 sudo find /run/containerd /var/lib/containerd /etc/containerd /etc/cni/net.d /opt/cni/bin \
@@ -657,14 +657,14 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 
 ## 14.9. production での適用方法
 
-- **Kubernetes v1.37 rootless node path。** `KubeletInUserNamespace` は Beta になり、kubelet と関連 node components が user namespace を通じて host-root なしに動く node stack を構築できます。Pod を isolate する `spec.hostUsers: false` と混同しないでください。[Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_JP.md)を参照してください。
+- **Kubernetes v1.37 rootless node path。** `KubeletInUserNamespace` は Beta になり、kubelet と関連 node components が user namespace を通じて host-root なしに動く node stack を構築できます。Pod を isolate する `spec.hostUsers: false` と混同しないでください。[Kubernetes v1.37 Security Delta (ロシア語版のみ)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)を参照してください。
 - **baseline を code で設定する。** packages、enabled services、systemd drop-ins、firewall、socket checks の一覧を immutable image、Ansible/Cloud-Init、またはほかの IaC に含めます。手作業の emergency fix は後で source of truth に移します。
 - **nodes を role で分ける。** control-plane、worker、build-host、Docker-host に同じ packages と ports を与えません。特に、CRI が containerd の場合、interactive `docker ps` だけのために Docker daemon を worker に install しません。
 - **runtime access を privileged access として review する。** group members、containerd/NRI/Docker socket permissions、systemd overrides の変更は、`sudo` の付与と同じ review を通します。allowed system groups に通常 users はいません。
 - **drift を確認する。** 定期的な CIS/OS scan、package inventory、enabled units、listeners を baseline と比較します。owner のない新しい listener は「通常 state」ではなく incident または change です。
-- **段階的に変更する。** staging node と一 service から始め、`kubelet`/`containerd` health check の後でのみ rollout します。control plane には out-of-band console と tested rollback を用意します。
+- **段階的に変更する。** staging node と一つの service から始め、`kubelet`/`containerd` health check の後でのみ rollout します。control plane には out-of-band console と tested rollback を用意します。
 
-> **より深く学びたい人向け - 試験範囲外。** 本章と第16-17章は、risk の識別、必要な `securityContext` field または policy の適用、effect の確認に必要な範囲で namespaces、capabilities、cgroups、MAC を説明します。kernel が syscall interception をどう実装するか、cgroup v2 controller level で何が起きるか、kernel structures level の namespace isolation など mechanism 自体を深く学ぶには、Liz Rice の *Container Security*、第2版（O'Reilly、2025）がこれを扱います。本 course は Linux internals の深さで競うものではありません。これは topic が第14-17章で尽きたという意味ではなく、意図した scope boundary です。
+> **より深く学びたい人向け - 試験範囲外。** 本章と第16-17章は、risk の識別、必要な `securityContext` field または policy の適用、effect の確認を行う、CKS に必要な範囲で namespaces、capabilities、cgroups、MAC を説明します。kernel が syscall interception をどう実装するか、cgroup v2 controller level で何が起きるか、kernel structures level の namespace isolation など mechanism 自体を深く学ぶには、Liz Rice の *Container Security*、第2版（O'Reilly、2025）がこれを扱います。本 course は Linux internals の深さで競うものではありません。これは topic が第14-17章で尽きたという意味ではなく、意図した scope boundary です。
 
 ## 14.10. ミニ用語集
 
@@ -768,7 +768,7 @@ module は CNI、storage driver、runtime、network/disk hardware に必要な�
 <details>
 <summary>12. **Flashback（第29章）。** 本章は known な余分 processes と ports を incident の前に閉じます（static hardening）。hardening 後、Falco は original service list に含まれない新しい process をどう検出しますか？attacker が baseline に存在しなかったものを node 上で start した場合、static inventory を補う detection signal は何ですか？</summary>
 
-static inventory は known services、packages、listeners を baseline と比較しますが、事前に unknown な program を rule として見ません。Falco は runtime detection で補います。sensitive context で unexpected process execution または shell/binary start を対象にする rule は、system event に基づく alert を作ります。この signal により hardening 後の新 process を investigate し、その後 baseline を update するか incident として response できます。
+static inventory は known services、packages、listeners を baseline と比較しますが、事前に unknown な program は通常検出できません。Falco は runtime detection で補います。sensitive context で unexpected process execution または shell/binary start を対象にする rule は、system event に基づく alert を作ります。この signal により hardening 後の新 process を investigate し、その後 baseline を update するか incident として対応できます。
 </details>
 
 ## 演習

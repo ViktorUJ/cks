@@ -426,6 +426,7 @@ underlay: скрыть inner Pod IP/port и другой L3/L4 metadata от ф�
 identity/mTLS **и** защита underlay или non-mesh traffic. Если application не требует
 workload identity или mesh-compatible behavior, Istio не включают автоматически - сначала
 оценивают threat model, compatibility и overhead.
+
 Istio sidecar (`istio-proxy`, Envoy) перехватывает inbound/outbound workload traffic.
 Istiod выдаёт workload сертификат на основе Kubernetes ServiceAccount; proxy устанавливают
 mTLS и проверяют identity peer. Workload identity имеет форму SPIFFE ID:

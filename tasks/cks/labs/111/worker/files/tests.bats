@@ -91,6 +91,24 @@ record_result() {
     return
   fi
 
+  # Compare the entire live workload set with the protected initial fixture. The
+  # remediation contract permits replica changes, not image or controller replacement.
+  baseline=$(sudo cat /var/lib/cks-lab111-checker/task1c-deployments.json 2>/dev/null) || baseline=''
+  live_deployments=$(kubectl -n cks-111 get deployments -l cks.io/task=1c -o json 2>/dev/null) || live_deployments=''
+  if ! jq -en --argjson expected "${baseline:-null}" --argjson live "${live_deployments:-null}" '
+    ($expected.items | type == "array" and length == 4) and
+    ($live.items | type == "array" and length == 4) and
+    all($expected.items[]; . as $original |
+      [ $live.items[] | select(.metadata.name == $original.metadata.name and
+          .metadata.uid == $original.metadata.uid and
+          .spec.template.spec.containers == $original.spec.template.spec.containers and
+          (.spec.template.spec.initContainers // []) == ($original.spec.template.spec.initContainers // [])) ] | length == 1)
+  ' >/dev/null 2>&1; then
+    echo 'HINT: task 1c Deployments must retain the bootstrap-owned UID, exact original images and container lists; only replicas may change.'
+    record_result "$result"
+    return
+  fi
+
   declare -A live_image live_replicas
   for line in "${deploys[@]}"; do
     name=$(awk '{print $1}' <<<"$line")
@@ -104,10 +122,20 @@ record_result() {
   declare -A fresh_critical
   for name in "${!live_image[@]}"; do
     scan_tmp=$(mktemp)
-    trivy image --scanners vuln --severity CRITICAL --format json --quiet "${live_image[$name]}" > "$scan_tmp" 2>/dev/null
-    fresh_critical["$name"]=$(jq -r '[.Results[]? | .Vulnerabilities[]? | select(.Severity=="CRITICAL") | .VulnerabilityID] | unique | length' "$scan_tmp" 2>/dev/null || echo 0)
+    if ! trivy image --scanners vuln --severity CRITICAL --format json --quiet "${live_image[$name]}" > "$scan_tmp" 2>/dev/null        || ! jq -e '.Results | type == "array"' "$scan_tmp" >/dev/null 2>&1; then
+      rm -f "$scan_tmp"
+      echo "HINT: fresh Trivy CRITICAL scan failed for $name; a scanner error cannot count as zero vulnerabilities."
+      record_result "$result"
+      return
+    fi
+    fresh_critical["$name"]=$(jq -er '[.Results[]? | .Vulnerabilities[]? | select(.Severity=="CRITICAL") | .VulnerabilityID] | unique | length' "$scan_tmp")
     rm -f "$scan_tmp"
   done
+  if [[ $(printf '%s\n' "${fresh_critical[@]}" | sort -u | wc -l) -ne 4 ]]; then
+    echo 'HINT: fresh CRITICAL scores contain ties, so a unique ranking cannot be verified; rebuild the fixture or stabilize the scan DB.'
+    record_result "$result"
+    return
+  fi
 
   mapfile -t ranked < <(for name in "${!fresh_critical[@]}"; do printf '%s %s\n' "${fresh_critical[$name]}" "$name"; done | sort -rn -k1,1 | awk '{print $2}')
   most_vulnerable="${ranked[0]}"
@@ -129,10 +157,13 @@ record_result() {
   cdx="$ART/1c/cyclonedx.json"
   cdx_ok=0
   most_digest="${live_image[$most_vulnerable]#*@}"
-  if [[ -s "$cdx" ]] && jq -e '.bomFormat == "CycloneDX"' "$cdx" >/dev/null 2>&1 \
-    && grep -qF "$most_digest" "$cdx"; then
-    cdx_ok=1
+  checker_cdx=$(mktemp)
+  if [[ -s "$cdx" ]]     && jq -e '.bomFormat == "CycloneDX" and (.components | type == "array" and length > 0)' "$cdx" >/dev/null 2>&1     && grep -qF "$most_digest" "$cdx"     && trivy image --format cyclonedx --output "$checker_cdx" "${live_image[$most_vulnerable]}" >/dev/null 2>&1     && jq -e '.bomFormat == "CycloneDX" and (.components | type == "array" and length > 0)' "$checker_cdx" >/dev/null 2>&1; then
+    student_inventory=$(jq -Sc '[.components[] | {name, version: (.version // ""), type: (.type // "")} ] | sort' "$cdx" 2>/dev/null)
+    checker_inventory=$(jq -Sc '[.components[] | {name, version: (.version // ""), type: (.type // "")} ] | sort' "$checker_cdx" 2>/dev/null)
+    [[ -n "$student_inventory" && "$student_inventory" == "$checker_inventory" ]] && cdx_ok=1
   fi
+  rm -f "$checker_cdx"
 
   remediation_ok=1
   for name in "${!live_replicas[@]}"; do
@@ -186,7 +217,11 @@ record_result() {
 @test "3. Dockerfile is pinned, has no secret or remote ADD, and runs non-root" {
   file="$ROOT/Dockerfile"; report="$ART/3/hadolint-after.txt"
   result=1
-  if [[ -f "$file" ]] && grep -Eq '^FROM[[:space:]]+nginx:1[.]27[.]3-alpine@sha256:[a-f0-9]{64}$' "$file" && ! grep -Eqi '^[[:space:]]*ADD[[:space:]]+https?://|^[[:space:]]*ENV[[:space:]].*(API_TOKEN|TOKEN)|sudo|:latest' "$file" && grep -Eq '^[[:space:]]*USER[[:space:]]+[1-9][0-9]*(:[0-9]+)?[[:space:]]*$' "$file" && grep -Eq '^[[:space:]]*ARG[[:space:]]+CKS_SIGNATURE_TEST' "$file" && grep -Eq '^[[:space:]]*LABEL[[:space:]]+cks[.]signature-test=\$CKS_SIGNATURE_TEST[[:space:]]*$' "$file" && [[ -f "$report" ]] && ! grep -Eq 'DL3007|DL3013|DL3020|DL3045' "$report"; then
+  expected_base=$(jq -r '.ArtifactName // ""' "$ART/1/trivy-report.json" 2>/dev/null) || expected_base=''
+  # Match actual instructions, not a good-looking first stage followed by an unsafe final stage.
+  mapfile -t froms < <(awk 'toupper($1)=="FROM" {print $2}' "$file" 2>/dev/null)
+  mapfile -t users < <(awk 'toupper($1)=="USER" {print $2}' "$file" 2>/dev/null)
+  if [[ -f "$file" && "$expected_base" =~ ^nginx:1[.]27[.]3-alpine@sha256:[a-f0-9]{64}$         && ${#froms[@]} -eq 1 && "${froms[0]}" == "$expected_base"         && ${#users[@]} -eq 1 && "${users[0]}" =~ ^[1-9][0-9]*(:[0-9]+)?$ ]]     && ! grep -Eqi '^[[:space:]]*ADD[[:space:]]+https?://|^[[:space:]]*ENV[[:space:]].*(API_TOKEN|TOKEN)|sudo|:latest' "$file"     && grep -Eq '^[[:space:]]*ARG[[:space:]]+CKS_SIGNATURE_TEST' "$file"     && grep -Eq '^[[:space:]]*LABEL[[:space:]]+cks[.]signature-test=\$CKS_SIGNATURE_TEST[[:space:]]*$' "$file"     && [[ -f "$report" ]] && ! grep -Eq 'DL3007|DL3013|DL3020|DL3045' "$report"; then
     # Independently re-run hadolint against the CURRENT Dockerfile rather than trusting
     # only the student artifact, which could be hand-edited or left over from a stale run.
     # An independent re-run alone only proves the file's CURRENT state is clean - it does
@@ -300,46 +335,65 @@ record_result() {
   # on the wrong object/container could otherwise satisfy a plain grep without actually
   # being effective at runtime.
   hardening_ok=0
+  # Validate every effective container and every volume, rather than matching one
+  # compliant container while ignoring extra privileged containers or mounts.
   if jq -e '
-      .spec.template.spec.automountServiceAccountToken == false and
-      .spec.template.spec.securityContext.runAsNonRoot == true and
-      .spec.template.spec.securityContext.runAsUser == 101 and
-      .spec.template.spec.securityContext.seccompProfile.type == "RuntimeDefault" and
-
-      ([.spec.template.spec.initContainers[]? |
-        select(.name == "prepare-nginx-config") |
-        .securityContext.allowPrivilegeEscalation == false and
-        (.securityContext.capabilities.drop | index("ALL") != null)
-      ] | any) and
-
-      ([.spec.template.spec.containers[]? |
-        select(.name == "catalog") |
-        (.image | test("@sha256:[a-f0-9]{64}$")) and
-        ((.image | test("(^|/)nginx([:@]|$)")) | not) and
-        .securityContext.allowPrivilegeEscalation == false and
-        .securityContext.readOnlyRootFilesystem == true and
-        (.securityContext.capabilities.drop | index("ALL") != null) and
-        (.resources.requests.cpu | type == "string") and
-        (.resources.requests.memory | type == "string") and
-        (.resources.limits.cpu | type == "string") and
-        (.resources.limits.memory | type == "string") and
-        ([.volumeMounts[]? | .mountPath] |
-          (index("/tmp") != null) and
-          (index("/var/run") != null) and
-          (index("/var/cache/nginx") != null) and
-          (index("/etc/nginx/conf.d") != null))
-      ] | any) and
-
-      ([.spec.template.spec.volumes[]?.name] |
-        (index("nginx-tmp") != null) and
-        (index("nginx-run") != null) and
-        (index("nginx-cache") != null) and
-        (index("nginx-config") != null))
-    ' <<<"$deploy" >/dev/null 2>&1; then
+    .spec.template.spec as $pod |
+    ($pod.automountServiceAccountToken == false) and
+    (($pod.hostNetwork // false) == false) and
+    (($pod.hostPID // false) == false) and
+    (($pod.hostIPC // false) == false) and
+    ($pod.securityContext.runAsNonRoot == true) and
+    ($pod.securityContext.runAsUser == 101) and
+    ($pod.securityContext.seccompProfile.type == "RuntimeDefault") and
+    ($pod.containers | length == 1) and
+    ($pod.initContainers | length == 1) and
+    ($pod.initContainers[0].name == "prepare-nginx-config") and
+    ($pod.containers[0].name == "catalog") and
+    (all(($pod.containers + $pod.initContainers)[];
+       ((.securityContext.privileged // false) == false) and
+       ((.securityContext.runAsNonRoot // true) == true) and
+       ((.securityContext.runAsUser // 101) == 101) and
+       ((.securityContext.seccompProfile.type // "RuntimeDefault") == "RuntimeDefault") and
+       (.securityContext.allowPrivilegeEscalation == false) and
+       ((.securityContext.capabilities.drop // []) | index("ALL") != null))) and
+    ($pod.containers[0] | 
+      (.image | test("@sha256:[a-f0-9]{64}$") and (test("(^|/)nginx([:@]|$)") | not)) and
+      .securityContext.readOnlyRootFilesystem == true and
+      (.resources.requests.cpu | type == "string") and
+      (.resources.requests.memory | type == "string") and
+      (.resources.limits.cpu | type == "string") and
+      (.resources.limits.memory | type == "string") and
+      (([.volumeMounts[]? | [.name,.mountPath]] | sort) ==
+       ([ ["nginx-cache","/var/cache/nginx"],["nginx-config","/etc/nginx/conf.d"],
+          ["nginx-run","/var/run"],["nginx-tmp","/tmp"] ] | sort))) and
+    ($pod.initContainers[0] | ([.volumeMounts[]? | [.name,.mountPath]] == [["nginx-config","/work"]])) and
+    ($pod.volumes | length == 4) and
+    (([ $pod.volumes[] | .name ] | sort) == (["nginx-tmp","nginx-run","nginx-cache","nginx-config"] | sort)) and
+    (all($pod.volumes[]; (.emptyDir | type == "object") and (.hostPath == null) and (.secret == null) and (.projected == null)))
+  ' <<<"$deploy" >/dev/null 2>&1; then
     hardening_ok=1
   fi
 
   ready=$(jq -r '.status.availableReplicas // 0' <<<"$deploy")
+  # An unrelated Service endpoint must not satisfy the HTTP probe for the hardened Deployment.
+  service=$(kubectl -n cks-111 get service catalog -o json 2>/dev/null) || service=''
+  rs=$(kubectl -n cks-111 get replicasets -l app=catalog -o json 2>/dev/null) || rs=''
+  pods=$(kubectl -n cks-111 get pods -l app=catalog -o json 2>/dev/null) || pods=''
+  route_ok=0
+  if jq -en --argjson svc "${service:-null}" --argjson d "${deploy:-null}"     --argjson rs "${rs:-null}" --argjson pods "${pods:-null}" '
+      ($svc.spec.selector == {app:"catalog"}) and
+      ([ $svc.spec.ports[]? | select(.port == 80 and .targetPort == "http") ] | length == 1) and
+      ($pods.items | length > 0) and
+      (any($pods.items[]?; .status.phase == "Running" and
+         ([.status.conditions[]? | select(.type=="Ready" and .status=="True")] | length > 0))) and
+      (all($pods.items[]?; . as $p |
+         (.spec.containers | length == 1) and
+         (.spec.containers[0].image == $d.spec.template.spec.containers[0].image) and
+         any($rs.items[]?; .metadata.uid as $rsuid |
+           (any(.metadata.ownerReferences[]?; .uid == $d.metadata.uid)) and
+           any($p.metadata.ownerReferences[]?; .uid == $rsuid))))
+    ' >/dev/null 2>&1; then route_ok=1; fi
 
   set +e
   run kubectl run catalog-http-smoke -n cks-111 \
@@ -348,7 +402,7 @@ record_result() {
   smoke_status="$status"
   set -e
 
-  if [[ "$hardening_ok" -eq 1 && "$ready" -ge 1 && "$smoke_status" -eq 0 ]]; then
+  if [[ "$hardening_ok" -eq 1 && "$route_ok" -eq 1 && "$ready" -ge 1 && "$smoke_status" -eq 0 ]]; then
     result=0
   else
     if [[ "$hardening_ok" -ne 1 ]]; then
@@ -439,6 +493,8 @@ record_result() {
   target_package=$(sudo grep -m1 '^TARGET_PACKAGE=' "$CHECKER/task5b-baseline.txt" 2>/dev/null | cut -d= -f2-)
   target_version=$(sudo grep -m1 '^TARGET_VERSION=' "$CHECKER/task5b-baseline.txt" 2>/dev/null | cut -d= -f2-)
   clean_container=$(sudo grep -m1 '^CLEAN_CONTAINER=' "$CHECKER/task5b-baseline.txt" 2>/dev/null | cut -d= -f2-)
+  clean_image=$(sudo grep -m1 '^CLEAN_IMAGE=' "$CHECKER/task5b-baseline.txt" 2>/dev/null | cut -d= -f2-)
+  original_uid=$(sudo grep -m1 '^DEPLOYMENT_UID=' "$CHECKER/task5b-baseline.txt" 2>/dev/null | cut -d= -f2-)
   offending_image_1=$(sudo grep -m1 '^OFFENDING_IMAGE_1=' "$CHECKER/task5b-baseline.txt" 2>/dev/null | cut -d= -f2-)
 
   if [[ -z "$target_package" || -z "$target_version" || -z "$clean_container" ]]; then
@@ -453,25 +509,33 @@ record_result() {
   # rather than trusting only the persisted baseline text or the student's own artifact.
   checker_sbom=$(mktemp)
   checker_confirms=0
-  if bom generate --format json --output "$checker_sbom" --image "$offending_image_1" >/dev/null 2>&1 \
-    && jq -e --arg pkg "$target_package" --arg ver "$target_version" \
+  answer="$ART/5b/answer.txt"
+  student_pkg=$(awk -F= '$1=="TARGET_PACKAGE"{print substr($0,index($0,"=")+1)}' "$answer" 2>/dev/null)
+  student_ver=$(awk -F= '$1=="TARGET_VERSION"{print substr($0,index($0,"=")+1)}' "$answer" 2>/dev/null)
+  # The two offending images share many OS packages, so ANY name=version present in both of them
+  # and absent from the clean image is a valid answer (checker-owned list built at provisioning).
+  identify_ok=0
+  if sudo test -r "$CHECKER/task5b-valid-pairs.txt"; then
+    [[ -n "$student_pkg" && -n "$student_ver" ]] \
+      && sudo grep -qxF "${student_pkg}=${student_ver}" "$CHECKER/task5b-valid-pairs.txt" && identify_ok=1
+  else
+    [[ "$student_pkg" == "$target_package" && "$student_ver" == "$target_version" ]] && identify_ok=1
+  fi
+
+  if [[ "$identify_ok" -eq 1 ]] \
+    && bom generate --format json --output "$checker_sbom" --image "$offending_image_1" >/dev/null 2>&1 \
+    && jq -e --arg pkg "$student_pkg" --arg ver "$student_ver" \
       'any(.packages[]?; .name == $pkg and .versionInfo == $ver)' "$checker_sbom" >/dev/null 2>&1; then
     checker_confirms=1
   fi
   rm -f "$checker_sbom"
-
-  answer="$ART/5b/answer.txt"
-  student_pkg=$(awk -F= '$1=="TARGET_PACKAGE"{print substr($0,index($0,"=")+1)}' "$answer" 2>/dev/null)
-  student_ver=$(awk -F= '$1=="TARGET_VERSION"{print substr($0,index($0,"=")+1)}' "$answer" 2>/dev/null)
-  identify_ok=0
-  [[ "$student_pkg" == "$target_package" && "$student_ver" == "$target_version" ]] && identify_ok=1
 
   bom_dir="$ART/5b/bom"
   spdx_ok=0
   if [[ -d "$bom_dir" ]]; then
     for f in "$bom_dir"/*.json; do
       [[ -f "$f" ]] || continue
-      if jq -e --arg pkg "$target_package" --arg ver "$target_version" \
+      if jq -e --arg pkg "$student_pkg" --arg ver "$student_ver" \
         'any(.packages[]?; .name == $pkg and .versionInfo == $ver)' "$f" >/dev/null 2>&1; then
         spdx_ok=1
         break
@@ -485,7 +549,15 @@ record_result() {
   available=$(jq -r '.status.availableReplicas // 0' <<<"$deploy" 2>/dev/null) || true
 
   remediation_ok=0
-  [[ "$remaining" == "$expected_remaining" ]] && remediation_ok=1
+  if [[ -n "$original_uid" && -n "$clean_image" ]] && jq -e     --arg expected_uid "$original_uid" --arg expected_name "$clean_container" --arg expected_image "$clean_image" '
+      .metadata.uid == $expected_uid and
+      (.spec.template.spec.containers | length == 1) and
+      .spec.template.spec.containers[0].name == $expected_name and
+      .spec.template.spec.containers[0].image == $expected_image and
+      ((.spec.template.spec.initContainers // []) | length == 0)
+    ' <<<"$deploy" >/dev/null 2>&1 && [[ "$remaining" == "$expected_remaining" ]]; then
+    remediation_ok=1
+  fi
 
   if [[ "$checker_confirms" -eq 1 && "$identify_ok" -eq 1 && "$spdx_ok" -eq 1 \
     && "$remediation_ok" -eq 1 && "$available" -ge 1 ]]; then
@@ -655,7 +727,11 @@ record_result() {
     && trivy sbom --format json --output "$checker_report" "$input_sbom" \
          >/dev/null 2>&1 \
     && jq -e "$valid_scan" "$checker_report" >/dev/null 2>&1; then
-    result=0
+    student_vulns=$(jq -Sc '[.Results[]? | .Vulnerabilities[]? | {id:.VulnerabilityID, pkg:.PkgName, ver:.InstalledVersion, severity:.Severity}] | sort' "$report")
+    checker_vulns=$(jq -Sc '[.Results[]? | .Vulnerabilities[]? | {id:.VulnerabilityID, pkg:.PkgName, ver:.InstalledVersion, severity:.Severity}] | sort' "$checker_report")
+    student_artifact=$(jq -r '.ArtifactName // ""' "$report")
+    checker_artifact=$(jq -r '.ArtifactName // ""' "$checker_report")
+    [[ -n "$student_vulns" && "$student_vulns" == "$checker_vulns" && "$student_artifact" == "$checker_artifact" ]] && result=0
   else
     echo "HINT: sbom-scan.json must be native Trivy JSON (ArtifactType cyclonedx) with a non-empty 'Results' that lists vulnerabilities, sbom-scan-command.txt must show 'trivy sbom' run against the task-7 CycloneDX file ($input_sbom), and the checker independently re-runs 'trivy sbom' on that exact file - it does not trust any student-authored field inside the JSON."
     echo "Missing or impure trivy sbom scan evidence: $report"
@@ -672,13 +748,32 @@ record_result() {
   hardened_image=$(kubectl get deployment catalog -n cks-111 -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
   hardened_repo=${hardened_image%@*}
   policy_ok=0; cosign_ok=0
-  if [[ -n "$policy" && -n "$hardened_repo" ]] && echo "$policy" | jq -e --arg repo "$hardened_repo" '
-    .apiVersion == "policies.kyverno.io/v1" and
-    (.spec.validationActions | index("Deny") != null) and
-    ([.spec.matchImageReferences[]?.glob] | sort == [$repo + ":*", $repo + "@*"]) and
-    (any(.spec.attestors[]?; .cosign.key.data? | type == "string" and length > 0)) and
-    (any(.spec.validations[]?; (.expression // "") | contains("verifyImageSignatures")))
-  ' >/dev/null 2>&1; then policy_ok=1; fi
+  trusted_key=$(cat "$KEYDIR/cosign.pub" 2>/dev/null) || trusted_key=''
+  # Match the actual enforced policy contract: trusted key, complete CREATE/UPDATE
+  # resource scope, no selectors/exclusions, fail closed, and an unconditional
+  # signature check for EVERY container list. A substring is not CEL semantics.
+  if [[ -n "$policy" && -n "$hardened_repo" && -n "$trusted_key" ]]     && jq -e --arg repo "$hardened_repo" --arg key "$trusted_key" '
+      .apiVersion == "policies.kyverno.io/v1" and
+      .spec.failurePolicy == "Fail" and
+      .spec.validationActions == ["Deny"] and
+      .spec.credentials.allowInsecureRegistry == true and
+      ((.spec.matchImageReferences | map(.glob) | sort) == ([$repo + ":*", $repo + "@*"] | sort)) and
+      (.spec.matchConstraints.resourceRules == [{
+        apiGroups:[""], apiVersions:["v1"], operations:["CREATE","UPDATE"],
+        resources:["pods","pods/ephemeralcontainers"]
+      }]) and
+      (.spec.matchConstraints.excludeResourceRules // [] | length == 0) and
+      (.spec.matchConstraints.namespaceSelector // {} | length == 0) and
+      (.spec.matchConstraints.objectSelector // {} | length == 0) and
+      (.spec.matchConditions // [] | length == 0) and
+      (.spec.attestors | length == 1) and
+      .spec.attestors[0].name == "catalogReleaseKey" and
+      ((.spec.attestors[0].cosign.key.data | rtrimstr("\n")) == $key) and
+      (.spec.validations | length == 1) and
+      .spec.validations[0].message == "catalog image must have a valid release signature" and
+      ((.spec.validations[0].expression | gsub("\\s+"; "")) ==
+       "(images.containers+images.?initContainers.orValue([])+images.?ephemeralContainers.orValue([])).map(image,verifyImageSignatures(image,[attestors.catalogReleaseKey])>0).all(ok,ok)")
+    ' <<<"$policy" >/dev/null 2>&1; then policy_ok=1; fi
   if [[ -n "$hardened_image" && -s "$KEYDIR/cosign.pub" ]] \
     && cosign verify --key "$KEYDIR/cosign.pub" "$hardened_image" >/dev/null 2>&1; then cosign_ok=1; fi
   # Check the SPECIFIC admission-controller Deployment, not any Deployment matching a
@@ -834,10 +929,68 @@ record_result() {
   fi
 
   if [[ "$deny_rc" -ne 0 ]] \
-    && grep -Fq \
-      'catalog image must have a valid release signature' \
-      <<<"$deny_output"; then
-    result=0
+    && grep -Fq 'require-signed-catalog-images' <<<"$deny_output" \
+    && grep -Fq 'catalog image must have a valid release signature' <<<"$deny_output"; then
+    # Independent unsigned initContainer control: a signed main image may not mask it.
+    init_probe="catalog-unsigned-init-${BATS_TEST_NUMBER:-9}-$$"
+    init_manifest=$(cat <<YAML
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $init_probe
+  namespace: cks-111
+spec:
+  restartPolicy: Never
+  initContainers:
+  - name: unsigned
+    image: $unsigned_image
+    command: ["sh", "-c", "true"]
+  containers:
+  - name: signed
+    image: $hardened_image
+    command: ["sleep", "180"]
+YAML
+)
+    if init_output=$(printf '%s\n' "$init_manifest" | kubectl create -f - 2>&1); then
+      init_rc=0
+    else
+      init_rc=$?
+    fi
+    init_denied=0; cleanup_ok=1
+    if [[ "$init_rc" -ne 0 ]] \
+      && grep -Fq 'require-signed-catalog-images' <<<"$init_output" \
+      && grep -Fq 'catalog image must have a valid release signature' <<<"$init_output"; then
+      init_denied=1
+    fi
+    if [[ "$init_rc" -eq 0 ]]; then
+      kubectl delete pod "$init_probe" -n cks-111 --wait=true --timeout=60s >/dev/null 2>&1 || cleanup_ok=0
+    fi
+
+    # Server dry-run tests the pods/ephemeralcontainers admission path without mutating
+    # the pre-existing signed proof Pod. A generic schema/RBAC error is not a DENY proof.
+    patch_json=$(jq -nc --arg image "$unsigned_image" '{spec:{ephemeralContainers:[{
+      name:"unsigned-debug-check", image:$image, command:["sleep","60"],
+      targetContainerName:"signed-admission-check", stdin:false, tty:false
+    }]}}')
+    if ephemeral_output=$(kubectl patch pod signed-admission-check -n cks-111 \
+      --subresource=ephemeralcontainers --type=merge --dry-run=server \
+      -p "$patch_json" 2>&1); then
+      ephemeral_rc=0
+    else
+      ephemeral_rc=$?
+    fi
+    ephemeral_denied=0
+    if [[ "$ephemeral_rc" -ne 0 ]] \
+      && grep -Fq 'require-signed-catalog-images' <<<"$ephemeral_output" \
+      && grep -Fq 'catalog image must have a valid release signature' <<<"$ephemeral_output"; then
+      ephemeral_denied=1
+    fi
+    if [[ "$init_denied" -eq 1 && "$ephemeral_denied" -eq 1 && "$cleanup_ok" -eq 1 ]]; then
+      result=0
+    else
+      echo "HINT: unsigned init/ephemeral must be denied by exact policy; init=$init_denied ephemeral=$ephemeral_denied cleanup=$cleanup_ok"
+      echo "init_output=$init_output ephemeral_output=$ephemeral_output"
+    fi
   else
     echo "HINT: Admission was denied, but not with the unique validation message of require-signed-catalog-images ('catalog image must have a valid release signature') - check the actual denial message; a DENY from an unrelated policy that merely mentions the word 'signature' or 'attestor' does not count."
     echo "Admission denial was not produced by require-signed-catalog-images"

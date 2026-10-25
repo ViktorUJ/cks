@@ -310,11 +310,11 @@ sudo chmod 700 "$DATA_DIR"
 sudo kube-bench run --targets master --check 1.1.11
 ```
 
- 「remediation は command を示すが、actual data directory と profile applicability を確認してから適用する」という原則は、etcd の隣接 CIS finding、Pod spec file（`/etc/kubernetes/manifests/etcd.yaml`）と TLS key（`/etc/kubernetes/pki/etcd/*.key`）の permission/owner にも当てはまります。`2379`/`2380` を外部に開かず、data directory と etcd process が自身の所有でない managed cluster へ例をそのまま移さないでください。
+「remediation は command を示すが、actual data directory と profile applicability を確認してから適用する」という原則は、etcd の隣接 CIS finding、Pod spec file（`/etc/kubernetes/manifests/etcd.yaml`）と TLS key（`/etc/kubernetes/pki/etcd/*.key`）の permission/owner にも当てはまります。`2379`/`2380` を外部に開かず、data directory と etcd process が自身の所有でない managed cluster へ例をそのまま移さないでください。
 
 ## 07.7. 再実行、診断、修正の証明
 
-各 `FAIL` または意識的に扱う `WARN` では、短い procedure に従います。(1) Kubernetes version、`kube-bench` version または digest、選択 profile、report の CIS check ID を記録する。(2) active file/object の backup を作る。filesystem-hosted static Pod の backup は **`staticPodPath` の外**に置く。kubelet はこの directory の file を extension で filter せず、`.backup` ももう一つの manifest として処理し得ます。(3) control を一つだけ変更する。(4) restart を待ち component と cluster health を確認する。(5) 影響 target または check だけを再実行する（例: この syntax を support する version では `kube-bench run --targets master --check <ID>`）。(6) health error なら即座に backup を戻し、recovery を待って health check を再実行する。component health、effective configuration、targeted rerun を確認するまで修正成功を宣言してはいけません。specific `kube-bench` check が component が実際に使う configuration source を見ない場合（07.4 の `--config` scheduler 例のように）、tool の制限として記録し、形式的 `PASS` で effective-state verification を置き換えません。
+各 `FAIL` または意識的に扱う `WARN` では、短い procedure に従います。(1) Kubernetes version、`kube-bench` version または digest、選択 profile、report の CIS check ID を記録します。(2) active file/object の backup を作ります。filesystem-hosted static Pod の backup は **`staticPodPath` の外**に置きます。kubelet はこの directory の file を extension で filter せず、`.backup` ももう一つの manifest として処理し得ます。(3) control を一つだけ変更します。(4) restart を待ち component と cluster health を確認します。(5) 影響 target または check だけを再実行します（例: この syntax を support する version では `kube-bench run --targets master --check <ID>`）。(6) health error なら即座に backup を戻し、recovery を待って health check を再実行します。component health、effective configuration、targeted rerun を確認するまで修正成功を宣言してはいけません。specific `kube-bench` check が component が実際に使う configuration source を見ない場合（07.4 の `--config` scheduler 例のように）、tool の制限として記録し、形式的 `PASS` で effective-state verification を置き換えません。
 
 self-managed cluster ではこの procedure は operator が責任を持つ control plane、node、file に適用します。managed Kubernetes では通常 provider が control plane を所有します。hostPath や直接編集で回避しようとせず、provider-owned control を documentation と照合し customer/provider-owned responsibility を記録してください。
 
@@ -394,7 +394,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 
 ## 07.11. 試験と実務での活用
 
-**試験では。** 課題は通常 `kube-bench` の一つまたは複数 `FAIL` を指定し node access を与えます。component が static Pod、kubelet service、etcd のどれかを素早く特定し、backup を作り、active file を修正し、restart を待って結果を証明します。とくに頻出する、三 component の profiling、kubelet `protect-kernel-defaults`、closed read-only port、anonymous access、file mode を覚えてください。
+**試験では。** 課題は通常 `kube-bench` の一つまたは複数 `FAIL` を指定し node access を与えます。component が static Pod、kubelet service、etcd のどれかを素早く特定し、backup を作り、active file を修正し、restart を待って結果を証明します。とくに頻出する項目として、三 component の profiling、kubelet `protect-kernel-defaults`、closed read-only port、anonymous access、file mode を覚えてください。
 
 **実務では。** CIS は platform team と security team の共通言語として有用ですが architectural analysis の代替ではありません。incident 前の configuration drift 発見を助け、reproducible な検査と文書化した exception は cluster update を予測可能にします。
 

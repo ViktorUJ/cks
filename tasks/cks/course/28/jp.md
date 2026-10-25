@@ -107,7 +107,7 @@ for pod in $(kubectl get pods -n "$namespace" -o name); do
 done
 ```
 
-> 🏭 **Production.** 完全な platform automation は実際に動いている regular、init、ephemeral container を inventory し、runtime `imageID` を canonical digest に対応させ、owner workload を記録します。Kubernetes v1.36 では `spec.volumes[].image.reference` を別途考慮してください。container-image-compatible volume は同じ CVE/SBOM flow を通りますが、他の OCI artifact には適切な policy が必要です。これは exploitation に有用ですが、exam task で手動で再現する必要はありません。
+> 🏭 **Production.** 完全な platform automation は実際に動いている regular、init、ephemeral container を inventory し、runtime `imageID` を canonical digest に対応させ、owner workload を記録します。Kubernetes v1.36 では `spec.volumes[].image.reference` を別途考慮してください。container-image-compatible volume は同じ CVE/SBOM flow を通りますが、他の OCI artifact には適切な policy が必要です。これは運用に有用ですが、exam task で手動で再現する必要はありません。
 
 > 🎯 SBOM を同じ digest に紐づけ、保存された構成を scan しましょう。CVE は artifact の rebuild で修正され、SBOM の編集では修正されません。
 
@@ -213,7 +213,7 @@ grype sbom:api.spdx.json
 
 **Trivy Operator** は既に使用中の workload の image を自動発見し、その controller revision に対して `VulnerabilityReport` を作成します。これは continuous な post-admission detection です。新規または更新された workload は report を得ますが、Operator 自体は admission enforcement ではありません。admission webhook 内で各 image を同期的にダウンロードして scan してはいけません。API server を registry、database、長時間の scan に依存させ、timeout を生み、scanner が unavailable な時に cluster を block する可能性があります。enforcement には、事前に作成された scan/signature/attestation を照合する別の admission policy が必要です。
 
-信頼できる pattern はこうです。CI が**特定の digest**を scan し、signed attestation または結果を保存する。admission 時の policy は最新の成功した evidence を持つ digest のみを許可する。定期的な scanner は既に deployed された image の新しい CVE を探し続ける。registry の allowlist と signature の verification は [第26章](../26/jp.md)で扱いました。これらは vulnerability scan を補完しますが、代替しません。
+信頼できる pattern はこうです。CI が**特定の digest**を scan し、signed attestation または結果を保存します。admission 時の policy は最新の成功した evidence を持つ digest のみを許可します。定期的な scanner は既に deployed された image の新しい CVE を探し続けます。registry の allowlist と signature の verification は [第26章](../26/jp.md)で扱いました。これらは vulnerability scan を補完しますが、代替しません。
 
 > 🏭 delivery path に沿って gate を配置しましょう。build 前の source check、promotion 前の digest 単位の scan/SBOM/signature、evidence のための admission、deploy 後の scheduled rescan。
 
@@ -251,7 +251,7 @@ flowchart TB
     style rescan fill:#673ab7,color:#fff
 ```
 
-fixed severe な HIGH または CRITICAL CVE で job を停止する GitHub Actions-style shell step の例:
+修正版が公開されている HIGH または CRITICAL の CVE で job を停止する GitHub Actions-style shell step の例:
 
 ```bash
 set -euo pipefail
@@ -369,7 +369,7 @@ remediation のテストは最低三つの部分から成ります。scan が対
 
 - CVE は特定の component/version に存在します。severity は priority 付けに役立ちますが、exploitation の context と ownership を代替しません。
 - `trivy image` の CVE gate は明示的に `--scanners vuln` を使う必要があります。`--severity HIGH,CRITICAL`、`--ignore-unfixed`、`--exit-code 1` はそれを管理された CI control にしますが、secret scanning は別の policy として残ります。
-- namespace の inventory は通常、init、ephemeral container の status、そして `spec.volumes[].image.reference` を含む必要があります。remediation では runtime `imageID` または volume reference を、tag に頼らず確認済みの platform-manifest digest に対応させます。
+- namespace の inventory は通常の container、init container、ephemeral container の status、そして `spec.volumes[].image.reference` を含む必要があります。remediation では runtime `imageID` または volume reference を、tag に頼らず確認済みの platform-manifest digest に対応させます。
 - Trivy は CycloneDX（`--format cyclonedx`）と SPDX JSON（`--format spdx-json`）で SBOM を作成します。multi-platform image では実際に配送される各 platform について scan と SBOM を作成します。`trivy sbom` は保存された構成を再スキャンする production の拡張であり、exam で保証された CLI task ではありません。
 - `trivy fs` と `trivy config` は image build 前に問題を見つけますが、build された image の scan を代替しません。
 - Grype と Clair は許容できる代替です。admission は同期的に重い scan を実行するべきではなく、digest による事前に作成された evidence を確認する方が良いです。
@@ -396,7 +396,7 @@ Vulnerability database は常に更新されるため、昨日 clean だった d
 </details>
 
 <details>
-<summary>3. 一つの namespace で `CRITICAL` が最も多い image をどう見つけ、通常、init、ephemeral container の status をなぜ考慮すべきですか？</summary>
+<summary>3. 一つの namespace で `CRITICAL` が最も多い image をどう見つけ、通常の container、init container、ephemeral container の status をなぜ考慮すべきですか？</summary>
 
 まず全 Pod の `.status.initContainerStatuses`、`.status.containerStatuses`、`.status.ephemeralContainerStatuses` を取得し、実際の `imageID` を取り出し、canonical registry digest に対応させます。別に `spec.volumes[].image.reference` を inventory します。次に、確認済みの各 container-image reference について `trivy image --scanners vuln --quiet --format json --severity CRITICAL` を実行し、`jq` で finding を数え、数値でソートします。各 container の type と image volume は別々の OCI artifact を配送できるため、どの path を除外しても盲点が残ります。
 </details>

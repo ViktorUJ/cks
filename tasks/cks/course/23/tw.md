@@ -61,7 +61,7 @@ encryption 不可取代 mTLS：trusted node 上遭 compromise 的 workload 並�
 
 > 🎯 變更前，記錄 CNI、versions、firewall、MTU 及 test Pods 的 cross-node placement。
 
-**記錄**不表示變更 configuration，而是保存可在 rollout 後用來比較的 baseline——也就是正常運作 state 的 snapshot。將
+**記錄**不表示變更 configuration，而是保存可在 rollout 後用來比較的 baseline-也就是正常運作 state 的 snapshot。將
 checks 的 output 寫入 change/incident note 或 lab records：目前提供 network 的 CNI 及其 version、涉及的
 Kubernetes/kernel/Cilium versions、firewall 是否允許所需的 inter-node protocol，以及 path 上可用的 MTU。
 **Cross-node placement** 表示兩個 test Pods 真的被排程到**不同** nodes。這很重要：只有這種 flow 會產生可用來證明
@@ -108,7 +108,7 @@ kubectl -n kube-system get configmap cilium-config -o yaml
 
 ## 23.3. Cilium transparent encryption：model 與 boundaries
 
-Cilium 在 nodes 的 datapath 加密 traffic。`node-a` 上的 Pod 將 data 傳給 `node-b` 上的 Pod 時，Cilium encapsulates/encrypts
+Cilium 在 nodes 的 datapath 加密 traffic。`node-a` 上的 Pod 將 data 傳給 `node-b` 上的 Pod 時，Cilium 會封裝/加密
 原始 packet，於 node IPs 間傳送 outer packet，而 `node-b` 上的 Cilium 會驗證 peer、解密，並將原始 packet 交付 target
 Pod。這對 Kubernetes Service、DNS 與 application 都是 transparent 的：不必變更 URL 或 port，也不用加入 TLS library。
 
@@ -179,7 +179,7 @@ kubectl -n kube-system rollout status daemonset/cilium --timeout=10m
 kubectl -n kube-system get pods -l k8s-app=cilium
 ```
 
-若 policy 也要求 encryption node traffic，將其作為獨立、可 review 的變更設定，並測試 API server/kubelet availability：
+若 policy 也要求加密 node traffic，將其作為獨立、可 review 的變更設定，並測試 API server/kubelet availability：
 
 ```bash
 helm upgrade cilium cilium/cilium \
@@ -237,7 +237,7 @@ mode 作為驗證 NetworkPolicy、firewall 或 control-plane availability 的替
 > 🏭 對遭 compromise 的 node：isolate、保全 evidence、將 old peer 排除於 trust；private key 不得進入 ticket、Git 或 chat。
 
 **實務上代表：**「compromised」表示有理由相信 attacker 能在 node 執行 commands 或讀取其 data。**Isolate** 表示不再對它
-排程 new Pods，並依 approved incident procedure 限制它參與 cluster；這會 containment，但不會抹除 traces。**Evidence**
+排程 new Pods，並依 approved incident procedure 限制它參與 cluster；這能遏制擴散，但不會抹除 traces。**Evidence**
 是調查所需的 metadata 與 logs（time、node name、Cilium state 和 events），而不是 private key copy。**將 old peer 排除於
 trust** 表示，key regeneration 或 node replacement 後，需確認其他 nodes 不再接受由 old public key authenticated 的
 traffic。以下列表顯示這些動作的安全順序。
@@ -267,7 +267,7 @@ mechanism 的一部分。
 
 對支援 IPsec 的 Cilium release，典型 transition 從 key Secret 開始：agent 必須在啟用 `encryption.type=ipsec` **之前**
 取得 `cilium-ipsec-keys`。僅從已安裝 supported compatible Cilium CLI 並具 kubeconfig 的 administrative machine 建立它。
-若 Secret 已存在，不要意外 overwrite——先檢查 owner 與 version-specific rotation procedure：
+若 Secret 已存在，不要意外 overwrite-先檢查 owner 與 version-specific rotation procedure：
 
 ```bash
 kubectl -n kube-system get secret cilium-ipsec-keys >/dev/null 2>&1 || \
@@ -328,14 +328,14 @@ rotation interval、audit 與 blast radius 可能不同。
 Cilium transport encryption 的設定至此結束。隨後討論 Istio 是刻意的：它**不是**下一個 Cilium parameter，也不是 IPsec
 prerequisite，而是獨立的 additional layer。對 cross-node request，Cilium 保護 nodes 間的 outer packet，而 Istio mTLS
 讓 proxy 驗證特定 workload 的 identity。因此，healthy Cilium encryption 仍不能證明 Istio injection、certificate 或
-mTLS policy——需在下一節分別驗證。
+mTLS policy-需在下一節分別驗證。
 
 > 🎯 Istio mTLS 將 certificate 與 workload identity 綁定；區分 `PeerAuthentication: STRICT` 與帶有 `ISTIO_MUTUAL` 的 `DestinationRule`，並檢查 proxy/injection。
 
 > 🔬 **Upstream identity primitive。** Kubernetes v1.37 已將 Pod Certificates 與 ClusterTrustBundles 穩定化。它們提供
 > Kubernetes-level X.509 primitives，卻不會自動使 Istio/SPIFFE identity plane 變得多餘：signer、trust model 與 mesh
 > enforcement 仍是獨立的 architecture decisions。請見
-> [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_TW.md)。
+> [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
 
 ## 23.6. Istio：sidecar、SPIFFE workload identity 與 `PeerAuthentication`
 
@@ -348,7 +348,7 @@ Pod/ServiceAccount identity，也不會自行強制 server 僅接受 mTLS。此�
 
 Istio 解決另一部分問題：workload proxies 取得 certificates、建立 mTLS 並驗證 peer identity。`PeerAuthentication: STRICT`
 可拒絕 plaintext inbound traffic。兩者的搭配是：**Istio 保護並驗證 workload-to-workload connection，Cilium 額外保護不受
-信任的 inter-node segment 上的 packet**。`NetworkPolicy` 仍是第三層——它決定何種 flow 被允許。
+信任的 inter-node segment 上的 packet**。`NetworkPolicy` 仍是第三層-它決定何種 flow 被允許。
 
 | 問題 | Cilium WireGuard/IPsec | Istio mTLS |
 |---|---|---|
@@ -364,7 +364,7 @@ encryption。
 Cilium 在 threat model 要求保護 node-to-node underlay 時提供另一種價值：對 physical network 隱藏 inner Pod IP/port
 及其他 L3/L4 metadata、涵蓋 mesh 外的 sensitive cross-node flow，或滿足 inter-node encryption policy/compliance requirement。
 兩個 layers 僅在**兩種**目標都適用時才需要：workload identity/mTLS **以及** underlay 或 non-mesh traffic protection。若
-application 不需要 workload identity 或 mesh-compatible behavior，不要自動啟用 Istio——先評估 threat model、compatibility
+application 不需要 workload identity 或 mesh-compatible behavior，不要自動啟用 Istio-先評估 threat model、compatibility
 與 overhead。
 
 Istio sidecar（`istio-proxy`、Envoy）攔截 inbound/outbound workload traffic。Istiod 依 Kubernetes ServiceAccount 簽發
@@ -474,7 +474,7 @@ verify mTLS -> STRICT narrow scope -> STRICT namespace -> remove temporary excep
 
 Istio auto mTLS 可自動選擇 TLS，但 explicit `DestinationRule` 是 lab 中可驗證的 client-side intent，或在 organization
 policy 要求 explicit configuration 時很有用。`PeerAuthentication` 保護 inbound server，而 `DestinationRule` 設定 outbound
-client traffic 的 TLS——它們是 connection 的不同 sides。
+client traffic 的 TLS-它們是 connection 的不同 sides。
 
 ```yaml
 apiVersion: networking.istio.io/v1
@@ -734,7 +734,7 @@ metadata:
 HTTP `200`；帶有允許 identity 的 meshed client 必須仍可運作。對較窄 rules，使用 release 的 policy API，例如
 `AuthorizationPolicy` 搭配 `MeshTLSAuthentication`。Linkerd policy API 與 unauthorized traffic behavior 在 versions 間曾
 變更：建立 default-deny 前，請確認 installed release 的 CRD 和 policy mode。mTLS 可證明 identity 並保護 channel，但不必然
-表示「每個 identity 都可呼叫每個 endpoint」——authorization 必須另行設定。
+表示「每個 identity 都可呼叫每個 endpoint」-authorization 必須另行設定。
 
 > 🔬 Capture 在 termination 前看見 inner plaintext/TLS，在 physical NIC 看見 outer encrypted packet。
 
@@ -885,7 +885,7 @@ Kubernetes/Cilium/mesh upgrade 後仍能運作的 evidence。
 2. **Canary namespace/nodes。** 從 dedicated namespace 與小型 node pool 開始。對 Istio，先證明 meshed `200` 與
    plaintext reset；對 Cilium，證明 cross-node encrypted outer packet。
 3. **Enforce 前先 observe。** 收集 latency、connection errors、packet drops、proxy certificate expiry 與 Cilium health。
-   `PERMISSIVE` 只可作為具 measurable、removal date 的 migration stage。
+   `PERMISSIVE` 只可作為可衡量且有 removal date 的 migration stage。
 4. **縮小 exceptions。** `PeerAuthentication` selector、dedicated namespace 或 documented legacy port 優於 global
    `DISABLE`。Exception 必須有 owner、reason、expiry 與 negative test。
 5. **變更後驗證。** New node、Cilium upgrade、mesh CA rotation 與 firewall change 都需要重複 status、functional flow
@@ -899,18 +899,18 @@ updates 與 monitoring。
 
 ## 23.13. 迷你詞彙表
 
-- **Transparent encryption** — 不改變 application、Service 或 URL 的 datapath encryption；Cilium 在 nodes 上套用它。
-- **WireGuard** — 使用 peer key pairs 的 VPN protocol；public key 定義被允許的 peer。
-- **IPsec ESP** — 在 Security Associations 間提供 confidentiality 與 integrity 的 IP-level protected payload。
-- **Node encryption** — nodes 間的 traffic protection；不等同於 workload identity。
-- **mTLS** — client 與 server 都提供 certificate 的 TLS。
-- **Workload identity** — workload 的 cryptographically verifiable identity，通常在 mesh 中與 ServiceAccount/namespace 綁定。
-- **Sidecar** — application 旁攔截 traffic 的 proxy container。
-- **`PeerAuthentication`** — Istio inbound mTLS policy；`STRICT` 拒絕 plaintext。
-- **`DestinationRule`** — Istio outbound traffic policy；`ISTIO_MUTUAL` 使用 Istio 管理的 certificates。
-- **Linkerd identity** — Linkerd 的 mTLS identity，通常建構自 ServiceAccount。
-- **Outer packet** — physical network 上 node IPs 間的 encrypted packet。
-- **Inner packet** — encryption 前或 decryption 後可見的原始 Pod-to-Pod flow。
+- **Transparent encryption** - 不改變 application、Service 或 URL 的 datapath encryption；Cilium 在 nodes 上套用它。
+- **WireGuard** - 使用 peer key pairs 的 VPN protocol；public key 定義被允許的 peer。
+- **IPsec ESP** - 在 Security Associations 間提供 confidentiality 與 integrity 的 IP-level protected payload。
+- **Node encryption** - nodes 間的 traffic protection；不等同於 workload identity。
+- **mTLS** - client 與 server 都提供 certificate 的 TLS。
+- **Workload identity** - workload 的 cryptographically verifiable identity，通常在 mesh 中與 ServiceAccount/namespace 綁定。
+- **Sidecar** - application 旁攔截 traffic 的 proxy container。
+- **`PeerAuthentication`** - Istio inbound mTLS policy；`STRICT` 拒絕 plaintext。
+- **`DestinationRule`** - Istio outbound traffic policy；`ISTIO_MUTUAL` 使用 Istio 管理的 certificates。
+- **Linkerd identity** - Linkerd 的 mTLS identity，通常建構自 ServiceAccount。
+- **Outer packet** - physical network 上 node IPs 間的 encrypted packet。
+- **Inner packet** - encryption 前或 decryption 後可見的原始 Pod-to-Pod flow。
 
 ## 23.14. 本章摘要
 
@@ -932,8 +932,8 @@ updates 與 monitoring。
 ## 23.15. 如何在 production 中應用
 
 在 production 中，透過 flow inventory、canary namespace、MTU 與 firewall control、以 RBAC 保護 key material，以及可驗證的
-rotation/rollback runbook 導入 Cilium encryption 與 mesh mTLS。將可觀察 evidence——`cilium-dbg encrypt status`、policy events
-和成功的 mTLS requests——在擴大 scope 前收集。
+rotation/rollback runbook 導入 Cilium encryption 與 mesh mTLS。將可觀察 evidence-`cilium-dbg encrypt status`、policy events
+和成功的 mTLS requests-在擴大 scope 前收集。
 
 ## 23.16. 如何派上用場：考試與實際工作
 
@@ -967,7 +967,7 @@ identities，server 也不會由 peer key 得知 client 的 ServiceAccount。
 <summary>3. Nodes 間必須允許哪些 firewall protocols：Cilium WireGuard 的 UDP/51871 與 Cilium IPsec 的 ESP（IP protocol 50）？</summary>
 
 對 WireGuard，允許 worker nodes 間的 Cilium UDP port，預設是 `51871`，但須在 installed configuration 確認實際值。對 Cilium
-IPsec，允許 ESP——IP protocol 50。典型 IKE/NAT-T UDP/4500 並不屬於本章描述的 Cilium IPsec mechanism。
+IPsec，允許 ESP-IP protocol 50。典型 IKE/NAT-T UDP/4500 並不屬於本章描述的 Cilium IPsec mechanism。
 </details>
 
 <details>
@@ -1040,14 +1040,14 @@ transport。Policy 可允許 transparent encryption 不會加密的 same-node fl
 並記錄 `check_result` output：
 [tasks/cks/labs/110](../../labs/110/README_TW.MD)。
 
-Lab 前可先複習 CKA foundations：[CKA 第 30 章 — CNI 與 Pod network](../../../cka/course/30/tw.md)、
-[CKA 第 31 章 — Service 與 DNS](../../../cka/course/31/tw.md)、
-[CKA 第 34 章 — NetworkPolicy](../../../cka/course/34/tw.md)，以及
-[CKA Lab 110 — Service/DNS、Ingress、Gateway API、NetworkPolicy](../../../cka/labs/110/README_TW.MD)。
+Lab 前可先複習 CKA foundations：[CKA 第 30 章 - CNI 與 Pod network](../../../cka/course/30/tw.md)、
+[CKA 第 31 章 - Service 與 DNS](../../../cka/course/31/tw.md)、
+[CKA 第 34 章 - NetworkPolicy](../../../cka/course/34/tw.md)，以及
+[CKA Lab 110 - Service/DNS、Ingress、Gateway API、NetworkPolicy](../../../cka/labs/110/README_TW.MD)。
 
 若專注於 native Cilium mTLS(不使用 Istio sidecar),可延伸練習 **Lab 115:基於 SPIRE 的
 Cilium Mutual Authentication**(advanced/production 進階實務內容,不屬於 CKS Core 考試正式
-範圍):[tasks/cks/labs/115](../../labs/115/README_RU.MD)。
+範圍):[tasks/cks/labs/115](../../labs/115/README_TW.MD)。
 
 自行測試時，使用 disposable cluster 與 dedicated namespaces。不要以關閉 production sidecar 或在 shared node 上對
 sensitive payload 執行 packet capture 來檢查 `STRICT`。
@@ -1065,21 +1065,21 @@ sensitive payload 執行 packet capture 來檢查 `STRICT`。
 
 ## 綜合 checkpoint：Minimize Microservice Vulnerabilities 已完成
 
-在前往 Supply Chain Security 前，用 15–20 分鐘不看提示地檢查你是否已掌握 Minimize Microservice Vulnerabilities
-domain（第 18–23 章）：
+在前往 Supply Chain Security 前，用 15-20 分鐘不看提示地檢查你是否已掌握 Minimize Microservice Vulnerabilities
+domain（第 18-23 章）：
 
 1. 對 test namespace 套用 `enforce=restricted` PSA label，並展示明確 privileged 的 Pod 得到 admission rejection、
-   而安全的 Pod 可建立（第 18–19 章）。
+   而安全的 Pod 可建立（第 18-19 章）。
 2. 撰寫或套用一個阻擋 `privileged: true` 的 admission policy（native VAP 或 Kyverno），並說明 `Audit` 與 `Enforce`
    的差別（第 20 章）。
 3. 建立 `Secret`，將它作為 volume mount 至 Pod，並解釋為何這比 environment variable 安全（第 21 章）。
-4. **綜合任務。** 結合 RBAC（第 10 章，Cluster Hardening domain）與 PSA（第 18–19 章，本 domain）：若使用者有
+4. **綜合任務。** 結合 RBAC（第 10 章，Cluster Hardening domain）與 PSA（第 18-19 章，本 domain）：若使用者有
    `create namespaces` 的權限卻沒有 label restriction，他如何建立一個沒有 `enforce=restricted` 的 namespace 並完全
-   bypass PSA——第 10 章中哪一項具體 RBAC restriction 可封閉此路徑？
+   bypass PSA-第 10 章中哪一項具體 RBAC restriction 可封閉此路徑？
 5. 指出一種 Pod-to-Pod encryption（第 23 章）可防禦、但 NetworkPolicy（第 04 章，Cluster Setup domain）無法防禦的
    具體 attack。
 
-若第 4 題有困難，請一併回到第 10 與第 18–19 章。
+若第 4 題有困難，請一併回到第 10 與第 18-19 章。
 
 ---
 [目錄](../README_TW.md) · [第 22 章](../22/tw.md) · [第 24 章](../24/tw.md)

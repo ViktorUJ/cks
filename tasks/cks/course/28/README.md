@@ -163,7 +163,7 @@ done
 > ephemeral containers, matches runtime `imageID` to a canonical digest, and records the owner
 > workload. In Kubernetes v1.36, also account separately for `spec.volumes[].image.reference`:
 > a container-image-compatible volume follows the same CVE/SBOM flow, while another OCI artifact
-> needs an appropriate policy. This is useful in operations but is not required to reproduce
+> needs an appropriate policy. This is useful in operations, but you do not need to reproduce it
 > manually in an exam task.
 
 > 🎯 Tie an SBOM to the same digest and scan the saved contents: a CVE is fixed by rebuilding the artifact, not by editing the SBOM.
@@ -258,7 +258,7 @@ trivy config --severity HIGH,CRITICAL Dockerfile
 These checks answer different questions. A vulnerable dependency in a lockfile will be visible
 through `fs`, while `privileged: true`, an open security group, or a Dockerfile with a risky
 instruction will be visible through `config`. But the runtime image is still scanned: a build can
-add OS packages or bring in a base image that are not present in the repository.
+add OS packages or bring in a base image, neither of which is present in the repository.
 
 Typical mistakes:
 

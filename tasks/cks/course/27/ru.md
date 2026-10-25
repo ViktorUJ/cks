@@ -768,7 +768,7 @@ Templates ещё не являются тем ресурсом, который �
 <details>
 <summary>7. Что нужно сделать после finding: отключить rule, исправить source или принять узкое исключение?</summary>
 
-Обычный путь - исправить исходный Dockerfile, manifest или policy и повторить проверки. Глобальный `--ignore` скрывает системное нарушение; legitimate exception ограничивают конкретным rule и scope, документируют причиной, owner и сроком пересмотра. После правки lint, `conftest`, policy tests и server dry-run должны вновь пройти.
+Обычный путь - исправить исходный Dockerfile, manifest или policy и повторить проверки. Глобальный `--ignore` скрывает системное нарушение; legitimate exception ограничивают конкретным rule и scope, документируют причину, owner и срок пересмотра. После правки lint, `conftest`, policy tests и server dry-run должны вновь пройти.
 </details>
 
 <details>

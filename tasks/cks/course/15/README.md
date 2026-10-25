@@ -4,7 +4,7 @@
 
 > **Problem.** After gaining entry through exposed SSH or a local account, an attacker
 > looks for broad `sudo`, a privileged group, or a writable configuration file. One such
-> mistake can provide root access, allow kubelet credentials to be read, or access to a
+> mistake can provide root access, expose kubelet credentials, or open access to a
 > runtime socket, turning limited node access into takeover of the node and Kubernetes.
 
 > **What comes next.** In chapter 14, we reduced the node's attack surface: removed
@@ -150,7 +150,7 @@ k8s-operator ALL=(root) KUBELET_STATUS
 
 Check the resulting policy for the target user specifically. Do not turn a
 `sudo`/authentication failure into an "expected denial" through `|| echo`: first the complete
-listing policy must be retrieved successfully, and absence of `/bin/bash` and other unneeded
+policy listing must be retrieved successfully, and the absence of `/bin/bash` and other unneeded
 commands is checked in its saved output.
 
 ```bash
@@ -295,7 +295,7 @@ sudo ss -lntup | grep -E ':(22|6443|10250|10256|10257|10259|2379|2380)\b' || tru
 | `10257/tcp` | kube-controller-manager | control-plane/monitoring only when needed, and not from the internet |
 | `10259/tcp` | kube-scheduler | control-plane/monitoring only when needed, and not from the internet |
 | `2379-2380/tcp` | etcd client/peer | only control-plane/etcd peers |
-| `30000-32767/tcp`, `30000-32767/udp` (default) | NodePort | only client/LB CIDRs that need published Service; verify the actual range against the API server's `--service-node-port-range` |
+| `30000-32767/tcp`, `30000-32767/udp` (default) | NodePort | only client/LB CIDRs that need the published Services; verify the actual range against the API server's `--service-node-port-range` |
 | CNI ports (variable) | overlay, node-to-node, and Pod traffic | exactly the CIDRs and protocols in the selected CNI documentation |
 
 Do not mix three rule managers without understanding the backend. `ufw` is a high-level
@@ -345,7 +345,7 @@ sudo ufw delete "$RULE_NUMBER"
 
 For the instructional `iptables` example, allow established traffic, loopback, SSH from the
 allowlist, and then deny all other inbound traffic. In a real cluster, add all documented
-Kubernetes/CNI flows before adding `DROP`, otherwise you can cut communication between nodes or
+Kubernetes/CNI flows before adding `DROP`; otherwise you can cut communication between nodes or
 Pod networking. Check `FORWARD` chains, IPv4, and IPv6 separately: a CNI can route Pod traffic
 outside `INPUT`, while a final `DROP` in `INPUT` neither creates a secure forwarding policy nor
 replaces CNI-specific rules.
@@ -548,7 +548,7 @@ access, use the provider console or a governed break-glass account, not a perman
 ## 15.6. Verification and diagnostics: prove that the protection works
 
 Verification must confirm actual behavior, not merely a line in a file. Run network tests from
-both an allowed and denied segment, and run `sudo` checks as an unprivileged user. Do not use
+both an allowed and a denied segment, and run `sudo` checks as an unprivileged user. Do not use
 destructive commands on a production node or remove active rules without a rollback plan.
 
 ```bash
@@ -634,7 +634,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
 - **Continuous verification.** CIS scanning from [chapter 07](../07/README.md), file-integrity
   monitoring, searches for world-writable paths, and control of open ports run regularly,
   not only before an audit.
-- For Kubernetes v1.37, separately evaluate rootless node architecture (`KubeletInUserNamespace`) as an additional least-privilege boundary; this is not the same as Pod user namespaces. See [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA.md).
+- For Kubernetes v1.37, separately evaluate rootless node architecture (`KubeletInUserNamespace`) as an additional least-privilege boundary; this is not the same as Pod user namespaces. See [Kubernetes v1.37 Security Delta (Russian original)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 15.8. Mini-glossary
 

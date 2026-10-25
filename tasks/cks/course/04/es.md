@@ -84,7 +84,7 @@ Las policies son aditivas: Kubernetes no tiene un orden `deny`/`allow` ni priori
 | Policy | Qué aísla | Cuándo aplicarla |
 |---|---|---|
 | Solo `Ingress` | Tráfico entrante a los Pods seleccionados | Cuando todavía no se pueden restringir las conexiones salientes |
-| Solo `Egress` | Tráfico saliente de los Pods seleccionados | Para proteger metadata, API externas y frente a exfiltración |
+| Solo `Egress` | Tráfico saliente de los Pods seleccionados | Para proteger metadata y API externas y evitar la exfiltración |
 | `Ingress` y `Egress` | Ambas direcciones | El objetivo habitual para un namespace sensible |
 
 ## 04.3. Reglas allow específicas: selectores, IP y puertos
@@ -210,7 +210,7 @@ flowchart TB
     style allowed fill:#0f9d58,color:#fff
 ```
 
-En la práctica, es útil aplicar un baseline automáticamente mediante una plantilla de namespace o un policy engine. Pero una `NetworkPolicy` normal tiene ámbito de namespace y no sustituye la policy cluster-wide de CNI. Si necesitas denegaciones cluster-wide, reglas FQDN o filtrado L7, considera Cilium y sus policies en el capítulo 06.
+En la práctica, es útil aplicar un baseline automáticamente mediante una plantilla de namespace o un policy engine. Pero una `NetworkPolicy` normal tiene ámbito de namespace y no sustituye la policy cluster-wide de un CNI concreto. Si necesitas denegaciones cluster-wide, reglas FQDN o filtrado L7, considera Cilium y sus policies en el capítulo 06.
 
 > **Nota de producción, no material de examen.** La `NetworkPolicy` core `networking.k8s.io/v1` sigue siendo la API portable principal para CKS. SIG Network desarrolla una API cross-CNI independiente, `ClusterNetworkPolicy` (`policy.networking.k8s.io/v1alpha2`), pero es una API emerging/experimental cuyo soporte depende de CNI; no sustituye ni la API core ni las extensiones vendor-specific de Cilium/Calico.
 
@@ -367,7 +367,7 @@ Para el diagnóstico didáctico anterior se utiliza el tag `nicolaka/netshoot:v0
 >
 > **Control:** default-deny para ingress y egress más reglas explícitas por identidad/labels y puertos.
 >
-> **Reprueba:** la misma solicitud desde `frontend` tiene éxito solo hacia el backend permitido; una solicitud de un Pod no relacionado se bloquea.
+> **Nueva prueba:** la misma solicitud desde `frontend` tiene éxito solo hacia el backend permitido; una solicitud de un Pod no relacionado se bloquea.
 
 ## 04.11. Preguntas de autoevaluación
 

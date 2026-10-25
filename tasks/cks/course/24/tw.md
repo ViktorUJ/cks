@@ -75,7 +75,7 @@ Base image 決定 `COPY` 前存在哪些 files。Final stage 不必像 builder�
 
 ```mermaid
 flowchart TB
-    q["Runtime<br/>requirements"]
+    q["Runtime<br/>需求"]
     q --> scratch["scratch<br/>static binary<br/>內含 data<br/>最少 files"]
     q --> dist["distroless<br/>需要 runtime<br/>沒有 shell<br/>沒有 package mgr"]
     q --> alpine["Alpine<br/>shell 或 apk<br/>或 debug tools<br/>有意識的選擇"]
@@ -425,7 +425,7 @@ Ephemeral debug container 位於同一 Pod 中並共享其 network namespace。`
 | 症狀 | 可能原因 | 採取動作 |
 |---|---|---|
 | `exec /server: no such file or directory` 於 `scratch` | binary 是 dynamically linked，或 architecture 錯誤 | 使用 `CGO_ENABLED=0` build；在 builder 檢查 `file /out/server`、platform 與 dependencies |
-| HTTPS 在 `scratch` 中無法運作 | 缺少 CA certificates | 將 CA bundle 內嵌入 application，或僅從獨立 stage 複製必要的 public bundle |
+| HTTPS 在 `scratch` 中無法運作 | 缺少 CA certificates | 將 CA bundle 嵌入 application，或僅從獨立 stage 複製必要的 public bundle |
 | Pod 無法以 `runAsNonRoot` 啟動 | image/manifest 嘗試使用 UID 0 | 在 Dockerfile 設定 `USER`、ownership 與明確 numeric UID；不可繞過 check |
 | `kubectl exec ... /bin/sh` 無法運作 | distroless/scratch 中預期缺少 shell | 檢查 logs/endpoint；用於調查時使用 `kubectl debug` |
 | 在 `dive`/history 找到 secret | credential 被複製、經 `ARG` 傳遞，或在較晚 layer 才刪除 | revoke secret、在沒有它的情況下 rebuild，使用 BuildKit/Podman secret mount |
@@ -448,9 +448,9 @@ Ephemeral debug container 位於同一 Pod 中並共享其 network namespace。`
 - **最小化是 pipeline 的一部分。** Teams 測量 image size 與 layer composition，在 review 時執行 `dive`，在 CI
   執行 SBOM/scan/sign，並在 base update 時定期 rebuild image。小 image 不代表可免除對 CVE 的回應。
 
-## 24.8. Mini-glossary
+## 24.8. 迷你詞彙表
 
-- **Attack surface（attack surface）** - 可能含有 vulnerability 或可在 attack 中使用的 components、files 與 interfaces。
+- **Attack surface（攻擊面）** - 可能含有 vulnerability 或可在 attack 中使用的 components、files 與 interfaces。
 - **Base image** - `FROM` instruction 中定義 stage 初始 filesystem 的 image。
 - **Build context** - 傳遞給 builder 的 files；由 `.dockerignore` 限制。
 - **distroless** - 沒有 package manager，通常也沒有 shell 的 minimal runtime image。
@@ -497,7 +497,7 @@ signing 與 admission policy - 能處理明確定義的 image。
 > **Control：** BuildKit `--mount=type=secret`、用於含 credentials files 的 `.dockerignore`，以及僅對必要 artifact 使用 `COPY --from`；只有 cacheable filesystem output 不含 credential 時才使用 external cache。
 > **Retest：** 再次檢查 final layers、可取得 build outputs 和 provenance，沒有找到 credential。
 
-## 24.11. Self-check questions
+## 24.11. 自我檢查問題
 
 <details>
 <summary>1. 為什麼 runtime image 中的 shell 和 package manager 會增加 RCE 影響，即使缺少它們不會修復 application vulnerability？</summary>

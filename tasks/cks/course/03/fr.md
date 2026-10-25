@@ -466,9 +466,9 @@ sudo strace -f -p "$PID" -e trace=%file,%network
 
 ## 03.6. MAC : AppArmor et SELinux complètent DAC
 
-Le DAC Linux ordinaire vérifie les UID, GID et mode bits d'un fichier. Dans le modèle DAC (Discretionary Access Control), le propriétaire de l'objet peut modifier les mode bits, par exemple avec `chmod`, et accorder ou retirer ainsi un accès dans le modèle DAC. Modifier l'UID propriétaire d'un fichier sous Linux exige `CAP_CHOWN` ; un propriétaire non privilégié ne peut modifier le groupe du fichier que vers un groupe dont il est membre. Un processus avec UID/GID ou capabilities suffisants peut réussir ou contourner une partie des vérifications DAC ordinaires.
+Le DAC Linux ordinaire vérifie les UID, GID et mode bits d'un fichier. Dans le modèle DAC (Discretionary Access Control, contrôle d'accès discrétionnaire), le propriétaire de l'objet peut modifier les mode bits, par exemple avec `chmod`, et accorder ou retirer ainsi un accès dans le modèle DAC. Modifier l'UID propriétaire d'un fichier sous Linux exige `CAP_CHOWN` ; un propriétaire non privilégié ne peut modifier le groupe du fichier que vers un groupe dont il est membre. Un processus avec UID/GID ou capabilities suffisants peut réussir ou contourner une partie des vérifications DAC ordinaires.
 
-**Mandatory Access Control (MAC)** ajoute une seconde vérification obligatoire pour le kernel. L'administrateur charge une policy et le kernel associe un processus à son profile/label, puis vérifie si une action donnée sur un fichier, socket ou autre objet est autorisée. Même si DAC a déjà autorisé l'accès, MAC peut le refuser ; le processus lui-même ne peut pas supprimer ou affaiblir la policy. L'objectif est de confiner un processus compromis : un web server ne doit par exemple pas lire des clés SSH ou modifier des fichiers système seulement parce qu'il a reçu un UID, une capability ou l'accès à un fichier supplémentaire. MAC complète donc DAC, capabilities et seccomp au lieu de les remplacer.
+**Mandatory Access Control (MAC, contrôle d'accès obligatoire)** ajoute une seconde vérification obligatoire pour le kernel. L'administrateur charge une policy et le kernel associe un processus à son profile/label, puis vérifie si une action donnée sur un fichier, socket ou autre objet est autorisée. Même si DAC a déjà autorisé l'accès, MAC peut le refuser ; le processus lui-même ne peut pas supprimer ou affaiblir la policy. L'objectif est de confiner un processus compromis : un web server ne doit par exemple pas lire des clés SSH ou modifier des fichiers système seulement parce qu'il a reçu un UID, une capability ou l'accès à un fichier supplémentaire. MAC complète donc DAC, capabilities et seccomp au lieu de les remplacer.
 
 | Mécanisme | Modèle principal | Où il est le plus fréquent | À vérifier |
 |---|---|---|---|
@@ -578,7 +578,7 @@ Erreurs typiques :
 ## 03.8. Application en production
 
 - **Intégrez les restrictions au workload template.** Un Helm chart de base ou platform template définit `resources.limits`, `allowPrivilegeEscalation: false`, `capabilities.drop: [ALL]`, `seccompProfile: RuntimeDefault` et l'exécution non-root. Une équipe ne s'écarte du template qu'avec justification.
-- **Interdisez les contournements de policy dangereux.** Pod Security Admission au niveau `restricted` ou Kyverno/Gatekeeper n'admet pas `privileged`, les host namespaces, capabilities non sûres et seccomp absent. Les détails de policy suivent aux chapitres 19 et 20.
+- **Interdisez les contournements de policy dangereux.** Pod Security Admission au niveau `restricted` ou Kyverno/Gatekeeper n'admet pas `privileged`, les host namespaces, capabilities non sûres et seccomp absent. Les détails de policy seront présentés aux chapitres 19 et 20.
 - **Séparez les node pools selon la confiance.** Les agents CNI, CSI et node ayant réellement besoin de `NET_ADMIN` ou host mounts s'exécutent séparément des workloads métier. Pour le multi-tenancy, choisissez gVisor ou Kata par RuntimeClass.
 - **Observez les refus ; ne désactivez pas la protection.** Les refus AppArmor/SELinux, erreurs seccomp, OOMKilled et épuisements de PID entrent dans les logs et métriques. Corrigez la cause en modifiant l'application, un writable volume ou une policy étroite, plutôt qu'en revenant à `privileged: true`.
 - **Vérifiez l'état réel du node.** Un Kubernetes manifest décrit l'état désiré, mais AppArmor profile, mode SELinux, mode cgroup et configuration runtime résident sur le node. Vérifiez-les dans le image pipeline et les audits de hardening périodiques.
@@ -589,7 +589,7 @@ Erreurs typiques :
 - **PID namespace** - isolation de la liste des processus et des PID.
 - **network namespace** - isolation des interfaces, routes et de la pile réseau.
 - **cgroup** - groupe de processus avec limites et comptabilité de ressources.
-- **capability** - privilège Linux individuel séparé de l'ensemble traditionnel des privilèges root tout-puissants.
+- **capability** - privilège Linux individuel, extrait de l'autorité de root.
 - **CAP_SYS_ADMIN** - capability excessivement large et dangereuse pour un workload ordinaire.
 - **syscall** - appel système par lequel un processus accède au kernel.
 - **seccomp** - filtre de syscall appliqué par le kernel à un processus.
@@ -603,7 +603,7 @@ Erreurs typiques :
 
 - Un conteneur utilise le kernel partagé du node ; sa protection repose sur plusieurs mécanismes Linux, pas sur un seul « sandbox ».
 - Les namespaces `PID`, `NET`, `MNT`, `UTS`, `IPC` et `USER` limitent la visibilité des ressources, mais host namespaces, `hostPath` et `privileged` peuvent contourner cette frontière. Un user namespace est activé séparément par `spec.hostUsers: false` et demande le support du node et du runtime.
-- Les cgroups limitent CPU, mémoire et PID, protégeant le node et les workloads voisins contre le DoS ; le kubelet définit la limite PID par `podPidsLimit`, et un cgroup OOM peut terminer un processus puis redémarrer un conteneur.
+- Les cgroups limitent CPU, mémoire et PID, protégeant le node et les workloads voisins contre le DoS ; le kubelet définit la limite PID par `podPidsLimit`, et un cgroup OOM peut terminer un processus et entraîner le redémarrage du conteneur.
 - Les capabilities fractionnent l'autorité de root. La baseline sûre consiste à retirer `ALL` et ne restaurer qu'une capability minimale documentée après contrôle de sysctl et du besoin réel.
 - seccomp avec `RuntimeDefault` réduit l'API kernel disponible pour un processus ; sans profil explicite, `Unconfined` est possible si `seccompDefault` n'est pas activé sur le node.
 - AppArmor et SELinux complètent les permissions de fichiers ordinaires par une policy obligatoire ; leur runtime/node profile, AVC et volume labels comptent. Pour les workloads fortement non fiables, envisagez aussi gVisor ou Kata.
@@ -672,8 +672,8 @@ Pour les tenants non fiables ou workloads à haut risque, une frontière kernel 
 
 ## Documentation de référence
 
-- [Kubernetes: Linux kernel security constraints](https://kubernetes.io/docs/concepts/security/linux-kernel-security-constraints/)
-- [Kubernetes: User Namespaces](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/)
+- [Kubernetes : contraintes de sécurité du kernel Linux](https://kubernetes.io/docs/concepts/security/linux-kernel-security-constraints/)
+- [Kubernetes : User Namespaces](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/)
 
 ---
 [Table des matières](../README_FR.md) · [Chapitre 02](../02/fr.md) · [Chapitre 04](../04/fr.md)

@@ -315,7 +315,7 @@ sequenceDiagram
 Backend 必須可從 *API server* 存取，並作出 fail-closed decision。下方選擇 mTLS configuration：API server
 出示 client certificate，backend 檢查它和 CA。mTLS 不是 `ImagePolicyWebhook` 的通用要求；backend 的 authentication
 方式由其 kubeconfig 與 infrastructure 決定。Backend 不應每次 request 都 pull image：檢查 reference/digest、
-signature 與 trusted identity，並僅使用短暫且有理由的 TTL cache results。Signature revoke 後長期的 allow-cache
+signature 與 trusted identity，並僅以短暫且有理由的 TTL 快取結果。Signature revoke 後長期的 allow-cache
 會留下 unwanted launch window。
 
 在 admission configuration 中設定 `defaultAllow: false`。下方 file path 和 mount 針對 kubeadm static Pod；
@@ -463,7 +463,7 @@ IMAGE="${IMAGE:?set image reference}"
 # 在具 OIDC 的 CI（例如 GitHub Actions）中：沒有 interactive confirmation。
 cosign sign --yes "$IMAGE"
 
-# 驗證 issuer **與** workflow subject，而不只 certificate 是否存在。
+# 驗證 issuer 與 workflow subject，而不只 certificate 是否存在。
 cosign verify \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
   --certificate-identity-regexp='^https://github\.com/example-org/payments/\.github/workflows/release\.yml@refs/tags/v[0-9].*$' \
@@ -544,7 +544,7 @@ spec:
 `pods/ephemeralcontainers` 有已知 `ImageValidatingPolicy` defect，無法保證其 `validations` 會套用至
 `kubectl debug`（upstream #16947 指出 fix milestone `1.19.2`；亦見 §26.2 compatibility note）。因此此 pinned
 release 的 mandatory positive/negative tests 是 normal 和 init container。下方 request 僅能作為 empirical
-compatibility test；不要預先記錄 expected denial，亦不可依賴它來 enforcement unsigned approved-registry
+compatibility test；不要預先記錄 expected denial，亦不可依賴它來強制執行 unsigned approved-registry
 debug-container，除非 lab 安裝修正版本且你的 test 確認結果。
 
 ```bash
@@ -642,7 +642,7 @@ API-server admission configuration 與 fail-open risk。保留 admission denial 
 
 **在實際工作中。** Signature 將 production workload 與 release workflow 及特定 artifact 相連，而 admission
 使此 rule 對每條 deployment path 都成為 mandatory。結合 CI least-privilege permissions、protected registry 和
-audit logs，這可減少啟動未通過 pipeline image 的機率。
+audit logs，這可減少啟動未通過你的 pipeline 之 image 的機率。
 
 > ### 🔴 Attacker 的觀點
 > **Asset：** production workload 對 image 的 reference。
@@ -651,7 +651,7 @@ audit logs，這可減少啟動未通過 pipeline image 的機率。
 > **Abuse path：** 將 tag 重新指向另一 image。若沒有 digest pinning，同一字串 `registry/app:stable` 不保證相同 bytes：使用 `imagePullPolicy: Always` 時，kubelet 每次啟動都會重新 resolve tag；使用 `IfNotPresent` 時 cached image 可能暫時掩蓋變更，但新的 node 或清除的 cache 在首次 pull 時會取得新的 digest；`Never` 不進行 pull，但不是 supply-chain verification control。`imagePullPolicy` 無法取代 digest pinning 和 signature/provenance verification。
 > **Expected evidence：** 已保存的 admission denial response 或 audit log；對 controller-owned Pod，還有 owner 的 `FailedCreate` event。
 > **Control：** digest pinning、registry allowlist，以及透過 ImagePolicyWebhook 或 Kyverno 的 admission signature verification。
-> **Retest：** 以 digest 的 workload 不會在 tag retarget 後變更，且 unsigned image 被 admission 拒絕。
+> **Retest：** 以 digest 固定的 workload 不會在 tag retarget 後變更，且 unsigned image 被 admission 拒絕。
 
 ## 26.10. Self-check questions
 

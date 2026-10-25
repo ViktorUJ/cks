@@ -343,7 +343,7 @@ kubectl exec -n "$NS" "$POD" -c "$CTR" -- grep '^Seccomp:' /proc/1/status
 
 Старые manifest могут использовать annotation
 `seccomp.security.alpha.kubernetes.io/pod` или
-`container.seccomp.security.alpha.kubernetes.io/<container>`. Это исторический интерфейс: начиная с Kubernetes v1.25 эти annotations **нефункциональны**
+`container.seccomp.security.alpha.kubernetes.io/<container>`. Это исторический интерфейс: начиная с Kubernetes v1.27 эти annotations **нефункциональны**
 и не назначают seccomp profile. Их наличие в современном кластере - сигнал для audit, а не
 работающая совместимость; замените их на `securityContext.seccompProfile`. Не смешивайте
 annotation и API-поле, особенно с разными значениями. После миграции протестируйте новый Pod

@@ -151,7 +151,7 @@ kubectl run metadata-probe --rm -i --restart=Never --image=curlimages/curl:8.11.
 საჭიროებას.
 
 **მნიშვნელოვანია არ აგვერიოს ორი განსხვავებული დასკვნა.** „Endpoint
-მისაწვდომია" და „credentials მიღებულია" - ერთი და იგივე არ არის, და მათი
+მისაწვდომია" და „credentials მიღებულია“ - ერთი და იგივე არ არის, და მათი
 შერევა ანგარიშში არ შეიძლება:
 
 - *მისაწვდომობა* - ეს **აღმოჩენა და წინაპირობაა**: ქსელური გზა Pod-იდან
@@ -214,7 +214,7 @@ profile assigned to the worker node" - სწორედ ეს ბლოკა
 IMDS... increase the hop limit to 2") - ეს დასაბუთებული გამონაკლისია, და არა
 საერთო security baseline ყველა container workload-ისთვის.
 
-**ცალკე შემთხვევა: self-managed კლასტერი „ჩვეულებრივ" სერვერებზე** (kubeadm
+**ცალკე შემთხვევა: self-managed კლასტერი „ჩვეულებრივ“ სერვერებზე** (kubeadm
 bare metal-ზე, VM Hetzner-სა და მსგავსში).
 
 > 🔬 Self-managed კლასტერის შემოწმება.
@@ -252,7 +252,7 @@ kubectl get --raw=/version
 kubectl get clusterrolebinding -o jsonpath='{range .items[?(@.roleRef.name=="cluster-admin")]}{.metadata.name}{"\t"}{range .subjects[*]}{.kind}:{.name}{" "}{end}{"\n"}{end}'
 ```
 
-ეს ბრძანება გამოაქვს მხოლოდ ის `ClusterRoleBinding`, რომლებიც მიუთითებენ
+ეს ბრძანება ბეჭდავს მხოლოდ იმ `ClusterRoleBinding`-ებს, რომლებიც მიუთითებენ
 ჩაშენებულ როლზე `cluster-admin` - კლასტერში ყველაზე ფართო როლზე, რომელიც
 სრულ წვდომას იძლევა ყველა რესურსზე. თითოეული ნაპოვნი binding-ისთვის სტრიქონი
 აჩვენებს მის სახელს, შემდეგ - subjects-ის სიას (`User`, `Group` ან
@@ -286,7 +286,7 @@ kubectl get clusterrolebinding -o jsonpath='{range .items[?(@.roleRef.name=="clu
 wildcard რესურსებზე და ცალკე wildcard-წესი `nonResourceURLs`-ზე, რომელიც
 ფარავს non-resource endpoint-ებს, როგორიცაა `/healthz`, `/metrics` და
 `/debug/*`. როლი მეორე წესის გარეშე ამ გზებს არ იძლევა, ასევე შეიძლება
-შეიზღუდოს `resourceNames`-ით ან შეიცვალოს agregation-ით (`aggregationRule`).
+შეიზღუდოს `resourceNames`-ით ან შეიცვალოს aggregation-ით (`aggregationRule`).
 პრაქტიკულად კი, triage-ის თვალსაზრისით, სხვაობა უმნიშვნელოა: API-ს ყველა
 რესურსზე კონტროლი უკვე მოიცავს ყველა Secret-ის წაკითხვას, Pod-ის შექმნას
 ნებისმიერ ნოდაზე და RBAC-ის რედაქტირებას, ესე იგი გზას კლასტერის სრული
@@ -357,7 +357,7 @@ kubectl get clusterroles -o json | jq -r '
   | .rules[]?
   | select(((.verbs // []) | index("*"))
       and (((.apiGroups // []) | index("*") | not) or ((.resources // []) | index("*") | not)))
-  | "\($name): verbs=* — apiGroups=\(.apiGroups // []) resources=\(.resources // [])"
+  | "\($name): verbs=* - apiGroups=\(.apiGroups // []) resources=\(.resources // [])"
 '
 ```
 
@@ -406,7 +406,7 @@ kubectl get clusterroles -o json | jq -r '
 > **გამოცდაზე.** ქვემოთ მოცემული სრული ვერსია (ცალკე `def`-ფუნქციებით
 > შემოწმების თითოეულ დონეზე) - სასწავლოა: ის ერთდროულად აჩვენებს ექვსივე
 > ნიშანს და იმას, თუ რატომაა ისინი ლოგიკურად დაკავშირებული, და არა იმას, რაც
-> რეალურად ღირს დაბეჭდო ტაიმერის ქვეშ. თუნდაც მოკლე `jq`-ფილტრი ჩაბუდებული
+> რეალურად ღირს დაბეჭდოთ ტაიმერის ქვეშ. თუნდაც მოკლე `jq`-ფილტრი ჩაბუდებული
 > `select`-ით და მასივებით ადვილად ფუჭდება ერთი გამოტოვებული ფრჩხილით, სწორედ
 > მაშინ, როცა დროის გამო ნერვიულობთ - წნევის ქვეშ უფრო საიმედოა დაწეროთ
 > *ნაკლებად ელეგანტური*, მაგრამ სინტაქსურად თითქმის შეუძლებელი დასაფუჭებელი
@@ -438,10 +438,10 @@ kubectl get clusterroles -o json | jq -r '
 > საკუთარ სტრიქონზეა, ამიტომ მეორე `grep`-ში ხვდება მხოლოდ სტრიქონი
 > `hostNetwork`, და არა მეზობელი ველები. ამ მიდგომას namespace-ში Pod-ების
 > დიდი რაოდენობისას იგივე მასშტაბის შეზღუდვები აქვს, რაც ამ გვერდის სხვა
-> ვარიანტებს (იხ. ზემოთ 10 000 Pod-ის შესახებ განყოფილება) - მაგრამ საგამოცდო
+> ვარიანტებს (იხ. ქვემოთ 10 000 Pod-ის შესახებ განყოფილება) - მაგრამ საგამოცდო
 > namespace-ისთვის, რომელშიც რამდენიმე ან ათეულამდე Pod-ია, ამას მნიშვნელობა
 > არ აქვს, და თავად ბრძანება თითქმის არ ფუჭდება, თუნდაც სწრაფად და ჩანახატის
-> გარეშე დაბეჭდო. იგივე ხერხი ნებისმიერი ბულევი ველისთვის მუშაობს: შეცვალეთ
+> გარეშე დაბეჭდოთ. იგივე ხერხი ნებისმიერი ბულევი ველისთვის მუშაობს: შეცვალეთ
 > `hostNetwork` `hostPID`-ით, `hostIPC`-ით ან `privileged`-ით.
 
 იდეა: გავიაროთ ყველა Pod ყველა namespace-ში და დავტოვოთ მხოლოდ ისინი,
@@ -509,7 +509,7 @@ server-side გაფილტვრაც არ შეიძლება. ქ�
 გარჩევა, რადგან ისინი ხშირად ერევათ ერთმანეთში. API server-ის მხარეს ყველაფერი
 ისე საშინელი არ არის, როგორც ჩანს: `kubectl get` დეფოლტად დიდ სიებს
 **ნაწილებად** ითხოვს - flag `--chunk-size` დეფოლტური მნიშვნელობით `500`
-(„Return large lists in chunks rather than all at once"), ესე იგი 10 000 Pod
+(„Return large lists in chunks rather than all at once“), ესე იგი 10 000 Pod
 მიღებული იქნება დაახლოებით ოცი თანმიმდევრული მოთხოვნით, და არა ერთი გიგანტური
 მოთხოვნით. ამ პაგინაციის გამორთვა შესაძლებელია მხოლოდ პირდაპირ,
 `--chunk-size=0`-ის გადაცემით.
@@ -521,7 +521,7 @@ server-side გაფილტვრაც არ შეიძლება. ქ�
 `kubectl`-ის ან `jq`-ის პროცესის OOM-მდე ჩათვლით. ამიტომ namespace-ების
 ციკლში ერთ-ერთზე გავლა სასარგებლოა არა API server-ის განტვირთვისთვის
 (ამას chunking უზრუნველყოფს), არამედ იმისთვის, რომ **მთელი კლასტერი ერთდროულად
-მეხსიერებაში არ შევინახოთ** და შედეგი inkrement-ულად, namespace-ის
+მეხსიერებაში არ შევინახოთ** და შედეგი ინკრემენტულად, namespace-ის
 namespace-ზე მივიღოთ:
 
 ```bash
@@ -533,7 +533,7 @@ for ns in $(kubectl get ns -o jsonpath='{.items[*].metadata.name}'); do
       + (.spec.ephemeralContainers // []);
 
     # true/false-ის ნაცვლად container-ის თითოეული შემოწმება აბრუნებს
-    # კონკრეტული ჩართული ნიშნების ᲡᲘᲐს container-ის სახელთან ერთად -
+    # კონკრეტული ჩართული ნიშნების ᲡᲘᲐᲡ container-ის სახელთან ერთად -
     # ამის გარეშე გამონატანში სხვადასხვა ნიშნების გარჩევა შეუძლებელი იქნებოდა.
     def container_reasons:
       [
@@ -585,7 +585,7 @@ done
 
 1. `for ns in $(kubectl get ns -o jsonpath='{.items[*].metadata.name}')`
    იღებს namespace-ების სახელების სიას ერთი მსუბუქი მოთხოვნით (Pod-ების
-   გარეშე, მხოლოდ სახელები) და ერთ-ერთზე გადასცემს ცვლადს `$ns`.
+   გარეშე, მხოლოდ სახელები) და სათითაოდ გადასცემს ცვლადს `$ns`.
 2. `kubectl get pods -n "$ns" --field-selector=status.phase=Running -o json`
    ციკლის შიგნით გამოტვირთავს მხოლოდ მიმდინარე namespace-ის Running Pod-ებს -
    რიგით ნაკლებ JSON-ს, ვიდრე `-A` მთელ კლასტერზე ფილტრის გარეშე, და
@@ -672,7 +672,7 @@ def pod_reasons:
       else empty end)
   ] + [containers[]? | container_reasons[]];
 
-# შენატანი (.) იკითხება chunk-ის ᲤᲐᲘᲚᲘᲓᲐᲜ ($chunk_file), და არა
+# შემავალი მონაცემები (.) იკითხება chunk-ის ᲤᲐᲘᲚᲘᲓᲐᲜ ($chunk_file), და არა
 # ბრძანების-სტრიქონის არგუმენტიდან - CHUNK_SIZE=200 რეალური Pod-ისთვის,
 # სრული status-ითა და managedFields-ით, chunk ადვილად აჭარბებს OS-ის
 # argv-სიგრძის ლიმიტს, და `jq --argjson chunk "$chunk_json"` მთავრდება
@@ -708,7 +708,7 @@ for ns in $(kubectl get ns -o jsonpath='{.items[*].metadata.name}'); do
     jq --slurpfile acc "$result_file" --arg ns "$ns" -f "$merge_jq" "$chunk_file" > "${result_file}.new"
     mv "${result_file}.new" "$result_file"
     processed=$((processed + ${#chunk[@]}))
-    echo "namespace $ns: $processed/$total pod დამუშავებულია" >&2
+    echo "namespace $ns: $processed/$total pods processed" >&2
     sleep "$SLEEP_BETWEEN_CHUNKS"
   done
 done
@@ -745,7 +745,7 @@ jq . "$result_file"
   Pod-ის მქონე კლასტერზე ეს შესამჩნევად ამცირებს პიკურ დატვირთვას, ვიდრე
   chunk-ების მაქსიმალურად სწრაფად ერთმანეთის მიყოლებით გაგზავნა.
 - **`echo ... >&2` პროგრესით ყოველი chunk-ის შემდეგ.** ბეჭდავს stderr-ში
-  (stdout-ზე საბოლოო JSON-თან შერევის გარეშე) სტრიქონს, ტიპის `namespace
+  (stdout-ზე საბოლოო JSON-თან შერევის გარეშე) სტრიქონს, რომელიც ასე გამოიყურება: `namespace
   kube-system: 200/1400 pods processed` - დიდ კლასტერზე გავლას წუთები
   შეიძლება დასჭირდეს, და ინდიკაციის გარეშე გაუგებარია, სკრიპტი მუშაობს თუ
   ჩამოკიდულია.
@@ -756,7 +756,7 @@ jq . "$result_file"
   ფაილებიდან, და არა ბრძანების-სტრიქონის არგუმენტების სახით გადასცემს. ეს
   პრინციპულია: `CHUNK_SIZE=200`-ისას რეალური Pod-ისთვის, სრული `status`-ითა
   და `managedFields`-ით, ერთი chunk-ის JSON ადვილად აღწევს რამდენიმე MB-ს,
-  ხოლო ბრძანება ტიპის `jq --argjson chunk "$chunk_json" ...` ამ JSON-ს
+  ხოლო `jq --argjson chunk "$chunk_json" ...` ტიპის ბრძანება ამ JSON-ს
   ჩვეულებრივ პროცესის არგუმენტად გადასცემს - argv-ის ჯამური სიგრძის OS-ის
   ლიმიტის (`ARG_MAX`, ჩვეულებრივ ~128 KB-დან რამდენიმე MB-მდე, სისტემიდან
   გამომდინარე) გადაჭარბებისას shell ბრძანებას ასრულებს შეცდომით `Argument
@@ -772,7 +772,7 @@ jq . "$result_file"
   ფაილები ავტომატურად იშლება სკრიპტიდან გასვლისას - შეცდომის ან `Ctrl+C`-ის
   შემთხვევაშიც, და არა მხოლოდ ნორმალურ დასრულებაზე. `trap`-ის გარეშე
   დროებითი ფაილები `/tmp`-ში დაგროვდებოდა თითოეულ შეწყვეტილ გაშვებაზე.
-- **ცალკე ფუნქცია `pod_reasons` `merge.jq`-ს შიგნით ითვალისწინებს, რომ
+- **მთავარი jq-ფილტრი დროებით `$merge_jq` ფაილში ითვალისწინებს, რომ
   kubectl აბრუნებს სხვადასხვა სტრუქტურას მოთხოვნილი სახელების რაოდენობის
   მიხედვით.** `kubectl get pods -n "$ns" pod-a pod-b -o json` ᲠᲐᲛᲓᲔᲜᲘᲛᲔ
   სახელისას გასცემს List-ს (`{"items": [...]}`), მაგრამ ᲖᲣᲡᲢᲐᲓ ᲔᲠᲗ
@@ -876,7 +876,7 @@ contains(":") | not` სწორედ ბოლო სეგმენტს �
 > ფილტრაცია სიმძიმის მიხედვით გაკეთებულია flag-ით `--severity CRITICAL,HIGH`
 > `trivy`-ის მხარეს, და არა `select`-ით `jq`-ში - მაშინ `jq` ტრივიალური
 > რჩება (`length` ყველა ნაპოვნ ჩანაწერზე), და ნაკლებია შანსი, ტაიმერის
-> ქვეშ პირობაში შეცდომა დაუშვა. გამონატანი ტიპის `3<tab>app-1<tab>nginx:1.19`
+> ქვეშ პირობაში შეცდომა დაუშვათ. გამონატანი, რომელიც ასე გამოიყურება: `3<tab>app-1<tab>nginx:1.19`
 > მაშინვე იკითხება: მარცხნივ რაოდენობა, შემდეგ Pod და image. `sort -rn`
 > ყველაზე ცუდს ზემოთ დგამს, და რჩება `kubectl delete pod app-1 -n "$NS"`.
 > გაითვალისწინეთ `.spec.containers[0].image` - აიღება პირველი container;
@@ -1002,7 +1002,7 @@ secret ფაილად მონტირდება და აპლიკ�
 > password` მარტო მხოლოდ სახელიან სტრიქონს აჩვენებს და არ გვეტყვის,
 > literal მნიშვნელობაა იქ თუ `secretKeyRef`. `-A1` ამატებს შემდეგ
 > სტრიქონს, ხოლო მეორე `grep` ამოწმებს, რომ მასში სწორედ `value:` არის.
-> გასაღები მომენტი: `value:` **არ** ემთხვევა `valueFrom:`-ს - `value`-ის
+> საკვანძო მომენტი: `value:` **არ** ემთხვევა `valueFrom:`-ს - `value`-ის
 > შემდეგ იქ მოდის `F`, და არა ორწერტილი, ამიტომ Pod, რომელიც სწორად იღებს
 > პაროლს `Secret`-იდან, სიაში ვერ მოხვდება. თუ საჭიროა არა მხოლოდ Pod-ის
 > სახელი, არამედ თავად სტრიქონის მაშინვე ნახვაც, ამოშალეთ `-q` მეორე
@@ -1019,7 +1019,7 @@ secret ფაილად მონტირდება და აპლიკ�
 | აპლიკაციის ლოგიკური დაუცველობები: injection, SSRF, authorization-ის გვერდის ავლა, IDOR | code review, SAST/DAST, pentest | CKS-ის ინსტრუმენტების გარეთ - დეველოპმენტის პასუხისმგებლობა |
 
 ბოლო სტრიქონი ღირს ცალკე გამოვყოთ: კოდში ლოგიკური დაუცველობა არცერთი
-`kubectl`-ბრძანებით არ პოვება, არცერთი image-scanner-ით და CKS-ის
+`kubectl`-ბრძანებით ვერ მოიძებნება, არცერთი image-scanner-ით და CKS-ის
 პროგრამაში არ შედის. CKS სხვა კითხვას პასუხობს - "რა შეუძლია გააკეთოს
 თავდამსხმელს, **მას შემდეგ**, რაც ასეთ დაუცველობას ექსპლუატირებს": სწორედ
 ამიტომაა კურსში ასეთი დიდი ყურადღება `SecurityContext`-ზე, RBAC-ზე,
@@ -1101,11 +1101,11 @@ IMDS-ის hardening ამცირებს ზედაპირს ყვ�
 
 | ინსტრუმენტი | რას ფარავს ზემოთ მოცემული შემოწმებებიდან | სტატუსი |
 |---|---|---|
-| [kube-bench](https://github.com/aquasecurity/kube-bench) | control plane-ის, kubelet-ისა და etcd-ის კონფიგურაცია CIS Benchmark-ის მიხედვით - ნაწილობრივ ნაბიჯები 2 და 5 | აქტიურად მხარდაჭერილი; განხილულია [07-ე თავში](../07/ge.md) და ლაბ 103 |
+| [kube-bench](https://github.com/aquasecurity/kube-bench) | control plane-ის, kubelet-ისა და etcd-ის კონფიგურაცია CIS Benchmark-ის მიხედვით - ნაწილობრივ ნაბიჯები 2 და 5 | აქტიურად მხარდაჭერილი; განხილულია [07-ე თავში](../07/ge.md) და ლაბი 103-ში |
 | [Kubescape](https://kubescape.io/) | Pod-ის საშიში პარამეტრები, ფართო RBAC-უფლებები, hostPath/hostNetwork/privileged, mutable-ტეგები - ნაბიჯები 3, 4, 6; სკანირებს როგორც ცოცხალ კლასტერს, ისე მანიფესტებს/Helm-ს NSA, MITRE, SOC 2 framework-ების მიხედვით | CNCF Incubating, აქტიურად ვითარდება |
-| `trivy k8s` ([Trivy](https://trivy.dev/)) | misconfiguration კლასტერის ობიექტებში პლუს CVE images-ში და KBOM - ნაბიჯები 4, 6 და Code-შრის ნაწილი | აქტიურად მხარდაჭერილი; images-ის სკანირება - [28-ე თავში](../28/ge.md) და ლაბ 111 |
+| `trivy k8s` ([Trivy](https://trivy.dev/)) | misconfiguration კლასტერის ობიექტებში პლუს CVE images-ში და KBOM - ნაბიჯები 4, 6 და Code-შრის ნაწილი | აქტიურად მხარდაჭერილი; images-ის სკანირება - [28-ე თავში](../28/ge.md) და ლაბი 111-ში |
 | [kubeaudit](https://github.com/Shopify/kubeaudit) | workload-ის წერტილოვანი შემოწმებები: root, capabilities, `allowPrivilegeEscalation`, `readOnlyRootFilesystem`-ის არარსებობა - ნაბიჯი 4 | upstream **დაარქივებულია** 30.10.2024, read-only; გვხვდება ძველ სტატიებში, მაგრამ ახალი პროცესებისთვის არ გამოდგება |
-| [kube-linter](https://docs.kubelinter.io/), [kubesec](https://kubesec.io/) | იგივე ნიშნები, მაგრამ მანიფესტებში deploy-მდე, და არა ცოცხალ კლასტერში | მხარდაჭერილია; განხილულია [27-ე თავში](../27/ge.md) და ლაბ 111 |
+| [kube-linter](https://docs.kubelinter.io/), [kubesec](https://kubesec.io/) | იგივე ნიშნები, მაგრამ მანიფესტებში deploy-მდე, და არა ცოცხალ კლასტერში | მხარდაჭერილია; განხილულია [27-ე თავში](../27/ge.md) და ლაბი 111-ში |
 | RBAC-სპეციფიკური: [rbac-tool](https://github.com/alcideio/rbac-tool), `kubectl who-can` | RBAC-ის ვიზუალიზაცია და მოთხოვნები - ნაბიჯი 3 მოსახერხებელი სახით, custom-როლების ჩათვლით wildcard-ით | მხარდაჭერილია; RBAC დეტალურად - [10-ე თავში](../10/ge.md) |
 
 ცალკე **ინსტრუმენტებზე, რომლებიც უკვე აღარ ვითარდება.** ორივე ხშირად
@@ -1177,7 +1177,7 @@ flowchart TB
   endpoint და RBAC-იდენტობა. `etcd` შეიცავს კლასტერის მდგომარეობასა და
   Secret-მონაცემებს, ამიტომ მისი კლიენტის პორტი და სერტიფიკატები
   workload-ისთვის ხელმისაწვდომი არ უნდა გახდეს.
-- **kubelet და ნოდა.** Kubelet უშვებს container-ებს და ჰყავს ნოდის
+- **kubelet და ნოდა.** Kubelet უშვებს container-ებს და აქვს ნოდის
   credentials. წვდომა `10250`-სთან, container runtime-ის socket-თან, SSH-სთან
   ან write-წვდომა static Pod manifest-ებთან ხშირად ნოდის კონტროლის
   ტოლფასია. ნოდა ნდობის ბაზის ნაწილია, და არა უბრალოდ ადგილი, სადაც Pod
@@ -1195,7 +1195,7 @@ flowchart TB
   writable root filesystem ეხმარება თავდამსხმელს, აპლიკაციაში RCE-დან
   ნოდაზე გადავიდეს ან container-ში გაიმაგროს.
 - **მონაცემები და იდენტობები.** `Secrets`, ServiceAccount tokens, kubeconfig,
-  სერტიფიკატები და cloud credentials ხშირად თავად container-ზე
+  სერტიფიკატები და cloud credentials ხშირად თავად container-ზე უფრო
   ღირებულია. Base64 `Secret`-ში დაშიფვრა არ არის, ხოლო `Secrets`-ის
   წაკითხვა RBAC-ის მეშვეობით ისეთივე კონტროლს მოითხოვს, როგორც წვდომა
   production database-თან.
@@ -1350,7 +1350,7 @@ API-ის შეცვლა. ეს ორი ნაკადია, რომ
 | დაუცველი manifest-ის ერთიანი cluster-level enforcement-ის არარსებობა | K04 Lack Of Cluster Level Policy Enforcement | ზუსტი ცალკე შესაბამისობა არ აქვს | PSA, `ValidatingAdmissionPolicy` ან policy engine + admission/audit evidence |
 | Pod-სა და namespace-ს შორის სეგმენტაციის არარსებობა | K05 Missing Network Segmentation Controls | K07 Missing Network Segmentation Controls | default-deny და წერტილოვანი `NetworkPolicy`, CNI flow/deny events |
 | ღია API, kubelet, etcd, webhook ან სხვა Kubernetes-კომპონენტი | K06 Overly Exposed Kubernetes Components | K09 Misconfigured Cluster Components | დახურული ქსელი, TLS, endpoint-ების შეზღუდვა და access logs |
-| control plane-ის, node-ის ან runtime-ის დაუცველი ან დაუცველობამორული კონფიგურაცია | K07 Misconfigured And Vulnerable Cluster Components | 2022 K09 + K10 | უსაფრთხო კონფიგურაცია, განახლებები, scanner/config audit და access logs |
+| control plane-ის, node-ის ან runtime-ის დაუცველი ან მოწყვლადი კონფიგურაცია | K07 Misconfigured And Vulnerable Cluster Components | 2022 K09 + K10 | უსაფრთხო კონფიგურაცია, განახლებები, scanner/config audit და access logs |
 | გადასვლა კლასტერიდან cloud-ში metadata-ს, node credentials-ის ან არასწორად გაცემული identity-ის მეშვეობით | K08 Cluster-To-Cloud Lateral Movement | K07 Missing Network Segmentation Controls, K03 Overly Permissive RBAC Configurations და K08 Secret Management Failures | egress policy, node identity-ისა და **workload identity**-ის მინიმალური უფლებები, flow logs და cloud audit |
 | სუსტი authentication ან შეუფერებელი anonymous access | K09 Broken Authentication Mechanisms | K06 Broken Authentication Mechanisms | შემოწმებული issuer/audience, გამორთული ან არაავტორიზებული anonymous identity, authentication/audit events |
 | ქმედებებისა და დარღვევების სიგნალების არარსებობა | K10 Inadequate Logging And Monitoring | K05 Inadequate Logging and Monitoring | audit policy, runtime და network telemetry, შენახული alerts identity-ითა და დროით |
@@ -1394,7 +1394,7 @@ movement/privilege escalation-ის მცდელობას, მაგრ�
 # მაგრამ არ ცვლის audit log-ს: events-ს მოკლე შენახვის ვადა აქვს.
 kubectl get events -A --sort-by='.lastTimestamp'
 
-# შევამოწმოთ, რომელი ServiceAccount იყენებენ გაშვებული Pod-ები.
+# შევამოწმოთ, რომელ ServiceAccount-ებს იყენებენ გაშვებული Pod-ები.
 kubectl get pods -A -o custom-columns='NAMESPACE:.metadata.namespace,POD:.metadata.name,SA:.spec.serviceAccountName'
 
 # ნოდაზე Falco-თან ერთად: შევამოწმოთ სერვისის მდგომარეობა და ბოლო სიგნალები.
@@ -1414,10 +1414,10 @@ get pods` და `kubectl -n falco logs <pod>`. Audit-ისა და Falco-ი
 Security controls შემთხვევით არ უნდა დაემატოს. ხუთი პრინციპი
 საშუალებას იძლევა, ნებისმიერი გადაწყვეტილება შეფასდეს.
 
-1. **Defense in depth.** ერთმა უარყოფამ არ უნდა გახსნას მთელი გზა.
+1. **Defense in depth.** ერთმა მტყუნებამ არ უნდა გახსნას მთელი გზა.
    მაგალითად, გასწორებული image ამცირებს RCE-ის ალბათობას,
    `SecurityContext` ზღუდავს პროცესს RCE-ის შემდეგ, NetworkPolicy
-   შეიკავებს lateral movement-ს, ხოლო Falco და audit ეხმარება, დარჩენილი
+   აკავებს lateral movement-ს, ხოლო Falco და audit ეხმარება, დარჩენილი
    რისკი შევამჩნიოთ.
 2. **Least privilege.** იდენტობა, workload და პროცესი იღებს მხოლოდ
    საჭირო უფლებებს. პრაქტიკულად ეს ნიშნავს ზუსტ `verbs`-ს RBAC-ში,
@@ -1481,10 +1481,10 @@ flowchart TB
 
 ერთი საფრთხე ხშირად რამდენიმე სტრიქონს მიეკუთვნება. მაგალითად,
 ServiceAccount token-ის მოპარვის რისკს 11-ე თავის ზომები ამცირებს:
-საჭირო token-ის არ-მონტირება, მოკლე ვადის projected token-ის და
+არასაჭირო token-ის არ-მონტირება, მოკლე ვადის projected token-ის და
 ცალკე ServiceAccount-ის გამოყენება. 04-ე თავის NetworkPolicy-ს
 შეუძლია შეზღუდოს უკვე კომპრომეტირებული token-ის გამოყენება ან
-exfiltration, მაგალითად, საჭირო egress-ის აკრძალვით Kubernetes
+exfiltration, მაგალითად, არასაჭირო egress-ის აკრძალვით Kubernetes
 API-სა და გარე endpoint-ებთან; 10-ე თავის RBAC-ი ზღუდავს მის
 შედეგებს, ხოლო Secret-ის წაკითხვას 32-ე თავის audit აფიქსირებს. არ
 აირჩიოთ ერთი "საუკეთესო" control: გამოიყენეთ დამოუკიდებელი
@@ -1518,7 +1518,7 @@ allowlist + workload identity -> CNI flow/Cloud audit -> policy-ის
 - **Threat model როგორც ცვლილების არტეფაქტი.** ახალი namespace-ის,
   Ingress-ის ან გარე registry-სთვის გუნდი აფიქსირებს აქტივებს, ნდობის
   საზღვრებს, entry points-ს, შესაძლო ზიანსა და controls-ს. ასეთი
-  დოკუმენტი არქიტექტურასთან ერთად უნდა განახლდებოდეს, და არ ეწოდოს
+  დოკუმენტი არქიტექტურასთან ერთად უნდა განახლდებოდეს, და არ ინახებოდეს
   ცალკე PDF-ად.
 - **Baseline და გამონაკლისები.** შემოდის უსაფრთხო baseline: non-root,
   `RuntimeDefault`, default-deny, წერტილოვანი RBAC roles, დაუცველი
@@ -1544,7 +1544,7 @@ allowlist + workload identity -> CNI flow/Cloud audit -> policy-ის
 - **Attack surface** - ხელმისაწვდომი შესვლის წერტილებისა და ქმედებების
   ნაკრები, რომლის გამოყენებაც თავდამსხმელს შეუძლია.
 - **Defense in depth** - დამოუკიდებელი დაცვის დონეები, რომლებიც
-  ამცირებენ ერთი control-ის უარყოფის შედეგებს.
+  ამცირებენ ერთი control-ის მტყუნების შედეგებს.
 - **Exfiltration** - მონაცემების არაავტორიზებული გატანა ნდობის
   საზღვრის გარეთ.
 - **Immutable infrastructure** - მიდგომა, სადაც production artifact
@@ -1631,7 +1631,7 @@ Cluster-შრეზე - API server, etcd, kubelet, PKI და RBAC. Container-
 
 `SecurityContext` non-root-ით, seccomp-ით, AppArmor-ითა და
 მინიმალური image-ით ზღუდავს პროცესს RCE-ის შემდეგ, ხოლო default-deny
-ingress/egress ვიწრო allow-წესებით შეიკავებს lateral movement-ს.
+ingress/egress ვიწრო allow-წესებით აკავებს lateral movement-ს.
 Secret-ის წაკითხვისგან იცავს least-privilege RBAC ServiceAccount-ისთვის;
 audit აფიქსირებს API-სთან დაშვებულ და აკრძალულ მიმართვებს.
 </details>
@@ -1641,8 +1641,8 @@ audit აფიქსირებს API-სთან დაშვებულ �
 
 Default-deny-ის შემდეგ Pod ვერ შეძლებს Service-ის სახელებისა და გარე
 FQDN-ების ამოხსნას, თუ საჭირო DNS-გზა ცალკე არ დაშვებულია. Zero trust
-ნიშნავს ფარული ნდობის არარსებობას კლასტერის შიგნითაც: DNS, ისევე
-როგორც სხვა დამოკიდებულებები, წერტილოვანი წესით უშვებენ, და არა
+ნიშნავს ფარული ნდობის არარსებობას კლასტერის შიგნითაც: DNS-ს, ისევე
+როგორც სხვა დამოკიდებულებებს, წერტილოვანი წესით უშვებენ, და არა
 egress `0.0.0.0/0`-ის გახსნით.
 </details>
 

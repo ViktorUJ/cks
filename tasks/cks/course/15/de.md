@@ -5,13 +5,13 @@
 > **Problem.** Nachdem ein Angreifer über offenes SSH oder ein lokales Benutzerkonto eingedrungen ist,
 > sucht er nach weitreichendem `sudo`, einer privilegierten Gruppe oder einer beschreibbaren Konfigurationsdatei. Ein
 > solcher Fehler ermöglicht es, root zu werden, kubelet credentials zu lesen oder auf einen
-> runtime socket zuzugreifen und verwandelt eingeschränkten Zugriff auf einen Node in die Übernahme dieses Nodes und von Kubernetes.
+> runtime socket zuzugreifen, und verwandelt eingeschränkten Zugriff auf einen Node in die Übernahme dieses Nodes und von Kubernetes.
 
 > **Was als Nächstes kommt.** In Kapitel 14 haben wir die Angriffsfläche des Nodes verringert: unnötige Dienste,
 > Pakete und unsicheren Zugriff auf die container runtime entfernt. Jetzt begrenzen wir die Folgen des verbleibenden
 > Eintrittspunkts: Wer darf sich am Host anmelden, was kann ein Benutzer über `sudo` tun,
 > welche Dateien darf er lesen oder ändern und von wo ist der Node überhaupt erreichbar. Dies ist die
-> **System Hardening**-Bereich von CKS.
+> **System Hardening**-Domäne von CKS.
 
 > **Was Sie aus CKA wissen müssen.** Grundlagen zu Benutzern, Gruppen, Dateiberechtigungen, Prozessen,
 > systemd und Netzwerkbefehlen werden im [CKA-Linux-Kapitel](../../../cka/course/00-5-linux/de.md) behandelt.
@@ -205,7 +205,7 @@ den Inhalt zu ersetzen.
 stat -c '%A %a %U:%G %n' /etc/kubernetes/admin.conf
 namei -l /etc/kubernetes/admin.conf
 
-# Suchen Sie im sensiblen Bereich nach world-writable Dateien; prüfen Sie sticky bit separat.
+# Suchen Sie im sensiblen Bereich nach world-writable Dateien; schließen Sie sticky bit separat aus.
 sudo find /etc/kubernetes -xdev -type f -perm -0002 -ls
 sudo find /etc/kubernetes -xdev -type d -perm -0002 -ls
 ```
@@ -216,7 +216,7 @@ gleichen Sie ihn mit der Dokumentation für Ihre Kubernetes-/CIS-Version ab, sta
 
 | Objekt | Risiko bei schwachen Berechtigungen | Sichere Richtung |
 |---|---|---|
-| `/etc/kubernetes/pki/*.key` | Diebstahl eines CA- oder Client-Private-Key | `root:root`, nur root lesbar, normalerweise `600` |
+| `/etc/kubernetes/pki/*.key` | Diebstahl eines CA- oder Client-Private-Keys | `root:root`, nur root lesbar, normalerweise `600` |
 | `/etc/kubernetes/admin.conf` | Ein Benutzer erhält ein cluster-admin-Credential | `root:root`, Modus `600`; nicht in gemeinsame Verzeichnisse kopieren |
 | `/etc/kubernetes/manifests/` | Manipulation eines static Pod des control plane | Verzeichnis und YAML sind nur für root beschreibbar |
 | `/var/lib/kubelet/config.yaml` und kubelet credentials | Änderung des kubelet-Verhaltens oder Diebstahl der Node-Identität | Eigentümer root, nicht für unprivilegierte Benutzer beschreibbar |
@@ -289,7 +289,7 @@ sudo ss -lntup | grep -E ':(22|6443|10250|10256|10257|10259|2379|2380)\b' || tru
 |---|---|---|
 | `22/tcp` | SSH | nur bastion/VPN/administrativer CIDR |
 | `6443/tcp` | kube-apiserver | worker/control plane und zugelassene Administratoren |
-| `10250/tcp` | geschützter kubelet API | control plane und erforderliches monitoring, nicht das Internet |
+| `10250/tcp` | geschützte kubelet API | control plane und erforderliches monitoring, nicht das Internet |
 | `10256/tcp` | kube-proxy healthz | nur zugewiesene health-check/monitoring-Quellen, sofern der Port nicht nur loopback ist |
 | `10257/tcp` | kube-controller-manager | control plane/monitoring nur bei Bedarf und nicht aus dem Internet |
 | `10259/tcp` | kube-scheduler | control plane/monitoring nur bei Bedarf und nicht aus dem Internet |
@@ -346,7 +346,7 @@ Im Lernbeispiel mit `iptables` erlauben wir established Traffic, Loopback, SSH a
 Allowlist und verbieten dann den übrigen eingehenden Traffic. Fügen Sie in einem realen Cluster alle
 dokumentierten Kubernetes/CNI-Flows hinzu, bevor Sie `DROP` setzen, sonst kann die Verbindung
 zwischen Nodes oder Pod-Networking unterbrochen werden. Prüfen Sie die Ketten `FORWARD`, IPv4 und IPv6 separat: CNI
-kann Pod-Traffic nicht über `INPUT` routen, und ein abschließendes `DROP` in `INPUT` schafft keine
+kann Pod-Traffic auch an `INPUT` vorbei routen, und ein abschließendes `DROP` in `INPUT` schafft keine
 sichere forwarding-Policy und ersetzt keine CNI-spezifischen Regeln.
 
 ```bash
@@ -370,8 +370,8 @@ die Ausgabe von `iptables -S` für sich allein eine Persistenzschicht ist.
 
 ### Variante C: `nftables`
 
-`nftables` ist ein moderner Kernel-Mechanismus. Damit lassen sich eine Policy explizit festlegen und das gesamte
-Ruleset mit einem Befehl anzeigen. Wenden Sie das Beispiel nicht auf einem Node an, auf dem CNI oder Firewall-Manager bereits
+`nftables` ist ein moderner Kernel-Mechanismus. Damit lassen sich eine Policy einfacher explizit festlegen und das gesamte
+Ruleset mit einem Befehl anzeigen. Wenden Sie das Beispiel nicht auf einen Node an, auf dem CNI oder Firewall-Manager bereits
 eigene Tabellen erstellt haben, ohne das vorhandene Ruleset zu prüfen.
 
 ```nft
@@ -447,7 +447,7 @@ und `DenyGroups` können mehrfach erscheinen, und jedes Vorkommen wird der jewei
 Ein frühes `00-hardening.conf` hebt ein anderes `AllowUsers` nicht auf. Inventarisieren Sie vor der Verwendung von
 `AllowUsers` sämtliche Vorkommen in der Hauptdatei `sshd_config` und den eingebundenen Dateien,
 entfernen oder führen Sie widersprüchliche Listen zu einer verwalteten Allowlist zusammen und prüfen Sie das Ergebnis mit
-`sshd -T` sowie bei vorhandenem `Match` mit `sshd -T -C user=...,host=...,addr=...`. Wählen Sie **ein**
+`sshd -T` sowie bei vorhandenem `Match` mit `sshd -T -C user=...,host=...,addr=...`. Wählen Sie **eines**
 der nachstehenden Profile: Beide verbieten Passwort-Login, das MFA-Profil verlangt aber zusätzlich einen Schlüssel und
 PAM keyboard-interactive. Aktivieren Sie nicht beide Profile gleichzeitig.
 
@@ -537,7 +537,7 @@ ssh -o PreferredAuthentications=publickey,keyboard-interactive \
 
 Stellen Sie außerdem sicher, dass das resultierende `allowusers` **nur** genehmigte Konten enthält, einschließlich
 erforderlicher Break-Glass-/Automatisierungsidentitäten, und keine zusätzlichen Werte aus einem anderen `Include`.
-Prüfen Sie bei `Match` die effektive Konfiguration für jeden relevanten Benutzer/Quelle mit
+Prüfen Sie bei `Match` die effektive Konfiguration für jeden relevanten Benutzer bzw. jede relevante Quelle mit
 `sshd -T -C`.
 
 Deaktivieren Sie password authentication erst, wenn Sie festgestellt haben, dass der Schlüssel des Zielbenutzers
@@ -634,11 +634,11 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
   Monitoring, Suchen nach world-writable Pfaden und die Kontrolle offener Ports laufen regelmäßig,
   nicht nur vor einem Audit.
 - Bewerten Sie für Kubernetes v1.37 die rootless Node-Architektur (`KubeletInUserNamespace`) separat als zusätzliche
-  Least-Privilege-Grenze; sie ist nicht dasselbe wie Pod User Namespaces. Siehe [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_DE.md).
+  Least-Privilege-Grenze; sie ist nicht dasselbe wie Pod User Namespaces. Siehe [Kubernetes v1.37 Security Delta (nur auf Russisch)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 15.8. Mini-Glossar
 
-- **Least Privilege** - einem Subjekt nur die minimalen Berechtigungen zu gewähren, die es für seine
+- **Least Privilege** - die Gewährung nur der minimalen Berechtigungen, die ein Subjekt für seine
   Aufgabe während eines begrenzten Zeitraums benötigt.
 - **`sudoers`** - eine Policy, die festlegt, welche Befehle ein Benutzer als ein anderer
   Benutzer ausführen darf; sie wird mit `visudo` bearbeitet.
@@ -684,7 +684,7 @@ regelmäßig geprüft und automatisiert werden können.
 <details>
 <summary>1. Warum kann die Mitgliedschaft in `docker` oder eine weit gefasste `sudo`-Regel root gleichkommen?</summary>
 
-Ein Mitglied der Gruppe `docker` kann auf den Docker-Socket zugreifen und einen Container mit Zugriff auf den Host erstellen; das ist somit root-äquivalent statt eine gewöhnliche Arbeitsgruppe. Die Regel `user ALL=(ALL) ALL` erlaubt, einen beliebigen Befehl als root auszuführen. Beide Pfade umgehen die Einschränkungen eines gewöhnlichen unprivilegierten Benutzers und erfordern dieselbe Vorsicht wie die Gewährung von root-Zugang.
+Ein Mitglied der Gruppe `docker` kann auf den Docker-Socket zugreifen und einen Container mit Zugriff auf den Host erstellen; das ist somit root-äquivalent und keine gewöhnliche Arbeitsgruppe. Die Regel `user ALL=(ALL) ALL` erlaubt, einen beliebigen Befehl als root auszuführen. Beide Pfade umgehen die Einschränkungen eines gewöhnlichen unprivilegierten Benutzers und erfordern dieselbe Vorsicht wie die Gewährung von root-Zugang.
 </details>
 
 <details>

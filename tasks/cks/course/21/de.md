@@ -32,7 +32,7 @@ flowchart TB
 Typische Wege für einen Datenabfluss:
 
 - ein Control-Plane-Node, seine Festplatte oder das etcd-Datenverzeichnis wurde kompromittiert;
-- ein snapshot wurde in unsicheren Storage übertragen, einem Ticket oder CI-artifact beigefügt oder auf einen Laptop gelangt;
+- ein snapshot wurde in unsicheren Storage übertragen, einem Ticket oder CI-artifact beigefügt oder ist auf einen Laptop gelangt;
 - jemand besitzt Netzwerk- und TLS-Zugriff direkt auf etcd;
 - ein Backup wurde in einer Testumgebung mit breiterem Zugriff wiederhergestellt;
 - ein Secret wurde versehentlich in einem Log, der shell history, Git oder einer Umgebungsvariable ausgegeben.
@@ -44,7 +44,7 @@ Den letzten Punkt behebt die etcd-Verschlüsselung nicht, die ersten vier werden
 | TLS API server/etcd | Abhören des Datenverkehrs | verschlüsselt keine Daten auf der Festplatte |
 | RBAC | beschränkt den API-Zugriff auf Secret | schützt keinen gestohlenen snapshot |
 | Encryption at rest | ciphertext ausgewählter API-Daten in etcd und dessen snapshot | verschlüsselt weder Festplatten noch snapshot oder Backup vollständig und verbirgt Secret nicht vor einem autorisierten API-Client |
-| externer secrets manager | trennt master keys und Lifecycle vom Cluster | ersetzt weder RBAC noch TLS oder einen sicheren Pod |
+| externer secrets manager | trennt master keys und Lifecycle vom Cluster | ersetzt weder RBAC noch TLS noch einen sicheren Pod |
 
 > 🧠 Der erste passende provider verschlüsselt neue Einträge, der API server liest providers der Reihe nach.
 
@@ -182,7 +182,7 @@ Lokales `aescbc`/`aesgcm` schützt einen snapshot vor jemandem, der nur den snap
 
 ## 21.4. `EncryptionConfiguration` mit kube-apiserver verbinden
 
-Die Datei allein ändert nichts. Der API server muss das Flag `--encryption-provider-config=<path>` erhalten. In einem kubeadm-Cluster ist `kube-apiserver` ein static Pod; sein Manifest liegt gewöhnlich unter `/etc/kubernetes/manifests/kube-apiserver.yaml`. Eine Änderung des Manifest erkennt kubelet und startet den API server neu.
+Die Datei allein ändert nichts. Der API server muss das Flag `--encryption-provider-config=<path>` erhalten. In einem kubeadm-Cluster ist `kube-apiserver` ein static Pod; sein Manifest liegt gewöhnlich unter `/etc/kubernetes/manifests/kube-apiserver.yaml`. Eine Änderung des Manifests erkennt kubelet und startet den API server neu.
 
 ```yaml
 # /etc/kubernetes/manifests/kube-apiserver.yaml (Auszüge)
@@ -219,12 +219,12 @@ Praktische Arbeitsreihenfolge:
 sudo grep -n -- '--encryption-provider-config\|encryption-config' \
   /etc/kubernetes/manifests/kube-apiserver.yaml
 
-# API server nach der Änderung des Manifest wieder bereit.
+# Der API server ist nach der Änderung des Manifests wieder bereit.
 kubectl get --raw='/readyz?verbose'
 kubectl -n kube-system get pods -l component=kube-apiserver
 ```
 
-> **Vorsicht.** Ein Fehler in path, YAML oder Schlüssel kann den Start des API server verhindern. Arbeiten Sie über die Konsole des Control-Plane-Node, behalten Sie ein Backup des Manifest und entfernen Sie die vorherige Konfiguration nicht, bis die Prüfung abgeschlossen ist. Bei managed Kubernetes wird kein static Pod bearbeitet: Aktivieren Sie encryption über den unterstützten Mechanismus des Providers und befolgen Sie dessen KMS-/Cluster-Update-Verfahren.
+> **Vorsicht.** Ein Fehler in path, YAML oder Schlüssel kann den Start des API server verhindern. Arbeiten Sie über die Konsole des Control-Plane-Node, behalten Sie ein Backup des Manifests und entfernen Sie die vorherige Konfiguration nicht, bis die Prüfung abgeschlossen ist. Bei managed Kubernetes wird kein static Pod bearbeitet: Aktivieren Sie encryption über den unterstützten Mechanismus des Providers und befolgen Sie dessen KMS-/Cluster-Update-Verfahren.
 
 > 🏭 KMS lagert den KEK aus, doch plugin und key manager benötigen HA, minimale Permissions und einen überprüften restore.
 
@@ -354,11 +354,11 @@ kubectl get secrets --all-namespaces -o json | kubectl replace -f -
 
 Für das massenhafte Neuschreiben in Production gibt es eine Kubernetes-native Alternative: **Storage Version Migration**. In Kubernetes 1.36 hat sie Beta-Status und ist standardmäßig deaktiviert; nach expliziter Aktivierung und Konfiguration gemäß der Dokumentation Ihrer Version schreibt die Migration Objekte über den API storage path neu. Sie eignet sich insbesondere für re-encryption nach der Änderung von `EncryptionConfiguration` oder Schlüsseln. Für CKS genügt es, die Reihenfolge der providers und das erzwungene Neuschreiben von Objekten zu verstehen; das obige `kubectl replace` bleibt der einfache Prüfungsweg, während Storage Version Migration einen separaten operational rollout, Beobachtung und einen getesteten rollback-/recovery-Prozess erfordert.
 
-> 🏭 **Upstream v1.37.** In Kubernetes v1.37 wurden die integrierte `StorageVersionMigration` API/controller GA und enabled by default. Dies ändert den aktuellen Production-Status, nicht jedoch den CKS-Core-Workflow dieses Kapitels, der an den exam/training context gebunden bleibt. Siehe [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_DE.md).
+> 🏭 **Upstream v1.37.** In Kubernetes v1.37 wurden die integrierte `StorageVersionMigration` API/controller GA und enabled by default. Dies ändert den aktuellen Production-Status, nicht jedoch den CKS-Core-Workflow dieses Kapitels, der an den exam/training context gebunden bleibt. Siehe [Kubernetes v1.37 Security Delta (nur auf Russisch)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
-`kubectl replace` erfordert ein aktuelles `resourceVersion`; bei hoher Konkurrenz sind Konflikte möglich. Führen Sie in Production ein controlled script mit retry, Beobachtung der API latency und einem abgestimmten Zeitfenster aus, statt den Befehl gedankenlos in CI einzufügen. Schreiben Sie JSON mit Secret nicht auf die Festplatte oder in ein pipeline log.
+`kubectl replace` erfordert ein aktuelles `resourceVersion`; bei hoher Parallelität sind Konflikte möglich. Führen Sie in Production ein controlled script mit retry, Beobachtung der API latency und einem abgestimmten Zeitfenster aus, statt den Befehl gedankenlos in CI einzufügen. Schreiben Sie JSON mit Secret nicht auf die Festplatte oder in ein pipeline log.
 
-Entfernen Sie nach Abschluss des re-encryption und der Schlüsselprüfung `key-old` aus der config, starten Sie den API server neu und prüfen Sie das Lesen erneut. Der alte key darf nicht vor dem Neuschreiben der Objekte entfernt werden: Ein wiederhergestellter snapshot oder alter Eintrag würde unlesbar.
+Entfernen Sie nach Abschluss des re-encryption und der Schlüsselprüfung `key-old` aus der config, starten Sie den API server neu und prüfen Sie das Lesen erneut. Der alte key darf nicht vor dem Neuschreiben der Objekte entfernt werden: Ein wiederhergestellter snapshot oder alter Eintrag würde unlesbar werden.
 
 ### Wechsel von `identity` zu Verschlüsselung
 
@@ -490,7 +490,7 @@ kubectl -n default delete secret encryption-check
 | nach Rotation | ein vor der Rotation erstelltes Secret ist lesbar und mit dem neuen provider neu geschrieben |
 | Backup/Restore | snapshot ist sicher verfügbar, und benötigte Schlüssel/KMS sind bei Wiederherstellung erreichbar |
 
-> 🏭 Encryption at rest ersetzt weder RBAC noch TLS, Secret hygiene und Backup; verwalten Sie keys, KMS availability und restore separat.
+> 🏭 Encryption at rest ersetzt weder RBAC noch TLS noch Secret hygiene noch Backup; verwalten Sie keys, KMS availability und restore separat.
 
 ## 21.8. Anwendung in Production
 
@@ -516,20 +516,20 @@ External Secrets Operator, Vault, Cloud Secrets Manager und Secrets Store CSI Dr
 | API-Schreibvorgang hängt oder schlägt fehl | KMS plugin oder externes KMS ist nicht verfügbar/langsam | socket, TLS, KMS health, timeout und HA prüfen; Security nicht blind abschwächen |
 | Secret in Git/Log entdeckt | encryption at rest hilft nicht | ursprüngliches credential sofort rotieren, Zugriff beschränken und artifact gemäß IR-Prozedur entfernen |
 
-> 🏭 **Kubernetes v1.37 Recovery Edge Case.** Für ein unlesbares/korruptes API-Objekt gibt es einen Beta unsafe force-delete path (`AllowUnsafeMalformedObjectDeletion`). Dies ist eine Operation mit cluster-breaking potential und ein letzter recovery mechanism, nicht der übliche Weg, eine encryption rotation zu korrigieren. Details und Einschränkungen: [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_DE.md).
+> 🏭 **Kubernetes v1.37 Recovery Edge Case.** Für ein unlesbares/korruptes API-Objekt gibt es einen Beta unsafe force-delete path (`AllowUnsafeMalformedObjectDeletion`). Dies ist eine Operation mit cluster-breaking potential und ein letzter recovery mechanism, nicht der übliche Weg, eine encryption rotation zu korrigieren. Details und Einschränkungen: [Kubernetes v1.37 Security Delta (nur auf Russisch)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 Bestimmen Sie in der Prüfung zuerst den Clustertyp. Suchen Sie bei kubeadm das API-server-Manifest und die etcd TLS paths. Bei einem managed Control Plane können die Einstellungen geschlossen sein: Versuchen Sie nicht, ein nicht vorhandenes `/etc/kubernetes/manifests` zu bearbeiten; verwenden Sie provider-supported KMS encryption und bestätigen Sie dessen Status.
 
 ## 21.10. Mini-Glossar
 
-- **Encryption at rest** - Verschlüsselung ausgewählter API-Daten vor dem Schreiben in etcd; keine Verschlüsselung der gesamten Festplatte, des snapshot oder Backup.
+- **Encryption at rest** - Verschlüsselung ausgewählter API-Daten vor dem Schreiben in etcd; keine Verschlüsselung der gesamten Festplatte, des snapshot oder des Backups.
 - **EncryptionConfiguration** - Konfiguration der providers, die kube-apiserver für ausgewählte API-Ressourcen liest.
 - **provider** - Mechanismus zum Ver- und Entschlüsseln konkreter API-Ressourcen.
 - **`aescbc`** - lokaler AES-CBC provider mit PKCS#7 padding und Schlüssel aus der Konfiguration; ohne integrierte Authentication/MAC, daher schwach.
 - **`aesgcm`** - AES-GCM AEAD provider; Schlüssel müssen unter Berücksichtigung des Schreiblimits rotiert werden.
 - **`secretbox`** - XSalsa20 + Poly1305 AEAD provider mit 32-Byte-Schlüssel.
 - **`kms`** - provider, der kryptografische Operationen an ein externes KMS plugin übergibt.
-- **envelope encryption** - ein Objekt wird mit DEK verschlüsselt, und der DEK ist durch externen KEK geschützt.
+- **envelope encryption** - ein Objekt wird mit DEK verschlüsselt, und der DEK ist durch einen externen KEK geschützt.
 - **KEK/DEK** - key encryption key / data encryption key.
 - **re-encryption** - Neuschreiben alter API-Objekte über den neuen provider/Schlüssel.
 - **`identity`** - provider ohne Verschlüsselung; nur als bewusster temporärer fallback zulässig.
@@ -545,9 +545,9 @@ Bestimmen Sie in der Prüfung zuerst den Clustertyp. Suchen Sie bei kubeadm das 
 
 ## 21.12. Nutzen für Prüfung und reale Arbeit
 
-**Bei CKS.** Eine Aufgabe kann verlangen, unverschlüsselte Secrets zu finden, encryption at rest zu aktivieren, das korrekte `--encryption-provider-config` zu bestimmen, die provider order zu erklären oder ein Secret während der Rotation nicht zu beschädigen. Schneller Algorithmus: Finden Sie das API-server-Manifest, erstellen Sie sichere config und mount, ergänzen Sie das Flag, warten Sie auf Health, schreiben Sie Objekte neu und prüfen Sie etcd. Antworten Sie nicht „Secret ist mit base64 verschlüsselt“ - das ist falsch.
+**Bei CKS.** Eine Aufgabe kann verlangen, unverschlüsselte Secrets zu finden, encryption at rest zu aktivieren, das korrekte `--encryption-provider-config` zu bestimmen, die provider order zu erklären oder ein Secret während der Rotation nicht zu beschädigen. Schneller Algorithmus: Finden Sie das API-server-Manifest, erstellen Sie eine sichere config und einen mount, ergänzen Sie das Flag, warten Sie auf Health, schreiben Sie Objekte neu und prüfen Sie etcd. Antworten Sie nicht „Secret ist mit base64 verschlüsselt“ - das ist falsch.
 
-**In Production.** Betrachten Sie encryption at rest als Standard-Control-Plane-Baseline, nicht als endgültige Maßnahme. Verwalten Sie Schlüssel getrennt von etcd Backups, automatisieren Sie die Rotation, überwachen Sie KMS, testen Sie restore und minimieren Sie die Anzahl der Personen, identities und Pods, die plaintext sehen können. Führen Sie Änderungen der API-server-Konfiguration nach einer Change Procedure mit Rollback und Backup durch.
+**In Production.** Betrachten Sie encryption at rest als Standard-Control-Plane-Baseline, nicht als endgültige Maßnahme. Verwalten Sie Schlüssel getrennt von etcd-Backups, automatisieren Sie die Rotation, überwachen Sie KMS, testen Sie restore und minimieren Sie die Anzahl der Personen, identities und Pods, die plaintext sehen können. Führen Sie Änderungen der API-server-Konfiguration nach einer Change Procedure mit Rollback und Backup durch.
 
 ## 21.13. Fragen zur Selbstkontrolle
 
@@ -560,7 +560,7 @@ Base64 ist Kodierung, nicht Verschlüsselung: `kubectl get secret -o yaml` kann 
 <details>
 <summary>2. Welche Einträge schützt encryption at rest, und welche Bedrohungen beseitigt es nicht?</summary>
 
-`EncryptionConfiguration` verschlüsselt ausgewählte API-Daten, beispielsweise Secrets, vor dem Schreiben in etcd, und ciphertext gelangt in den snapshot. Es verschlüsselt weder die gesamte Festplatte, den snapshot oder Backup noch schützt es TLS-Verkehr oder verbirgt ein Secret vor einer Identity mit `get secret` oder `exec` in einem Pod. RBAC, TLS und Backup-Schutz bleiben unabhängige Controls.
+`EncryptionConfiguration` verschlüsselt ausgewählte API-Daten, beispielsweise Secrets, vor dem Schreiben in etcd, und ciphertext gelangt in den snapshot. Es verschlüsselt nicht die gesamte Festplatte, den snapshot oder das Backup, schützt nicht den TLS-Verkehr und verbirgt ein Secret nicht vor einer Identity mit `get secret` oder `exec` in einem Pod. RBAC, TLS und Backup-Schutz bleiben unabhängige Controls.
 </details>
 
 <details>

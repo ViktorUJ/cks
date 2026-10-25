@@ -1,3 +1,5 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
 # Lab 101 - краткое решение
 
 Используем `k` вместо `kubectl` (алиас уже доступен на экзамене).
@@ -26,7 +28,7 @@ k -n cks-101 expose deployment backend --port=8080
 k -n cks-101 wait --for=condition=Available deploy/frontend deploy/backend --timeout=60s
 ```
 
-Проверяем что образы совпадают:
+Проверяем, что образы совпадают:
 ```bash
 k -n cks-101 get deploy frontend backend -o yaml | grep 'image:'
 ```
@@ -194,7 +196,7 @@ k -n cks-101 exec probe -- \
 echo $?
 ```
 
-## 5. IMDS final verification
+## 5. Финальная проверка IMDS
 
 ```bash
 # control: IMDS достижим
@@ -269,7 +271,7 @@ echo $?
 k -n cks-101-legacy exec deploy/legacy-client -- curl -sS -m 5 http://backend.cks-101:8080/
 ```
 
-## 7. hostNetwork observation
+## 7. Наблюдение hostNetwork
 
 ```bash
 k -n cks-101 run hostnetwork-probe --image=curlimages/curl:8.11.1 -l app=frontend \

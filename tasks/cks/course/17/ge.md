@@ -58,7 +58,7 @@ flowchart TB
 თუ syscall გატარებულია seccomp-ის მიერ, ჩვეულებრივი kernel-შემოწმებები მაინც
 რჩება ძალაში. მაგალითად, ნებადართულ `mount(2)`-საც კვლავ დასჭირდება capability და
 საჭირო mount namespace/LSM-უფლებები. და პირიქით, `CAP_SYS_ADMIN` არ აუქმებს
-seccomp-denial-ს. ამიტომ seccomp - ბირთვის API-ის წინა ბოლო ვიწრო ბარიერია და არა
+seccomp-denial-ს. ამიტომ seccomp - ბირთვის API-მდე ბოლო ვიწრო ბარიერია და არა
 დანარჩენი controls-ის უნივერსალური ჩანაცვლება.
 
 | მექანიზმი | კითხვა, რომელზეც პასუხობს | მაგალითი |
@@ -110,7 +110,7 @@ JSON-profile-ში მოქმედებები მითითებუ�
 | `SCMP_ACT_KILL_PROCESS` | kernel ასრულებს მთელ პროცესს | მკაცრი fail-closed აშკარად საშიში syscall-ისთვის |
 | `SCMP_ACT_KILL_THREAD` | kernel ასრულებს გამომძახებელ thread-ს | ჩვეულებრივ ერიდებიან: multithread-პროცესს შეუძლია უცნაურ მდგომარეობაში დარჩეს |
 | `SCMP_ACT_TRAP` | პროცესი იღებს `SIGSYS`-ს | სპეციალიზებული დამუშავება, არა ჩვეულებრივი baseline |
-| `SCMP_ACT_LOG` | syscall ნებადართულია, kernel ცდილობს audit event-ის ჩაწერას | ინვენტარიზაცია enforce-მდე |
+| `SCMP_ACT_LOG` | syscall ნებადართულია, kernel ცდილობს audit event-ის ჩაწერას | გამოძახებების ინვენტარიზაცია enforce-მდე |
 | `SCMP_ACT_NOTIFY` | გადაწყვეტილება გადაეცემა userspace supervisor-ს | სპეციალური არქიტექტურა; არ არის ჩვეულებრივი policy-ის ჩანაცვლება |
 
 `SCMP_ACT_LOG` არ ბლოკავს syscall-ს. ის სასარგებლოა მოკლე controlled test-ისთვის,
@@ -230,7 +230,7 @@ if ! sudo cat "/proc/$KPID/cmdline" | tr '\0' '\n' | \
   exit 2
 fi
 
-# --config-dir drop-ins მხარდაჭერილია kubelet v1.36-დან. გადაწყვიტეთ ფარდობითი ბილიკები
+# --config-dir drop-ins მხარდაჭერილია kubelet v1.36-დან. გადაიყვანეთ ფარდობითი ბილიკები აბსოლუტურ ბილიკებად
 # kubelet-ის სამუშაო დირექტორიის მიმართ, წაიკითხეთ ყოველი .conf kubelet-ის merge-თანმიმდევრობით
 # და შემდეგ გამოიყენეთ CLI-ფლაგები. თუ ბილიკები/თანმიმდევრობა/გაერთიანებული მნიშვნელობა
 # ზუსტად ვერ დგინდება, აცნობეთ REVIEW_REQUIRED; ნუ გამოიტანთ დასკვნას
@@ -363,7 +363,7 @@ privileged კონტეინერისთვის.
 ძველმა manifest-ებმა შეიძლება გამოიყენონ annotation
 `seccomp.security.alpha.kubernetes.io/pod` ან
 `container.seccomp.security.alpha.kubernetes.io/<container>`. ეს ისტორიული
-ინტერფეისია: Kubernetes v1.25-იდან ეს annotations **არაფუნქციონალურია** და
+ინტერფეისია: Kubernetes v1.27-იდან ეს annotations **არაფუნქციონალურია** და
 seccomp profile-ს არ ანიჭებს. მათი არსებობა თანამედროვე კლასტერში audit-ისთვის
 სიგნალია და არა მოქმედი თავსებადობა; ჩაანაცვლეთ ისინი `securityContext.seccompProfile`-ით.
 ნუ აურევთ annotation-სა და API-ველს ერთად, განსაკუთრებით სხვადასხვა
@@ -398,7 +398,7 @@ shell-ბრძანების სახელით: `mount` ნიშნა
 }
 ```
 
-> 🔬 `syscalls[].args`, `errnoRet` და syscall-არგუმენტების მიხედვით ფილტრაცია — ვიწრო, ვერსია- და არქიტექტურა-დამოკიდებული დეტალებია.
+> 🔬 `syscalls[].args`, `errnoRet` და syscall-არგუმენტების მიხედვით ფილტრაცია - ვიწრო, ვერსია- და არქიტექტურა-დამოკიდებული დეტალებია.
 
 OCI seccomp-ს შეუძლია არა მხოლოდ syscall-ის სახელის, არამედ `syscalls[].args`-ის
 მეშვეობით მისი არგუმენტების შედარებაც (`index`, `value`, არასავალდებულო
@@ -468,8 +468,8 @@ sudo jq empty /var/lib/kubelet/seccomp/profiles/audit.json
 ```
 
 `errnoRet: 1` ნიშნავს `EPERM`-ს. თუ პროცესი იღებს `Operation not permitted`-ს,
-ეს ავტომატურად seccomp-ს არ ამტკიცებს: იგივე errno-ს შეუძლიათ დააბრუნონ
-capabilities-მა, AppArmor-მა, SELinux-მა ან ჩვეულებრივმა უფლებებმა. ერთდროულად
+ეს ავტომატურად seccomp-ს არ ამტკიცებს: იგივე errno-ს შეიძლება აბრუნებდნენ
+capabilities, AppArmor, SELinux ან ჩვეულებრივი უფლებები. ერთდროულად
 საჭიროა manifest, პროცესის status და kernel audit/log.
 
 ## 17.5. დაკვირვება: syscall-audit და kernel-log
@@ -554,7 +554,7 @@ sudo grep '^Seccomp:' "/proc/$HOST_PID/status"
 ```
 
 `strace` სასარგებლოა ლოკალური, რეპროდუცირებადი კვლევისთვის, მაგრამ თავადვე ცვლის
-timing-ს და ქმნის დატვირთვას. ნუ დაუკავშირდებით მას ხანგრძლივად მაღალდატვირთულ
+timing-ს და ქმნის დატვირთვას. ნუ დაუკავშირდებით ხანგრძლივად მაღალდატვირთულ
 production-PID-ს. test-node-ზე შეგიძლიათ გაუშვათ პროცესის ან ბრძანების მოკლე trace
 და syscalls-ის სახელები profile-ს შეადაროთ:
 
@@ -630,14 +630,14 @@ sudo journalctl -k --since '15 minutes ago' | grep -Ei 'seccomp|SECCOMP|audit' |
 | Pod scheduled არასწორ ადგილზე | profile არ არის მიწოდებული მთელ pool-ზე | შემოწმდეს node label, automation delivery და placement; ნუ შეასუსტებთ profile-ს |
 | `Seccomp: 0` მომუშავე კონტეინერში | profile არ არის მინიჭებული, დაყენებულია `Unconfined`, კონტეინერი privileged-ია ან node-ის default გამორთულია | შედარდეს Pod-/container-`securityContext` და `privileged`, შემდეგ ფაქტობრივი kubelet-ფლაგები/config node-ზე |
 | `Seccomp: 2`, მაგრამ აპლიკაცია აბრუნებს `EPERM`-ს | შესაძლებელია seccomp denial, capability/MAC/DAC denial ან ორივე ერთად | kernel audit, AppArmor/SELinux ლოგები, capabilities და ზუსტი syscall |
-| `SIGSYS` ან პროცესი killed | profile იყენებს `TRAP`/`KILL`-ს | შემოწმდეს JSON, exit code და runtime-ლოგები; აღდგეს test-node-ზე |
+| `SIGSYS` ან პროცესი killed | profile იყენებს `TRAP`/`KILL`-ს | შემოწმდეს JSON, exit code და runtime-ლოგები; გამეორდეს test-node-ზე |
 | JSON `jq`-ით იკითხება, მაგრამ კონტეინერი არ იწყება | schema, ABI, runtime-ვერსია ან seccomp support შეუთავსებელია | kubelet/runtime-event და იზოლირებული თავსებადობის ტესტი |
 | rollout ირღვევა მხოლოდ რეპლიკების ნაწილზე | node pools განსხვავდება profile/runtime/architecture-ით | ყოველი pool-ის ინვენტარიზაცია, თავსებადი pool-ის pin ან ერთიანი managed delivery |
 | „გასწორება“ `Unconfined`/`privileged`-ით | დაცვა გამორთულია, მიზეზი ვერ მოიძებნა | დაბრუნდეს baseline, გამოვლინდეს კონკრეტული syscall და მინიმალური დასაბუთებული გამონაკლისი |
 
 `/proc/1/status` საჭირო კონტეინერთან უნდა წაიკითხოთ. multi-container Pod-ში
 ყოველი კონტეინერის PID 1-ს ცალკე წარმოდგენა აქვს; `kubectl exec` `-c`-ის გარეშე
-შეიძლება არასწორ კონტეინერს აირჩევს. `Seccomp: 2` ადასტურებს filter mode-ის
+შეიძლება არასწორი კონტეინერი აირჩიოს. `Seccomp: 2` ადასტურებს filter mode-ის
 არსებობას, ხოლო profile-ის იდენტურობის დამტკიცება რჩება Pod spec-ის,
 runtime/kubelet-records-ის, node delivery-ისა და მოსალოდნელი ქცევის ერთობლიობად.
 
@@ -662,7 +662,7 @@ profile, `Seccomp: 2`, ბრძანების stderr და შესაბ
 გამოძიებაში იზოლირეთ ტესტი და ნუ დაამატებთ `CAP_SYS_ADMIN`-ს მხოლოდ იმისთვის,
 რომ ერთი შეზღუდვა გვერდი აუარეს და „შეამოწმონ“ მეორე.
 
-> 🧠 Seccomp აკონტროლებს syscalls-ს, capabilities — პრივილეგიებს, AppArmor/SELinux — ობიექტებსა და ოპერაციებზე წვდომას.
+> 🧠 Seccomp აკონტროლებს syscalls-ს, capabilities - პრივილეგიებს, AppArmor/SELinux - ობიექტებსა და ოპერაციებზე წვდომას.
 
 ## 17.7. როგორ დავაკავშიროთ seccomp, capabilities და AppArmor
 
@@ -723,7 +723,7 @@ production-workload-ზე seccomp-ის ტესტირებისთვ�
 ექსპლუატაცია მოითხოვს მართვად, სრულ lifecycle-ს.
 
 1. **განსაზღვრეთ საფრთხე და owner.** მიუთითეთ, რომელი syscall ამცირებს რისკს
-   და რომელ workload/ვერსიას ეხმარება profile. „ყოველი შემთხვევისთვის
+   და რომელ workload/ვერსიას ფარავს profile. „ყოველი შემთხვევისთვის
    ყველაფერს ავკრძალავთ“ სპეციფიკაცია არ არის.
 2. **დააკვირდით მართვადად.** test-node-ზე გამოიყენეთ მოკლე audit/profile
    tracing representative workload-ისთვის, startup-ისა და failure paths-ის
@@ -753,7 +753,7 @@ policy-ის კომბინაცია. Custom profile გამართ�
 როცა custom seccomp/AppArmor/SELinux profiles საჭიროა კლასტერის მასშტაბით
 გავრცელდეს და ჩაიწეროს, განიხილეთ **Security Profiles Operator (SPO)**
 production-გზად: ის მართავს profiles-ის lifecycle-სა და recording workflow-ს
-ხელით JSON-ის ყოველ node-ის kubelet-დირექტორიაში კოპირების ნაცვლად. ეს არ
+ხელით JSON-ის ყოველი node-ის kubelet-დირექტორიაში კოპირების ნაცვლად. ეს არ
 აუქმებს ტესტებს, versioning-სა და placement-ის კონტროლს, მაგრამ profile-ის
 delivery-ს პლატფორმის მიერ მართვადს ხდის.
 
@@ -787,7 +787,7 @@ node-ზე - ეს კვლავ node lifecycle-ისა და rollout-ი
 - **`SCMP_ACT_ERRNO`** - action, რომელიც syscall-ს შეცდომას აბრუნებს მისი
   შესრულების გარეშე.
 - **`SECCOMP` audit record** - kernel/audit ჩანაწერი, რომელიც ეხება
-  seccomp-ს დაკავშირებულ მოვლენას.
+  seccomp-თან დაკავშირებულ მოვლენას.
 
 ## 17.10. თავის შეჯამება
 
@@ -845,7 +845,7 @@ capability seccomp-denial-ს არ აუქმებს. ამიტომ b
 <details>
 <summary>2. რატომ არის `RuntimeDefault` `Unconfined`-ზე უკეთესი ჩვეულებრივი workload-ისთვის?</summary>
 
-`RuntimeDefault` ითხოვს, რომ runtime-მა გამოიყენოს თავისი შტატული seccomp-profile
+`RuntimeDefault` ითხოვს, რომ runtime-მა გამოიყენოს თავისი სტანდარტული seccomp-profile
 და ქმნის გადატანად baseline-ს ჩვეულებრივი workload-ისთვის. `Unconfined`
 ამ შრეს გამორთავს და დასაშვებია მხოლოდ როგორც მოკლე დიაგნოსტიკური
 გამონაკლისი owner-ითა და ვადით. manifest-ში აშკარა ველი ასევე აფიქსირებს
@@ -886,7 +886,7 @@ enforce-სთვის გამოიყენება, მაგალით
 
 საჭიროა declared Pod/container security context, საჭირო კონტეინერის
 effective `Seccomp`, ზუსტი syscall და kernel audit/log. `EPERM` თავისთავად
-საკმარისი არ არის: მას შეუძლიათ დააბრუნონ capabilities-მა, AppArmor-მა,
+საკმარისი არ არის: შეიძლება დააბრუნონ capabilities-მა, AppArmor-მა,
 SELinux-მა ან ჩვეულებრივმა უფლებებმა. თავი ასევე გვირჩევს შევადაროთ node,
 PID/container ID, დრო და `SECCOMP` ჩანაწერები.
 </details>
@@ -918,13 +918,13 @@ runtime-ებსა და არქიტექტურებზე. და�
 Admission-policy ამოწმებს მხოლოდ YAML-ს ობიექტის ჩაწერამდე და არ
 ადასტურებს, რომ node-ს შეუძლია profile-ის გამოყენება. ფაქტობრივ node-ზე
 უნდა დაემთხვეს seccomp-ის მხარდაჭერა runtime/kubelet-ის მიერ, effective
-`securityContext` container override-ის გათვალისწინებით და, `Localhost`-ისთვის
-- თავსებადი JSON-ის არსებობა kubelet-ის seccomp root-ის ქვეშ. კონტეინერი
+`securityContext` container override-ის გათვალისწინებით და, `Localhost`-ისთვის,
+თავსებადი JSON-ის არსებობა kubelet-ის seccomp root-ის ქვეშ. კონტეინერი
 ასევე არ უნდა იყოს `privileged`, რადგან Kubernetes მას `Unconfined`-ად
 უშვებს; შედეგი მოწმდება events-ითა და საჭირო პროცესის `Seccomp: 2`-ით.
 </details>
 
-> 🏭 `RuntimeDefault` template/admission-ში; custom `Localhost` — versioned profile თავსებადი pool-ით, დაკვირვებითა და rollback-ით.
+> 🏭 `RuntimeDefault` template/admission-ში; custom `Localhost` - versioned profile თავსებადი pool-ით, დაკვირვებითა და rollback-ით.
 
 ## 17.13. როგორ გამოიყენება ეს production-ში
 
@@ -949,7 +949,7 @@ manifest ეყრდნობა profile-ის ვერსიას ფარ
 ცვლილება გადის test-node-ზე representative traffic-ით, canary-ით და
 startup-ის, probes-ის, error rate-ისა და `SECCOMP`/runtime events-ის
 დაკვირვებით. უარის შემთხვევაში გუნდი ჯერ ადარებს Pod spec-ს, node-ს,
-`Seccomp: 2`-ს, syscall-ს და kernel audit record-ს, შემდეგ ღებულობს
+`Seccomp: 2`-ს, syscall-ს და kernel audit record-ს, შემდეგ ახორციელებს
 ვიწრო, დასაბუთებულ ცვლილებას profile-ში ან აპლიკაციაში. სერვისის
 მუდმივად `Unconfined`-ზე გადართვა, `CAP_SYS_ADMIN`-ის დამატება ან JSON-ის
 რედაქტირება მომუშავე node-ზე დაუშვებელია: ეს მალავს მიზეზს, ქმნის

@@ -68,7 +68,7 @@ openssl pkey -in tls.key -pubout -outform DER \
   | sha256sum
 
 # For a CA certificate, check the chain: leaf -> intermediate -> trusted root.
-# `tls.crt` for a controller normally contains the leaf followed by intermediate; the root is not included.
+# `tls.crt` for a controller normally contains the leaf followed by the intermediate; the root is not included.
 openssl verify -show_chain -CAfile root-ca.crt \
   -untrusted intermediate-ca.crt leaf.crt
 ```
@@ -417,7 +417,7 @@ The `client-ca` `ConfigMap` contains the trusted CA certificate (trust anchor) i
 
 - `spec.tls.frontend.default.validation` validates the client when connecting **to the Gateway** and applies to all HTTPS listeners without a per-port override; it is not the same as `BackendTLSPolicy`, which controls TLS from the Gateway **to the backend** - the two policies are independent and can apply at the same time.
 - `spec.tls.frontend.perPort[].tls.validation` overrides this configuration for all HTTPS listeners on the specified port.
-- `mode: AllowValidOnly` (the default) rejects a connection without a valid certificate. `AllowInsecureFallback` accepts a connection even without a certificate or when its verification fails, delegating client authorization to the backend. This condition is explicitly indicated by `InsecureFrontendValidationMode` on the `Gateway` and creates a significant security risk. Gateway API recommends this mode in test environments or only temporarily in non-test environments; prefer `AllowValidOnly` for ordinary production mTLS.
+- `mode: AllowValidOnly` (the default) rejects a connection without a valid certificate. `AllowInsecureFallback` accepts a connection even without a certificate or when its verification fails, delegating client authorization to the backend. This state is explicitly flagged by the `InsecureFrontendValidationMode` condition on the `Gateway` and creates a significant security risk. Gateway API recommends this mode in test environments or only temporarily in non-test environments; prefer `AllowValidOnly` for ordinary production mTLS.
 - Frontend client-certificate validation support depends on the specific Gateway API controller; before use, check it in the supported implementations list for your version.
 
 Both mechanisms solve the same task through different APIs: NGINX Ingress through `auth-tls-*` and Gateway API through `spec.tls.frontend...validation` can validate a client certificate at the cluster boundary. Which is available depends not on the mTLS concept itself, but on which ingress controller or Gateway API implementation is deployed in the cluster - choose syntax for the controller actually installed, not the other way around.
@@ -583,7 +583,7 @@ An HTTPS call with the correct SNI and Host, for example through `curl --resolve
 </details>
 
 <details>
-<summary>7. How can you confirm the matching certificate/key public key and leaf -> intermediate -> root chain before creating the Secret?</summary>
+<summary>7. How can you confirm, before creating the Secret, that the public keys of the certificate and key match and that the leaf -> intermediate -> root chain is valid?</summary>
 
 Obtain the certificate public-key hash through `openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | sha256sum` and compare it with the hash from `openssl pkey -in tls.key -pubout -outform DER | sha256sum`. Check the chain with `openssl verify -show_chain -CAfile root-ca.crt -untrusted intermediate-ca.crt leaf.crt`: the leaf must verify through the intermediate to a trusted root.
 

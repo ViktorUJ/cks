@@ -41,14 +41,14 @@ Sicherheit ist hier keine getrennte Einstellung am Ende eines Projekts. Ein Fehl
 
 ## 01.2 Prüfungsformat, Version und Dokumentation
 
-Die CKS-Prüfung ist performance-based: Praktische Aufgaben werden im Terminal auf bereitgestellten Clustern und Nodes erledigt. Es stehen 2 Stunden zur Verfügung, die Bestehensgrenze liegt bei 67 %. Zum Zeitpunkt der Prüfung nennen die Important Instructions **15-20 praktische Aufgaben**; dies ist eine Momentaufnahme, die die Linux Foundation ändern kann. Für Registrierung und Ablegen von CKS ist ein zuvor bestandener CKA erforderlich, seine Gültigkeit kann zum Zeitpunkt von CKS aber abgelaufen sein: Das CKA-Zertifikat muss nicht aktiv bleiben. Ein praxistaugliches Vorbereitungsmodell besteht darin, bewusst zwischen context zu wechseln und nach jeder Änderung den tatsächlichen Zustand zu prüfen.
+Die CKS-Prüfung ist performance-based: Praktische Aufgaben werden im Terminal auf bereitgestellten Clustern und Nodes erledigt. Es stehen 2 Stunden zur Verfügung, die Bestehensgrenze liegt bei 67 %. Zum Zeitpunkt der Überprüfung nennen die Important Instructions **15-20 praktische Aufgaben**; dies ist eine Momentaufnahme, die die Linux Foundation ändern kann. Für Registrierung und Ablegen von CKS ist ein zuvor bestandener CKA erforderlich, seine Gültigkeit kann zum Zeitpunkt von CKS aber abgelaufen sein: Das CKA-Zertifikat muss nicht aktiv bleiben. Ein praxistaugliches Vorbereitungsmodell besteht darin, bewusst zwischen context zu wechseln und nach jeder Änderung den tatsächlichen Zustand zu prüfen.
 
 Eine Aufgabe kann einen separaten host zuweisen: Führen Sie in diesem Fall `ssh <host>` von der Ausgangsmaschine (`base`) aus, erledigen Sie die Arbeit und kehren Sie zu `base` zurück. Verschachteltes SSH zwischen den Ziel-host wird nicht unterstützt. Die vorinstallierten Werkzeuge auf `base` und auf dem Ziel-host können unterschiedlich sein, prüfen Sie daher zuerst, wo ein Befehl ausgeführt werden muss. **Die Standardregistrierung für CKS** umfasst zwei echte Prüfungsversuche (**One Retake**) innerhalb eines eligibility window von **12 Monaten**; das erhaltene Zertifikat gilt **2 Jahre**. Dies sind keine simulator-Versuche: Die Standardregistrierung enthält außerdem zwei Versuche im Killer.sh simulator, jeder wird für **36 Stunden** aktiviert und enthält **17 Fragen**; **CKS-SINGLE beinhaltet keinen Zugang zum simulator**. Trainieren Sie den vollständigen Ablauf: Aufgabenstellung lesen, host/context wählen, die minimale Änderung vornehmen und das Ergebnis prüfen.
 
 Kubernetes-Versionen müssen unterschieden werden:
 
 - **Die Ausbildungs- und core labs-Version `101-114` dieses Kurses ist `v1.36`** (`k8_version = "1.36.0"` in ihren Laborumgebungen): Darin werden Kubernetes-native Befehle, Flags und API-Verhalten des Kurses geprüft; die Kompatibilität von Third-Party-Komponenten muss anhand ihrer eigenen support matrix geprüft werden. Konstruktionsbedingte Ausnahme ist Lab `113`: Sein Cluster startet mit `v1.35.x`, denn die Aufgabenstellung behandelt den Prozess eines minor upgrade auf `v1.36.x`.
-- **Die Version der Prüfungsumgebung legt die Linux Foundation fest, und sie kann hinter der Kursversion zurückliegen.** Die Hauptseite [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) nennt Kubernetes **v1.35**, Important Instructions und FAQ werden jedoch unabhängig aktualisiert und können vorübergehend eine andere Version zeigen. Für den konkreten Versuch haben ExamUI und die Anweisungen der zugewiesenen Prüfung Vorrang. Das veröffentlichte CNCF curriculum overview bleibt nach Dateinamen [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), dies hebt die von der Linux Foundation für den Versuch angegebenen Parameter jedoch nicht auf. **Betrachten Sie `v1.36` daher nicht als Prüfungsversion.**
+- **Die Version der Prüfungsumgebung legt die Linux Foundation fest, und sie kann hinter der Kursversion zurückliegen.** Die Hauptseite [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) nennt Kubernetes **v1.35**, Important Instructions und FAQ werden jedoch unabhängig aktualisiert und können vorübergehend eine andere Version zeigen. Für den konkreten Versuch haben ExamUI und die Anweisungen der zugewiesenen Prüfung Vorrang. Das veröffentlichte CNCF curriculum overview bleibt dem Dateinamen nach [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), dies hebt die von der Linux Foundation für den Versuch angegebenen Parameter jedoch nicht auf. **Betrachten Sie `v1.36` daher nicht als Prüfungsversion.**
 
 Die CKS-Seiten und FAQ werden unabhängig aktualisiert und können vorübergehend voneinander abweichen. Bestätigen Sie unmittelbar vor dem Versuch Kubernetes-Version, Anzahl und Format der Aufgaben, Bestehensgrenze, Voraussetzungen und erlaubte Ressourcen zuerst auf der CKS-Hauptseite [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) und danach in ExamUI für den zugewiesenen Versuch. Verlassen Sie sich nicht darauf, dass die im Kurs dokumentierte Version oder Regeln dauerhaft gelten.
 
@@ -60,7 +60,7 @@ Der praktische Unterschied: Prüfen Sie die Syntax eines Objekts und admission-V
 | User Namespaces | `hostUsers: false` wurde in v1.36 Stable/GA; ein Lab kann sich auf dieses Verhalten stützen | Übernehmen Sie dieses Verhalten nicht automatisch in den Versuch: Prüfen Sie Version, runtime und Verfügbarkeit der Funktion |
 | Neue Felder und admission-Verhalten | Nützlich zum Lernen, aber keine Zusage für die Prüfung | Verwenden Sie nur API und Verhalten der in der Umgebung angegebenen Version |
 
-Die Linux Foundation pflegt erlaubte Ressourcen getrennt vom curriculum und dessen Gewichtungen. Dies ist eine zeitgebundene Momentaufnahme: Am letzten Prüftag, dem **2026-08-31**, enthält die globale CKS-Liste die **Quick Reference** aus der Aufgabe, Kubernetes-Dokumentation und -Blog sowie Dokumentation zu Falco, `bom`, etcd, NGINX Ingress Controller, Cilium und Istio. Darüber hinaus sind Dokumentation, man-Seiten und Pakete der Distribution des Prüfungsterminals erlaubt. Die Liste kann sich unabhängig vom curriculum ändern: Prüfen Sie vor der Prüfung erneut die LF-Seite [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed) und die in ExamUI verfügbaren Links.
+Die Linux Foundation pflegt erlaubte Ressourcen getrennt vom curriculum und dessen Gewichtungen. Dies ist eine zeitgebundene Momentaufnahme: Am Tag der letzten Überprüfung, dem **2026-08-31**, enthält die globale CKS-Liste die **Quick Reference** aus der Aufgabe, Kubernetes-Dokumentation und -Blog sowie Dokumentation zu Falco, `bom`, etcd, NGINX Ingress Controller, Cilium und Istio. Darüber hinaus sind Dokumentation, man-Seiten und Pakete der Distribution des Prüfungsterminals erlaubt. Die Liste kann sich unabhängig vom curriculum ändern: Prüfen Sie vor der Prüfung erneut die LF-Seite [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed) und die in ExamUI verfügbaren Links.
 
 | Ressource | Wofür | Verfügbarkeit |
 |---|---|---|
@@ -73,8 +73,8 @@ Die Linux Foundation pflegt erlaubte Ressourcen getrennt vom curriculum und dess
 | [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/) | TLS termination und HTTP-to-HTTPS redirect (siehe 08.5 über retirement) | erlaubt |
 | [Falco](https://falco.org/docs/) | Runtime-Regeln, Ereignisse und Diagnose | erlaubt |
 | Dokumentation, man-Seiten und Pakete der Distribution des Prüfungsterminals | Lokale Referenz und Informationen über installierte Software | erlaubt |
-| [Trivy](https://trivy.dev/latest/docs/) | Scan von image, filesystem, config und SBOM | Lernressource; am Prüftag nicht in der globalen LF-Liste |
-| [AppArmor](https://gitlab.com/apparmor/apparmor/-/wikis/Documentation) | MAC-Profile und deren Laden auf den Node | Lernressource; am Prüftag nicht in der globalen LF-Liste |
+| [Trivy](https://trivy.dev/latest/docs/) | Scan von image, filesystem, config und SBOM | Lernressource; am Tag der Überprüfung nicht in der globalen LF-Liste |
+| [AppArmor](https://gitlab.com/apparmor/apparmor/-/wikis/Documentation) | MAC-Profile und deren Laden auf den Node | Lernressource; am Tag der Überprüfung nicht in der globalen LF-Liste |
 
 Verlassen Sie sich nicht auf gespeicherte lokale Notizen als Quelle für Syntax und versuchen Sie nicht, externe Suchmaschinen oder Drittseiten außerhalb der erlaubten Liste zu öffnen. Bestimmen Sie zuerst das Objekt und die API-Version und suchen Sie dann ein exaktes Beispiel in der erlaubten Dokumentation. Kapitel 33 behandelt Prüfungsstrategie und abschließende Checkliste.
 
@@ -152,7 +152,7 @@ Halten Sie vor dem Start eines scanner das Prüfobjekt und die erwartete Entsche
 
 ## 01.6 Aufbau des Kurses und Vorbereitung
 
-Der Kurs führt vom Bedrohungsmodell zu den Schutzschichten. Jedes fachliche Kapitel enthält einen Angriffsszenario, eine Schutzkonfiguration, Überprüfung, typische Fehler und Production-Praktiken. Die Laborübungen beginnen mit 101 und prüfen das Ergebnis automatisch über `check_result`.
+Der Kurs führt vom Bedrohungsmodell zu den Schutzschichten. Jedes fachliche Kapitel enthält ein Angriffsszenario, eine Schutzkonfiguration, Überprüfung, typische Fehler und Production-Praktiken. Die Laborübungen beginnen mit 101 und prüfen das Ergebnis automatisch über `check_result`.
 
 ```mermaid
 flowchart TB
@@ -197,7 +197,7 @@ Ein typischer Fehler besteht darin, ein Schutzmittel ohne Überprüfung des Angr
 - **Performance-based** - ein Format, in dem ein Ergebnis in einer Arbeitsumgebung erreicht und nicht in einem Test ausgewählt wird.
 - **CIS Benchmark** - eine Sammlung von Empfehlungen für die sichere Konfiguration von Komponenten und Nodes.
 - **SBOM** - Software Bill of Materials, ein Verzeichnis der Komponenten eines Softwareartefakts.
-- **Admission policy** - eine Regel, die eine Anfrage an die Kubernetes API erlaubt, verändert oder ablehnt.
+- **Admission policy** - eine Regel, die eine Anfrage an die Kubernetes-API erlaubt, verändert oder ablehnt.
 - **Runtime security** - Erkennung und Begrenzung verdächtigen Verhaltens eines laufenden workload.
 - **Defense in depth** - Anwendung unabhängiger Schutzschichten statt einer einzigen Kontrolle.
 

@@ -11,6 +11,26 @@ START_MINOR="1.35"
 cp_node() { kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true; }
 worker_node() { kubectl get nodes --context "$CTX" -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true; }
 
+monitor_value() {
+  local key="$1" state="$2" result
+  [[ -r "$state" ]] || { printf 'missing'; return; }
+  result=$(sed -n "s/^${key}=\([0-9][0-9]*\)$/\1/p" "$state" | tail -n 1)
+  [[ "$result" =~ ^[0-9]+$ ]] || { printf 'missing'; return; }
+  printf '%s' "$result"
+}
+
+node_packages_and_repo_ok() {
+  local host="$1"
+  timeout 20s ssh -o BatchMode=yes -o ConnectTimeout=5 "$host" bash -s <<'REMOTE' >/dev/null 2>&1
+set -euo pipefail
+grep -Eq '^[[:space:]]*deb[[:space:]]+\[signed-by=[^]]+\][[:space:]]+https://pkgs\.k8s\.io/core:/stable:/v1\.36/deb/[[:space:]]+/[[:space:]]*$' /etc/apt/sources.list.d/kubernetes.list
+for package in kubeadm kubelet kubectl; do
+  version=$(dpkg-query -W -f='${Version}' "$package")
+  [[ "$version" == 1.36.* ]] || exit 1
+done
+REMOTE
+}
+
 record_result() {
   echo '1' >> /var/work/tests/result/all
   if [[ "$1" -eq 0 ]]; then echo '1' >> /var/work/tests/result/ok; fi
@@ -32,6 +52,7 @@ record_result() {
   if [[ "$kubeadm_ver" == v${TARGET_MINOR}.* && "$kubelet_ver" == *"v${TARGET_MINOR}."* \
         && "$api_server_ver" == v${TARGET_MINOR}.* && "$cp_kubectl_ver" == v${TARGET_MINOR}.* \
         && "$node_status" == "True" ]] \
+     && node_packages_and_repo_ok k8s113_controlPlane_1 \
      && [[ -s "$evidence" ]] && grep -qi 'SUCCESS' "$evidence" && grep -q "v${TARGET_MINOR}" "$evidence"; then
     result=0
   else
@@ -64,6 +85,7 @@ record_result() {
   if [[ "$kubeadm_ver" == v${TARGET_MINOR}.* && "$kubelet_ver" == *"v${TARGET_MINOR}."* \
         && "$worker_kubectl_ver" == v${TARGET_MINOR}.* \
         && "$node_version" == v${TARGET_MINOR}.* && "$node_status" == "True" ]] \
+     && node_packages_and_repo_ok k8s113_node_worker1 \
      && [[ -s "$evidence" ]]; then
     result=0
   else
@@ -87,55 +109,89 @@ record_result() {
 @test "3. control-plane was upgraded before the worker node (correct kubeadm upgrade order)" {
   monitor=/var/lib/cks-lab113-checker/upgrade-monitor.log
   state=/var/lib/cks-lab113-checker/order-state
+  baseline_seen=$(monitor_value baseline_seen "$state")
+  cp_done_seen=$(monitor_value cp_done_seen "$state")
+  order_violation=$(monitor_value order_violation "$state")
+  worker_target_seen=$(monitor_value worker_target_seen "$state")
+  history_gap_seen=$(monitor_value history_gap_seen "$state")
+  cp_done_at=$(monitor_value cp_done_at "$state")
+  worker_target_at=$(monitor_value worker_target_at "$state")
+  last_ts=$(monitor_value last_ts "$state")
+  now=$(date +%s)
 
-  cp_done_seen=""
-  order_violation=""
-  # shellcheck disable=SC1090
-  [[ -r "$state" ]] && source "$state"
-
-  worker_target_seen=$(
-    awk '
-      /worker_kubeadm=v'"${TARGET_MINOR}"'\./ || /worker_kubelet=v'"${TARGET_MINOR}"'\./ {
-        print NR
-        exit
-      }
-    ' "$monitor" 2>/dev/null
-  )
-
-  if [[ "$cp_done_seen" == "1" && "$order_violation" == "0" && -n "$worker_target_seen" ]]; then
+  if [[ "$baseline_seen" == 1 && "$cp_done_seen" == 1 &&
+        "$order_violation" == 0 && "$worker_target_seen" == 1 &&
+        "$history_gap_seen" == 0 && "$cp_done_at" =~ ^[0-9]+$ &&
+        "$worker_target_at" =~ ^[0-9]+$ && "$last_ts" =~ ^[0-9]+$ ]] &&
+     ((cp_done_at > 0 && worker_target_at > cp_done_at &&
+       now >= last_ts && now - last_ts <= 60)) &&
+     [[ -s "$monitor" ]]; then
     result=0
   else
-    echo "HINT: the checker-owned monitor ($state / $monitor) does not confirm that the control-plane fully reached v${TARGET_MINOR} (API server, kubeadm, kubelet, Ready, schedulable) before the worker showed any v${TARGET_MINOR} kubeadm/kubelet. kubeadm requires the control-plane to be fully upgraded first: 'kubeadm upgrade apply' on control-plane, then 'kubeadm upgrade node' on each worker."
-    echo "cp_done_seen=${cp_done_seen:-missing} order_violation=${order_violation:-missing} worker_target_seen=${worker_target_seen:-missing}"
+    echo "HINT: the checker-owned monitor must record a 1.35 baseline, complete 1.36 control-plane readiness while the worker is still 1.35, and only then the worker target. Monitor state must survive restarts and sampling gaps must not exceed 60 s."
+    echo "baseline=$baseline_seen cp_done=$cp_done_seen violation=$order_violation worker_target=$worker_target_seen gap=$history_gap_seen cp_done_at=$cp_done_at worker_target_at=$worker_target_at last_ts=$last_ts"
     result=1
   fi
   record_result "$result"
 }
 
 @test "4. canary workload in upgrade-113 remained Available throughout the upgrade (no unplanned downtime)" {
-  desired=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.spec.replicas}' 2>/dev/null || true)
-  available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null || true)
   checker_log=/var/lib/cks-lab113-checker/upgrade-monitor.log
+  state=/var/lib/cks-lab113-checker/order-state
   student_evidence="$ARTIFACTS/4/canary-availability.log"
-  min_running_seen=$(grep -oE 'canary_running=[0-9]+' "$checker_log" 2>/dev/null | cut -d= -f2 | sort -n | head -1)
-  student_min=$(grep -oE 'available=[0-9]+' "$student_evidence" 2>/dev/null | cut -d= -f2 | sort -n | head -1)
-  student_samples=$(grep -cE '(^|[[:space:]])available=[0-9]+([[:space:]]|$)' "$student_evidence" 2>/dev/null || true)
-  student_samples=${student_samples:-0}
-  if [[ "$desired" == "2" && "$available" == "2" ]] \
-     && [[ -s "$checker_log" ]] && [[ -n "$min_running_seen" ]] && [[ "$min_running_seen" -ge 1 ]] \
-     && [[ -s "$student_evidence" ]] && [[ -n "$student_min" ]] && [[ "$student_samples" -ge 2 ]]; then
+  deployment=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o json 2>/dev/null || true)
+  pdb=$(kubectl get pdb canary -n upgrade-113 --context "$CTX" -o json 2>/dev/null || true)
+  workload_valid=false
+  pdb_valid=false
+  if [[ -n "$deployment" ]] && printf '%s' "$deployment" | jq -e '
+    .spec.replicas == 2 and .status.availableReplicas == 2 and
+    .spec.selector.matchLabels == {"app":"canary"} and
+    .spec.template.metadata.labels.app == "canary" and
+    .spec.template.spec.automountServiceAccountToken == false and
+    (.spec.template.spec.containers | length == 1) and
+    .spec.template.spec.containers[0].name == "canary" and
+    .spec.template.spec.containers[0].image == "registry.k8s.io/pause:3.9" and
+    (.spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution | length == 1) and
+    .spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey == "kubernetes.io/hostname" and
+    .spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchLabels == {"app":"canary"} and
+    (.spec.template.spec.readinessGates // [] | length == 0)
+  ' >/dev/null 2>&1; then workload_valid=true; fi
+  if [[ -n "$pdb" ]] && printf '%s' "$pdb" | jq -e '
+    .spec.minAvailable == 1 and .spec.selector == {"matchLabels":{"app":"canary"}}
+  ' >/dev/null 2>&1; then pdb_valid=true; fi
+
+  baseline=$(monitor_value baseline_seen "$state")
+  outage=$(monitor_value canary_outage_seen "$state")
+  unknown=$(monitor_value canary_unknown_seen "$state")
+  gap=$(monitor_value history_gap_seen "$state")
+  samples=$(monitor_value healthy_samples "$state")
+  cp_done_at=$(monitor_value cp_done_at "$state")
+  worker_target_at=$(monitor_value worker_target_at "$state")
+  first_sample=0; last_sample=0; student_samples=0
+  if [[ -s "$student_evidence" ]]; then
+    read -r first_sample last_sample student_samples < <(
+      awk '
+        /^[0-9][0-9]* available=([0-9][0-9]*|api-unreachable)$/ {
+          ts=$1+0; if (count == 0 || ts < first) first=ts;
+          if (ts > last) last=ts;
+          count++
+        }
+        END {printf "%d %d %d\n", first+0, last+0, count+0}
+      ' "$student_evidence"
+    )
+  fi
+  if [[ "$workload_valid" == true && "$pdb_valid" == true &&
+        "$baseline" == 1 && "$outage" == 0 && "$unknown" == 0 &&
+        "$gap" == 0 && "$samples" =~ ^[0-9]+$ &&
+        "$cp_done_at" =~ ^[0-9]+$ && "$worker_target_at" =~ ^[0-9]+$ ]] &&
+     ((samples >= 3 && student_samples >= 2 &&
+       first_sample > 0 && first_sample <= cp_done_at &&
+       last_sample >= worker_target_at && worker_target_at > cp_done_at)) &&
+     [[ -s "$checker_log" ]]; then
     result=0
   else
-    if [[ "$available" != "2" ]]; then
-      echo "HINT: Deployment 'canary' in namespace 'upgrade-113' does not currently have 2 available replicas - the upgrade should not have taken this workload down; check 'kubectl get pods -n upgrade-113'."
-    elif [[ ! -s "$student_evidence" ]] || [[ "$student_samples" -lt 2 ]]; then
-      echo "HINT: $student_evidence must contain at least 2 separate 'available=N' polling samples - you must have been polling and logging deployment availability in a loop (e.g. via 'kubectl get deployment canary -n upgrade-113 -o jsonpath=...') DURING the drain/upgrade steps, not just checking it once at the end."
-    elif [[ -z "$min_running_seen" ]]; then
-      echo "HINT: the checker-owned monitor log ($checker_log) is missing or empty - this is unexpected infrastructure state, contact the lab maintainers."
-    else
-      echo "HINT: the checker-owned monitor log shows at least one point where no canary container was actually Running on either node (min_running_seen=$min_running_seen, observed independently via crictl on both nodes) - with 2 replicas spread across nodes and a proper rolling drain (one node at a time, PodDisruptionBudget-aware), the workload should never have zero running replicas. Note: this check is independent of transient kube-apiserver unavailability during 'kubeadm upgrade apply'."
-    fi
-    echo "desired=${desired:-missing} available=${available:-missing} min_running_seen=${min_running_seen:-missing} student_samples=${student_samples}"
+    echo "HINT: preserve the exact canary Deployment and PDB, keep two Available replicas at the end, and collect valid checker-owned observations throughout both upgrades. SSH/CRI/API failures produce UNKNOWN, not a fabricated zero; unresolved evidence gaps are not a PASS. Student log must span the upgrade milestones."
+    echo "deployment=$workload_valid pdb=$pdb_valid baseline=$baseline outage=$outage unknown=$unknown gap=$gap healthy_samples=$samples student_samples=$student_samples first=$first_sample cp_done_at=$cp_done_at worker_target_at=$worker_target_at last=$last_sample"
     result=1
   fi
   record_result "$result"

@@ -83,6 +83,7 @@ fi
 > 🧠 La compromission d'un nœud peut commencer par un processus, paquet, listener ou socket superflu ; maintenez une carte du composant, de son propriétaire, de son rôle et de l'accès autorisé.
 
 > 🎯 Inventoriez le service, paquet, kernel module et listener ; ne modifiez que l'objet superflu, conservez le baseline et vérifiez `kubelet`/containerd. `disable --now`, removal et la fermeture d'un port demandent des vérifications différentes.
+
 ## 14.2. Inventorier et désactiver les services inutiles
 
 Distinguez d'abord trois états. `systemctl list-units` affiche les unit chargés, `is-active` indique
@@ -297,7 +298,6 @@ sudo ss -lxnp | grep -E 'docker|containerd' || true
 | kube-apiserver `6443/tcp` | control-plane ; worker et administrateurs selon l'architecture | allowlist/private endpoint, pas `0.0.0.0/0` |
 | etcd `2379`, `2380/tcp` | uniquement control-plane/etcd peers | ne pas publier sur les worker ou le réseau externe |
 | Docker TCP API (souvent `2375`/`2376`) | uniquement avec une administration distante justifiée | ne pas écouter sur `2375` ; tout TCP endpoint requiert une exception explicite, mTLS et un firewall précis |
-
 | containerd/NRI Unix socket | localement sur le nœud | `root` et l'ensemble minimal des consommateurs système autorisés |
 
 Ne tirez pas de conclusion du seul numéro de port sans le processus : par exemple, `6443` est
@@ -335,7 +335,7 @@ capable d'accéder à l'API containerd, NRI ou Docker peut souvent lancer un con
 monter le filesystem de l'hôte ou obtenir les credentials du nœud. Le socket Unix est donc une
 frontière d'accès, pas un détail d'implémentation inoffensif.
 
-> 🎯 L'accès au socket CRI containerd est réservé à `root` et au minimum de consommateurs système, sans mode world-writable ni mount dans un workload non privilégié.
+> 🎯 L'accès au socket CRI containerd est réservé à `root` et à un ensemble minimal de consommateurs système, sans mode world-writable ni mount dans un workload non privilégié.
 
 ```mermaid
 flowchart TB
@@ -364,7 +364,7 @@ de règle rendrait à nouveau l'API accessible.
 
 ```bash
 set -euo pipefail
-# Cette porte vérifie indépendamment la configuration effective et les listeners effectifs.
+# Ce gate vérifie indépendamment la configuration effective et les listeners effectifs.
 # false est le baseline sûr ; true n'est admis que pour une exception de risque documentée.
 ALLOW_REMOTE_DOCKER_API=false
 declare -a TCP_CONFIGURATION_SOURCES=()
@@ -434,7 +434,7 @@ for ((i = 0; i < ${#DOCKER_ARGV[@]}; i++)); do
   esac
 done
 
-# Un chemin de configuration personnalisé ne se déduit pas sûrement de grep ; exiger sa revue explicite.
+# Un chemin de configuration personnalisé ne peut pas être déduit de façon fiable de la sortie de grep ; exiger sa revue explicite.
 if printf '%s\n' "$DOCKER_SERVICE_EXEC" "$DOCKER_CMDLINE"   | grep -Eq -- '--config-file(=|[[:space:]])'; then
   echo 'REVIEW_REQUIRED: dockerd uses --config-file; parse that effective config before allowing Docker TCP API' >&2
   exit 2
@@ -567,7 +567,7 @@ default pour un nœud Kubernetes.
 Le socket CRI principal se trouve habituellement dans `/run/containerd/containerd.sock` ; le chemin
 du socket NRI est configurable et vaut souvent `/run/nri/nri.sock` (équivalent à
 `/var/run/nri/nri.sock`). L'accès à **l'un ou l'autre** est root-equivalent. Réservez-le à `root`
-et au minimum de processus système. Si un groupe est nécessaire aux opérations, il doit s'agir d'un
+et à un ensemble minimal de processus système. Si un groupe est nécessaire aux opérations, il doit s'agir d'un
 groupe système dédié, sans utilisateurs ordinaires ; n'y ajoutez pas de développeurs, de comptes
 CI ni de workload identity. Ne montez jamais `containerd.sock` ou `nri.sock` dans un conteneur non
 privilégié.
@@ -576,7 +576,7 @@ Il n'existe pas de `chmod` universel pour un socket Docker ou containerd : le ch
 le groupe et le mode sont définis par le paquet, le unit systemd et la policy du nœud concerné.
 N'utilisez pas de modes world-writable et ne corrigez pas les permissions par une commande ponctuelle
 si systemd recrée le socket. Identifiez d'abord le propriétaire de la configuration, puis fixez
-l'accès minimal requis par la configuration prise en charge de l'image/IaC et vérifiez-le après un
+l'accès minimal requis, via la configuration prise en charge de l'image/IaC et vérifiez-le après un
 redémarrage.
 
 ```bash
@@ -782,7 +782,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 - [ ] Chaque service actif a un objectif, un propriétaire et un port/socket attendu.
 - [ ] Les services inutiles sont arrêtés avec `systemctl disable --now` et, s'ils sont de nouveau
   dangereux, masqués si nécessaire ; kubelet/containerd et les composants nécessaires ne sont pas cassés.
-- [ ] Les paquets inutilement présents ont été supprimés ; l'image du nœud dispose d'une allowlist
+- [ ] Les paquets confirmés comme superflus ont été supprimés ; l'image du nœud dispose d'une allowlist
   de paquets et d'un processus de mise à jour, et non d'une dérive manuelle non documentée.
 - [ ] `ss -tulpn` ne contient aucun listener inexpliqué ; `10250`, `6443`, etcd et SSH sont accessibles
   uniquement là et depuis les sources requises par l'architecture.
@@ -819,7 +819,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 
 ## 14.9. Comment ceci est appliqué en production
 
-- **Chemin de nœud rootless Kubernetes v1.37.** `KubeletInUserNamespace` est devenu Beta et permet de construire une pile de nœud où kubelet et les composants de nœud associés s'exécutent sans host-root grâce à un user namespace. Ne confondez pas cela avec `spec.hostUsers: false`, qui isole un Pod. Voir [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_FR.md).
+- **Chemin de nœud rootless Kubernetes v1.37.** `KubeletInUserNamespace` est devenu Beta et permet de construire une pile de nœud où kubelet et les composants de nœud associés s'exécutent sans host-root grâce à un user namespace. Ne confondez pas cela avec `spec.hostUsers: false`, qui isole un Pod. Voir [Kubernetes v1.37 Security Delta (uniquement en russe)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 - **Le baseline est défini comme du code.** La liste des paquets, les services enabled, les drop-ins
   systemd, le firewall et la vérification des sockets font partie de l'image immutable,
   d'Ansible/Cloud-Init ou d'un autre IaC. Une correction d'urgence manuelle est ensuite portée dans

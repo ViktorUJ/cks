@@ -4,7 +4,7 @@
 
 > **課題。** Pod 内の shell または盗まれた token を得た攻撃者は、ServiceAccount または user に余分な権限があれば、一つの namespace の境界で止まりません。広い `verb`、便宜のために残された `cluster-admin`、あるいは利用可能な `escalate`/`bind`/`impersonate` により、局所的な侵害が全 Secret の読み取り、任意の node 上での Pod 作成、完全な cluster takeover へ変わります。これを決めるのは脆弱性そのものではなく、RBAC があらかじめ許可したことです。
 
-> **この先。** 第07–09章では cluster component の attack surface を減らしました。次は identity、ServiceAccount、Pod が侵害された場合の影響を制限します。RBAC は実際に必要な access だけを付与すべきです。これは CKS の Cluster Hardening（15%）domain です。
+> **この先。** 第07-09章では cluster component の attack surface を減らしました。次は identity、ServiceAccount、Pod が侵害された場合の影響を制限します。RBAC は実際に必要な access だけを付与すべきです。これは CKS の Cluster Hardening（15%）domain です。
 
 > **CKA で必要な知識。** `Role`、`ClusterRole`、`RoleBinding`、`ClusterRoleBinding` の基本構文は、すでに [CKA 第38章](../../../cka/course/38/jp.md)で扱っています。ここでは四つの object の作成は繰り返さず、audit、privilege escalation、安全な rule 設計を扱います。
 
@@ -98,10 +98,10 @@ security audit で legacy `impersonate` を自動的に付与しないでくだ�
 
 **Constrained Impersonation** は Kubernetes v1.36+ で Beta かつデフォルト有効です。通常の `impersonate` と異なり、target ができるすべてをその名前で実行できるようにはしません。通常の user（`Impersonate-User` の値が `system:serviceaccount:` または `system:node:` で始まらない場合）に対し、API server は**二つの別個の確認**を行います。
 
-1. **Identity permission** — この identity だけを偽装できるか。generic user では、`apiGroups: ["authentication.k8s.io"]`、resource `users`、必要な name の `resourceNames`、verb `impersonate:user-info` を持つ rule です。user には namespace scope がないため、`ClusterRole` と `ClusterRoleBinding` で付与します。
-2. **Action-at-scope permission** — この偽装で、その scope の特定 operation を実行できるか。Pod の `list` では `pods` 上の `impersonate-on:user-info:list`、`watch` では `impersonate-on:user-info:watch` です。必要な namespace で `Role`/`RoleBinding` により付与できます。identity だけの permission では不十分です。
+1. **Identity permission** - この identity だけを偽装できるか。generic user では、`apiGroups: ["authentication.k8s.io"]`、resource `users`、必要な name の `resourceNames`、verb `impersonate:user-info` を持つ rule です。user には namespace scope がないため、`ClusterRole` と `ClusterRoleBinding` で付与します。
+2. **Action-at-scope permission** - この偽装で、その scope の特定 operation を実行できるか。Pod の `list` では `pods` 上の `impersonate-on:user-info:list`、`watch` では `impersonate-on:user-info:watch` です。必要な namespace だけで `Role`/`RoleBinding` により付与できます。identity だけの permission では不十分です。
 
-次の例では ServiceAccount `audit-reader` が generic user `readonly@example.com` を偽装し、`cks-104` 内で Pod の list/watch だけを行えます。
+次の例では ServiceAccount `audit-reader` が generic user `readonly@example.com` だけを偽装し、`cks-104` 内で Pod の list/watch だけを行えます。
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -307,7 +307,7 @@ flowchart TB
 
 組み込みの `ClusterRole` は便利ですが、risk は同じではありません。`view` は通常の namespaced object を読むためのもので、Secret、Role、RoleBinding には意図的に access を与えません。Secret は ServiceAccount の privileges を保持することが多いためです。`edit` はほとんどの namespaced resource の変更と Secret の読み取りを許可しますが、Role や RoleBinding は変更できません。それでも同じ namespace の任意の ServiceAccount として Pod を実行できます。`admin` は namespace 内のほとんどの RBAC を管理できます。
 
-組み込みの `cluster-admin` は最も広い wildcard permission を持ちます。`ClusterRoleBinding` を通すと、同じ `ClusterRole` は cluster-wide superuser access を与えます。`RoleBinding` を通すと一つの namespace に制限されますが、組み込み `cluster-admin` の semantics は、**Namespace object 自体を含めて**その namespace の resources を完全に制御できます。Namespace は cluster-scoped resource であるため、これは重要な例外です。この `RoleBinding` は cluster-wide ではありませんが、依然として非常に特権的な namespaced binding です。すべての `cluster-admin` の割り当てには、個別の根拠と管理が必要です。
+組み込みの `cluster-admin` は最も広い wildcard permission を持ちます。`ClusterRoleBinding` を通すと、同じ `ClusterRole` は cluster-wide superuser access を与えます。`RoleBinding` を通すと一つの namespace に制限されますが、組み込み `cluster-admin` の semantics により、**Namespace object 自体を含めて**その namespace の resources を完全に制御できます。Namespace は cluster-scoped resource であるため、これは重要な例外です。この `RoleBinding` は cluster-wide ではありませんが、依然として非常に特権的な namespaced binding です。すべての `cluster-admin` の割り当てには、個別の根拠と管理が必要です。
 
 | Role | 実用的な意味 | application または広い group に付与した場合の risk |
 |---|---|---|
@@ -423,7 +423,7 @@ production では、RBAC 変更後の smoke test にこの `can-i` set を含め
   `--authorization-config` による file-based configuration では、`--authorization-mode` を同時に設定しません。`AuthorizationConfiguration` 内で直接 `type: RBAC`、`authorizers` の内容と順序を確認します。
 
   authorizer-chain の内容と順序は security review の対象にする必要があります。
-- **Periodic audit。** `ClusterRoleBinding`、`system:serviceaccount` subjects、組み込み roles、aggregators を inventory し、critical contracts を `kubectl auth can-i` で確認します。
+- **定期的な audit。** `ClusterRoleBinding`、`system:serviceaccount` subjects、組み込み roles、aggregators を inventory し、critical contracts を `kubectl auth can-i` で確認します。
 - **恒久的な admin ではなく break-glass を使う。** emergency access は、日常 user の `cluster-admin` ではなく、短命で別個の identity とし、記録し、作業後に revoke する必要があります。
 
 ## 10.8. ミニ用語集

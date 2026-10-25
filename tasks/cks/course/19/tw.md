@@ -486,7 +486,7 @@ PSA labels 必須由 platform control/admission policy 指定並保護。
 
 在 CKS exam 中，快速區分 PSA rejection 與 RBAC、scheduler 或 container runtime problems 很重要：檢查
 namespace PSA labels，透過 `kubectl apply --dry-run=server` 套用 manifest，並閱讀 admission error 中的 violations
-清單。應能設定 `enforce`、`warn` 和 `audit`、固定 PSS version，並修正正是 controller template。
+清單。應能設定 `enforce`、`warn` 和 `audit`、固定 PSS version，並修正 controller template 本身。
 
 在實際工作中，這些步驟可讓 namespace 遷移至 `restricted` 而不停止 delivery：先以 `warn`/`audit` 收集
 violations，然後修正 templates，僅在驗證後開啟 `enforce`。將個別 system components 隔離於具備最低必要
@@ -590,7 +590,7 @@ PodSecurityPolicy 已於 Kubernetes 1.25 移除，因此舊 PSP manifests 與 RB
 ## 練習
 
 在 [Lab 107 - PSA 與 SecurityContext](../../labs/107/README_TW.MD) 練習 PSA 與 `securityContext`。建立 test namespace，
-啟用 `warn=restricted` 與 `audit=restricted`，接著套用安全與明知 privileged 的 Pod。將 template 修正至乾淨結果，
+啟用 `warn=restricted` 與 `audit=restricted`，接著套用安全與明確為 privileged 的 Pod。將 template 修正至乾淨結果，
 啟用 `enforce=restricted`，並確認不良 Pod 得到 admission rejection，而良好 Pod 可以建立。然後以第 19.9 節的
 命令檢查 labels 與 effective `securityContext`。
 

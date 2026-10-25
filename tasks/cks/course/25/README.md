@@ -50,7 +50,7 @@ flowchart TB
 
 A chain of trust is only as strong as its weakest part. If CI receives a tampered or replaced
 dependency, signs an image from the wrong revision, or CD deploys a mutable tag,
-a later Kubernetes check cannot recover the original artifact. Therefore, both identifying
+a later Kubernetes check cannot recover the original artifact. Therefore, identifying
 **what** is running (digest and SBOM), **where** it came from (provenance), and
 **which actions are allowed** at every transition matter.
 
@@ -63,7 +63,7 @@ Typical supply-chain attacks:
   corresponds to reviewed source;
 - replace a registry tag: `app:stable` begins to point to different bytes even though the Kubernetes
   manifest did not change;
-- obtain attacker access to registry or CD credentials and deploy directly, bypassing review;
+- gain access to registry or CD credentials and deploy directly, bypassing review;
 - leak a secret from a CI log, environment, or image layer, then use that
   credential to sign, push, or alter a release.
 
@@ -83,7 +83,7 @@ path to deliver untrusted code.
 
 Protection cannot be reduced to one scanner. An SBOM shows the composition, a scanner matches it to
 known CVEs, signature/provenance link an artifact to the build process, and an admission
-policy prevents an artifact that does not meet the rules. These mechanisms complement
+policy rejects an artifact that does not meet the rules. These mechanisms complement
 each other.
 
 > 🧠 An SBOM is an inventory of the composition of a particular artifact, not a scan report or cryptographic proof of its origin.
@@ -603,7 +603,7 @@ This is a sanity check, not complete SPDX schema/conformance validation.
 | an SBOM exists, but deployment is still vulnerable | CD applied a tag/old digest or rollout is incomplete | manifest `image:`, Pod `imageID`, rollout status, and registry digest |
 
 The readiness criterion for verification is: a non-empty SPDX 2.3 JSON that passed a sanity check (a
-separate SPDX validator is required for full conformance), contains the package/version recorded for a
+separate SPDX validator is required for full conformance), in which the package/version is recorded for a
 specific platform-manifest digest, and whose commands and files can be handed to another engineer to
 reproduce the result.
 

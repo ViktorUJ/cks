@@ -117,6 +117,7 @@ spec:
       capabilities:
         drop: ["ALL"]
 ```
+
 Compruebe la especificación almacenada, el estado y el modo efectivo del proceso:
 
 ```bash
@@ -161,7 +162,7 @@ fi
 # informe REVIEW_REQUIRED; no deduzca seccompDefault de un único config.yaml.
 ```
 
-Los drop-ins de `--config`, `--config-dir` y `--seccomp-default` son fuentes de configuración de kubelet; los flags CLI anulan la configuración de archivos fusionada. No publique una configuración completa ni una línea de comandos arbitraria de `/proc` en un ticket. Después compare el estado deseado con el modo del proceso. La prioridad es el profile de nivel de contenedor, luego el profile de nivel de Pod y después el default de node cuando falta un profile; `privileged` es la excepción y permanece `Unconfined`.
+`--config`, los drop-ins de `--config-dir` y `--seccomp-default` son fuentes de configuración de kubelet; los flags CLI anulan la configuración de archivos fusionada. No publique una configuración completa ni una línea de comandos arbitraria de `/proc` en un ticket. Después compare el estado deseado con el modo del proceso. La prioridad es el profile de nivel de contenedor, luego el profile de nivel de Pod y después el default de node cuando falta un profile; `privileged` es la excepción y permanece `Unconfined`.
 
 ```bash
 NS=demo
@@ -226,7 +227,7 @@ No coloque un label controlado por un usuario en una node únicamente para este 
 
 ### `privileged` siempre es `Unconfined`
 
-Kubernetes inicia un contenedor con `securityContext.privileged: true` como seccomp `Unconfined` y no le aplica ni `RuntimeDefault` ni `Localhost`. Por tanto, un YAML que contiene `privileged: true` y `seccompProfile` no significa que haya dos capas activas: el profile seccomp no puede ser efectivo aquí. No intente "arreglarlo" sustituyendo el profile o buscando JSON en la node. Elimine `privileged` si no está justificado y después asigne un profile mínimo.
+Kubernetes inicia un contenedor con `securityContext.privileged: true` como seccomp `Unconfined` y no le aplica ni `RuntimeDefault` ni `Localhost`. Por tanto, un YAML que contiene `privileged: true` y `seccompProfile` no significa que haya dos capas activas: el profile seccomp no puede ser efectivo aquí. No intente «arreglarlo» sustituyendo el profile o buscando JSON en la node. Elimine `privileged` si no está justificado y después asigne un profile mínimo.
 
 Un diagnóstico seguro primero registra el estado deseado conflictivo y solo después inspecciona el proceso del contenedor requerido:
 
@@ -246,9 +247,9 @@ Para un contenedor privileged sin un filtro instalado por la propia aplicación,
 
 ### `Unconfined` y la annotation obsoleta
 
-`Unconfined` deshabilita esta capa para un contenedor. Puede usarse como una excepción breve, por ejemplo para una comparación controlada en una node de prueba, pero no como una "solución" permanente a `Operation not permitted`. Registre el responsable, la fecha límite de retirada y el motivo específico; después restaure el mínimo privilegio.
+`Unconfined` deshabilita esta capa para un contenedor. Puede usarse como una excepción breve, por ejemplo para una comparación controlada en una node de prueba, pero no como una «solución» permanente a `Operation not permitted`. Registre el responsable, la fecha límite de retirada y el motivo específico; después restaure el mínimo privilegio.
 
-Los manifests antiguos pueden usar la annotation `seccomp.security.alpha.kubernetes.io/pod` o `container.seccomp.security.alpha.kubernetes.io/<container>`. Esta es una interfaz histórica: desde Kubernetes v1.25, estas annotations son **no funcionales** y no asignan un profile seccomp. Su presencia en un clúster moderno es una señal de audit, no compatibilidad funcional; sustitúyalas por `securityContext.seccompProfile`. No mezcle la annotation y el campo de API, especialmente con valores distintos. Después de migrar, pruebe el nuevo Pod y compruebe su modo efectivo.
+Los manifests antiguos pueden usar la annotation `seccomp.security.alpha.kubernetes.io/pod` o `container.seccomp.security.alpha.kubernetes.io/<container>`. Esta es una interfaz histórica: desde Kubernetes v1.27, estas annotations son **no funcionales** y no asignan un profile seccomp. Su presencia en un clúster moderno es una señal de audit, no compatibilidad funcional; sustitúyalas por `securityContext.seccompProfile`. No mezcle la annotation y el campo de API, especialmente con valores distintos. Después de migrar, pruebe el nuevo Pod y compruebe su modo efectivo.
 
 > 🎯 Cree un profile JSON `Localhost` en formato OCI seccomp, cárguelo en la node requerida y confirme el modo efectivo del contenedor.
 
@@ -341,7 +342,7 @@ kubectl exec -n demo localhost-seccomp -- sh -c 'unshare -Ur true || true'
 kubectl exec -n demo localhost-seccomp -- grep '^Seccomp:' /proc/1/status
 ```
 
-Después conecte a la node indicada por `kubectl get ... -o wide` y busque registros de seccomp en el journal del kernel. El formato preciso depende del kernel, auditd y el pipeline de logging; un registro normalmente incluye `type=SECCOMP`, `syscall=`, `pid=`, `comm=` y arch. No espere un texto invariable en todas las distribuciones.
+Después conéctese a la node indicada por `kubectl get ... -o wide` y busque registros de seccomp en el journal del kernel. El formato preciso depende del kernel, auditd y el pipeline de logging; un registro normalmente incluye `type=SECCOMP`, `syscall=`, `pid=`, `comm=` y arch. No espere un texto invariable en todas las distribuciones.
 
 ```bash
 # En la node seleccionada, limite la ventana de tiempo y busque varias variantes conocidas.

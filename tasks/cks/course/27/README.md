@@ -535,7 +535,7 @@ test_allows_hardened_workload if {
 opa test policy/ -v
 ```
 
-In production, duplicate critical policy in an admission controller, such as Kyverno, Gatekeeper, or ValidatingAdmissionPolicy, where applicable. `conftest` protects the Git -> CI path; admission protects the API from manual `kubectl apply`, another pipeline, and a misconfigured job. Policies should have one source or tests that confirm their equivalent intent, otherwise they diverge over time.
+In production, duplicate critical policy in an admission controller, such as Kyverno, Gatekeeper, or ValidatingAdmissionPolicy, where applicable. `conftest` protects the Git -> CI path; admission protects the API from manual `kubectl apply`, another pipeline, and a misconfigured job. Policies should have one source or tests that confirm their equivalent intent; otherwise, they diverge over time.
 
 > 🏭 Static analysis becomes a safeguard only as a mandatory, reproducible CI gate with pinned tools, reports, and managed exceptions.
 

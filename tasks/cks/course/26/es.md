@@ -146,7 +146,7 @@ modo Audit, corrija los manifests existentes y después pase la regla a Enforce.
 > (infraestructura de lab, `env.hcl`) es Kubernetes v1.36, por lo que esta lab es una variante
 > orientada al futuro fuera de la support matrix probada de Kyverno 1.19 (véase el capítulo
 > 20 §20.4). No confunda tres ámbitos independientes: la versión de examen, la versión de training
-> del clúster y la versión de un instrumento concreto soportada por el vendor pueden diferir a la vez.
+> del clúster y la versión de una herramienta concreta soportada por el vendor pueden diferir a la vez.
 >
 > Las labs 108 y 111 instalan Kyverno mediante Helm chart `3.9.0`, que corresponde al release
 > **Kyverno 1.19.0**. Un defecto upstream conocido [#16947](https://github.com/kyverno/kyverno/issues/16947)
@@ -210,7 +210,7 @@ El prefix de la prueba es importante: esta Kyverno `ValidatingPolicy` comprueba 
 para probar la policy se necesita una image del registry coincidente con una ruta incorrecta dentro de
 él, no un registry ajeno arbitrario.
 
-No añada todo `docker.io` "temporalmente": eso convierte el allowlist en allow-all.
+No añada todo `docker.io` «temporalmente»: eso convierte el allowlist en allow-all.
 Para los componentes del sistema, defina prefixes separados y estrechos, por ejemplo
 `registry.k8s.io/*`, y registre la excepción al revisar el cambio.
 
@@ -499,7 +499,7 @@ cosign verify --key cosign.pub "$IMAGE"
 El `cosign generate-key-pair` anterior es solo un par local para el lab. En production,
 use el flujo keyless OIDC de abajo o una clave independiente, creada y mantenida en KMS;
 no transfiera `cosign.key` creado localmente a CI. El éxito de `cosign verify` significa
-la verificación criptográfica de la firma para el image reference indicado. La policy debe
+la verificación criptográfica de la firma para la image reference indicada. La policy debe
 además limitar **qué** public key/identity se permiten para ese repository. Una única clave
 común para todos los environments y proyectos convierte la compromise del CI de un servicio
 en un riesgo para todos los demás. Rote las claves, revoque el acceso a la clave antigua y
@@ -538,7 +538,7 @@ casi inútil: cualquier usuario OIDC aceptado por el verifier podrá firmar la i
 ## 26.5. Verificación de firma en admission y Notary
 
 La verificación antes del deployment es útil, pero no es enforcement: un usuario puede omitir
-el script local de CI y dirigirse al API directamente. Por ello, la verificación debe residir
+el script local de CI y dirigirse a la API directamente. Por ello, la verificación debe residir
 en el admission path. En Kyverno 1.19 lo realiza `ImageValidatingPolicy` basado en CEL;
 el legacy `ClusterPolicy.verifyImages` se conserva solo para la migración. No considere este
 ejemplo de policy como una verificación de `spec.volumes[].image.reference`: en este capítulo,
@@ -576,7 +576,7 @@ spec:
       key:
         data: |-
           -----BEGIN PUBLIC KEY-----
-          <clave-publica-del-firmante-de-release>
+          <clave-pública-del-firmante-de-release>
           -----END PUBLIC KEY-----
   - name: releaseNotary
     notary:
@@ -666,7 +666,7 @@ Un pipeline seguro mínimo tiene este aspecto:
 5. Los logs de CI, registry y admission vinculan el commit, el workflow run, el digest y la decisión.
 
 Comience el diagnóstico con los hechos, no relajando la policy. Un CREATE directo de `Pod`
-rechazado por admission no se conserva, por lo que la evidencia primaria es la respuesta del
+rechazado por admission no se conserva, por lo que la evidence primaria es la respuesta del
 propio comando, no `kubectl describe pod`:
 
 ```bash
@@ -730,7 +730,7 @@ reduce la probabilidad de ejecutar una image que no ha pasado por su pipeline.
 > ### 🔴 Perspectiva del atacante
 > **Asset:** production workload reference a una image.
 > **Starting foothold:** capacidad de hacer push en el registry o CI comprometido.
-> **Attacker objective:** eludir la comprobación de registry allowlist/admission, sustituyendo una image maliciosa mediante la reasignación de un mutable tag sin cambiar el digest de los workload ya desplegados.
+> **Attacker objective:** eludir la comprobación de registry allowlist/admission, sustituyendo una image maliciosa mediante la reasignación de un mutable tag sin cambiar el digest de los workloads ya desplegados.
 > **Abuse path:** reasignar un tag a otra image. Sin digest pinning, la misma cadena
 > `registry/app:stable` no garantiza los mismos bytes: con `imagePullPolicy: Always`,
 > kubelet resuelve el tag de nuevo en cada arranque; con `IfNotPresent`, una image en caché puede
@@ -776,7 +776,7 @@ El flujo keyless obtiene un certificado de corta duración después de la autent
 <details>
 <summary>6. ¿Por qué `cosign verify` en CI no evita un `kubectl apply` directo?</summary>
 
-La comprobación CI actúa solo en la vía donde realmente se ejecuta. Un usuario u otro pipeline puede dirigirse directamente a la API de Kubernetes y crear un Pod con una image sin firma. La verificación obligatoria debe estar en la admission path y devolver deny antes de conservar el Pod.
+La comprobación CI actúa solo en la vía donde realmente se ejecuta. Un usuario u otro pipeline puede dirigirse directamente a la API de Kubernetes y crear un Pod con una image sin firma. La verificación obligatoria debe estar en el admission path y devolver deny antes de conservar el Pod.
 </details>
 
 <details>

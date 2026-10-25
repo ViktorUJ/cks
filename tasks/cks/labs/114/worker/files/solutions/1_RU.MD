@@ -1,4 +1,4 @@
-[Eng version](1.MD)
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
 
 # Лаба 114 - краткое решение
 
@@ -97,6 +97,12 @@ curl -sS -o /dev/null -w 'external HTTP:%{http_code}\n' -m5 "http://$node_ip:301
 kubectl -n cks-114 run probe --image=curlimages/curl:8.10.1 --restart=Never --command -- sleep 300
 kubectl -n cks-114 wait --for=condition=Ready pod/probe --timeout=60s
 kubectl -n cks-114 exec probe -- curl -sS -o /dev/null -w 'in-cluster HTTP:%{http_code}\n' -m5 http://kubernetes-public.cks-114.svc.cluster.local/
+# Перед заданием 4 дождитесь независимой фиксации NodePort и DNS probes монитором.
+for i in $(seq 1 60); do
+  test -s /var/lib/cks-lab114-checker/nodeport-phase-seen && break
+  sleep 3
+done
+test -s /var/lib/cks-lab114-checker/nodeport-phase-seen || { echo 'NodePort history not captured'; exit 1; }
 ```
 
 ```
@@ -106,8 +112,8 @@ in-cluster HTTP:200
 
 ## 4. Reduce exposure: NodePort -> ClusterIP
 
-`kubectl patch` на массиве `ports` **не удаляет** `nodePort` сам по себе - нужно заменить весь массив
-без этого поля (либо `kubectl edit` вручную и убрать строку):
+Явно убираем `nodePort`: один JSON patch меняет тип и удаляет `/spec/ports/0/nodePort`
+(либо `kubectl edit` вручную и убрать строку):
 
 ```bash
 kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
@@ -116,7 +122,7 @@ kubectl -n cks-114 patch svc kubernetes-public --type=json -p '[
 ]'
 ```
 
-Проверяем ту же пару проверок (kube-proxy убирает правила NodePort тоже не мгновенно, поэтому сначала
+Повторяем те же две проверки (kube-proxy убирает правила NodePort тоже не мгновенно, поэтому сначала
 ждём, пока порт перестанет отвечать):
 
 ```bash
@@ -126,12 +132,12 @@ kubectl -n cks-114 exec probe -- curl -sS -o /dev/null -w 'in-cluster HTTP:%{htt
 ```
 
 ```
-curl: (28) Connection timed out after 5000 milliseconds
+curl: (7) Failed to connect to 10.114.1.xxx port 30114 after 0 ms: Connection refused
 external HTTP:000
 in-cluster HTTP:200
 ```
 
-`kubernetes-public:30114` больше не слушается kube-proxy на узле (transport deny); внутрикластерный путь
+kube-proxy на узле больше не обслуживает `kubernetes-public:30114` (transport deny); внутрикластерный путь
 по Service DNS не регрессировал.
 
 ```bash

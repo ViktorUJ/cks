@@ -8,7 +8,7 @@
 
 > **Prérequis CKA.** La tactique de base, le travail avec les contextes, `kubectl` et JSONPath sont expliqués dans le [chapitre 47 CKA](../../../cka/course/47/fr.md), et les tâches sur les nœuds, les static Pod et le troubleshooting dans le [chapitre 48 CKA](../../../cka/course/48/fr.md). Avant l'examen, révisez le minimum de l'éditeur dans le [chapitre 0.8 CKA](../../../cka/course/00-8-vim/fr.md). Nous ne répétons pas ici les bases CKA, mais ajoutons les spécificités de sécurité du CKS.
 
-CKS est un examen performance-based : il vérifie l'état d'un cluster vivant, d'un nœud et des artefacts créés, et non le texte d'une réponse. À la date de vérification **2026-09-05**, la page produit LF indique Kubernetes `v1.35` pour l'examen. `v1.36` est la version cible du cours et une extension production, pas une promesse pour le CKS. Le PDF du curriculum et les autres documents peuvent être mis à jour à un autre moment ; juste avant l'examen, vérifiez à nouveau la page produit LF, Important Instructions, Resources Allowed et ExamUI. La version Kubernetes, les poids des domaines, les ressources autorisées, les raccourcis clavier et les paramètres du simulator sont des snapshots à évolution rapide : si le texte conservé diverge de l'ExamUI/des instructions effectives à la date de l'examen, ExamUI et les instructions LF actuelles prévalent.
+Le CKS est un examen performance-based : il vérifie l'état d'un cluster vivant, d'un nœud et des artefacts créés, et non le texte d'une réponse. À la date de vérification **2026-09-05**, la page produit LF indique Kubernetes `v1.35` pour l'examen. `v1.36` est la version cible du cours et une extension production, pas une promesse pour le CKS. Le PDF du curriculum et les autres documents peuvent être mis à jour à un autre moment ; juste avant l'examen, vérifiez à nouveau la page produit LF, Important Instructions, Resources Allowed et ExamUI. La version Kubernetes, les poids des domaines, les ressources autorisées, les raccourcis clavier et les paramètres du simulator sont des snapshots à évolution rapide : si le texte conservé diverge de l'ExamUI/des instructions effectives à la date de l'examen, ExamUI et les instructions LF actuelles prévalent.
 
 > 🎯 Les sections 33.1-33.6 forment un workflow d'examen unique : sur `base`, lisez l'énoncé, connectez-vous au host assigné, confirmez context et scope, effectuez la modification minimale, prouvez le résultat et revenez à `base`. Utilisez la documentation autorisée pour trouver le champ ou le flag exact, répartissez le temps avec des drapeaux de tâches et revérifiez chaque critère à la fin.
 
@@ -93,7 +93,7 @@ Voici un aide-mémoire pédagogique sur la documentation des outils du cours : q
 | [Istio](https://istio.io/latest/docs/) | `PeerAuthentication`, mTLS, vérification mesh | `PeerAuthentication STRICT` |
 | [etcd](https://etcd.io/docs/) | santé, TLS et opérations `etcdctl` | `etcdctl endpoint health`, `snapshot` |
 | [bom](https://kubernetes-sigs.github.io/bom/cli-reference/) | SBOM au format SPDX avec la commande `bom` | `bom generate` (SPDX) ; CycloneDX - via syft/trivy |
-| [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/) | TLS et configuration de Ingress Controller | `Ingress TLS`, `annotations` ; projet communautaire `ingress-nginx` retired, voir ch. 08 |
+| [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/) | TLS et configuration d'Ingress Controller | `Ingress TLS`, `annotations` ; projet communautaire `ingress-nginx` retired, voir ch. 08 |
 | [Falco](https://falco.org/docs/) | règle, champ d'événement, sortie d'alert | `Falco rule condition`, `Falco fields` |
 | [Trivy](https://trivy.dev/) | scan pédagogique d'image, filesystem, config | ne pas le considérer globalement autorisé sans liste actuelle ou Quick Reference |
 | [AppArmor](https://gitlab.com/apparmor/apparmor/-/wikis/Documentation) | syntaxe pédagogique des profils et modes enforce/complain | ne pas le considérer globalement autorisé sans liste actuelle ou Quick Reference |
@@ -118,12 +118,12 @@ Deux heures représentent 120 minutes. À la date de vérification **2026-09-05*
 
 | Domaine CKS | Poids LF au 2026-09-05 | Repère de temps sur 120 minutes | À faire rapidement |
 |---|---:|---:|---|
-| Cluster Setup | 15% | 18 min | NetworkPolicy, CIS, Ingress TLS, metadata, vérification des binaires |
-| Cluster Hardening | 15% | 18 min | RBAC, ServiceAccount, accès API, mise à jour sûre |
-| System Hardening | 10% | 12 min | host footprint, firewall, AppArmor, seccomp |
-| Minimize Microservice Vulnerabilities | 20% | 24 min | SecurityContext, PSA, secrets, sandbox, Cilium/Istio |
-| Supply Chain Security | 20% | 24 min | image, SBOM, signature, allowlist, analyse statique, Trivy |
-| Monitoring, Logging & Runtime Security | 20% | 24 min | Falco, investigation, rootfs immuable, audit |
+| Cluster Setup | 15 % | 18 min | NetworkPolicy, CIS, Ingress TLS, metadata, vérification des binaires |
+| Cluster Hardening | 15 % | 18 min | RBAC, ServiceAccount, accès API, mise à jour sûre |
+| System Hardening | 10 % | 12 min | host footprint, firewall, AppArmor, seccomp |
+| Minimize Microservice Vulnerabilities | 20 % | 24 min | SecurityContext, PSA, secrets, sandbox, Cilium/Istio |
+| Supply Chain Security | 20 % | 24 min | image, SBOM, signature, allowlist, analyse statique, Trivy |
+| Monitoring, Logging & Runtime Security | 20 % | 24 min | Falco, investigation, rootfs immuable, audit |
 
 L'instruction officielle LF donne une plage de 15-20 tâches, non un nombre exact permanent. Ne fondez pas votre stratégie sur le nombre de tâches, l'affichage de leur poids ou un mécanisme d'attribution de points non documenté. Terminez chaque critère indépendant et vérifiable de l'énoncé, sans laisser un travail en espérant une attribution partielle supposée.
 
@@ -152,9 +152,9 @@ D'après la page produit LF, le simulateur inclus donne **deux tentatives**. Cha
 
 Règle d'arrêt : si, après quelques minutes ciblées, il n'existe pas de prochaine étape vérifiable, notez ce qui est déjà fait et ce qui manque, posez un drapeau et avancez. Ne supprimez pas une configuration fonctionnelle pour une supposition risquée. Soyez particulièrement prudent avec API server, etcd, firewall, CNI et `drain`.
 
-## 33.4. Techniques rapides pour CKS : créer, modifier, vérifier
+## 33.4. Techniques rapides pour le CKS : créer, modifier, vérifier
 
-La vitesse dans CKS est un cycle court « obtenir un squelette -> ajouter les champs de sécurité -> appliquer -> vérifier ». Il ne remplace pas la compréhension du modèle de menace : chaque flag doit correspondre à l'énoncé et ne pas étendre les privilèges.
+La vitesse dans le CKS est un cycle court « obtenir un squelette -> ajouter les champs de sécurité -> appliquer -> vérifier ». Il ne remplace pas la compréhension du modèle de menace : chaque flag doit correspondre à l'énoncé et ne pas étendre les privilèges.
 
 ### Génération de YAML et modification ciblée
 
@@ -214,7 +214,7 @@ securityContext:
 sudo aa-status
 sudo apparmor_parser -r /etc/apparmor.d/cks-deny-write
 
-# Sur le même hôte SSH après le démarrage du Pod, vérifier que scheduler a choisi le node attendu.
+# Sur le même hôte SSH après le démarrage du Pod, vérifier que le scheduler a choisi le node attendu.
 NAMESPACE="${NAMESPACE:?Set NAMESPACE to the namespace from the task}"
 POD="${POD:?Set POD to the Pod name from the task}"
 k get pod -n "$NAMESPACE" "$POD" -o wide
@@ -271,7 +271,7 @@ sudo falco
 sudo journalctl -u falco -f
 ```
 
-Ne corrigez pas aveuglément tout le rapport `kube-bench`. Certaines recommandations dépendent de la méthode d'installation, d'un managed control plane ou de la version Kubernetes. Pour l'examen, corrigez uniquement la finding requise, puis répétez le contrôle ciblé. Pour `trivy`, distinguez l'image de base, le CVE concret, severity et le correctif disponible ; supprimer le scanner ou masquer toute la sortie ne corrige pas la vulnérabilité. Pour Falco, vérifiez que l'événement provient du bon Pod/container, non d'une activité de test sur un autre node.
+Ne corrigez pas aveuglément tout le rapport `kube-bench`. Certaines recommandations dépendent de la méthode d'installation, d'un managed control plane ou de la version Kubernetes. Pour l'examen, corrigez uniquement la finding requise, puis répétez le contrôle ciblé. Pour `trivy`, distinguez l'image de base, le CVE concret, la severity et le correctif disponible ; supprimer le scanner ou masquer toute la sortie ne corrige pas la vulnérabilité. Pour Falco, vérifiez que l'événement provient du bon Pod/container, non d'une activité de test sur un autre node.
 
 ### Dernière vérification universelle
 
@@ -343,12 +343,12 @@ Avant l'examen, ne cochez pas « lu », mais « fait sans indice et résultat v�
 
 | Domaine | Minimum à savoir faire | Vérification du résultat | Pièges fréquents |
 |---|---|---|---|
-| Cluster Setup - 15% | default-deny ingress/egress, DNS et metadata egress, `CiliumNetworkPolicy`, `kube-bench`, TLS Ingress, checksum du binaire | connectivité du Pod autorisé et interdit, requête DNS, rapport CIS, `curl` TLS endpoint, `sha256sum -c` | default-deny egress sans DNS allow bloque DNS ; ingress-only policy sans Egress isolation ne bloque pas DNS ; CIDR metadata trop large ; CNI ne prend pas en charge la policy ; TLS Secret dans un autre namespace |
-| Cluster Hardening - 15% | least-privilege RBAC, `auth can-i`, désactivation/limitation de ServiceAccount token, API allowlist, upgrade sûr | `kubectl auth can-i --as`, consultation de RoleBinding et Pod spec, readiness API | wildcard `*`, dangereux `bind`/`escalate`/`impersonate` ; default SA reste monté ; modification du mauvais API server |
-| System Hardening - 10% | services et paquets superflus, permissions, firewall, AppArmor, seccomp `RuntimeDefault` et Localhost profile | `systemctl`, `ss`, règles firewall, `aa-status`, état du Pod | profil AppArmor chargé sur le mauvais node ; `localhostProfile` incorrect ; seccomp profile absent du node ; firewall ferme le trafic control-plane requis |
-| Minimize Microservice Vulnerabilities - 20% | `runAsNonRoot`, drop capabilities, `allowPrivilegeEscalation: false`, root en lecture seule, PSA, secret encryption, RuntimeClass, Cilium encryption et Istio mTLS | Pod démarre sans privilèges inutiles, PSA rejette la violation, chemin du secret protégé, vérification mTLS | l'application n'a pas de `emptyDir` writable ; seulement PSA audit au lieu de `enforce` ; Secret arrive dans le log ; policy mTLS appliquée dans un autre namespace |
-| Supply Chain Security - 20% | minimal image, SBOM, registry allowlist, vérification cosign, `kubesec`/`kube-linter`/`hadolint`, `trivy` | SBOM contient les composants, policy rejette le registry interdit, scanner produit la finding attendue | tag contrôlé au lieu de digest ; allowlist ne couvre pas initContainer ; scanner lancé mais finding non interprétée ; signature policy non raccordée au chemin admission |
-| Monitoring, Logging & Runtime Security - 20% | rule/événement Falco, triage par phases d'attaque, root filesystem immuable, audit policy et backend | Falco event contient la bonne source, enregistrement audit avec identity/verb/outcome, écriture dans rootfs rejetée | Falco observe le mauvais node ou runtime ; audit policy non montée dans API server ; oubli du redémarrage du static Pod ; audit `RequestResponse` révèle Secret |
+| Cluster Setup - 15 % | default-deny ingress/egress, DNS et metadata egress, `CiliumNetworkPolicy`, `kube-bench`, TLS Ingress, checksum du binaire | connectivité du Pod autorisé et interdit, requête DNS, rapport CIS, `curl` TLS endpoint, `sha256sum -c` | default-deny egress sans DNS allow bloque DNS ; ingress-only policy sans Egress isolation ne bloque pas DNS ; CIDR metadata trop large ; CNI ne prend pas en charge la policy ; TLS Secret dans un autre namespace |
+| Cluster Hardening - 15 % | least-privilege RBAC, `auth can-i`, désactivation/limitation de ServiceAccount token, API allowlist, upgrade sûr | `kubectl auth can-i --as`, consultation de RoleBinding et Pod spec, readiness API | wildcard `*`, dangereux `bind`/`escalate`/`impersonate` ; default SA reste monté ; modification du mauvais API server |
+| System Hardening - 10 % | services et paquets superflus, permissions, firewall, AppArmor, seccomp `RuntimeDefault` et Localhost profile | `systemctl`, `ss`, règles firewall, `aa-status`, état du Pod | profil AppArmor chargé sur le mauvais node ; `localhostProfile` incorrect ; seccomp profile absent du node ; firewall ferme le trafic control-plane requis |
+| Minimize Microservice Vulnerabilities - 20 % | `runAsNonRoot`, drop capabilities, `allowPrivilegeEscalation: false`, root en lecture seule, PSA, secret encryption, RuntimeClass, Cilium encryption et Istio mTLS | Pod démarre sans privilèges inutiles, PSA rejette la violation, chemin du secret protégé, vérification mTLS | l'application n'a pas de `emptyDir` writable ; seulement PSA audit au lieu de `enforce` ; Secret arrive dans le log ; policy mTLS appliquée dans un autre namespace |
+| Supply Chain Security - 20 % | minimal image, SBOM, registry allowlist, vérification cosign, `kubesec`/`kube-linter`/`hadolint`, `trivy` | SBOM contient les composants, policy rejette le registry interdit, scanner produit la finding attendue | tag contrôlé au lieu de digest ; allowlist ne couvre pas initContainer ; scanner lancé mais finding non interprétée ; signature policy non raccordée au chemin admission |
+| Monitoring, Logging & Runtime Security - 20 % | rule/événement Falco, triage par phases d'attaque, root filesystem immuable, audit policy et backend | Falco event contient la bonne source, enregistrement audit avec identity/verb/outcome, écriture dans rootfs rejetée | Falco observe le mauvais node ou runtime ; audit policy non montée dans API server ; oubli du redémarrage du static Pod ; audit `RequestResponse` révèle Secret |
 
 ```mermaid
 flowchart TB
@@ -375,7 +375,7 @@ flowchart TB
 4. Qu'est-ce qui doit être autorisé et qu'est-ce qui doit être interdit ? Vérifiez les deux sens.
 5. Quel artefact observable prouve le résultat : champ API, exit code, log, profil, port, audit event ou Falco alert ?
 
-Ces questions protègent contre une fausse assurance typique : le YAML est appliqué avec succès, mais le contrôleur ne prend pas en charge le champ, scheduler a choisi un autre node, la policy ne correspond pas au label ou le service requis est devenu indisponible.
+Ces questions protègent contre une fausse assurance typique : le YAML est appliqué avec succès, mais le contrôleur ne prend pas en charge le champ, le scheduler a choisi un autre node, la policy ne correspond pas au label ou le service requis est devenu indisponible.
 
 ## 33.6. Stratégie finale et configuration de l'environnement
 
@@ -405,9 +405,9 @@ Procédure finale des 10-15 dernières minutes :
 
 ## 33.7. Application en production
 
-La discipline d'examen est utile lors d'un incident : déterminez d'abord scope et identity, effectuez ensuite une modification minimale et réversible, collectez des evidence et vérifiez le service du point de vue de l'utilisateur. Le contexte CKS diffère de la production car, dans un environnement réel, il faut avant toute modification un change record, peer review, sauvegarde, fenêtre de maintenance et rollback plan.
+La discipline d'examen est utile lors d'un incident : déterminez d'abord le scope et l'identity, effectuez ensuite une modification minimale et réversible, collectez des evidence et vérifiez le service du point de vue de l'utilisateur. Le contexte CKS diffère de la production car, dans un environnement réel, il faut avant toute modification un change record, une peer review, une sauvegarde, une fenêtre de maintenance et un rollback plan.
 
-Appliquez les mêmes habitudes dans le travail de plateforme : n'accordez pas wildcard RBAC pour un correctif rapide, ne lancez pas de scanner sans triage des findings, ne modifiez pas les static Pod de tous les control-plane à la fois et n'activez pas un audit détaillé sans politique de conservation et de protection des données. Une défense réussie est un service disponible, avec une surface d'attaque réduite et des preuves observables des actions.
+Appliquez les mêmes habitudes dans le travail de plateforme : n'accordez pas de wildcard RBAC pour un correctif rapide, ne lancez pas de scanner sans triage des findings, ne modifiez pas les static Pod de tous les control-plane à la fois et n'activez pas un audit détaillé sans politique de conservation et de protection des données. Une défense réussie est un service disponible, avec une surface d'attaque réduite et des preuves observables des actions.
 
 ## 33.8. Mini-glossaire
 
@@ -416,24 +416,24 @@ Appliquez les mêmes habitudes dans le travail de plateforme : n'accordez pas wi
 - **evidence** - artefact vérifiable : API object, log, profile, report scanner ou test réseau confirmant le résultat.
 - **default-deny** - policy qui interdit le trafic par défaut et n'autorise explicitement que ce qui est nécessaire.
 - **Localhost AppArmor profile** - profil AppArmor préchargé sur le node et sélectionné par le container avec `securityContext`.
-- **read-only root filesystem** - interdiction d'écrire dans image layer du container ; les writable paths nécessaires sont fournis par des volumes explicites.
-- **triage** - classification rapide d'une finding ou d'un événement selon la source, le risque, scope et l'action suivante.
+- **read-only root filesystem** - interdiction d'écrire dans l'image layer du container ; les writable paths nécessaires sont fournis par des volumes explicites.
+- **triage** - classification rapide d'une finding ou d'un événement selon la source, le risque, le scope et l'action suivante.
 
 ## 33.9. Résumé du chapitre
 
-- CKS est un examen pratique de 2 heures avec 15-20 tâches ; chacune s'exécute sur le host SSH assigné, puis il faut revenir à `base` sans nested SSH.
+- Le CKS est un examen pratique de 2 heures avec 15-20 tâches ; chacune s'exécute sur le host SSH assigné, puis il faut revenir à `base` sans nested SSH.
 - Travaillez en cycle : sur `base`, lire le host -> SSH vers le host -> choisir le context -> modifier au minimum -> vérifier le résultat -> `exit` vers `base`.
 - Les poids LF 15 %, 15 %, 10 %, 20 %, 20 %, 20 % sont fournis comme snapshot au 2026-09-05 ; le curriculum CNCF peut différer, alors vérifiez les sources actuelles avant l'examen.
 - Ne vous fiez pas à une méthode d'évaluation non documentée : terminez chaque critère indépendant et vérifiable, sans laisser API server, CNI ou firewall cassé.
 - Deux tentatives de simulateur, avec 17 scénarios et 36 heures après activation, sont utiles pour deux cycles : diagnostic des lacunes, puis répétition stricte et élimination des erreurs restantes.
-- Pour CKS, les champs de sécurité rapides, la modification correcte d'un static Pod, AppArmor sur le bon node, le diagnostic `kube-bench`/`trivy`/`falco` et un test réseau positif avec un négatif sont particulièrement importants.
+- Pour le CKS, les champs de sécurité rapides, la modification correcte d'un static Pod, AppArmor sur le bon node, le diagnostic `kube-bench`/`trivy`/`falco` et un test réseau positif avec un négatif sont particulièrement importants.
 - La documentation est un moyen de trouver le champ ou flag exact sur un site autorisé, pas un substitut à la pratique.
 
 ## 33.10. Utilité à l'examen et dans le travail réel
 
 **À l'examen (CKS).** Ce chapitre relie les compétences de lab à la contrainte de 120 minutes : SSH-host assigné, retour à `base`, context sur le host, documents autorisés, ordre des tâches, deux tentatives de simulateur et vérification finale. Révisez la tactique du [chapitre 48 CKA](../../../cka/course/48/fr.md), la vitesse `kubectl` du [chapitre 47 CKA](../../../cka/course/47/fr.md) et vim du [chapitre 0.8 CKA](../../../cka/course/00-8-vim/fr.md), puis faites les labs avec un minuteur.
 
-**Dans le travail réel.** Le changement de context, la modification ciblée, rollback, la vérification du scénario positif et négatif et la conservation des evidence sont une discipline de base pour SRE et l'ingénieur sécurité. Elle réduit le risque d'effectuer la bonne configuration dans le mauvais cluster ou d'éliminer une alert au prix de l'indisponibilité du service.
+**Dans le travail réel.** Le changement de context, la modification ciblée, le rollback, la vérification du scénario positif et négatif et la conservation des evidence sont une discipline de base pour SRE et l'ingénieur sécurité. Elle réduit le risque d'effectuer la bonne configuration dans le mauvais cluster ou d'éliminer une alert au prix de l'indisponibilité du service.
 
 ## 33.11. Questions d'auto-évaluation
 
@@ -452,7 +452,7 @@ Le workflow d'examen demande de commencer la tâche suivante sur `base`, depuis 
 <details>
 <summary>3. Comment répartir 120 minutes selon les poids LF source-dated, alors que le curriculum CNCF peut être différent ?</summary>
 
-Pour le snapshot LF au 2026-09-05, les poids 15/15/10/20/20/20 donnent des repères de 18, 18, 12, 24, 24 et 24 minutes par domaine. Une tactique pratique est un premier passage rapide d'environ 60-70 minutes, les drapeaux pendant 35-45 minutes et 10-15 minutes de vérification. Ces nombres ne sont pas invariants : avant l'examen, comparez page produit LF, curriculum et ExamUI actuels, puis suivez les instructions réelles.
+Pour le snapshot LF au 2026-09-05, les poids 15/15/10/20/20/20 donnent des repères de 18, 18, 12, 24, 24 et 24 minutes par domaine. Une tactique pratique est un premier passage rapide d'environ 60-70 minutes, les drapeaux pendant 35-45 minutes et 10-15 minutes de vérification. Ces nombres ne sont pas invariants : avant l'examen, comparez la page produit LF, le curriculum et l'ExamUI actuels, puis suivez les instructions réelles.
 </details>
 
 <details>
@@ -464,7 +464,7 @@ La première tentative se fait comme un examen : 17 scénarios avec un minuteur 
 <details>
 <summary>5. Comment s'assurer qu'une modification du static Pod `kube-apiserver` est réellement appliquée et n'a pas cassé l'API ?</summary>
 
-Sur le control-plane host assigné, sauvegardez le manifest hors de `/etc/kubernetes/manifests/` avant la modification, puis vérifiez la recréation avec `crictl ps -a` et `journalctl -u kubelet`. Après le démarrage, confirmez le Pod API server et `k get --raw='/readyz?verbose'`. Si readiness ne revient pas, avant de sortir vers `base`, lisez les logs, vérifiez YAML/mount paths et, si nécessaire, restaurez le backup.
+Sur le control-plane host assigné, sauvegardez le manifest hors de `/etc/kubernetes/manifests/` avant la modification, puis vérifiez la recréation avec `crictl ps -a` et `journalctl -u kubelet`. Après le démarrage, confirmez le Pod API server et `k get --raw='/readyz?verbose'`. Si la readiness ne revient pas, avant de sortir vers `base`, lisez les logs, vérifiez YAML/mount paths et, si nécessaire, restaurez le backup.
 </details>
 
 <details>
@@ -476,13 +476,13 @@ Un apply policy réussi ne prouve pas sa sémantique réseau. Il faut montrer qu
 <details>
 <summary>7. Que faut-il confirmer avant d'appliquer un Localhost AppArmor profile à un Pod ?</summary>
 
-Le profil doit exister et être chargé sur le node où scheduler lance effectivement le Pod ; vérifiez-le avec `sudo aa-status` et, si nécessaire, `apparmor_parser`. Dans le manifest, utilisez le champ moderne `securityContext.appArmorProfile`, avec `type: Localhost` et le bon `localhostProfile`. Si le node est différent, le profile ne donnera pas la protection attendue ; vérifiez donc le placement avec `k get pod -n "$NAMESPACE" -o wide`.
+Le profil doit exister et être chargé sur le node où le scheduler lance effectivement le Pod ; vérifiez-le avec `sudo aa-status` et, si nécessaire, `apparmor_parser`. Dans le manifest, utilisez le champ moderne `securityContext.appArmorProfile`, avec `type: Localhost` et le bon `localhostProfile`. Si le node est différent, le profile ne donnera pas la protection attendue ; vérifiez donc le placement avec `k get pod -n "$NAMESPACE" -o wide`.
 </details>
 
 <details>
 <summary>8. Quelle différence existe entre une documentation globalement autorisée et un Quick Reference task-specific ?</summary>
 
-Les ressources globalement autorisées sont définies par les LF instructions actuelles et peuvent être utilisées dans leur périmètre établi. Quick Reference appartient à une tâche précise et n'autorise que les liens affichés ; son autorisation ne peut pas être reportée à d'autres tâches. Avant l'examen, vérifiez dans tous les cas Resources Allowed et ExamUI, plutôt qu'une table du cours enregistrée.
+Les ressources globalement autorisées sont définies par les LF instructions actuelles et peuvent être utilisées dans les tâches, à l'intérieur de leur périmètre établi. Quick Reference appartient à une tâche précise et n'autorise que les liens affichés ; son autorisation ne peut pas être reportée à d'autres tâches. Avant l'examen, vérifiez dans tous les cas Resources Allowed et ExamUI, plutôt qu'une table du cours enregistrée.
 </details>
 
 <details>
@@ -493,7 +493,7 @@ Dans le terminal, utilisez `Ctrl+Shift+C` et `Ctrl+Shift+V`, et dans les autres 
 
 ## Pratique
 
-Refaites tous les travaux pratiques sans solutions, puis mélangez les tâches de domaines différents et changez de context entre elles. Pour chaque lab, notez le temps, l'erreur et la commande de vérification : c'est votre liste personnelle de drapeaux pour le mock-examen.
+Refaites tous les travaux pratiques sans solutions, puis mélangez les tâches de domaines différents et changez de context entre elles. Pour chaque lab, notez le temps, l'erreur et la commande de vérification : c'est votre liste personnelle de drapeaux pour l'examen blanc.
 
 | Lab | Domaines et compétences entraînés |
 |---|---|
@@ -510,8 +510,8 @@ Refaites tous les travaux pratiques sans solutions, puis mélangez les tâches d
 | [Lab 111](../../labs/111/README_FR.MD) | image minimale, analyse statique, Trivy, SBOM, signature et ImagePolicyWebhook |
 | [Lab 112](../../labs/112/README_FR.MD) | Falco, audit logs et immutabilité du container |
 | [Lab 113](../../labs/113/README_FR.MD) | kubeadm minor upgrade : control-plane → worker, version skew, drain/uncordon et evidence de l'absence de downtime |
-| [Lab 114](../../labs/114/README_RU.MD) | contextes kubeconfig, extraction de client certificate, réduction de l'exposition du Service NodePort → ClusterIP |
-| [Lab 115](../../labs/115/README_RU.MD) | Cilium depuis zéro : remplacement de kube-proxy, WireGuard, Mutual Authentication avec SPIRE (avancé/production, hors CKS Core) |
+| [Lab 114](../../labs/114/README_FR.MD) | contextes kubeconfig, extraction de client certificate, réduction de l'exposition du Service NodePort → ClusterIP |
+| [Lab 115](../../labs/115/README_FR.MD) | Cilium depuis zéro : remplacement de kube-proxy, WireGuard, Mutual Authentication avec SPIRE (avancé/production, hors CKS Core) |
 
 ---
 [Table des matières](../README_FR.md) · [Chapitre 32](../32/fr.md)

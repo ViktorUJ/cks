@@ -35,7 +35,7 @@ Le filtre est attaché à un processus et hérité par les processus enfants. Il
 | Mécanisme | Question à laquelle il répond | Exemple |
 |---|---|---|
 | UID/GID et DAC | l'identity peut-elle travailler avec l'objet ? | permissions de fichier `0640` |
-| capabilities | une privilege spéciale du kernel est-elle présente ? | pas de `CAP_SYS_ADMIN` |
+| capabilities | un privilège spécial du kernel est-il présent ? | pas de `CAP_SYS_ADMIN` |
 | seccomp | ce syscall précis est-il autorisé ? | `unshare(2)` retourne `EPERM` |
 | AppArmor / SELinux | la MAC policy autorise-t-elle l'objet et l'opération ? | AppArmor interdit la lecture de `/etc/shadow` |
 | RBAC | l'identity peut-elle appeler l'API Kubernetes ? | pas de `get secrets` |
@@ -87,7 +87,7 @@ Deux orientations de policy se présentent différemment :
 
 ## 17.3. API Kubernetes : `RuntimeDefault`, `Localhost`, `Unconfined`
 
-L'API Kubernetes actuelle définit seccomp dans `securityContext.seccompProfile`. Il peut être défini au niveau du Pod comme baseline pour tous les conteneurs, ou sur un container particulier qui nécessite une policy plus étroite. Le `securityContext` au niveau du container est prioritaire pour ce conteneur. Évitez les filtres différents sans nécessité : ils compliquent rollout, audit et la recherche de la cause d'un échec.
+L'API Kubernetes actuelle définit seccomp dans `securityContext.seccompProfile`. Il peut être défini au niveau du Pod comme baseline pour tous les conteneurs, ou sur un container particulier qui nécessite une policy plus étroite. Le `securityContext` au niveau du container est prioritaire pour ce conteneur. Évitez les filtres différents sans nécessité : ils compliquent le rollout, l'audit et la recherche de la cause d'un échec.
 
 | `type` | Ce qui est attribué | Quand le choisir |
 |---|---|---|
@@ -127,7 +127,7 @@ kubectl get pod -n demo runtime-default-seccomp \
   -o jsonpath='{.spec.securityContext.seccompProfile.type}{"\n"}'
 kubectl describe pod -n demo runtime-default-seccomp
 kubectl exec -n demo runtime-default-seccomp -- grep '^Seccomp:' /proc/1/status
-# Attendu : Seccomp: 2 ; cela confirme le filter mode, mais pas l'identité du profile.
+# Attendu : Seccomp : 2 ; cela confirme le filter mode, mais pas l'identité du profile.
 ```
 
 Même si le default à l'échelle du cluster active déjà `RuntimeDefault`, le champ explicite reste utile : le manifest transporte l'intention avec le workload, une admission policy peut le vérifier, et la personne qui vérifie ne doit pas deviner la configuration de la node/runtime.
@@ -247,9 +247,9 @@ Pour un privileged container sans filtre installé par l'application elle-même,
 
 ### `Unconfined` et annotation obsolète
 
-`Unconfined` désactive cette couche pour le conteneur. Son utilisation peut être acceptable comme exception courte, par exemple pour une controlled comparison sur une test node, mais non comme « solution » permanente à `Operation not permitted`. Consignez le owner, la date de retrait et la cause précise ; rétablissez ensuite le least privilege.
+`Unconfined` désactive cette couche pour le conteneur. Son utilisation peut être acceptable comme exception courte, par exemple pour une controlled comparison sur une test node, mais non comme « solution » permanente à `Operation not permitted`. Consignez l'owner, la date de retrait et la cause précise ; rétablissez ensuite le least privilege.
 
-Les anciens manifests peuvent utiliser l'annotation `seccomp.security.alpha.kubernetes.io/pod` ou `container.seccomp.security.alpha.kubernetes.io/<container>`. Il s'agit d'une interface historique : depuis Kubernetes v1.25, ces annotations sont **non fonctionnelles** et n'attribuent aucun seccomp profile. Leur présence dans un cluster moderne est un signal pour un audit, et non une compatibilité opérationnelle ; remplacez-les par `securityContext.seccompProfile`. Ne mélangez pas l'annotation et le champ d'API, surtout avec des valeurs différentes. Après la migration, testez le nouveau Pod et vérifiez son mode effectif.
+Les anciens manifests peuvent utiliser l'annotation `seccomp.security.alpha.kubernetes.io/pod` ou `container.seccomp.security.alpha.kubernetes.io/<container>`. Il s'agit d'une interface historique : depuis Kubernetes v1.27, ces annotations sont **non fonctionnelles** et n'attribuent aucun seccomp profile. Leur présence dans un cluster moderne est un signal pour un audit, et non une compatibilité opérationnelle ; remplacez-les par `securityContext.seccompProfile`. Ne mélangez pas l'annotation et le champ d'API, surtout avec des valeurs différentes. Après la migration, testez le nouveau Pod et vérifiez son mode effectif.
 
 > 🎯 Construisez un JSON profile `Localhost` au format OCI seccomp, chargez-le sur la node requise et confirmez le mode effectif du conteneur.
 
@@ -303,7 +303,7 @@ sudo jq empty /var/lib/kubelet/seccomp/profiles/audit.json
 
 `jq empty` vérifie la syntaxe JSON, mais ne prouve pas la sémantique des syscall names ni la compatibilité du runtime. Avant un production rollout, ajoutez un test de démarrage du container sur chaque version de runtime cible, puis préparez le rollback comme publication d'une nouvelle version de profile validée, et non comme une modification manuelle d'une live node.
 
-Ci-dessous, un exemple de enforce-profile avec deny-list. Il sert à démontrer un refus prévisible : par défaut les syscalls sont autorisés, mais quelques actions reçoivent `EPERM`. Ce fichier ne remplace pas `RuntimeDefault` et n'est pas, à lui seul, une production policy suffisante.
+Ci-dessous, un exemple d'enforce-profile avec deny-list. Il sert à démontrer un refus prévisible : par défaut les syscalls sont autorisés, mais quelques actions reçoivent `EPERM`. Ce fichier ne remplace pas `RuntimeDefault` et n'est pas, à lui seul, une production policy suffisante.
 
 ```json
 {
@@ -467,7 +467,7 @@ Pour le JSON enforce de la section 17.4, créez un Pod de test distinct en attri
 
 ```bash
 kubectl exec -n demo localhost-seccomp -- sh -c 'mount -t tmpfs tmpfs /tmp/x'
-# Attendu : mount: permission denied (ou un EPERM analogue).
+# Attendu : mount : permission denied (ou un EPERM analogue).
 
 kubectl exec -n demo localhost-seccomp -- grep '^Seccomp:' /proc/1/status
 # Attendu : Seccomp: 2
@@ -475,7 +475,7 @@ kubectl exec -n demo localhost-seccomp -- grep '^Seccomp:' /proc/1/status
 
 Cette commande ne suffit pas pour l'attribution : mount peut être interdit par l'absence de capability. Pour une preuve pédagogique, consignez le profile, `Seccomp: 2`, stderr de la commande et le node audit/log correspondant. Dans une investigation réelle, isolez le test et n'ajoutez pas `CAP_SYS_ADMIN` uniquement pour contourner une restriction et en « vérifier » une autre.
 
-> 🧠 Seccomp contrôle les syscalls, les capabilities - les privileges, AppArmor/SELinux - l'accès aux objets et aux opérations.
+> 🧠 Seccomp contrôle les syscalls, les capabilities - les privilèges, AppArmor/SELinux - l'accès aux objets et aux opérations.
 
 ## 17.7. Relier seccomp, capabilities et AppArmor
 
@@ -555,7 +555,7 @@ Les Pod Security Standards au niveau `restricted` exigent seccomp `RuntimeDefaul
 
 ## 17.11. Utilité pour l'examen et le travail réel
 
-**À l'examen.** Distinguez rapidement `RuntimeDefault` de `Localhost`, souvenez-vous du chemin relatif `localhostProfile`, de `seccompDefault` kubelet et de la règle : `privileged` est toujours `Unconfined`. Vérifiez le résultat avec `kubectl describe`, `-o jsonpath`, la node sélectionnée et `/proc/1/status`. En cas de `CreateContainerError`, lisez d'abord l'event et vérifiez le node-local profile ; en cas de `EPERM`, ne déclarez pas seccomp responsable avant d'avoir vérifié capabilities et les logs AppArmor/SELinux.
+**À l'examen.** Distinguez rapidement `RuntimeDefault` de `Localhost`, souvenez-vous du chemin relatif `localhostProfile`, de `seccompDefault` kubelet et de la règle : `privileged` est toujours `Unconfined`. Vérifiez le résultat avec `kubectl describe`, `-o jsonpath`, la node sélectionnée et `/proc/1/status`. En cas de `CreateContainerError`, lisez d'abord l'event et vérifiez le node-local profile ; en cas de `EPERM`, ne déclarez pas seccomp responsable avant d'avoir vérifié les capabilities et les logs AppArmor/SELinux.
 
 **Dans le travail réel.** Runtime default fournit un baseline portable, et seccomp custom est un contrat entre l'application, le runtime et la node platform. Seul un workflow complet fournit un résultat utile : measured syscalls, threat review, versioned JSON, canary, audit correlation et rollback rapide. Un « fichier sur une node » et un `Unconfined` permanent ne constituent pas du hardening.
 
@@ -564,7 +564,7 @@ Les Pod Security Standards au niveau `restricted` exigent seccomp `RuntimeDefaul
 <details>
 <summary>1. En quoi seccomp diffère-t-il des Linux capabilities et pourquoi un control ne remplace-t-il pas l'autre ?</summary>
 
-Les capabilities déterminent si un processus dispose d'une privilege spéciale du kernel, par exemple `CAP_SYS_ADMIN` ; seccomp décide si un syscall précis est autorisé. Un appel autorisé par seccomp passe encore les vérifications ordinaires de capabilities, namespace et LSM, et une capability n'annule pas un seccomp-denial. C'est pourquoi le baseline de ce chapitre associe `drop: ["ALL"]` à `RuntimeDefault`.
+Les capabilities déterminent si un processus dispose d'un privilège spécial du kernel, par exemple `CAP_SYS_ADMIN` ; seccomp décide si un syscall précis est autorisé. Un appel autorisé par seccomp passe encore les vérifications ordinaires de capabilities, namespace et LSM, et une capability n'annule pas un seccomp-denial. C'est pourquoi le baseline de ce chapitre associe `drop: ["ALL"]` à `RuntimeDefault`.
 </details>
 
 <details>
@@ -610,7 +610,7 @@ Un seul `curl` réussi ne couvre ni démarrage, ni probes, ni DNS/TLS, ni tâche
 </details>
 
 <details>
-<summary>9. **Flashback (chapitre 20).** Imaginez une `ValidatingAdmissionPolicy` du chapitre 20 qui exige `seccompProfile.type` dans le manifest. Pourquoi le passage de cette policy à l'admission ne garantit-il toujours pas une protection réelle des syscalls - que doit précisément correspondre au niveau de la node/kubelet à l'exigence de la policy pour que le filtre seccomp fonctionne effectivement ?</summary>
+<summary>9. **Flashback (chapitre 20).** Imaginez une `ValidatingAdmissionPolicy` du chapitre 20 qui exige `seccompProfile.type` dans le manifest. Pourquoi le passage de cette policy à l'admission ne garantit-il toujours pas une protection réelle des syscalls - qu'est-ce qui doit précisément correspondre, au niveau de la node/kubelet, à l'exigence de la policy pour que le filtre seccomp fonctionne effectivement ?</summary>
 
 L'admission-policy ne vérifie que le YAML avant l'enregistrement de l'objet et ne confirme pas que la node pourra appliquer le profile. Sur la node effective, la prise en charge de seccomp par runtime/kubelet, le `securityContext` effectif tenant compte du container override et, pour `Localhost`, l'existence d'un JSON compatible sous le seccomp root kubelet doivent correspondre. Le container ne doit pas non plus être `privileged`, car Kubernetes l'exécute `Unconfined` ; le résultat est vérifié par les événements et `Seccomp: 2` dans le bon processus.
 </details>
@@ -643,9 +643,9 @@ Avant de passer à Minimize Microservice Vulnerabilities, vérifiez pendant 15-2
 
 1. Trouvez sur une test node un port ou service superflu en écoute et expliquez comment décider s'il peut être désactivé (chapitre 14).
 2. Nommez deux niveaux de least privilege - l'utilisateur Linux sur l'hôte et l'API Kubernetes - et donnez un exemple concret pour chacun (chapitre 15).
-3. Basculez le AppArmor profile d'un Pod de `enforce` à `complain` et expliquez pourquoi `complain` ne peut pas être présenté comme une preuve de protection à l'examen (chapitre 16).
+3. Basculez l'AppArmor profile d'un Pod de `enforce` à `complain` et expliquez pourquoi `complain` ne peut pas être présenté comme une preuve de protection à l'examen (chapitre 16).
 4. **Exercice mixte.** Prenez RBAC (chapitre 10, domaine Cluster Hardening) et AppArmor/seccomp (chapitres 16-17, ce domaine) : un utilisateur a RBAC `create pods`, et l'admission ne limite pas `securityContext`. Pourquoi RBAC ne contrôle-t-il pas lui-même les Linux syscalls ? L'utilisateur peut-il demander `Unconfined`/`privileged` et contourner les seccomp/AppArmor disponibles ? Quelle admission enforcement (PSA `restricted`, ValidatingAdmissionPolicy, Gatekeeper, Kyverno ou platform equivalent) faut-il pour que le hardening ne puisse pas être désactivé dans un manifest ?
-5. Définissez `seccompProfile.type: RuntimeDefault` pour un Pod de test et expliquez en quoi cela diffère de `Unconfined` en termes de allow-list/deny-list (chapitre 17).
+5. Définissez `seccompProfile.type: RuntimeDefault` pour un Pod de test et expliquez en quoi cela diffère de `Unconfined` en termes d'allow-list/deny-list (chapitre 17).
 
 Si l'exercice 4 a posé des difficultés, revenez aux chapitres 10 et 16-17 ensemble.
 

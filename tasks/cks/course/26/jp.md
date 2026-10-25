@@ -95,7 +95,7 @@ spec:
       operations: ["CREATE", "UPDATE"]
       resources: ["pods", "pods/ephemeralcontainers"]
   validations:
-  - message: "Only container images registry.example.com/platform/ are allowed; image volumes are forbidden."
+  - message: "registry.example.com/platform/ 配下の container images のみ許可します。image volumes は禁止です。"
     expression: >-
       object.spec.containers.all(c, c.image.startsWith("registry.example.com/platform/")) &&
       (!has(object.spec.initContainers) || object.spec.initContainers.all(c,
@@ -161,7 +161,7 @@ controller は許可され、拒否は Pod 作成時にだけ起こります。�
 > [#16947](https://github.com/kyverno/kyverno/issues/16947) はまさに
 > `ImageValidatingPolicy` に関するもので、`pods/ephemeralcontainers` に対して
 > validating handler が `validations` を適用しません。webhook と image
-> verification は呼び出されますが。issue には milestone `1.19.2` が付けられて
+> verification は呼び出されます。issue には milestone `1.19.2` が付けられて
 > います。したがって pinned 1.19.0 では否定的な `kubectl debug` test を
 > **signature** について保証されたものとみなさないでください（詳細は §26.5）。
 > この制限は通常の `ValidatingPolicy` には及びません。下の policy は
@@ -172,7 +172,7 @@ controller は許可され、拒否は Pod 作成時にだけ起こります。�
 variable は三つの container list すべてを結合します。`pods/ephemeralcontainers`
 resource は `kubectl debug` 時にも同じチェックが実行されるために必要です。
 native VAP と同様、この variant も image volumes を別途禁止します。
-`spec.volumes[].image.reference` に確認済みサポートを持つ verifier が選ばれるまで。
+`spec.volumes[].image.reference` に確認済みサポートを持つ verifier が選ばれるまで、この禁止は続きます。
 
 ```yaml
 apiVersion: policies.kyverno.io/v1
@@ -197,11 +197,11 @@ spec:
       object.spec.?initContainers.orValue([]) +
       object.spec.?ephemeralContainers.orValue([])
   validations:
-  - message: "Only images from registry.example.com/platform/ are allowed."
+  - message: "registry.example.com/platform/ 配下の images のみ許可します。"
     expression: >-
       variables.allContainers.all(container,
         container.image.startsWith("registry.example.com/platform/"))
-  - message: "Image volumes are forbidden until a verified verifier exists for them."
+  - message: "検証済みの verifier が利用可能になるまで、image volumes は禁止します。"
     expression: >-
       !has(object.spec.volumes) || !object.spec.volumes.exists(volume, has(volume.image))
 ```
@@ -212,7 +212,7 @@ rollout 前に positive と negative の両ケースを確認してください�
 kubectl apply -f allowed-pod.yaml
 kubectl apply -f forbidden-pod.yaml  # admission denial を期待
 kubectl debug allowed-pod --image=registry.example.com/other-team/debug:1.0 --target=app
-# Expected: admission denial — 通常の ValidatingPolicy が
+# Expected: admission denial - 通常の ValidatingPolicy が
 # pods/ephemeralcontainers を確認し、誤った repository prefix を拒否する。
 kubectl get policyreport -A          # cluster で Policy Reports が有効な場合
 ```
@@ -315,7 +315,7 @@ spec:
 インストールし、インストール後に実際の設定を確認してください。
 
 ```yaml
-# values.yaml for the Gatekeeper Helm chart
+# Gatekeeper の Helm chart 用 values.yaml
 validatingWebhookFailurePolicy: Fail
 ```
 
@@ -356,13 +356,13 @@ sequenceDiagram
     participant A as kube-apiserver
     participant W as ImagePolicyWebhook backend
     participant E as etcd
-    C->>A: create Pod with image@digest
+    C->>A: image@digest で Pod を作成
     A->>W: ImageReview (images, user, namespace)
     W-->>A: allowed/denied + reason
     alt allowed
-        A->>E: save Pod
-    else denied or backend unavailable
-        A-->>C: admission error; Pod not created
+        A->>E: Pod を保存
+    else 拒否、または backend 利用不可
+        A-->>C: admission エラー; Pod は作成されない
     end
 ```
 
@@ -425,7 +425,7 @@ fragment は不完全で backend は呼び出されません。`--runtime-config
 を追加してください。
 
 ```yaml
-# fragment of /etc/kubernetes/manifests/kube-apiserver.yaml
+# /etc/kubernetes/manifests/kube-apiserver.yaml のフラグメント
 spec:
   containers:
   - name: kube-apiserver
@@ -463,7 +463,7 @@ allow/deny test を確認してください。以下は `kubectl apply` 用の o
 backend の最小限の概念的な応答です。
 
 ```yaml
-# allow: reason is left empty, auditAnnotations keys have no prefix
+# allow: reason は空のままにし、auditAnnotations のキーに prefix は付けない
 apiVersion: imagepolicy.k8s.io/v1alpha1
 kind: ImageReview
 status:
@@ -471,7 +471,7 @@ status:
   auditAnnotations:
     decision: "approved signed digest"
 ---
-# deny: short reason goes into the admission error
+# deny: 短い reason が admission エラーに含まれる
 apiVersion: imagepolicy.k8s.io/v1alpha1
 kind: ImageReview
 status:
@@ -505,14 +505,14 @@ registry のアクセス制御と retention は鍵と同じくらい重要です
 ```bash
 IMAGE="${IMAGE:?set image reference}"
 
-# Lab: this command creates a local cosign.key/cosign.pub pair.
-# Do not use the private key created here as a production key, and do not add it to Git.
+# Lab: このコマンドはローカルの cosign.key/cosign.pub のペアを作成する。
+# ここで作成した private key は production の鍵として使わず、Git にも追加しない。
 cosign generate-key-pair
 
-# CI receives the key briefly; the password is not printed to logs.
+# CI は鍵を一時的にだけ受け取る。パスワードはログに出力しない。
 cosign sign --key cosign.key "$IMAGE"
 
-# Verification with the trusted public key - before deploy and at admission.
+# 信頼された public key による確認 - deploy 前と admission 時。
 cosign verify --key cosign.pub "$IMAGE"
 ```
 
@@ -539,10 +539,10 @@ OIDC identity を信頼する必要があります。
 ```bash
 IMAGE="${IMAGE:?set image reference}"
 
-# In CI with OIDC (e.g. GitHub Actions): there is no interactive confirmation.
+# OIDC を使う CI（たとえば GitHub Actions）では、対話的な確認はない。
 cosign sign --yes "$IMAGE"
 
-# We verify BOTH the issuer AND the subject workflow, not just that a certificate exists.
+# issuer と subject workflow の両方を確認する（certificate が存在するだけでは不十分）。
 cosign verify \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
   --certificate-identity-regexp='^https://github\.com/example-org/payments/\.github/workflows/release\.yml@refs/tags/v[0-9].*$' \
@@ -641,7 +641,7 @@ denial を記録せず、lab が修正版をインストールしその結果を
 
 ```bash
 kubectl debug allowed-pod --image=registry.example.com/platform/debug@sha256:<digest> --target=app
-# Empirical test only, for pinned Kyverno 1.19.0: record the outcome as evidence.
+# pinned Kyverno 1.19.0 に対する empirical test のみ: outcome を evidence に記録する。
 kubectl debug allowed-pod --image=registry.example.com/platform/debug:unsigned --target=app
 ```
 
@@ -658,7 +658,7 @@ static key の代わりに、特定の CI workflow の正確な issuer と subje
 `cosign.keyless.identities` を設定してください。署名済みと未署名の digest、
 誤った signer、欠けている signed SBOM、registry の利用不可をテストしてください。
 
-> 🔬 Notary/Notation は代替の OCI signing-エコシステムです。Kubernetes にとっては、admission allow/deny を返す integration が依然として必要です。
+> 🔬 Notary/Notation は代替の OCI signing エコシステムです。Kubernetes にとっては、admission allow/deny を返す integration が依然として必要です。
 
 **Notary Project** と CLI `notation` は、X.509 trust store と trust policy を
 持つ代替の OCI signing エコシステムです。`notation verify` は CI/CD で有用です。
@@ -703,9 +703,9 @@ direct な `Pod` CREATE は保存されないため、一次的な evidence は
 
 ```bash
 kubectl apply -f pod.yaml 2>&1 | tee /tmp/admission-denial.txt
-kubectl get pod "${POD:?set pod}" && kubectl describe pod "$POD"  # only if the Pod exists
+kubectl get pod "${POD:?set pod}" && kubectl describe pod "$POD"  # Pod が存在する場合のみ
 kubectl get events -A --sort-by=.lastTimestamp
-kubectl describe rs/my-replicaset         # for a Pod created by a controller: look for FailedCreate
+kubectl describe rs/my-replicaset         # controller が作成する Pod の場合: FailedCreate を探す
 cosign verify --key cosign.pub "$IMAGE"
 kubectl logs -n kyverno deploy/kyverno-admission-controller
 ```
@@ -735,7 +735,7 @@ namespace と digest に scope された解決策を使ってください。
 
 - registry allowlist と signature verification は異なる task を解決し、一緒に機能する必要があります。
 - Kyverno と Gatekeeper は未承認の container image reference を禁止できます。確認は
-  通常、init、ephemeral container を考慮する必要があり、
+  通常の container、init container、ephemeral container を考慮する必要があり、
   `spec.volumes[].image.reference` は別の verifier で明示的に確認するか
   fail-closed で禁止する必要があります。
 - `ImagePolicyWebhook` は保護され利用可能な backend、API server の設定、
@@ -835,7 +835,7 @@ Admission policy は match するすべての CREATE/UPDATE Pod に対して kub
 manifest を扱う安全な context を提供します。backup と API の可用性確認なしに、
 exam の control plane で admission configuration の変更を適用しないでください。
 
-🌐 追加の対話型練習（killer.sh/killercoda, 外部リソース）: [image-policy-webhook-setup](https://killercoda.com/killer-shell-cks/scenario/image-policy-webhook-setup) · [image-use-digest](https://killercoda.com/killer-shell-cks/scenario/image-use-digest)
+🌐 追加の対話型練習（killer.sh/killercoda、外部リソース）: [image-policy-webhook-setup](https://killercoda.com/killer-shell-cks/scenario/image-policy-webhook-setup) · [image-use-digest](https://killercoda.com/killer-shell-cks/scenario/image-use-digest)
 
 📘 CKA の基礎: [admission](../../../cka/course/21/jp.md) ·
 [image と Dockerfile](../../../cka/course/23/jp.md) ·

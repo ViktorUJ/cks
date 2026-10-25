@@ -96,7 +96,7 @@ registry.example.com/payments/api:1.4.2@sha256:<digest-verificado-de-64-caracter
 ```
 
 Escriba el digest en GitOps/manifest después de comprobar la image, no lo tome de una publicación casual.
-El tag es cómodo para personas; el digest garantiza los bytes que fueron scanned y firmados. En Kubernetes,
+El tag es cómodo para personas; el digest garantiza los bytes que fueron escaneados y firmados. En Kubernetes,
 este mismo valor se especifica en `image:`.
 
 > 🎯 Builder y final stage separados con `COPY --from=builder` solo del artifact terminado; compiler, source, cache y credentials no llegan a runtime.
@@ -267,7 +267,7 @@ RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
     npm ci
 COPY . .
 RUN npm run build
-# Eliminar devDependencies solo después del build; al runtime-stage se copian artefacts y dependencies necesarias.
+# Eliminar devDependencies solo después del build; al runtime-stage se copian artifacts y dependencies necesarias.
 RUN npm prune --omit=dev
 ```
 
@@ -490,7 +490,7 @@ no debe usarse como bypass permanente de la ausencia de shell.
 - `USER` en Dockerfile y `runAsNonRoot` en Pod son comprobaciones complementarias de arranque non-root.
 - Docker y rootless Podman construyen el mismo Dockerfile; los permisos del builder no anulan las reglas para
   context y secrets.
-- Un secret no se entrega mediante `ARG`, `ENV`, `COPY` ni se elimina en un layer tardío; use BuildKit/Podman
+- Un secret no debe entregarse mediante `ARG`, `ENV`, `COPY` ni eliminarse en un layer tardío; use BuildKit/Podman
   secret mount y `.dockerignore`.
 - `dive`, `history` e `inspect` muestran layers, wasted bytes, files y effective user. En distroless, la
   ausencia de `/bin/sh` se comprueba con el rechazo esperado de `kubectl exec`.
@@ -550,7 +550,7 @@ llegar a la final image. Compruebe el contenido con `history`, `inspect` y `dive
 <summary>4. ¿Por qué un versioned tag es mejor que `latest`, y por qué digest es más fuerte que version tag para release?</summary>
 
 `latest` es mutable y no fija un artifact comprobado; un version tag al menos expresa el release. Un
-immutable digest vincula deployment a bytes concretos de manifest/content que se scanned y firmaron. Para
+immutable digest vincula deployment a bytes concretos de manifest/content que se escanearon y firmaron. Para
 release, el capítulo recomienda guardar en GitOps tag junto al digest `@sha256:...` comprobado.
 </details>
 
@@ -567,11 +567,11 @@ policy.
 <summary>6. ¿Por qué `RUN rm /secret` no elimina un secret de image history? ¿Qué mecanismo usar para private dependency credential?</summary>
 
 Si el secret se creó en un layer de un stage incluido en la image publicada, borrarlo en el siguiente layer
-no elimina bytes del lower layer/history. Un builder separado no entra por sí solo en la final image, pero
+no elimina bytes del lower layer/history. En un multi-stage build normal, un builder separado no entra por sí solo en la final image, pero
 `ARG`, `ENV`, `COPY` o `ADD` siguen siendo inseguros: credential puede llegar al artifact copiado, cache,
 logs o intermediate image publicada. BuildKit/Podman `--mount=type=secret` entrega el secret temporalmente
 solo a build instruction y no conserva su valor en final layer ni provenance attestation. El build-command
-puede imprimirlo o escribirlo en artifact, así que compruebe output. Si ya se publicó, revoque y rote el
+puede imprimirlo por sí mismo o escribirlo en un generated artifact, así que compruebe output de todos modos. Si ya se publicó, revoque y rote el
 secret y reconstruya la image desde Dockerfile limpio.
 </details>
 

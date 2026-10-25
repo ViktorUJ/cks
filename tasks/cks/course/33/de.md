@@ -22,7 +22,7 @@
 > ergänzt.
 
 CKS ist eine performance-based Prüfung: Geprüft wird der Zustand eines laufenden Clusters, einer Node
-und der erstellten Artefakte, nicht der Text einer Antwort. Zum Prüfdatum **2026-09-05** gibt die
+und der erstellten Artefakte, nicht der Text einer Antwort. Zum Stand vom **2026-09-05** gibt die
 LF-Produktseite Kubernetes `v1.35` für die Prüfung an. `v1.36` ist die Zielversion des Kurses und eine
 Production-Erweiterung, kein Versprechen für CKS. Das Curriculum-PDF und andere Dokumente können zu
 einem anderen Zeitpunkt aktualisiert werden, daher sollten Sie unmittelbar vor der Prüfung erneut die
@@ -125,10 +125,10 @@ nicht funktionieren, das Symbol **Virtual Keyboard** auf dem Desktop.
 
 ## 33.2. Erlaubte Dokumentation: suchen, nicht alles lesen
 
-Die erlaubten Ressourcen werden von LF unabhängig vom Curriculum gepflegt. Zum Prüfdatum **2026-09-05**
+Die erlaubten Ressourcen werden von LF unabhängig vom Curriculum gepflegt. Zum Stand vom **2026-09-05**
 sind global erlaubt: Kubernetes Documentation und Blog, Falco, `bom`, etcd, NGINX Ingress Controller,
 Cilium und Istio sowie die Instruktionen, Dokumente in `/usr/share` und Pakete der installierten
-Distribution. Dies ist keine Liste von „beliebigen nützlichen Seiten".
+Distribution. Dies ist keine Liste von „beliebigen nützlichen Seiten“.
 
 **Quick Reference** ist eine separate, task-specific Quelle: In einer konkreten Aufgabe kann sie Links
 zur offiziellen Kubernetes-Dokumentation oder zu anderen benötigten Ressourcen liefern. Verwenden Sie nur
@@ -159,8 +159,8 @@ Quelle global erlaubt ist oder in der Quick Reference der aktuellen Aufgabe ange
 Die Dokumentation dient dazu, ein exaktes Flag, die Struktur einer Ressource oder eine seltene Syntax zu
 finden, nicht als Ersatz für die Fertigkeit. Wenn die Suche nach etwa einer Minute keine Antwort liefert,
 setzen Sie ein Flag bei der Aufgabe und gehen Sie zur nächsten über. Der Dokumentations-Tab sollte eine
-konkrete Frage beantworten: „welches Feld legt das profile fest", „welcher selector entspricht der
-policy", „welches Flag aktiviert das audit backend".
+konkrete Frage beantworten: „welches Feld legt das profile fest“, „welcher selector entspricht der
+policy“, „welches Flag aktiviert das audit backend“.
 
 Praktische Suchreihenfolge:
 
@@ -179,7 +179,7 @@ protokolliert.
 
 ## 33.3. Zeitmanagement: Gewichte, Flags und Simulator
 
-Zwei Stunden sind 120 Minuten. Zum Prüfdatum **2026-09-05** veröffentlicht die LF-Produktseite folgende
+Zwei Stunden sind 120 Minuten. Zum Stand vom **2026-09-05** veröffentlicht die LF-Produktseite folgende
 Gewichte: 15 / 15 / 10 / 20 / 20 / 20. Dies ist ein snapshot genau dieser Quelle, keine unveränderliche
 einzige Tabelle: Die veröffentlichte CNCF-Curriculum-Seite/PDF kann andere Gewichte enthalten und wird
 separat aktualisiert. Gleichen Sie vor der Prüfung beide Seiten ab und folgen Sie der aktuellen LF
@@ -252,7 +252,7 @@ API server, etcd, firewall, CNI und `drain` geboten.
 ## 33.4. Schnelle Techniken für CKS: erstellen, ändern, prüfen
 
 Geschwindigkeit bei CKS ist ein kurzer Zyklus „Gerüst holen -> Security-Felder ergänzen -> anwenden ->
-prüfen". Er ersetzt nicht das Verständnis des Bedrohungsmodells: Jedes Flag muss der Aufgabenstellung
+prüfen“. Er ersetzt nicht das Verständnis des Bedrohungsmodells: Jedes Flag muss der Aufgabenstellung
 entsprechen und darf keine Berechtigungen erweitern.
 
 ### YAML generieren und gezielt bearbeiten
@@ -423,7 +423,7 @@ if ! k exec -n "$NAMESPACE" "$SOURCE_POD" -- wget -qO- --timeout=3 "$ALLOWED_URL
   exit 1
 fi
 
-# Wenn ein Pod bekannt ist, dem policy denselben DENIED_URL erlaubt, bestätigt er, dass target/path lebt.
+# Wenn ein Pod bekannt ist, dem die policy denselben DENIED_URL erlaubt, bestätigt er, dass target/path lebt.
 CONTROL_POD="${CONTROL_POD:-}"
 if [ -n "$CONTROL_POD" ] && ! k exec -n "$NAMESPACE" "$CONTROL_POD" --   wget -qO- --timeout=3 "$DENIED_URL" >/dev/null; then
   echo "ERROR: control Pod cannot reach DENIED_URL; negative probe would be ambiguous" >&2
@@ -461,7 +461,7 @@ exit
 
 ## 33.5. Checkliste nach Domains und typische Fallstricke
 
-Markieren Sie vor der Prüfung nicht „gelesen", sondern „ohne Hilfe getan und das Ergebnis geprüft". Die
+Markieren Sie vor der Prüfung nicht „gelesen“, sondern „ohne Hilfe getan und das Ergebnis geprüft“. Die
 Kapitelkarte unten führt zum CKS-Material, während die CKA-Grundlagen in den Kapitel-Links verbleiben.
 
 | Domain | Minimum, das man können muss | Ergebnisprüfung | Häufige Fallstricke |
@@ -502,7 +502,7 @@ flowchart TB
    audit event oder Falco alert?
 
 Diese Fragen schützen vor der typischen falschen Sicherheit: Das YAML wurde erfolgreich angewendet,
-aber der controller unterstützt das Feld nicht, scheduler wählte eine andere Node, policy stimmte nicht
+aber der controller unterstützt das Feld nicht, scheduler wählte eine andere Node, die policy stimmte nicht
 mit dem label überein, und der benötigte Dienst wurde unerreichbar.
 
 ## 33.6. Finale Strategie und Umgebungskonfiguration
@@ -544,9 +544,9 @@ Finale Prozedur in den letzten 10-15 Minuten:
 5. Bestätigen Sie für Node und static Pod Dienst/Container, log und API readiness auf dem zugewiesenen
    host. Beenden Sie die Prüfung nicht bei nicht funktionierendem API server.
 6. Kehren Sie nach jeder Prüfung zu `base` zurück, lesen Sie dann die Formulierung, Dateipfade und das
-   Format der geforderten Ausgabe erneut. „Fast dasselbe" entspricht keinem erfüllten Kriterium.
+   Format der geforderten Ausgabe erneut. „Fast dasselbe“ entspricht keinem erfüllten Kriterium.
 
-> 🏭 Der Prüfungszyklus „scope → minimale reversible Änderung → evidence → Prüfung" wird zur
+> 🏭 Der Prüfungszyklus „scope → minimale reversible Änderung → evidence → Prüfung“ wird zur
 > Incident-Disziplin, wenn er um change record, peer review, rollback plan und den Schutz der
 > Dienstverfügbarkeit ergänzt wird.
 
@@ -613,7 +613,7 @@ Zeitdruck.
 **In der Praxis.** Contextwechsel, gezielte Änderung, rollback, Prüfung von positivem und negativem
 Szenario und das Bewahren von evidence sind Basisdisziplin von SRE- und Security-Ingenieuren. Sie
 verringert das Risiko, eine korrekte Konfiguration im falschen Cluster vorzunehmen oder einen alert
-auf Kosten der Diensteverfügbarkeit zu beheben.
+auf Kosten der Dienstverfügbarkeit zu beheben.
 
 ## 33.11. Fragen zur Selbstkontrolle
 
@@ -671,7 +671,7 @@ die logs, prüft YAML/mount paths und setzt bei Bedarf das backup zurück.
 Ein erfolgreiches apply der policy beweist nicht ihre Netzwerksemantik. Man muss zeigen, dass der
 erlaubte flow funktioniert und der verbotene nicht durchgeht, weil selector, namespace oder port nicht
 mit der intent übereinstimmen können. Eine egress policy blockiert leicht DNS zusammen mit
-unerwünschtem Traffic, daher prüft man auch eine DNS-Abfrage, wenn policy egress einschränkt.
+unerwünschtem Traffic, daher prüft man auch eine DNS-Abfrage, wenn die policy egress einschränkt.
 </details>
 
 <details>
@@ -716,7 +716,7 @@ Ihre persönliche Flag-Liste für die Mock-Prüfung.
 | [Lab 103](../../labs/103/README_DE.MD) | CIS/kube-bench, TLS Ingress, Komponenten-Flags und Binary-Prüfung |
 | [Lab 104](../../labs/104/README_DE.MD) | RBAC, ServiceAccount und Einschränkung des API-Zugriffs |
 | [Lab 105](../../labs/105/README_DE.MD) | OS-Hardening, Dienste, Ports, firewall und runtime-Daemon |
-| [Lab 106](../../labs/106/README_DE.MD) | AppArmor und seccomp auf dem Worker Node |
+| [Lab 106](../../labs/106/README_DE.MD) | AppArmor und seccomp auf der Worker-Node |
 | [Lab 107](../../labs/107/README_DE.MD) | Pod Security Standards, PSA und SecurityContext |
 | [Lab 108](../../labs/108/README_DE.MD) | admission policy und registry-allowlist |
 | [Lab 109](../../labs/109/README_DE.MD) | Secret encryption at rest und Zugriff auf etcd |
@@ -724,8 +724,8 @@ Ihre persönliche Flag-Liste für die Mock-Prüfung.
 | [Lab 111](../../labs/111/README_DE.MD) | minimal image, statische Analyse, Trivy, SBOM, Signatur und ImagePolicyWebhook |
 | [Lab 112](../../labs/112/README_DE.MD) | Falco, audit-logs und Unveränderlichkeit des Containers |
 | [Lab 113](../../labs/113/README_DE.MD) | kubeadm minor upgrade: control-plane → worker, version skew, drain/uncordon und evidence für Downtime-Freiheit |
-| [Lab 114](../../labs/114/README_RU.MD) | kubeconfig-Kontexte, Client-Certificate-Extraktion, Reduzierung der Service-Exposition NodePort → ClusterIP |
-| [Lab 115](../../labs/115/README_RU.MD) | Cilium von Grund auf: kube-proxy-Ersatz, WireGuard, SPIRE Mutual Authentication (advanced/production, nicht CKS Core) |
+| [Lab 114](../../labs/114/README_DE.MD) | kubeconfig-Kontexte, Client-Certificate-Extraktion, Reduzierung der Service-Exposition NodePort → ClusterIP |
+| [Lab 115](../../labs/115/README_DE.MD) | Cilium von Grund auf: kube-proxy-Ersatz, WireGuard, SPIRE Mutual Authentication (advanced/production, nicht CKS Core) |
 
 ---
 [Inhaltsverzeichnis](../README_DE.md) · [Kapitel 32](../32/de.md)

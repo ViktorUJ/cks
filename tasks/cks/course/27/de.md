@@ -2,9 +2,9 @@
 
 # Kapitel 27. Statische Analyse von Workloads und Images
 
-> **Das Problem.** Ein syntaktisch korrektes Manifest kann unbemerkt `privileged: true`, einen root-Prozess, ein writable root filesystem oder eine image mit `:latest` enthalten, und ein Dockerfile kann ein unsicheres build-Pattern einführen. Nach dem merge gelangt dieses Risiko bereits in CI und den Cluster, wo die Korrektur einen rollout oder incident response erfordert. Nötig ist eine Prüfung der Quell-Dockerfile und -manifests vor build, push und deploy.
+> **Das Problem.** Ein syntaktisch korrektes Manifest kann unbemerkt `privileged: true`, einen root-Prozess, ein writable root filesystem oder ein image mit `:latest` enthalten, und ein Dockerfile kann ein unsicheres build-Pattern einführen. Nach dem merge gelangt dieses Risiko bereits in CI und den Cluster, wo die Korrektur einen rollout oder incident response erfordert. Nötig ist eine Prüfung der Quell-Dockerfile und -manifests vor build, push und deploy.
 
-> **Was folgt.** In [Kapitel 26](../26/de.md) haben wir gelernt, ein trusted registry zuzulassen und die Signatur eines artifact bei admission zu prüfen. Doch eine Signatur belegt die Herkunft, nicht das Fehlen unsicherer Konfiguration: Ein signiertes Deployment kann weiterhin einen root-Prozess, ein writable root filesystem oder eine image mit dem tag `latest` ausführen. Statische Analyse prüft Dockerfile und Kubernetes manifests vor push und deploy. Dies ist die Domain **Supply Chain Security** von CKS (20 %): schnelles feedback in der lokalen Entwicklung und ein obligatorisches gate in CI.
+> **Was folgt.** In [Kapitel 26](../26/de.md) haben wir gelernt, ein trusted registry zuzulassen und die Signatur eines artifact bei admission zu prüfen. Doch eine Signatur belegt die Herkunft, nicht das Fehlen unsicherer Konfiguration: Ein signiertes Deployment kann weiterhin einen root-Prozess, ein writable root filesystem oder ein image mit dem tag `latest` ausführen. Statische Analyse prüft Dockerfile und Kubernetes manifests vor push und deploy. Dies ist die Domain **Supply Chain Security** von CKS (20 %): schnelles feedback in der lokalen Entwicklung und ein obligatorisches gate in CI.
 
 > **Was Sie aus CKA wissen müssen.** Die Felder von `securityContext`, die Linter erkennen - `runAsNonRoot`, `allowPrivilegeEscalation`, `readOnlyRootFilesystem`, capabilities und `privileged` - werden in [CKA-Kapitel 20](../../../cka/course/20/de.md) behandelt. Hier wiederholen wir nicht ihre Syntax, sondern bauen automatische Prüfungen, die eine unsichere Einstellung in Git nicht durchrutschen lassen.
 
@@ -12,7 +12,7 @@
 
 ## 27.1. Bedrohungsmodell: unsichere Konfiguration gelangt zusammen mit dem Code in den Cluster
 
-Die Kubernetes API akzeptiert ein syntaktisch valides Manifest, auch wenn es der secure-by-default Praxis widerspricht. Ein Container mit UID 0, `privileged: true`, ein writable root filesystem oder eine image mit `:latest` können im review wie eine gewöhnliche Änderung aussehen. Wird das Problem erst nach dem deploy gefunden, ist es bereits für einen Angreifer verfügbar und erfordert incident response statt einer kostengünstigen Korrektur im pull request.
+Die Kubernetes API akzeptiert ein syntaktisch valides Manifest, auch wenn es der secure-by-default Praxis widerspricht. Ein Container mit UID 0, `privileged: true`, ein writable root filesystem oder ein image mit `:latest` können im review wie eine gewöhnliche Änderung aussehen. Wird das Problem erst nach dem deploy gefunden, ist es bereits für einen Angreifer verfügbar und erfordert incident response statt einer kostengünstigen Korrektur im pull request.
 
 Statische Analyse liest die Quelldateien, ohne den workload auszuführen. Sie ersetzt keine admission policy, signature verification, vulnerability scanning oder runtime detection: Die Werkzeuge beantworten unterschiedliche Fragen.
 
@@ -39,13 +39,13 @@ flowchart TB
     style risk fill:#c0392b,color:#fff
 ```
 
-Typisches Szenario: Ein Entwickler fügt ein `Deployment` für eine API hinzu. Er gibt `image: api:latest` an, definiert kein `securityContext`, und die Anwendung benötigt vorübergehend das Verzeichnis `/tmp`. Ohne Prüfung wird der workload erfolgreich angewendet und läuft mit einer image, die sich unter demselben tag ändert, als root und mit writable filesystem. Mit `kube-linter`, `kubesec` und einer eigenen policy zeigt CI konkrete Verstöße vor dem merge. Die Korrektur wird Teil der Änderung: fixierter tag oder digest, non-root user, entfernte capabilities und ein separates `emptyDir` zum Schreiben.
+Typisches Szenario: Ein Entwickler fügt ein `Deployment` für eine API hinzu. Er gibt `image: api:latest` an, definiert kein `securityContext`, und die Anwendung benötigt vorübergehend das Verzeichnis `/tmp`. Ohne Prüfung wird der workload erfolgreich angewendet und läuft mit einem image, das sich unter demselben tag ändert, als root und mit writable filesystem. Mit `kube-linter`, `kubesec` und einer eigenen policy zeigt CI konkrete Verstöße vor dem merge. Die Korrektur wird Teil der Änderung: fixierter tag oder digest, non-root user, entfernte capabilities und ein separates `emptyDir` zum Schreiben.
 
 | Control | Frage | Was es nicht belegt |
 |---|---|---|
-| `kubesec` | Wie sicher ist das Manifest nach einer Menge bekannter controls? | dass eine rule der policy genau Ihrer Organisation entspricht |
-| `kube-linter` | Werden Kubernetes best practices eingehalten? | dass die image keine CVE enthält |
-| `hadolint` | Ist das Dockerfile sicher und reproduzierbar? | dass die final image der runtime policy entspricht |
+| `kubesec` | Wie sicher ist das Manifest nach einer Menge bekannter controls? | dass eine rule genau der policy Ihrer Organisation entspricht |
+| `kube-linter` | Werden Kubernetes best practices eingehalten? | dass das image keine CVE enthält |
+| `hadolint` | Ist das Dockerfile sicher und reproduzierbar? | dass das finale image der runtime policy entspricht |
 | `conftest` + OPA | Wird lokale policy-as-code erfüllt? | dass die policy bereits an admission angebunden ist |
 | Trivy, Signatur, admission | Gibt es CVEs, ist das artifact trusted, lässt der Cluster es zu? | ersetzen kein lint der Quellen |
 
@@ -98,7 +98,7 @@ Der report enthält einen Gesamt-score und detaillierte controls. In diesem Beis
 
 | Finding | Warum gefährlich | Praktische Korrektur |
 |---|---|---|
-| `Run as non-root user` | Ein RCE erhält UID 0 im Container | einen non-root `USER` in der image ergänzen und `runAsNonRoot: true` im Pod setzen |
+| `Run as non-root user` | Ein RCE erhält UID 0 im Container | einen non-root `USER` im image ergänzen und `runAsNonRoot: true` im Pod setzen |
 | `Read-only root filesystem` | Ein Angreifer kann Tools schreiben und runtime-Dateien ändern | `readOnlyRootFilesystem: true` setzen; writable path in ein volume auslagern |
 | `Drop NET_RAW capability` oder `Drop ALL capabilities` | überflüssige capabilities erweitern die möglichen Aktionen des Prozesses | `drop: ["ALL"]`, nur eine begründete capability zurückgeben |
 | geprüfte control aus einer fixierten rule-Menge | Risiko und Korrektur hängen vom Text dieser control ab | vor dem gate `kubesec print-rules` für die fixierte Version ausgeben; die Prüfung des mutable tag nicht ohne diese Bestätigung `kubesec` zuschreiben |
@@ -131,7 +131,7 @@ kube-linter checks list
 
 Für das Demonstrationsmanifest `manifests/api.yaml` sind `run-as-non-root`, `no-read-only-root-fs` und `latest-tag` typisch. Die genaue Zusammensetzung hängt von der Version von `kube-linter` und den enabled checks ab, fixieren Sie daher die Version in CI und speichern Sie ihre Ausgabe als artifact des job. Bilden Sie `image:` nicht durch Konkatenation mit einer leeren Variable: Das kann einen erwarteten versioned tag in `latest` verwandeln.
 
-Das korrigierte Manifest fügt defense in depth hinzu. Die Anwendung muss mit UID `10001` kompatibel sein; die image muss ebenfalls einen non-root `USER` haben, weil das Manifest eine unsichere image bei lokalem Start nicht korrigiert. `emptyDir` gibt der Anwendung den einzigen writable Ort, und `readOnlyRootFilesystem` lässt das root-Verzeichnis immutable.
+Das korrigierte Manifest fügt defense in depth hinzu. Die Anwendung muss mit UID `10001` kompatibel sein; das image muss ebenfalls einen non-root `USER` haben, weil das Manifest ein unsicheres image bei lokalem Start nicht korrigiert. `emptyDir` gibt der Anwendung den einzigen writable Ort, und `readOnlyRootFilesystem` lässt das root-Verzeichnis immutable.
 
 ```yaml
 # manifests/api.yaml
@@ -205,11 +205,11 @@ checks:
 
 Prüfen Sie Namen und Verfügbarkeit der checks für die fixierte Version über `kube-linter checks list`; kopieren Sie die Konfiguration nicht ungeprüft zwischen Versionen. CI muss bei einer nicht ladbaren configuration fehlschlagen - ein stiller Übergang zu default checks erzeugt ein falsches Sicherheitsgefühl.
 
-> 🔬 `hadolint` ist für Dockerfile und die Reproduzierbarkeit der image nützlich, ersetzt aber keinen image scan.
+> 🔬 `hadolint` ist für Dockerfile und die Reproduzierbarkeit des images nützlich, ersetzt aber keinen image scan.
 
-## 27.4. `hadolint`: Analyse des Dockerfile vor dem Bau der image
+## 27.4. `hadolint`: Analyse des Dockerfile vor dem Bau des images
 
-Das Manifest schützt den Start, aber ein security issue beginnt oft im Dockerfile: eine mutable base image, `apt-get install` ohne cleanup, `curl | sh`, ein root final user oder die shell form von `CMD`. `hadolint` zerlegt das Dockerfile und meldet Regeln im Format `DL####`. Es baut keine image und führt kein `RUN` aus, daher ist der Lauf sicherer und schneller als ein build, ersetzt aber nicht build/test/scan.
+Das Manifest schützt den Start, aber ein security issue beginnt oft im Dockerfile: ein mutable base image, `apt-get install` ohne cleanup, `curl | sh`, ein root final user oder die shell form von `CMD`. `hadolint` zerlegt das Dockerfile und meldet Regeln im Format `DL####`. Es baut kein image und führt kein `RUN` aus, daher ist der Lauf sicherer und schneller als ein build, ersetzt aber nicht build/test/scan.
 
 ```bash
 hadolint Dockerfile
@@ -233,7 +233,7 @@ Typische `hadolint`-Meldungen und die richtige Reaktion:
 | Rule | Signal | Korrektur |
 |---|---|---|
 | `DL3002` | der letzte `USER` ist root | im final stage einen non-root `USER` angeben; das Pod-level `runAsNonRoot` bleibt ein unabhängiger Schutz |
-| `DL3007` | der tag `latest` ist mutable | eine konkrete Version der base image angeben und für ein release einen digest fixieren |
+| `DL3007` | der tag `latest` ist mutable | eine konkrete Version des base images angeben und für ein release einen digest fixieren |
 | `DL3008` | ein Paket ohne Version | die Version fixieren, wo dies das repository und Ihre Update-Strategie unterstützen |
 | `DL3009` | ein `apt`-cache bleibt zurück | update/install/cleanup in einem `RUN` zusammenfassen oder eine passende minimal base verwenden |
 | `DL3059` | mehrere aufeinanderfolgende `RUN` | logisch zusammengehörende Operationen zusammenfassen, ohne die Lesbarkeit zu verschlechtern |
@@ -259,7 +259,7 @@ USER 10001:10001
 ENTRYPOINT ["/api"]
 ```
 
-`hadolint` sieht nicht alles: Es weiß nicht, ob `COPY . .` ein secret enthält, ob die binary architecture zum node passt oder ob eine CVE in der base image steckt. Verwenden Sie `.dockerignore`, BuildKit secret mounts, unit tests, SBOM und den scanner aus benachbarten Kapiteln. Lint hilft, structural errors früher zu bemerken, ersetzt aber nicht die supply-chain controls.
+`hadolint` sieht nicht alles: Es weiß nicht, ob `COPY . .` ein secret enthält, ob die binary architecture zum node passt oder ob eine CVE im base image steckt. Verwenden Sie `.dockerignore`, BuildKit secret mounts, unit tests, SBOM und den scanner aus benachbarten Kapiteln. Lint hilft, structural errors früher zu bemerken, ersetzt aber nicht die supply-chain controls.
 
 > 🔬 `conftest` erweitert generic lint um lokale Rego-Regeln; prüfen und versionieren Sie die policies selbst über `opa test`.
 
@@ -313,7 +313,7 @@ violation contains msg if {
   msg := sprintf("container %q uses an unapproved registry: %s", [name, image])
 }
 
-# Wir fordern eine tatsächlich immutable OCI reference. Ein image ohne tag interpretiert
+# Wir fordern eine tatsächlich immutable OCI reference. Eine image ohne tag interpretiert
 # Kubernetes als :latest, und ein kurzer/inkorrekter digest ist kein SHA-256-Pin.
 violation contains msg if {
   workload
@@ -380,7 +380,7 @@ deny contains msg if {
 }
 ```
 
-Prüfen Sie die policy anhand von bad- und good-fixtures. `conftest test` liest das policy directory automatisch, wenn es sich unter `policy/` befindet; ein explizites `--policy` macht den CI invocation eindeutig.
+Prüfen Sie die policy anhand von bad- und good-fixtures. `conftest test` liest das policy directory automatisch, wenn es sich unter `policy/` befindet; ein explizites `--policy` macht die CI invocation eindeutig.
 
 ```bash
 # Sollte für das alte Manifest deny ausgeben und einen non-zero exit code liefern.
@@ -390,7 +390,7 @@ conftest test --policy policy manifests/api.yaml
 conftest test --policy policy manifests/
 ```
 
-Auch die policy sollte eine test suite haben. Sonst kann eine Änderung des Rego versehentlich eine Kontrolle entfernen, während CI grün bleibt. Ein separates `*_test.rego` prüft erwartete deny/allow-Ergebnisse ohne einen Cluster zu starten:
+Auch die policy sollte eine test suite haben. Sonst kann eine Änderung des Rego versehentlich eine Kontrolle entfernen, während CI grün bleibt. Ein separates `*_test.rego` prüft erwartete deny/allow-Ergebnisse, ohne einen Cluster zu starten:
 
 ```rego
 # policy/main_test.rego
@@ -526,7 +526,7 @@ test_allows_hardened_workload if {
 opa test policy/ -v
 ```
 
-Duplizieren Sie in Production kritische policy im admission controller, etwa Kyverno, Gatekeeper oder ValidatingAdmissionPolicy, wo anwendbar. `conftest` schützt den Pfad Git -> CI; admission schützt die API vor manuellem `kubectl apply`, einer anderen pipeline und einem fehlkonfigurierten job. Die Policies sollten eine gemeinsame Quelle oder tests haben, die ihre gleichwertige intent bestätigen, sonst driften sie mit der Zeit auseinander.
+Duplizieren Sie in Production kritische policies im admission controller, etwa Kyverno, Gatekeeper oder ValidatingAdmissionPolicy, wo anwendbar. `conftest` schützt den Pfad Git -> CI; admission schützt die API vor manuellem `kubectl apply`, einer anderen pipeline und einem fehlkonfigurierten job. Die Policies sollten eine gemeinsame Quelle oder tests haben, die ihre gleichwertige intent bestätigen, sonst driften sie mit der Zeit auseinander.
 
 > 🏭 Statische Analyse wird nur als obligatorisches, reproduzierbares CI gate mit fixierten Werkzeugen, reports und verwalteten Ausnahmen zu einem Schutz.
 
@@ -562,7 +562,7 @@ flowchart TB
     style admission fill:#326ce5,color:#fff
 ```
 
-Für die Praxis dieses Kapitels kann das gate `kubesec` und `kube-linter` ausführen; `hadolint` für das Dockerfile und `conftest` mit unit tests ist nützlich für eine vollständige lokale Prüfung. Das folgende GitHub-Actions-Job-Beispiel zeigt eine erweiterte Reihenfolge, es schreibt keinen bestimmten CI-Provider vor. Verwenden Sie im Examen das Werkzeug und die Umgebung, die in der konkreten Aufgabe angegeben sind. Ersetzen Sie in einer echten pipeline floating `curl`-Downloads durch eine interne, geprüfte tool image oder ein pinned action/image digest; verwenden Sie ein lockfile/verified checksums für binary. Ergänzen Sie `helm template` oder `kustomize build` vor den Lintern, falls das production deploy templates verwendet.
+Für die Praxis dieses Kapitels kann das gate `kubesec` und `kube-linter` ausführen; `hadolint` für das Dockerfile und `conftest` mit unit tests ist nützlich für eine vollständige lokale Prüfung. Das folgende GitHub-Actions-Job-Beispiel zeigt eine erweiterte Reihenfolge, es schreibt keinen bestimmten CI-Provider vor. Verwenden Sie im Examen das Werkzeug und die Umgebung, die in der konkreten Aufgabe angegeben sind. Ersetzen Sie in einer echten pipeline floating `curl`-Downloads durch eine interne, geprüfte tool image oder einen pinned action/image digest; verwenden Sie ein lockfile bzw. verified checksums für binaries. Ergänzen Sie `helm template` oder `kustomize build` vor den Lintern, falls das production deploy templates verwendet.
 
 ```yaml
 # .github/workflows/static-analysis.yaml
@@ -679,7 +679,7 @@ Typische Fehler und ihre Diagnose:
 |---|---|---|
 | `kube-linter` meldet weiterhin `run-as-non-root` | Das Feld wurde nicht in `spec.template.spec` ergänzt, oder ein konkreter container override hat die Einstellung aufgehoben | die gerenderte resource über `kubectl kustomize`/`helm template` und den Pfad `spec.template.spec.securityContext` prüfen |
 | Die Anwendung stürzt nach `readOnlyRootFilesystem: true` ab | Der process schreibt cache, PID oder eine temp-Datei ins root filesystem | den Pfad anhand der logs ermitteln, dorthin gezielt ein enges `emptyDir` mounten; das read-only root nicht komplett deaktivieren |
-| `hadolint` läuft durch, aber die image startet als root | Das Dockerfile enthält kein `USER`, und das Manifest prüft nur das cluster runtime | einen non-root `USER` im final stage ergänzen und den manifest guard beibehalten |
+| `hadolint` läuft durch, aber das image startet als root | Das Dockerfile enthält kein `USER`, und das Manifest prüft nur das cluster runtime | einen non-root `USER` im final stage ergänzen und den manifest guard beibehalten |
 | `conftest` findet keine Regel | Ein template statt gerendertem YAML wurde übergeben, oder der Pfad `--policy` ist falsch | mit einer input fixture testen, `opa test` ausführen und dann genau die gerenderte Ausgabe linten |
 | CI grün nach `kubesec ... | tee` | `tee` hat das JSON gespeichert, aber das security result wurde nicht geprüft | `set -o pipefail` und `jq -e` aktivieren: für das gesamte JSON-Array `.valid == true`, ein leeres `scoring.critical` und einen versionierten score threshold prüfen |
 | Ein kritischer system-workload benötigt eine Ausnahme | Die Regel wurde einheitlich auf die Anwendung und CNI/CSI angewendet | ein separater scope, eine least-privilege-Ausnahme mit owner, ticket und expiry; kein globales ignore |
@@ -713,7 +713,7 @@ Typische Fehler und ihre Diagnose:
 - Ein Kubernetes-Manifest kann für die API valide, aber unsicher sein; static analysis findet solche Fehler vor dem deploy und macht security practice zu einem wiederholbaren CI gate.
 - In der Praxis des Kurses zeigt `kubesec` score und security controls, und `kube-linter` prüft Kubernetes best practices, einschließlich non-root, read-only root filesystem und mutable tags. Das gate für `kubesec` zerlegt das JSON-Array und prüft für jedes Ergebnis Gültigkeit, das Fehlen von `scoring.critical` und einen versionierten score threshold.
 - `hadolint` erkennt structural Probleme des Dockerfile über die Regeln `DL####`, einschließlich `DL3002` für einen root final user, ersetzt aber nicht image build, secret handling und CVE scan.
-- `conftest` führt versionierte Rego policy für die Anforderungen einer konkreten Organisation aus; die policy selbst muss über `opa test` getestet werden, auch für fehlende Felder und gefährliche Werte. In Kubernetes v1.36 muss die policy separat OCI references von image volumes abdecken, die keine container images sind.
+- `conftest` führt eine versionierte Rego policy für die Anforderungen einer konkreten Organisation aus; die policy selbst muss über `opa test` getestet werden, auch für fehlende Felder und gefährliche Werte. In Kubernetes v1.36 muss die policy separat OCI references von image volumes abdecken, die keine container images sind.
 - Eine Korrektur bedeutet eine Änderung von Dockerfile/Manifest/policy, nach der alle linters und der server dry-run erneut `0` zurückgeben.
 - Lint ersetzt nicht SBOM, vulnerability scan, signing oder admission: Das sind aufeinanderfolgende Schichten der supply-chain defense.
 
@@ -738,7 +738,7 @@ Die API prüft Syntax und schema, betrachtet aber einen root-Prozess, ein writab
 </details>
 
 <details>
-<summary>3. Welche typischen finding zeigt `kube-linter` für einen gewöhnlichen application container?</summary>
+<summary>3. Welche typischen findings zeigt `kube-linter` für einen gewöhnlichen application container?</summary>
 
 Für das Beispiel ohne hardening sind die checks `run-as-non-root`, `no-read-only-root-fs` und `latest-tag` typisch. Ebenso nützlich sind checks für `allowPrivilegeEscalation`, `privileged`, capabilities, sensitive host mounts und den docker socket. Die genaue Menge hängt von der fixierten Version und den enabled checks ab, daher wird sie über `kube-linter checks list` geprüft.
 </details>
@@ -746,11 +746,11 @@ Für das Beispiel ohne hardening sind die checks `run-as-non-root`, `no-read-onl
 <details>
 <summary>4. Warum ersetzt `hadolint` keinen vulnerability scanner, und warum sollte man den konkreten `DL####` lesen?</summary>
 
-Hadolint zerlegt das Dockerfile, baut aber keine image, führt kein `RUN` aus und gleicht packages nicht mit einer CVE-Datenbank ab. Der scanner wird für die final image und ihre Abhängigkeiten benötigt, während hadolint structural issues wie einen root final user, einen mutable base tag oder eine shell-form von `CMD` erkennt. Der Code `DL####` muss gelesen werden, weil seine Bedeutung sich auf Sicherheit, Reproduzierbarkeit, die image size oder die Verarbeitung von signals beziehen kann.
+Hadolint zerlegt das Dockerfile, baut aber kein image, führt kein `RUN` aus und gleicht packages nicht mit einer CVE-Datenbank ab. Der scanner wird für das finale image und seine Abhängigkeiten benötigt, während hadolint structural issues wie einen root final user, einen mutable base tag oder eine shell-form von `CMD` erkennt. Der Code `DL####` muss gelesen werden, weil seine Bedeutung sich auf Sicherheit, Reproduzierbarkeit, das image size oder die Verarbeitung von signals beziehen kann.
 </details>
 
 <details>
-<summary>5. Wie helfen `conftest` und Rego, ein trusted registry oder ein obligatorisches `securityContext` zu prüfen?</summary>
+<summary>5. Wie helfen `conftest` und Rego, eine trusted registry oder ein obligatorisches `securityContext` zu prüfen?</summary>
 
 `conftest test` übergibt YAML an eine Rego policy und liefert non-zero, wenn eine Regel `deny` erzeugt. Die Beispiel-policy prüft den prefix `registry.example.com/` und den SHA-256-digest bei regular/init containers und image volumes sowie das effective `runAsNonRoot`, `readOnlyRootFilesystem` und `allowPrivilegeEscalation` bei containers. Die tests von `opa test` schützen die policy selbst vor versehentlicher Abschwächung.
 </details>

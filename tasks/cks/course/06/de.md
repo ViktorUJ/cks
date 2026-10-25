@@ -20,7 +20,7 @@
 
 Vor diesem Kapitel stellte `kube-proxy` den Paketpfad zu einem Service bereit. Der Mechanismus besteht aus drei Teilen:
 
-- **Beobachtung.** Auf jeder node beobachtet `kube-proxy` Änderungen an Service- und `EndpointSlice`-Objekten.
+- **Beobachtung.** Auf jeder Node beobachtet `kube-proxy` Änderungen an Service- und `EndpointSlice`-Objekten.
 - **Programmierung des Kernels.** Bei jeder Änderung aktualisiert es Kernel-Regeln - üblicherweise über `iptables` oder `nftables` (auch das veraltende `ipvs` ist möglich).
 - **Abfangen und DNAT.** Eine Regel fängt Traffic zu `ClusterIP:port` ab und führt DNAT auf die IP eines bestimmten Pods aus, der zufällig oder über session affinity ausgewählt wird.
 
@@ -34,13 +34,13 @@ Cilium bietet für denselben Paketpfad eine andere Architektur:
 
 - **eBPF als primärer L3/L4-Datapath.** Für Pod-Networking, L3/L4-Policy und kube-proxy replacement verwendet Cilium eBPF-Programme und BPF-Maps. Die Programme werden an Kernel-Hook-Punkte angehängt, etwa an Netzwerkschnittstellen und cgroups.
 - **Map-Lookup statt linearer `iptables`-Traversal.** Beim kube-proxy replacement speichert Cilium den Service/Backend-State in BPF-Maps und führt einen Lookup ohne sequenzielles Durchlaufen einer langen `iptables`-Kette aus. Das ist ein wichtiger Unterschied speziell zu kube-proxy im `iptables`-Modus. Übertragen Sie diesen Vergleich nicht auf kube-proxy `nftables`: Der moderne nftables-Modus verwendet ebenfalls map-basierten Dispatch (`verdict map`) mit annähernd O(1)-Lookup - Details finden Sie im offiziellen Kubernetes-Blog zum nftables-Modus von kube-proxy.
-- **Zwei Betriebsmodi.** Vollständiger **kube-proxy replacement** implementiert das gesamte Service Load Balancing in eBPF und ermöglicht, `kube-proxy` aus dem Cluster zu entfernen. Im kooperativen Modus bedient `kube-proxy` Services weiter, während Cilium daneben Policy Enforcement und L7-Fähigkeiten ergänzt.
+- **Zwei Betriebsmodi.** Vollständiges **kube-proxy replacement** implementiert das gesamte Service Load Balancing in eBPF und ermöglicht, `kube-proxy` aus dem Cluster zu entfernen. Im kooperativen Modus bedient `kube-proxy` Services weiter, während Cilium daneben Policy Enforcement und L7-Fähigkeiten ergänzt.
 
 Beide Modi sind in Produktion möglich, und die CKS-Prüfung verlangt keinen bestimmten davon.
 
 Es ist wichtig, die Ebenen zu trennen. L3/L4-Forwarding, Policy Enforcement und Service Load Balancing mit kube-proxy replacement werden in Cilium überwiegend über eBPF umgesetzt.
 
-L7-HTTP/DNS-Policy funktioniert anders: Ausgewählter Traffic wird zu einem node-lokalen Userspace-Proxy (Envoy oder DNS-Proxy) umgeleitet. In aktuellen stabilen Cilium-Versionen kann diese Proxy-Umleitung auch netfilter/`iptables` TPROXY verwenden. Cilium sollte daher nicht als Datapath beschrieben werden, der bei allen Funktionen `iptables` und Userspace vollständig ausschließt.
+L7-HTTP/DNS-Policy funktioniert anders: Ausgewählter Traffic wird zu einem Node-lokalen Userspace-Proxy (Envoy oder DNS-Proxy) umgeleitet. In aktuellen stabilen Cilium-Versionen kann diese Proxy-Umleitung auch netfilter/`iptables` TPROXY verwenden. Cilium sollte daher nicht als Datapath beschrieben werden, der bei allen Funktionen `iptables` und Userspace vollständig ausschließt.
 
 > 🎯 Verwenden Sie native `NetworkPolicy` für Labels/CIDR und L3/L4-Ports, CNP für L7 HTTP/DNS, `toFQDNs`, `toEntities` und Cilium-Beobachtbarkeit.
 
@@ -92,13 +92,13 @@ Cilium wertet Policy nach Identity aus, nicht nur nach IP. Für Kubernetes-Workl
 
 `NetworkPolicy` aus [Kapitel 04](../04/de.md) und CNP/CCNP können gleichzeitig denselben Endpoint auswählen. Ihre Allow-Regeln werden gemeinsam berücksichtigt, aber ein explizites Cilium `ingressDeny`/`egressDeny` hat Vorrang vor **allen** Allow-Regeln: aus CNP, CCNP und nativer Kubernetes-`NetworkPolicy`. Daher kann ein Allow aus gewöhnlicher `NetworkPolicy` ein Cilium deny nicht umgehen. Erfassen Sie bei einem unerwarteten `DROP` alle diese Objekte, ihre Selectors und Richtungen, statt den Fehler nur in der zuletzt angewendeten CNP zu suchen. Native Policy bleibt portable L3/L4-Kontrolle; Cilium ergänzt sie um L7, FQDN, Entities und Beobachtbarkeit.
 
-> **Fortgeschritten: Kubernetes `ClusterNetworkPolicy`.** In modernen Cilium-Versionen kann neben `NetworkPolicy`, CNP und CCNP Kubernetes `ClusterNetworkPolicy` (KCNP, `v1alpha2`) gelten. Sein Tiers-Modell trennt `Admin`, `NetworkPolicy` und `Baseline`; die Regeln des `Admin`-Tiers haben Vorrang vor CNP, CCNP und gewöhnlicher `NetworkPolicy`. Das ist für plattformweite Grenzen nützlich, aber kein eigenständiges Pflichtthema in CKS: Prüfen Sie vor der Verwendung, ob die betreffenden APIs und die Unterstützung in Ihrem Cilium-Cluster aktiviert sind.
+> **Fortgeschritten: Kubernetes `ClusterNetworkPolicy`.** In modernen Cilium-Versionen kann neben `NetworkPolicy`, CNP und CCNP Kubernetes `ClusterNetworkPolicy` (KCNP, `v1alpha2`) gelten. Ihr Tiers-Modell trennt `Admin`, `NetworkPolicy` und `Baseline`; die Regeln des `Admin`-Tiers haben Vorrang vor CNP, CCNP und gewöhnlicher `NetworkPolicy`. Das ist für plattformweite Grenzen nützlich, aber kein eigenständiges Pflichtthema in CKS: Prüfen Sie vor der Verwendung, ob die betreffenden APIs und die Unterstützung in Ihrem Cilium-Cluster aktiviert sind.
 
 > 🎯 In CNP wählt `endpointSelector` Pods aus, `fromEndpoints`/`toEndpoints` wählen die Identity und `toPorts` Protokoll und Port; ingress und egress erzeugen unabhängig voneinander default-deny.
 
 ## 06.2. L3/L4: Nur den benötigten Workload und Port erlauben
 
-Eine Policy wird auf einen Endpoint anwendbar, wenn `endpointSelector` ihn auswählt. Bei `policyEnforcementMode: default` aktiviert Cilium Enforcement, wenn eine Policy den Endpoint auswählt; `always` aktiviert es für alle Endpoints (ein Endpoint ohne Allow-Regeln wird verboten), während `never` Enforcement deaktiviert. Standardmäßig gilt eine Allow-List **für jede Richtung getrennt**: Das Vorhandensein von `ingress` macht ingress bis zum Match einer Allow-Regel zu default-deny, und das Vorhandensein von `egress` macht ebenso nur egress zu default-deny. Eine Policy nur mit `ingress` sperrt egress nicht und umgekehrt. Der Selector muss daher präzise sein.
+Eine Policy wird auf einen Endpoint anwendbar, wenn `endpointSelector` ihn auswählt. Bei `policyEnforcementMode: default` aktiviert Cilium Enforcement, wenn eine Policy den Endpoint auswählt; `always` aktiviert es für alle Endpoints (ein Endpoint ohne Allow-Regeln wird gesperrt), während `never` Enforcement deaktiviert. Standardmäßig gilt eine Allow-List **für jede Richtung getrennt**: Das Vorhandensein von `ingress` macht ingress bis zum Match einer Allow-Regel zu default-deny, und das Vorhandensein von `egress` macht ebenso nur egress zu default-deny. Eine Policy nur mit `ingress` sperrt egress nicht und umgekehrt. Der Selector muss daher präzise sein.
 
 Dieses Verhalten lässt sich über `enableDefaultDeny` ändern: Eine Richtung, für die `false` gesetzt ist, wird nicht berücksichtigt, wenn ein Endpoint in default-deny überführt wird. So kann ein Administrator eine clusterweite Policy - etwa das Abfangen von DNS - sicher anwenden, ohne den Endpoint in default-deny zu versetzen und legitimen Traffic zu blockieren. Diese Ausnahme darf nicht auf L7-Policy übertragen werden: `enableDefaultDeny` gilt nicht für Layer-7-Regeln, und das Hinzufügen einer L7-Regel ohne die entsprechende L7-allow-all-Regel verursacht selbst bei explizit deaktiviertem default-deny einen DROP.
 
@@ -157,7 +157,7 @@ Ersetzen Sie die Identity nicht durch eine Regel mit beliebigem `toCIDR`, wenn d
 
 ### Sonderfall: Aktives FTP lässt sich nicht über L3/L4 ausdrücken
 
-Aktives FTP zeigt die Grenze von L3/L4-Policy. Ein Client öffnet eine Control-Verbindung zu TCP/21 und teilt dem Server seinen Port für die Data-Verbindung mit; anschließend **initiiert der Server selbst eine neue TCP-Verbindung zurück zum Client** auf diesem Port. Der Port ist im Voraus unbekannt und wird innerhalb der Sitzung dynamisch ausgehandelt. Daher kann eine statische `toPorts`/`fromEndpoints`-Regel nicht beschreiben: „Erlaube eine eingehende Verbindung an einem Port, auf den sich die Parteien später einigen."
+Aktives FTP zeigt die Grenze von L3/L4-Policy. Ein Client öffnet eine Control-Verbindung zu TCP/21 und teilt dem Server seinen Port für die Data-Verbindung mit; anschließend **initiiert der Server selbst eine neue TCP-Verbindung zurück zum Client** auf diesem Port. Der Port ist im Voraus unbekannt und wird innerhalb der Sitzung dynamisch ausgehandelt. Daher kann eine statische `toPorts`/`fromEndpoints`-Regel nicht beschreiben: „Erlaube eine eingehende Verbindung an einem Port, auf den sich die Parteien später einigen.“
 
 Vor Kubernetes und Cilium löste **Connection Tracking auf Kernel-Ebene** dieses Problem: Das Modul `nf_conntrack_ftp` parst den Control-Kanal, erkennt den ausgehandelten Port und fügt die zugehörige Verbindung dynamisch als erlaubt hinzu. `kube-proxy` und seine `iptables`/`nftables`-Regeln lösen diese Aufgabe nicht selbst - ein separater Conntrack-Helper über netfilter löst sie, nicht der Service-Forwarding-Mechanismus selbst.
 
@@ -265,12 +265,12 @@ kubectl annotate service payment-grpc-service \
 
 Danach läuft Traffic zu `payment-grpc-service` durch einen von Cilium verwalteten Envoy, der einzelne Aufrufe auf Pods verteilt, statt die gesamte TCP-Verbindung an ein Backend zu pinnen. Der Load-Balancing-Algorithmus kann mit einer separaten Annotation `service.cilium.io/lb-l7-algorithm` (`round_robin`, `least_request` oder `random`) festgelegt werden. Die Funktion hat den Status **beta**; prüfen Sie ihr Verhalten in Ihrer Cilium-Version, bevor Sie sie in Produktion aktivieren. Ein Schritt-für-Schritt-Beispiel mit Traffic-Beobachtung über Hubble finden Sie in der offiziellen Dokumentation: [Proxy-Lastverteilung für Kubernetes Services](https://docs.cilium.io/en/stable/network/servicemesh/envoy-load-balancing/).
 
-**Wo Envoy physisch läuft.** Es ist kein Sidecar in jedem Pod. Envoy ist im Cilium-Image enthalten und läuft **einmal auf jeder node**: entweder als Prozess in `cilium-agent` oder als separates `cilium-envoy` DaemonSet, das von allen Pods auf dieser node genutzt wird. In den oben betrachteten Szenarien wird Traffic durch ihn geleitet, der von L7-Policy oder Proxy Load Balancing (`lb-l7`) umgeleitet wurde. Dies ist keine vollständige Liste: Auch Cilium Ingress, Gateway API und `CiliumEnvoyConfig` leiten Traffic durch denselben per-node Envoy. Gewöhnlicher Pod-to-Pod-L3/L4-Traffic, für den keine dieser proxy-basierten Funktionen aktiviert ist, bleibt ohne Durchlauf durch den Userspace auf dem eBPF-Datapath.
+**Wo Envoy physisch läuft.** Es ist kein Sidecar in jedem Pod. Envoy ist im Cilium-Image enthalten und läuft **einmal auf jeder Node**: entweder als Prozess in `cilium-agent` oder als separates `cilium-envoy` DaemonSet, das von allen Pods auf dieser Node genutzt wird. In den oben betrachteten Szenarien wird Traffic durch ihn geleitet, der von L7-Policy oder Proxy Load Balancing (`lb-l7`) umgeleitet wurde. Dies ist keine vollständige Liste: Auch Cilium Ingress, Gateway API und `CiliumEnvoyConfig` leiten Traffic durch denselben per-node Envoy. Gewöhnlicher Pod-to-Pod-L3/L4-Traffic, für den keine dieser proxy-basierten Funktionen aktiviert ist, bleibt ohne Durchlauf durch den Userspace auf dem eBPF-Datapath.
 
-**Wie dies Latenz und Verbindungsparameter beeinflusst.** Jedes umgeleitete Paket durchläuft einen zusätzlichen Übergang durch den Envoy-Userspace-Prozess auf derselben node, nicht über das Netzwerk zu einer anderen node oder einem Pod. Das fügt Folgendes hinzu:
+**Wie dies Latenz und Verbindungsparameter beeinflusst.** Jedes umgeleitete Paket durchläuft einen zusätzlichen Übergang durch den Envoy-Userspace-Prozess auf derselben Node, nicht über das Netzwerk zu einer anderen Node oder einem Pod. Das fügt Folgendes hinzu:
 
 - **Eine kleine zusätzliche Latenz** für jede Anfrage - einen Übergang vom Kernel in den Userspace und zurück sowie die Protokollanalyse (HTTP/gRPC). Der Wert ist für einen lokalen Hop gewöhnlich klein, aber nicht null, und sollte vor dem Aktivieren unter realer Last gemessen werden.
-- **Zusätzliche CPU- und Speichernutzung auf der node** - Envoy verarbeitet Traffic als eigener Prozess, deshalb wächst die Last auf der node bei hohem L7-Traffic-Volumen proportional.
+- **Zusätzliche CPU- und Speichernutzung auf der Node** - Envoy verarbeitet Traffic als eigener Prozess, deshalb wächst die Last auf der Node bei hohem L7-Traffic-Volumen proportional.
 - **Die Source Address hängt vom Proxy-Pfad und von der Konfiguration ab.** Allein der Durchlauf durch Envoy bedeutet nicht, dass ein Backend zwingend die Source-IP des Proxys sieht. Für L7-Policy-Enforcement verwendet Cilium standardmäßig die ursprüngliche Source Address; `CiliumEnvoyConfig`, Ingress und Gateway API haben eigene Einstellungen und Regeln für die Source Visibility. Prüfen Sie deshalb die vom Backend sichtbare Source-IP/Port für den konkreten Modus, statt sie allein aus der Verwendung von Envoy abzuleiten.
 - **Der Overhead gilt nur für ausgewählten Traffic** - gewöhnliche L3/L4-Verbindungen ohne L7-Regeln und ohne die Annotation `lb-l7` zahlen diesen Preis nicht: Sie bleiben ohne Envoy auf dem schnellen eBPF-Pfad.
 
@@ -346,8 +346,8 @@ geeignet sind. Die wichtigsten Werte sind:
 |---|---|---|
 | `world` | Adressen außerhalb des Clusters | Egress zu einer externen API oder Ingress von außen erlauben |
 | `cluster` | Endpoints innerhalb des Clusters | Clusterinternen Traffic vom Internet trennen |
-| `host` | lokaler Host-Endpoint der node | Zugriff auf die node explizit steuern |
-| `remote-node` | andere nodes des Clusters | benötigte Kommunikation zwischen nodes erlauben |
+| `host` | lokaler Host-Endpoint der Node | Zugriff auf die node explizit steuern |
+| `remote-node` | andere Nodes des Clusters | benötigte Kommunikation zwischen Nodes erlauben |
 | `kube-apiserver` | Kubernetes API server | Zugriff von Workloads auf die API beschränken |
 
 Beispielsweise lässt sich ein Service, der HTTPS nur aus dem Internet akzeptieren soll,
@@ -397,14 +397,14 @@ spec:
 ```
 
 Betrachten Sie `host` nicht als harmloses Objekt. `toEntities: host` steuert den
-Netzwerkzugriff auf die lokale node und host-networked Workloads und kann daher einen Weg
+Netzwerkzugriff auf die lokale Node und host-networked Workloads und kann daher einen Weg
 zum kubelet oder anderen TCP/UDP-Listenern auf dem Host öffnen. Der Runtime-CRI-Socket ist
 ein separater Mechanismus: containerd ist beispielsweise gewöhnlich über den Unix domain
 socket `/var/run/containerd/containerd.sock` verfügbar, und seine Exposition hängt von
 Filesystem-Mounts/`hostPath` und den Privilegien eines Pods ab, nicht von
 `toEntities: host` allein. Die Einschränkung von Host-Traffic erfordert ein Verständnis der
 Cilium Host Firewall, des Modus `hostFirewall.enabled` und des Control-Plane-Traffics;
-testen Sie sie in einem Testcluster, damit Sie nicht den Zugang zu nodes oder zum API server
+testen Sie sie in einem Testcluster, damit Sie nicht den Zugang zu Nodes oder zum API server
 verlieren. Beschränken Sie den Zugang zum Runtime-Socket separat über Mount-/Privilege-
 Controls.
 
@@ -429,13 +429,13 @@ warum.
 
 Architektonisch besteht Hubble aus vier Teilen:
 
-- **Hubble Server** ist in `cilium-agent` eingebettet und läuft auf jeder node; er liefert
+- **Hubble Server** ist in `cilium-agent` eingebettet und läuft auf jeder Node; er liefert
   Flow-Events über gRPC aus.
 - **Hubble Relay** (`hubble-relay`) ist eine separate Komponente, die sich mit den Servern
-  auf allen nodes verbindet und statt einer node-für-node-Sicht eine einheitliche
+  auf allen Nodes verbindet und statt einer Node-für-Node-Sicht eine einheitliche
   Clustersicht liefert.
 - **Hubble CLI** (`hubble`) ist ein Kommandozeilenclient; er verbindet sich entweder mit
-  Relay für eine Clusterübersicht oder mit dem lokalen Server auf einer node.
+  Relay für eine Clusterübersicht oder mit dem lokalen Server auf einer Node.
 - **Hubble UI** (`hubble-ui`) ist eine optionale grafische Oberfläche auf Relay mit einer
   Karte der Service-Verbindungen.
 
@@ -493,7 +493,7 @@ Für die Diagnose sind auch die Agent-CLI und das Kubernetes-Objekt nützlich:
 kubectl -n cks-102 get ciliumnetworkpolicy -o yaml
 kubectl -n kube-system get pods -l k8s-app=cilium
 
-# Wird im Pod cilium auf der ausgewählten node ausgeführt.
+# Wird im Pod cilium auf der ausgewählten Node ausgeführt.
 kubectl -n kube-system exec ds/cilium -- cilium-dbg endpoint list
 kubectl -n kube-system exec ds/cilium -- cilium-dbg policy get
 ```
@@ -665,10 +665,10 @@ FQDN-Zuordnung.
 <summary>6. Wann sind die Entities `world`, `cluster` und `host` passend, und warum erfordert `host` besondere Vorsicht?</summary>
 
 `world` bezeichnet Adressen außerhalb des Clusters, `cluster` Endpoints darin und `host`
-den lokalen Host-Endpoint der node sowie host-networked Workloads. Der Zugang zu `host` kann
-kubelet und andere Netzwerk-Listener der node betreffen und benötigt daher eine vorsichtige
+den lokalen Host-Endpoint der Node sowie host-networked Workloads. Der Zugang zu `host` kann
+kubelet und andere Netzwerk-Listener der Node betreffen und benötigt daher eine vorsichtige
 Host-Firewall-Policy. Der Runtime-CRI-Socket ist ein anderer Attack Path: gewöhnlich ist er
-ein Unix socket im Filesystem der node und muss durch Einschränken von `hostPath`,
+ein Unix socket im Filesystem der Node und muss durch Einschränken von `hostPath`,
 Privilegien und anderen Mechanismen für den Zugang zum Host-Filesystem geschützt werden.
 </details>
 
@@ -699,7 +699,7 @@ debuggen.
 
 🧪 Lab 102 (Cilium NetworkPolicy L3/L4/L7): [tasks/cks/labs/102](../../labs/102/README_DE.MD)
 
-🧪 Lab 115 (Cilium von Grund auf installieren: kube-proxy-Ersatz, WireGuard und SPIRE-basierte Mutual Authentication - Advanced-/Production-Track, nicht Teil der formalen CKS-Core-Prüfungsanforderung): [tasks/cks/labs/115](../../labs/115/README_RU.MD)
+🧪 Lab 115 (Cilium von Grund auf installieren: kube-proxy-Ersatz, WireGuard und SPIRE-basierte Mutual Authentication - Advanced-/Production-Track, nicht Teil der formalen CKS-Core-Prüfungsanforderung): [tasks/cks/labs/115](../../labs/115/README_DE.MD)
 
 🎮 Cilium Hubble (Dokumentation und interaktive Beispiele):
 [Hubble-Beobachtbarkeit](https://docs.cilium.io/en/stable/observability/hubble/) ·

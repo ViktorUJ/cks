@@ -14,7 +14,7 @@
 
 ## 26.1. Ce qui doit être protégé
 
-La supply chain commence avant Kubernetes : le code source et CI construisent une image, le registry stocke celle-ci et sa signature, GitOps ou `kubectl` envoie la référence à l'API server, et l'admission décide d'admettre ou non le Pod. Si une étape est altérée ou remplacée de manière inattendue, un manifest correct peut exécuter un code non fiable.
+La supply chain commence avant Kubernetes : le code source et CI construisent une image, le registry stocke celle-ci et sa signature, GitOps ou `kubectl` envoie la référence à l'API server, et l'admission décide d'admettre ou non le Pod. Si une étape est remplacée, un manifest correct peut exécuter un code non fiable.
 
 ```mermaid
 flowchart TB
@@ -154,7 +154,7 @@ La `ClusterPolicy` legacy avec `foreach` ne sert qu'au matériel de migration : 
 
 ### OPA Gatekeeper
 
-Gatekeeper sépare la logique du `ConstraintTemplate` d'une `Constraint` particulière. Le template ci-dessous contrôle les containers normaux, init et ephemeral et rejette les image volumes jusqu'à l'introduction d'un verifier séparément validé pour `spec.volumes[].image.reference`. Son `match` est limité à `Pod` : cette Constraint **ne rejette pas le Deployment lui-même**. Elle rejette le Pod qu'un controller crée ensuite ; ajoutez des règles distinctes sur les workload templates pour un refus anticipé. Pour `kubectl debug`, le webhook Gatekeeper doit recevoir le sous-ressource `UPDATE` `pods/ephemeralcontainers`, et le Rego ci-dessous vérifie ce contexte explicitement.
+Gatekeeper sépare la logique du `ConstraintTemplate` d'une `Constraint` particulière. Le template ci-dessous contrôle les containers normaux, init et ephemeral et rejette les image volumes jusqu'à l'introduction d'un verifier séparément validé pour `spec.volumes[].image.reference`. Son `match` est limité à `Pod` : cette Constraint **ne rejette pas le Deployment lui-même**. Elle rejette le Pod qu'un controller crée ensuite ; ajoutez des règles distinctes sur les workload templates pour un refus anticipé. Pour `kubectl debug`, le webhook Gatekeeper doit recevoir la sous-ressource `UPDATE` `pods/ephemeralcontainers`, et le Rego ci-dessous vérifie ce contexte explicitement.
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1
@@ -305,7 +305,7 @@ contexts:
 current-context: image-policy
 ```
 
-Ajoutez le plugin à `kube-apiserver` et passez la configuration d'admission. Ne remplacez pas la liste existante des enabled-admission-plugins : ajoutez `ImagePolicyWebhook` à sa valeur actuelle, sinon vous pouvez désactiver accidentellement des controllers intégrés requis. Activez aussi l'API `imagepolicy.k8s.io/v1alpha1` utilisée par `ImageReview` ; sans elle, ce fragment est incomplet et le backend n'est pas appelé. Si `--runtime-config` existe déjà, ajoutez `imagepolicy.k8s.io/v1alpha1=true` à sa valeur actuelle sans écraser les autres réglages.
+Ajoutez le plugin à `kube-apiserver` et passez la configuration d'admission. Ne remplacez pas la liste existante des admission plugins activés : ajoutez `ImagePolicyWebhook` à sa valeur actuelle, sinon vous pouvez désactiver accidentellement des controllers intégrés requis. Activez aussi l'API `imagepolicy.k8s.io/v1alpha1` utilisée par `ImageReview` ; sans elle, ce fragment est incomplet et le backend n'est pas appelé. Si `--runtime-config` existe déjà, ajoutez `imagepolicy.k8s.io/v1alpha1=true` à sa valeur actuelle sans écraser les autres réglages.
 
 ```yaml
 # fragment /etc/kubernetes/manifests/kube-apiserver.yaml
@@ -380,7 +380,7 @@ cosign sign --key cosign.key "$IMAGE"
 cosign verify --key cosign.pub "$IMAGE"
 ```
 
-`cosign generate-key-pair` ci-dessus crée une paire locale réservée à un lab. En production, utilisez le flux OIDC keyless ci-dessous ou une clé distincte créée et conservée dans KMS ; ne déplacez pas une `cosign.key` créée localement dans CI. Un `cosign verify` réussi signifie que la signature cryptographique est vérifiée pour la référence d'image indiquée. La policy doit en plus restreindre **quelle** public key/identity est autorisée pour un repository. Une clé partagée par tous les environnements et projets fait du compromis du CI d'un service un risque pour tous les autres. Effectuez la rotation des clés, révoquez l'accès aux anciennes clés et gardez une piste d'audit de qui a signé quel digest et quand.
+`cosign generate-key-pair` ci-dessus crée une paire locale réservée à un lab. En production, utilisez le flux OIDC keyless ci-dessous ou une clé distincte créée et conservée dans KMS ; ne déplacez pas une `cosign.key` créée localement dans CI. Un `cosign verify` réussi signifie que la signature cryptographique est vérifiée pour la référence d'image indiquée. La policy doit en plus restreindre **quelle** public key/identity est autorisée pour un repository. Une clé partagée par tous les environnements et projets fait de la compromission du CI d'un service un risque pour tous les autres. Effectuez la rotation des clés, révoquez l'accès aux anciennes clés et gardez une piste d'audit de qui a signé quel digest et quand.
 
 > 🔬 Un flux keyless avec OIDC, Fulcio et Rekor réduit le risque d'une private key permanente, mais exige une restriction exacte de l'issuer et de l'identité du workflow de release.
 
@@ -409,7 +409,7 @@ Pour GitHub Actions, le workflow doit accorder à son job `id-token: write` ; ce
 
 La vérification avant le deployment est utile, mais n'est pas une application obligatoire : un utilisateur peut contourner un script CI local et appeler directement l'API. La vérification doit donc vivre sur le chemin d'admission. Dans Kyverno 1.19, la `ImageValidatingPolicy` basée sur CEL le fait ; la `ClusterPolicy.verifyImages` legacy est conservée uniquement pour la migration. Ne traitez pas cette policy comme un contrôle de `spec.volumes[].image.reference` : l'allowlist policy de ce chapitre rejette déjà les image volumes en fail-closed jusqu'à confirmation du support du verifier.
 
-**Le coeur de l'examen** est l'allowlist de repository, le digest immutable, l'admission fail-closed et le diagnostic d'un refus. `ImageValidatingPolicy` Kyverno, Notary et les attestations SBOM/in-toto signées sont une **extension de production** : ils relient la policy au signer de confiance et aux preuves de release. L'exemple ne place pas de private key dans le cluster.
+**Le cœur de l'examen** est l'allowlist de repository, le digest immutable, l'admission fail-closed et le diagnostic d'un refus. `ImageValidatingPolicy` Kyverno, Notary et les attestations SBOM/in-toto signées sont une **extension de production** : ils relient la policy au signer de confiance et à l'evidence de release. L'exemple ne place pas de private key dans le cluster.
 
 ```yaml
 apiVersion: policies.kyverno.io/v1
@@ -484,7 +484,7 @@ IMAGE="${IMAGE:?set image reference}"
 notation verify "$IMAGE"
 ```
 
-Notary seul n'est pas un Kubernetes admission controller. Sa trust policy doit être convertie en un contrôle de policy-controller ou de webhook backend qui renvoie allow/deny à kube-apiserver. N'attendez pas qu'un verifier comprenne automatiquement tout : Cosign/Sigstore et Notary/Notation utilisent des modèles de confiance différents. Choisissez un standard pour chaque repository, documentez la trust root, les identities autorisées et la procédure de rotation, puis migrez avec une période explicite de double signature et de double vérification.
+Notary seul n'est pas un Kubernetes admission controller. Sa trust policy doit être convertie en un contrôle de policy-controller ou de webhook backend qui renvoie allow/deny à kube-apiserver. N'exigez pas qu'un seul verifier « comprenne » tout automatiquement : Cosign/Sigstore et Notary/Notation utilisent des modèles de confiance différents. Choisissez un standard pour chaque repository, documentez la trust root, les identities autorisées et la procédure de rotation, puis migrez avec une période explicite de double signature et de double vérification.
 
 > 🏭 Le processus de bout en bout combine build, scan, SBOM/attestations, signature, deployment par digest et admission fail-closed avec evidence d'audit.
 
@@ -513,7 +513,7 @@ kubectl logs -n kyverno deploy/kyverno-admission-controller
 
 Pour un Pod possédé par un controller, vérifiez Events et `FailedCreate` sur ReplicaSet/Job et, pour une trace complète, l'audit de l'API server et les logs du controller d'admission concerné.
 
-Si un deployment légitime est rejeté, vérifiez son digest, le préfixe du repository, l'identité du signer, le certificate/la key et le réseau/TLS vers le registry. Ne réparez pas un incident en utilisant temporairement `validationActions: [Audit]`, `failurePolicy: Ignore` ou une allowlist de production large : cela retire précisément le contrôle destiné à détecter le compromis. Pour une exception d'urgence, utilisez une solution courte, limitée au namespace et au digest, avec owner, expiration et suppression ultérieure.
+Si un deployment légitime est rejeté, vérifiez son digest, le préfixe du repository, l'identité du signer, le certificate/la key et le réseau/TLS vers le registry. Ne réparez pas un incident en utilisant temporairement `validationActions: [Audit]`, `failurePolicy: Ignore` ou une allowlist de production large : cela retire précisément le contrôle destiné à détecter la compromission. Pour une exception d'urgence, utilisez une solution de courte durée, limitée au namespace et au digest, avec owner, expiration et suppression ultérieure.
 
 ## 26.7. Mini-glossaire
 
@@ -536,7 +536,7 @@ Si un deployment légitime est rejeté, vérifiez son digest, le préfixe du rep
 
 ## 26.9. Utilité : à l'examen et dans le travail réel
 
-**À l'examen.** Le coeur court est la différence entre registry policy, tag et digest, la configuration ou le diagnostic de validating admission, la configuration d'admission de l'API server et le risque de fail-open. Sauvegarder la réponse de refus d'admission et vérifier la référence d'image exacte est plus rapide et plus sûr que désactiver un controller. `ImageValidatingPolicy` Kyverno, Notary et les attestations sont des extensions de production pour lesquelles comprendre le but suffit.
+**À l'examen.** Le cœur court est la différence entre registry policy, tag et digest, la configuration ou le diagnostic de validating admission, la configuration d'admission de l'API server et le risque de fail-open. Sauvegarder la réponse de refus d'admission et vérifier la référence d'image exacte est plus rapide et plus sûr que désactiver un controller. `ImageValidatingPolicy` Kyverno, Notary et les attestations sont des extensions de production pour lesquelles comprendre le but suffit.
 
 **Dans le travail réel.** La signature relie un workload de production à un workflow de release et à un artifact particulier, tandis que l'admission rend cette règle obligatoire pour chaque chemin de deployment. Avec les permissions CI least-privilege, un registry protégé et les audit logs, elle réduit la probabilité d'exécuter une image qui n'a pas passé votre pipeline.
 
@@ -566,7 +566,7 @@ Un version tag est un nom mutable et peut être redirigé vers d'autres octets s
 <details>
 <summary>3. Quelles références de container une registry policy doit-elle contrôler, et que doit-elle faire des image volumes ?</summary>
 
-La policy doit contrôler `containers`, `initContainers` et `ephemeralContainers`. Sinon, un container init ou un container ajouté via `kubectl debug` et le sous-ressource `pods/ephemeralcontainers` devient un contournement de l'allowlist. Faites aussi correspondre CREATE/UPDATE du sous-ressource requis. Dans Kubernetes v1.36, `spec.volumes[].image.reference` est une référence OCI séparée hors de ces tableaux : vérifiez-la explicitement avec un verifier pris en charge ou, comme dans ce chapitre, interdisez les image volumes en fail-closed.
+La policy doit contrôler `containers`, `initContainers` et `ephemeralContainers`. Sinon, un container init ou un container ajouté via `kubectl debug` et la sous-ressource `pods/ephemeralcontainers` devient un contournement de l'allowlist. Faites aussi correspondre CREATE/UPDATE de la sous-ressource requise. Dans Kubernetes v1.36, `spec.volumes[].image.reference` est une référence OCI séparée hors de ces tableaux : vérifiez-la explicitement avec un verifier pris en charge ou, comme dans ce chapitre, interdisez les image volumes en fail-closed.
 </details>
 
 <details>
@@ -578,7 +578,7 @@ Le kubeconfig du backend requiert la CA dans `certificate-authority` et, avec le
 <details>
 <summary>5. En quoi une signature keyless diffère-t-elle d'une clé Cosign statique, et quel issuer/identity la vérification doit-elle restreindre ?</summary>
 
-Le flux keyless obtient un certificat de courte durée après l'authentification OIDC de CI et ne requiert pas la distribution d'une private key locale permanente. Une clé Cosign statique est une paire de clés distincte conservée dans KMS ou un autre production store protégé. La vérification keyless restreint l'issuer OIDC et l'identité de workflow exacts : organisation, repository, workflow de release et ref/environnement permis, pas l'expression régulière `.*`.
+Le flux keyless obtient un certificat de courte durée après l'authentification OIDC de CI et ne requiert pas la distribution d'une private key locale permanente. Une clé Cosign statique est une paire de clés distincte conservée en production dans KMS ou un autre stockage protégé. La vérification keyless restreint l'issuer OIDC et l'identité de workflow exacts : organisation, repository, workflow de release et ref/environnement permis, pas l'expression régulière `.*`.
 </details>
 
 <details>

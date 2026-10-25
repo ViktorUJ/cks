@@ -139,7 +139,7 @@ Kubernetes поддерживает четыре уровня. Правило в
 `.requestURI`, `.verb`, identity, timestamps, status и annotations, а не ожидайте имя объекта.
 
 `Metadata` не означает, что event лишён чувствительных данных: `.requestURI` остаётся в нём.
-У `pods/exec` command и arguments передаются query string, поэтому password, token или другой
+У `pods/exec` command и arguments передаются в query string, поэтому password, token или другой
 secret из CLI arguments может попасть в audit log даже без request/response body. Не передавайте
 secrets через `kubectl exec ... -- command secret`; используйте Secret volume/stdin-процедуру,
 ограничьте доступ к audit log и при необходимости санитизируйте downstream pipeline.
@@ -369,7 +369,7 @@ sudo ls -l /var/log/kubernetes/audit/audit.log
 
 Если API server не возвращается, немедленно смотрите `journalctl -u kubelet`, exited
 контейнер через `crictl ps -a`/`crictl logs` и YAML манифеста. При необходимости верните
-сохранённый файл `.bak` **вне** каталога manifests: backup внутри
+сохранённую копию `kube-apiserver.yaml.<timestamp>` из `/root/k8s-manifest-backup`: backup внутри
 `/etc/kubernetes/manifests/` kubelet может воспринять как ещё один static Pod manifest.
 
 ```bash
@@ -596,8 +596,8 @@ sudo jq -r --arg name "$CM" '
 `$CM` и успешным response code класса `2xx`. Конкретный код зависит от операции и API. Если
 policy использует другой namespace/resource, тест и фильтр должны соответствовать именно ей.
 
-Проверить, что body Secret не утёк в локальный audit log, можно создать или прочитать
-тестовый Secret и смотреть event: у `Metadata` не должно быть `.requestObject` или
+Чтобы проверить, что body Secret не утёк в локальный audit log, создайте или прочитайте
+тестовый Secret и посмотрите event: у `Metadata` не должно быть `.requestObject` или
 `.responseObject`.
 
 ```bash

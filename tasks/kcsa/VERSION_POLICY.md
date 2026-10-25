@@ -1,28 +1,28 @@
-# Политика версий и весов курса KCSA
+# KCSA course version and weight policy
 
-Последняя проверка: **2026-09-02**.
+Last verified: **2026-09-02**.
 
-Контуры KCSA независимы и не должны автоматически выравниваться:
+KCSA's version tracks are independent and must not be auto-aligned with each other:
 
-| Контур | Текущее значение | Источник истины |
+| Track | Current value | Source of truth |
 |---|---|---|
-| Учебные примеры | Kubernetes `v1.36` | Зафиксированная учебная baseline-версия; её корректность проверяется отдельно от версии экзамена CKS |
-| Экзамен KCSA | Концептуальный, version-light | LF «Domains & Competencies» |
-| Программа KCSA (LIVE) | 6 доменов, веса `14/22/22/16/16/10` | LF «Domains & Competencies» |
+| Course examples | Kubernetes `v1.36` | Fixed training baseline version; its correctness is verified separately from the CKS exam version |
+| KCSA exam | Conceptual, version-light | LF "Domains & Competencies" |
+| KCSA curriculum (LIVE) | 6 domains, weights `14/22/22/16/16/10` | LF "Domains & Competencies" |
 
-> **Сопровождение версий.** Последняя проверенная upstream minor-версия Kubernetes — `v1.37`. Примеры курса пока остаются на `v1.36` как на зафиксированной учебной baseline-версии. Не называйте её автоматически «версией CKS»: версия CKS является отдельным контуром и должна проверяться по актуальной странице Linux Foundation при каждом релизе курса. На дату проверки 2026-09-02 LF указывает CKS на Kubernetes `v1.35`.
+> **Version maintenance.** The latest verified upstream Kubernetes minor version is `v1.37`. Course examples currently remain on `v1.36` as the fixed training baseline. Do not automatically call this baseline "the CKS version": the CKS version is a separate track and must be checked against the current Linux Foundation page at every course release. As of the 2026-09-02 verification, LF lists CKS on Kubernetes `v1.35`.
 
-KCSA проверяет концепции безопасности cloud native и Kubernetes, поэтому версия Kubernetes влияет на корректность иллюстративных примеров, но не задаёт отдельную версию экзаменационной среды. Перед выпуском курса нужно отдельно проверить актуальную страницу LF и зафиксировать дату проверки.
+KCSA tests cloud native and Kubernetes security concepts, so the Kubernetes version affects the correctness of illustrative examples but does not set a separate exam-environment version. Before releasing the course, re-check the current LF page separately and record the verification date.
 
-## Provenance официального curriculum PDF
+## Official curriculum PDF provenance
 
-При проверке 2026-09-01 использовался официальный файл `KCSA Curriculum.pdf`: размер `227288` bytes, SHA-256 `2855eb7db729ab9ad0136b87d002560f82297e66e811026159df946227d5114a`.
+The 2026-09-01 verification used the official `KCSA Curriculum.pdf` file: size `227288` bytes, SHA-256 `2855eb7db729ab9ad0136b87d002560f82297e66e811026159df946227d5114a`.
 
-При каждой последующей сверке нужно заново скачать именно этот curriculum PDF с официального источника LF, записать дату проверки, имя файла, размер и SHA-256, затем сопоставить его домены и веса с LIVE-страницей LF. Веса `14/22/22/16/16/10` изменяют только если LIVE-страница LF подтверждённо изменилась.
+At every subsequent review, re-download this exact curriculum PDF from the official LF source, record the verification date, file name, size, and SHA-256, then cross-check its domains and weights against the LF LIVE page. Change the weights `14/22/22/16/16/10` only if the LF LIVE page has confirmedly changed.
 
-## Текущая программа экзамена
+## Current exam curriculum
 
-| Домен | Вес |
+| Domain | Weight |
 |---|---:|
 | Overview of Cloud Native Security | 14% |
 | Kubernetes Cluster Component Security | 22% |
@@ -31,13 +31,13 @@ KCSA проверяет концепции безопасности cloud native
 | Platform Security | 16% |
 | Compliance and Security Frameworks | 10% |
 
-Веса `14/22/22/16/16/10` нельзя менять без изменения на странице LF. Дрейф версий или вторичные источники сами по себе не являются основанием для изменения структуры курса.
+The weights `14/22/22/16/16/10` must not be changed without a corresponding change on the LF page. Version drift or secondary sources alone are not grounds for changing the course structure.
 
-## Дрейф с `cncf/curriculum`
+## Drift with `cncf/curriculum`
 
-В `cncf/curriculum` master зафиксирована другая редакция из шести доменов:
+The `cncf/curriculum` master branch records a different six-domain edition:
 
-| Домен ревизии CNCF | Вес |
+| CNCF revision domain | Weight |
 |---|---:|
 | Cloud Native Fundamentals | 16% |
 | Kubernetes Security Fundamentals | 20% |
@@ -46,9 +46,9 @@ KCSA проверяет концепции безопасности cloud native
 | Monitoring, Logging, and Runtime Security | 12% |
 | General Security Knowledge | 16% |
 
-Для структуры курса и весов используется LIVE-программа LF. Содержание проектируется как надмножество LIVE-программы LF и ревизии `cncf/curriculum`, чтобы курс сохранял полезность при возможном переходе программы. При следующей проверке необходимо сопоставить оба контура, обновить дату и изменить структуру только после подтверждённого изменения LF.
+The course structure and weights use the LF LIVE curriculum. Content is designed as a superset of the LF LIVE curriculum and the `cncf/curriculum` revision, so the course stays useful if the curriculum transitions. At the next review, compare both tracks, update the verification date, and change the structure only after a confirmed LF change.
 
-## Ссылки
+## References
 
 - [Linux Foundation KCSA - Domains & Competencies](https://training.linuxfoundation.org/certification/kubernetes-and-cloud-native-security-associate-kcsa/)
 - [CNCF curriculum repository](https://github.com/cncf/curriculum)

@@ -81,7 +81,7 @@ a node agent. It is **not** a sensible default for an application namespace. A n
 PSA labels effectively behaves as `privileged` only with the standard PSA configuration, where
 `PodSecurityConfiguration.defaults` has `enforce: privileged`. A cluster administrator can set
 `baseline` or `restricted` and their version in `defaults`, so always verify the effective policy
-against the namespace and admission-controller configuration, not absence of a label.
+against the namespace and admission-controller configuration, not the absence of a label.
 
 Even for a system namespace, do not grant `privileged` to an application team "to fix it".
 First determine the required capability, volume, or syscall; otherwise, temporary debugging
@@ -212,7 +212,7 @@ pod-security.kubernetes.io/<mode>-version=<version>
 
 `<mode>` is `enforce`, `audit`, or `warn`; `<level>` is `privileged`, `baseline`, or
 `restricted`. A version value is a Kubernetes minor version, such as `v1.36`, or `latest`.
-Set a version separately for each mode.
+A version can be set separately for each mode.
 
 PSA labels are part of the security boundary. An identity allowed to create workloads in an
 application namespace must not automatically receive `create`, `patch`, or `update` on
@@ -447,7 +447,7 @@ enable protection. During migration:
 - remove `PodSecurityPolicy`, `policy/v1beta1`, and RBAC `use` rules for PSP from manifests and Helm charts;
 - map the intent of the old policy to PSS: move standard requirements into `baseline` or `restricted` labels;
 - move rules that PSA cannot express (a trusted registry, required labels, resource limits, a specific StorageClass) into Kyverno, Gatekeeper, or `ValidatingAdmissionPolicy`;
-- start PSA in `warn`/`audit`, because PSP and PSA differ in semantics and scope;
+- first start PSA in `warn`/`audit`, because PSP and PSA differ in semantics and scope;
 - after cutover, verify that the admission controller is enabled, labels are assigned, and old cluster-wide bypasses have not remained.
 
 PSA cannot be extended with custom fields. This is an advantage for basic hardening: behavior is
@@ -492,7 +492,7 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 | Observation | Probable cause | Action |
 |---|---|---|
 | `privileged` Pod passed in a supposedly restricted namespace | absent/incorrect `enforce` label, exempt Pod, or another namespace is being checked | show namespace labels, creator, and admission configuration |
-| CI sees a warning but deployment was still created | `warn` or `audit`, not `enforce`, is active | this is an expected migration phase; do not call it protection |
+| CI sees a warning but the Deployment was still created | `warn` or `audit`, not `enforce`, is active | this is an expected migration phase; do not call it protection |
 | New rollout is rejected while old Pods run | PSA does not remove existing Pods but checks new ones | fix the controller template and repeat rollout |
 | `kubectl apply` returns Forbidden and the Pod is not created | PSA or RBAC denied before persistence | compare the error text with `auth can-i` and namespace labels |
 | System component breaks after restricted | component needs a permitted separate namespace or narrow exemption | do not weaken the application namespace; record the exception |
@@ -570,7 +570,7 @@ the minimum necessary level, and document every exemption with an owner and remo
 - A reliable migration goes from `warn`/`audit` to `enforce=baseline`, then to
   `enforce=restricted`, fixing templates rather than live Pods.
 - PSA rejection occurs before Pod creation. Check namespace labels, effective defaults, a direct
-  Pod through server-side dry run, RBAC, and the admission-error text; successful Deployment dry
+  Pod through server-side dry run, RBAC, and the admission-error text; a successful Deployment dry
   run does not confirm enforce for a Pod that a controller will later create.
 - PSP was removed in 1.25. It cannot be restored with a manifest: move standard rules to PSA and
   organizational rules to a policy engine.
@@ -587,7 +587,7 @@ RBAC determines who can perform `create pods`. `securityContext` sets process pr
 <details>
 <summary>2. Why should a namespace without PSA labels not be considered protected?</summary>
 
-With standard PSA defaults, such a namespace effectively behaves as `privileged`, but an administrator can configure different defaults. Therefore absence of labels does not prove the effective policy. Check namespace labels and admission-controller configuration.
+With standard PSA defaults, such a namespace effectively behaves as `privileged`, but an administrator can configure different defaults. Therefore, the absence of labels does not prove the effective policy. Check namespace labels and admission-controller configuration.
 </details>
 
 <details>

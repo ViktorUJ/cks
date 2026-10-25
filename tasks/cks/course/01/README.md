@@ -145,7 +145,7 @@ A tool does not replace a threat model. Choose it based on what is being examine
 | `cosign` / sigstore | Sign and verify image | 26 |
 | Falco | Observes suspicious runtime events through syscall/eBPF | 29-30 |
 | Cilium and Hubble | Implement and observe network policy, encryption, and mTLS | 06, 23 |
-| OPA/Gatekeeper and Kyverno | Prevent manifest that violate policy from being admitted | 20, 26 |
+| OPA/Gatekeeper and Kyverno | Prevent manifests that violate policy from being admitted | 20, 26 |
 | gVisor (`runsc`) and Kata | Isolate workload through a sandbox runtime | 22 |
 
 Before running a scanner, identify the object being checked and the expected decision. For example, a `trivy` warning does not mean that every CVE is immediately exploitable: consider the package, execution path, availability of a fixed image, and risk to the specific workload. Conversely, a clean report does not eliminate the need for RBAC, network isolation, and runtime monitoring.
@@ -186,7 +186,7 @@ A common mistake is applying a security tool without checking the attack path. F
 ## 01.7 How this is applied in production
 
 - **Security as an engineering cycle.** The team describes a threat model, introduces policy and hardening in IaC, checks them in CI, and observes the result in production.
-- **Minimal privileges by default.** New workload receives a non-root SecurityContext, a limited ServiceAccount, network default-deny, and explicitly allowed dependencies.
+- **Minimal privileges by default.** New workloads receive a non-root SecurityContext, a limited ServiceAccount, network default-deny, and explicitly allowed dependencies.
 - **Shift checks left.** `hadolint`, `kube-linter`, `kubesec`, SBOM, and `trivy` run before an image is published; admission policy does not allow critical requirements to be bypassed.
 - **Node protection is no less important.** Access to kubelet, the container runtime socket, etcd, static Pod manifests, and audit files is limited as strictly as API access.
 - **Verifiable exceptions.** If a workload requires a capability, privileged mode, or access to hostPath, the exception is documented, constrained to a namespace, and periodically reviewed.
@@ -218,7 +218,7 @@ A common mistake is applying a security tool without checking the attack path. F
 
 **On the exam.** This chapter helps you immediately recognize the class of a task and choose the right tool. Before making a change, identify the layer where the problem lies: API/RBAC, network, node, image, or runtime. Then make the smallest change and verify exactly the condition requested by the task.
 
-**In real work.** The domain map prevents a narrow approach in which a team only scans image or only blocks privileged Pod. Reliable protection combines secure configuration, access restriction, artifact control, logging, and investigation.
+**In real work.** The domain map prevents a narrow approach in which a team only scans an image or only blocks a privileged Pod. Reliable protection combines secure configuration, access restriction, artifact control, logging, and investigation.
 
 ## 01.11 Self-check questions
 

@@ -59,10 +59,10 @@ node-ს. შემდეგ ინჟინერი აკავშირე�
 
 | კონტროლი | როდის მუშაობს | რომელ კითხვას პასუხობს | რას არ ანაცვლებს |
 |---|---|---|---|
-| image scan / SBOM | build-მდე და მის შემდეგ | ცნობილია თუ არა დაუცველი component/version | პროცესის ქმედებების დაკვირვება |
-| admission policy | ობიექტის შექმნისას | შეესაბამება თუ არა Pod policy-ს | უკვე გაშვებული პროცესის კონტროლი |
+| image scan / SBOM | build-მდე და მის შემდეგ | ცნობილია თუ არა დაუცველი component/version | პროცესის ქმედებებზე დაკვირვებას |
+| admission policy | ობიექტის შექმნისას | შეესაბამება თუ არა Pod policy-ს | უკვე გაშვებული პროცესის კონტროლს |
 | Falco | გაშვების დროს | მოხდა თუ არა საეჭვო სისტემური ქმედება | remediation-ს, იზოლაციასა და გამოძიებას |
-| Kubernetes audit | API-სთან მიმართვისას | ვინ გამოიძახა API და რა მოითხოვა | პროცესის syscall-კონტექსტი node-ზე |
+| Kubernetes audit | API-სთან მიმართვისას | ვინ გამოიძახა API და რა მოითხოვა | პროცესის syscall-კონტექსტს node-ზე |
 
 Falco განსაკუთრებით სასარგებლოა შემდეგი სიგნალებისთვის:
 
@@ -316,7 +316,7 @@ Kubernetes-კონტექსტისთვის სასარგებ�
 Falco rules - YAML-დოკუმენტებია. `rule` განსაზღვრავს დეტექტორს, `condition` -
 ბულეან გამოსახულებას event fields-ზე, `output` - alert-ის სტრიქონს, ხოლო
 `priority` განსაზღვრავს სიმძიმეს. `macro` აძლევს condition-ის ფრაგმენტს
-გადასამეორებელ სახელს; `list` ინახავს მნიშვნელობათა ნაკრებს. ეს ხდის rule-ს
+მრავალჯერადი გამოყენების სახელს; `list` ინახავს მნიშვნელობათა ნაკრებს. ეს ხდის rule-ს
 უფრო მოკლეს, აადვილებს review-ს და საშუალებას აძლევს, შეცვალონ
 allowlist/denylist გამოსახულებების კოპირების გარეშე.
 
@@ -601,11 +601,11 @@ kubectl -n falco describe daemonset falco
   ruleset immutable არ არის: განსაზღვრეთ დასაშვები version range,
   compatibility gate, staged validation და გაითვალისწინეთ rules-ის
   განახლება ახალი Helm release-ის გარეშე.
-- **მიაწოდეთ alert საშტატო output-ით.** პირდაპირი ინტეგრაციისთვის გამოიყენეთ
+- **მიაწოდეთ alert სტანდარტული output-ით.** პირდაპირი ინტეგრაციისთვის გამოიყენეთ
   Falco-ის native HTTP(S) output; SIEM-ში, chat-ში ან incident system-ში
   fan-out-ისთვის გამოიყენეთ Falcosidekick, როგორც Falco events-ის downstream
   მიმღები. Falco plugins - ცალკე მექანიზმია event source-ისა და დაკავშირებული
-  fields/დამუშავებისთვის და არა უნივერსალური output channel. plugin
+  fields/დამუშავებისთვის და არა უნივერსალური output channel. Plugin
   დააკავშირეთ მხოლოდ მისი თავსებადი დოკუმენტაციის მიხედვით და შეამოწმეთ
   ცალკე.
 
@@ -637,12 +637,12 @@ kubectl -n falco describe daemonset falco
 ზონების არარსებობას: გადატვირთვისას Falco-მ შეიძლება დაკარგოს syscall event,
 სანამ rule გამოითვლება. Events-ის დაკარგვამ ასევე შეიძლება დაარღვიოს
 პროცესების, ფაილებისა და container metadata-ს შიდა მდგომარეობა. ჩართეთ
-native metrics და alert ნულოვან ან მზარდ drops-ზე; Falco-ის მეტრიკები
+native metrics და alert არანულოვან ან მზარდ drops-ზე; Falco-ის მეტრიკები
 სტანდარტულად გამორთულია. Prometheus-ისთვის საჭიროა ჩართული metrics,
 web server და მისი Prometheus endpoint:
 
 ```yaml
-# falco.yaml — კონკრეტული ხელმისაწვდომი ოფციები pinned Falco-ის ვერსიასთან შეადარეთ.
+# falco.yaml - კონკრეტული ხელმისაწვდომი ოფციები pinned Falco-ის ვერსიასთან შეადარეთ.
 metrics:
   enabled: true
   kernel_event_counters_enabled: true
@@ -781,7 +781,7 @@ staging-ზე.
 > ქმედება მოხდა. **Cilium Tetragon** - პრინციპულად სხვა მოდელია:
 > eBPF LSM hooks-ის გამოყენებით მას შეუძლია **დაბლოკოს** ქმედება
 > **inline**, მცდელობის მომენტში და არა მხოლოდ დაფიქსირება
-> უკუფაქტურად - მაგალითად, აკრძალოს თვით `execve` ან ფაილის გახსნა და
+> ფაქტის შემდეგ - მაგალითად, აკრძალოს თვით `execve` ან ფაილის გახსნა და
 > არა უბრალოდ დააფიქსიროს მისი შესრულება. ეს იმავე ტიპის განსხვავებაა,
 > როგორიც Gatekeeper/Kyverno-ს, როგორც admission-კონტროლისა, და
 > ფაქტის შემდგომი logging-ს შორის: detection და enforcement - სხვადასხვა
@@ -820,8 +820,8 @@ staging-ზე.
 - **rule** - Falco-ის სახელდებული დეტექტორი condition-ით, output-ითა და
   priority-ით.
 - **condition** - ბულეან გამოსახულება event-ის ველებზე, რომელიც
-  განსაზღვრავს rule-ის გამოწვევას.
-- **macro** - გადასამეორებელი სახელდებული condition-ის ფრაგმენტი.
+  განსაზღვრავს rule-ის ამოქმედებას.
+- **macro** - მრავალჯერადი გამოყენების სახელდებული condition-ის ფრაგმენტი.
 - **list** - სახელდებული მნიშვნელობათა სია, გამოყენებული condition-ში.
 - **output** - alert-ის ფორმატი; უნდა შეიცავდეს გამოძიებით კონტექსტს.
 - **priority** - alert-ის სიმძიმე, მაგალითად `NOTICE`, `WARNING`,
@@ -931,7 +931,7 @@ tolerations-ის ან driver-ის შეცდომების ანა
 `rule` - სახელდებული დეტექტორია; მისი `condition` - ბულეან გამოსახულებაა
 event-ის ველებზე. `output` განსაზღვრავს alert-ის ტექსტს, ხოლო
 `priority` - მის სიმძიმეს. `macro` აძლევს condition-ის ნაწილს
-გადასამეორებელ სახელს, ხოლო `list` შეიცავს მნიშვნელობათა ნაკრებს, რის
+მრავალჯერადი გამოყენების სახელს, ხოლო `list` შეიცავს მნიშვნელობათა ნაკრებს, რის
 გამოც ruleset-ის review და tuning უფრო მარტივია.
 </details>
 
@@ -979,14 +979,13 @@ image-მდე, Pod label-მდე ან command-მდე, false positives-�
 </details>
 
 <details>
-<summary>9. **Flashback (თავი 17).** Falco (ეს თავი) და seccomp (თავი 17) ორივე syscall-დონეზე მუშაობს, მაგრამ სხვადასხვა გარანტიით: seccomp-ს შეუძლია **დაბლოკოს** syscall მისი შესრულებამდე, ხოლო Falco **აღმოაჩენს** მას უკვე გამოწვევის შემდეგ. თუ კრიტიკული syscall (მაგალითად, `unshare`) უკვე დაბლოკილია თავი 17-ის seccomp-პროფილით, აქვს თუ არა აზრი მაინც დაწეროთ მისთვის Falco rule - და თუ დიახ, რას ამტკიცებს ასეთი კომბინაცია, რასაც ერთი წარმატებული seccomp denial არ ამტკიცებს?</summary>
+<summary>9. **Flashback (თავი 17).** Falco (ეს თავი) და seccomp (თავი 17) ორივე syscall-დონეზე მუშაობს, მაგრამ სხვადასხვა გარანტიით: seccomp-ს შეუძლია **დაბლოკოს** syscall მისი შესრულებამდე, ხოლო Falco **აღმოაჩენს** მას უკვე შესრულების შემდეგ. თუ კრიტიკული syscall (მაგალითად, `unshare`) უკვე დაბლოკილია თავი 17-ის seccomp-პროფილით, აქვს თუ არა აზრი მაინც დაწეროთ მისთვის Falco rule - და თუ დიახ, რას ამტკიცებს ასეთი კომბინაცია, რასაც ერთი წარმატებული seccomp denial არ ამტკიცებს?</summary>
 
 დიახ, Falco რჩება სასარგებლო detection-ფენად, მაგრამ ნუ დაჰპირდებით
 alert-ს იმავე syscall-ზე, რომელიც seccomp-მა უკვე უარყო. ჩვეულებრივ
 Linux syscall-გზაზე seccomp filter სრულდება syscall tracepoint-მდე;
 ამიტომ უარყოფილმა მცდელობამ შეიძლება ჩვეულებრივი Falco syscall event
-ვერ წარმოშვას. seccomp denial-ის მტკიცებულებას იღებთ seccomp/audit-
-სპეციფიკური telemetry-დან. Falco სასარგებლოა მეზობელი დაშვებული
+ვერ წარმოშვას. seccomp denial-ის მტკიცებულებას იღებთ seccomp/audit-სპეციფიკური telemetry-დან. Falco სასარგებლოა მეზობელი დაშვებული
 ქმედებებისა და სხვა runtime-კონტექსტისთვის (process/command,
 container, Pod, namespace, node); alert-ს ზუსტად denied syscall-ზე
 ადასტურებენ ცალკე ტესტით ფაქტობრივ kernel-სა და driver-ზე და არ
@@ -997,7 +996,7 @@ container, Pod, namespace, node); alert-ს ზუსტად denied syscall-�
 
 Runtime-დომენის პრაქტიკა აერთიანებს Falco-ის rules-ს, Kubernetes audit
 logs-ს და კონტეინერის immutability-ს. მასში საჭიროა Falco-ის გაშვება
-ან შემოწმება, shell-event-ის დაჭერა, checkable output-ის მქონე custom
+ან შემოწმება, shell-event-ის დაჭერა, შემოწმებადი output-ის მქონე custom
 rule-ის დამატება და evidence-ის შენახვა `check_result`-ისთვის.
 
 🧪 ლაბა 112 (Runtime: Falco, audit-logs და immutability): [tasks/cks/labs/112](../../labs/112/README_GE.MD)

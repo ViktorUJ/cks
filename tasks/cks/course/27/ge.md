@@ -36,7 +36,7 @@ secure-by-default პრაქტიკას ეწინააღმდეგ�
 review-ში ჩვეულებრივ ცვლილებას შესაძლოა დაემსგავსოს. თუ პრობლემა
 მხოლოდ deploy-ის შემდეგ აღმოჩნდება, ის უკვე ხელმისაწვდომია
 თავდამსხმელისთვის და მოითხოვს incident response-ს, ნაცვლად
-pull request-ში ჩალიცხი, დაბალფასიანი გასწორებისა.
+pull request-ში იაფი გასწორებისა.
 
 სტატიკური ანალიზი კითხულობს საწყის ფაილებს workload-ის გაშვების გარეშე. ის
 არ ჩაანაცვლებს admission policy-ს, signature verification-ს, vulnerability
@@ -80,7 +80,7 @@ non-root user, capabilities-ის drop და ცალკე `emptyDir` ჩა
 | `kube-linter` | დაცულია თუ არა Kubernetes best practices? | image-ს CVE არ აქვს თუ არა |
 | `hadolint` | უსაფრთხოა და reproducible-ია თუ არა Dockerfile? | final image runtime policy-ს ემთხვევა თუ არა |
 | `conftest` + OPA | სრულდება თუ არა ლოკალური policy-as-code? | policy admission-თან უკვე დაკავშირებულია თუ არა |
-| Trivy, ხელმოწერა, admission | არსებობს CVE, artifact trusted-ია, კლასტერი მას აღიარებს თუ არა? | წყაროების lint-ს არ ჩაანაცვლებენ |
+| Trivy, ხელმოწერა, admission | არსებობს თუ არა CVE, trusted-ია თუ არა artifact, უშვებს თუ არა მას კლასტერი? | წყაროების lint-ს არ ჩაანაცვლებენ |
 
 ამ თავში `kubesec` და `kube-linter` პრაქტიკის ინსტრუმენტებია Kubernetes
 manifest-ების ანალიზისთვის. `hadolint` და `conftest` ასევე სასარგებლოა
@@ -101,11 +101,11 @@ Linter - detector-ია, არა authority. თითოეული rule გ
 ## 27.2. `kubesec`: Kubernetes manifest-ის ქულების დარიცხვა
 
 `kubesec` აანალიზებს Kubernetes YAML-ს და ველებს security control-ებთან
-ადარებს. ბრძანება გამოაქვს score და passed/failed check-ების სია. ეს
+ადარებს. ბრძანებას გამოაქვს score და passed/failed check-ების სია. ეს
 სასარგებლოა როგორც სწრაფი სიგნალი: უარყოფითი finding ხშირად ნიშნავს
 `securityContext`-ის არარსებობას ან რისკიან host access-ს. score არ
 წარმოადგენს უსაფრთხოების დამტკიცებას და არ უნდა იქცეს ერთადერთ CI
-gate-ად: ზოგი ლეგიტიმური workload, მაგალითად CNI DaemonSet, დამტკიცებულად
+gate-ად: ზოგი ლეგიტიმური workload, მაგალითად CNI DaemonSet, დასაბუთებულად
 საჭიროებს გაფართოებულ პრივილეგიებს.
 
 ქვემოთ განზრახ არაუსაფრთხო manifest-ია. ის მხოლოდ finding-ის
@@ -153,16 +153,16 @@ report შეიცავს საერთო score-ს და დეტალ
 | Finding | რატომ არის საშიში | პრაქტიკული გასწორება |
 |---|---|---|
 | `Run as non-root user` | RCE კონტეინერში UID 0-ს იღებს | image-ში დამატებულია non-root `USER`, Pod-ში - `runAsNonRoot: true` |
-| `Read-only root filesystem` | თავდამსხმელს შესწევს ხელი ჩაწეროს ინსტრუმენტები და შეცვალოს runtime-ის ფაილები | დაყენდეს `readOnlyRootFilesystem: true`; writable path გატანილია volume-ში |
+| `Read-only root filesystem` | თავდამსხმელს შესწევს ხელი ჩაწეროს ინსტრუმენტები და შეცვალოს runtime-ის ფაილები | დაყენდეს `readOnlyRootFilesystem: true`; writable path გატანილ იქნეს volume-ში |
 | `Drop NET_RAW capability` ან `Drop ALL capabilities` | ზედმეტი capabilities აფართოებს პროცესის შესაძლო ქმედებებს | `drop: ["ALL"]`, დაბრუნდეს მხოლოდ დასაბუთებული capability |
-| შემოწმებული control ფიქსირებული rule-ების ნაკრებიდან | რისკი და გასწორება ამ control-ის ტექსტზეა დამოკიდებული | gate-ის წინ გამოაქვთ `kubesec print-rules` ფიქსირებული ვერსიისთვის; mutable tag-ის შემოწმება `kubesec`-ს არ მიენიჭება ამ დადასტურების გარეშე |
+| შემოწმებული control ფიქსირებული rule-ების ნაკრებიდან | რისკი და გასწორება ამ control-ის ტექსტზეა დამოკიდებული | gate-ის წინ გამოიტანეთ `kubesec print-rules` ფიქსირებული ვერსიისთვის; ნუ მიაწერთ `kubesec`-ს mutable tag-ის შემოწმებას ამ დადასტურების გარეშე |
 
-ორიენტირდებით control-ების ტექსტზე, არა მხოლოდ ერთ score-ზე. მაგალითად,
-score-ს შესაძლოა ამატოს securityContext-ის დამატების შემდეგ, თუმცა manifest
+იხელმძღვანელეთ control-ების ტექსტით, არა მხოლოდ ერთი score-ით. მაგალითად,
+score შესაძლოა გაიზარდოს securityContext-ის დამატების შემდეგ, თუმცა manifest
 მაინც უცნობ registry-ს დასაშვებად ტოვებს - ეს წესი უკეთ გამოხატულია
 `conftest`-სა და admission policy-ში. Helm chart-ის ანალიზისას
 დაასკანირეთ rendering, სხვაგვარად linter templates-ს ხედავს, არა
-resource-ებს, რომლებსაც `kubectl` გაუშვებს:
+resource-ებს, რომლებსაც `kubectl` გააგზავნის:
 
 ```bash
 helm template payments-api ./chart --namespace payments \
@@ -202,7 +202,7 @@ CI-ში, ხოლო მისი output ინახება job-ის art
 `image:`-ს ცარიელ ცვლადთან კონკატენაციით: ეს მოსალოდნელ versioned tag-ს
 `latest`-ად შესაძლოა გადააქცევდეს.
 
-გასწორებული manifest defense in depth-ს ამატებს. აპლიკაცია თანხმდება UID
+გასწორებული manifest defense in depth-ს ამატებს. აპლიკაცია უნდა იყოს თავსებადი UID
 `10001`-თან; image-საც უნდა ჰქონდეს non-root `USER`, რადგან manifest არ
 გამოასწორებს არაუსაფრთხო image-ს ლოკალურად გაშვების დროს. `emptyDir`
 აპლიკაციას ერთადერთ writable ადგილს აძლევს, ხოლო `readOnlyRootFilesystem`
@@ -268,12 +268,12 @@ resource-ის შენახვის გარეშე. ეს lint-ის�
 
 ### Check-ების კონფიგურაცია მთელი pipeline-ის შესუსტების გარეშე
 
-ზოგი check-ს კონფიგურაცია სჭირდება legacy workload-ისთვის. `include`
+ზოგ check-ს კონფიგურაცია სჭირდება legacy workload-ისთვის. `include`
 `doNotAutoAddDefaults: true`-ის გარეშე ამატებს check-ებს default-ნაკრებს,
 არა ჩაანაცვლებს მას. თუ ზუსტად თვალსაჩინო security baseline გსჭირდებათ,
 გამორთეთ defaults-ის ავტომატური დამატება და ჩამოთვალეთ მთელი ნაკრები. არ
 გამორთოთ `run-as-non-root` მთელი repository-სთვის ერთი სისტემური
-DaemonSet-ის გამო: გამოყავით system manifest ცალკე ბაზისზე, დაამატეთ
+DaemonSet-ის გამო: გამოყავით system manifest ცალკე path-ზე, დაამატეთ
 გამონაკლისი policy-ში დასაბუთებით და შემოფარგლეთ წვდომა ამ გამონაკლისის
 ცვლილებაზე.
 
@@ -296,7 +296,7 @@ checks:
 `kube-linter checks list`-ის მეშვეობით; არ დააკოპიროთ კონფიგურაცია
 ვერსიებს შორის შემოწმების გარეშე. CI ვალდებულია ჩავარდნაზე დაასრულოს
 მუშაობა configuration-ის ჩატვირთვის შეუძლებლობისას - default check-ებზე
-დუმილში გადასვლა დაცულობის ცრუ შეგრძნებას ქმნის.
+ჩუმად გადასვლა დაცულობის ცრუ შეგრძნებას ქმნის.
 
 > 🔬 `hadolint` სასარგებლოა Dockerfile-სა და image-ის reproducibility-ისთვის,
 > მაგრამ არ ჩაანაცვლებს image scan-ს.
@@ -334,7 +334,7 @@ CMD python /app/server.py
 | `DL3002` | ბოლო `USER` - root | final stage-ში მითითეთ non-root `USER`; Pod-level `runAsNonRoot` დარჩება დამოუკიდებელ დაცვად |
 | `DL3007` | tag `latest` mutable-ია | მიუთითეთ base image-ის კონკრეტული ვერსია, release-ისთვის ფიქსირდეს digest |
 | `DL3008` | პაკეტი ვერსიის გარეშე | ფიქსირდეს ვერსია, სადაც ეს repository-ს და თქვენი განახლების სტრატეგიას ეთანხმება |
-| `DL3009` | დარჩენილია `apt`-ის cache | update/install/cleanup გაერთიანდეს ერთ `RUN`-ში ან გამოიყენოთ შესატყვისი minimal base |
+| `DL3009` | დარჩენილია `apt`-ის cache | update/install/cleanup გაერთიანდეს ერთ `RUN`-ში ან გამოიყენებოდეს შესატყვისი minimal base |
 | `DL3059` | რამდენიმე თანმიმდევრული `RUN` | ლოგიკურად დაკავშირებული ოპერაციები გაერთიანდეს, კითხვადობის დარღვევის გარეშე |
 | `DL3025` | shell form `CMD` | გამოყენდეს JSON/exec form, რომ process-მა signals სწორად მიღოს |
 
@@ -448,7 +448,7 @@ violation contains msg if {
   msg := sprintf("container %q uses an unapproved registry: %s", [name, image])
 }
 
-# ვმოითხოვთ ფაქტობრივად immutable OCI reference-ს. image-ს tag-ის გარეშე
+# მოვითხოვთ ფაქტობრივად immutable OCI reference-ს. image-ს tag-ის გარეშე
 # Kubernetes :latest-ად აღიქვამს, ხოლო მოკლე/არასწორი digest SHA-256 pin-ს არ
 # წარმოადგენს.
 violation contains msg if {
@@ -672,7 +672,7 @@ production-ში დააკოპირეთ კრიტიკული pol
 სადაც ეს გამოსადეგია. `conftest` იცავს გზას Git -> CI; admission იცავს
 API-ს ხელით `kubectl apply`-სგან, სხვა pipeline-სგან და მცდარად
 დაკონფიგურირებული job-სგან. policy-ებს ერთი წყარო ან test-ები უნდა
-ჰქონდეთ, რომლებიც მათი ეკვივალენტური intent-ს ადასტურებენ, სხვაგვარად
+ჰქონდეთ, რომლებიც მათ ეკვივალენტურ intent-ს ადასტურებენ, სხვაგვარად
 ისინი დროთა განმავლობაში ერთმანეთისგან განსხვავდებიან.
 
 > 🏭 სტატიკური ანალიზი მხოლოდ სავალდებულო, reproducible CI gate-ის სახით,
@@ -686,7 +686,7 @@ API-ს ხელით `kubectl apply`-სგან, სხვა pipeline-ს�
 სავალდებულო CI job შემოწმებას ყოველი pull request-ისთვის reproducible-ს
 ხდის. pipeline-მა უნდა დააინსტალიროს ან გამოიყენოს pinned release-ები,
 შეინახოს report-ები როგორც artifacts და შეაჩეროს build/push error-ის
-დროს. არ ჩააქროთ scanner-ისთვის manifest-ები production secrets-ით და არ
+დროს. არ ატვირთოთ scanner-ისთვის manifest-ები production secrets-ით და არ
 დაბეჭდოთ secrets logs-ში.
 
 მინიმალური თანმიმდევრობა:
@@ -717,7 +717,7 @@ flowchart TB
     style admission fill:#326ce5,color:#fff
 ```
 
-ამ თავის პრაქტიკისთვის gate-ს შესწევს ხელი გაუშვას `kubesec` და
+ამ თავის პრაქტიკისთვის gate-ს შეუძლია გაუშვას `kubesec` და
 `kube-linter`; `hadolint` Dockerfile-სთვის და `conftest` unit tests-ით
 სასარგებლოა სრული ლოკალური შემოწმებისთვის. ქვემოთ GitHub Actions job-ის
 მაგალითი აჩვენებს გაფართოებულ თანმიმდევრობას, არ განსაზღვრავს ერთადერთ CI
@@ -868,16 +868,16 @@ kubectl apply --dry-run=server -f manifests/
 
 | სიმპტომი | მიზეზი | რა უნდა გაკეთდეს |
 |---|---|---|
-| `kube-linter` მაინც აწვდის `run-as-non-root` | ველი დამატებული არაა `spec.template.spec`-ში, ან კონკრეტული container override-მა პარამეტრი გააუარესა | rendered resource შემოწმდეს `kubectl kustomize`/`helm template`-ით და გზით `spec.template.spec.securityContext` |
-| აპლიკაცია ეშვება ჩავარდნას `readOnlyRootFilesystem: true`-ის შემდეგ | process cache, PID ან temp-ფაილს root filesystem-ში წერს | გზა განისაზღვროს logs-ის მიხედვით, ზუსტად იმ ადგილას მიმონტაჟდეს ვიწრო `emptyDir`; read-only root მთლიანად არ გამოირთოს |
+| `kube-linter` მაინც გვატყობინებს `run-as-non-root`-ის შესახებ | ველი დამატებული არაა `spec.template.spec`-ში, ან კონკრეტული container override-მა პარამეტრი გააუქმა | rendered resource შემოწმდეს `kubectl kustomize`/`helm template`-ით და გზით `spec.template.spec.securityContext` |
+| აპლიკაცია ავარიულად ჩერდება `readOnlyRootFilesystem: true`-ის შემდეგ | process cache, PID ან temp-ფაილს root filesystem-ში წერს | გზა განისაზღვროს logs-ის მიხედვით, ზუსტად იმ ადგილას მიმონტაჟდეს ვიწრო `emptyDir`; read-only root მთლიანად არ გამოირთოს |
 | `hadolint` გაივლის, მაგრამ image root-ისგან ეშვება | Dockerfile-ს `USER` არ აქვს, ხოლო manifest მხოლოდ cluster runtime-ს ამოწმებს | non-root `USER` დაემატოს final stage-ს, manifest guard-ი შენარჩუნდეს |
 | `conftest` rule-ს ვერ პოულობს | template გადმოეცა rendered YAML-ის ნაცვლად, ან `--policy` გზა არასწორია | input fixture-ით შემოწმდეს, გაუშვათ `opa test`, შემდეგ ზუსტად rendered output-ის lint |
 | CI მწვანეა `kubesec ... | tee`-ის შემდეგ | `tee`-მ JSON შეინახა, მაგრამ security შედეგი არ შემოწმდა | ჩაირთოს `set -o pipefail` და `jq -e`: მთელი JSON-მასივისთვის შემოწმდეს `.valid == true`, ცარიელი `scoring.critical` და versioned score threshold |
 | კრიტიკული system-workload-ს გამონაკლისი სჭირდება | rule ერთნაირად გამოეყენა აპლიკაციასა და CNI/CSI-ს | ცალკე scope, least-privilege გამონაკლისი owner-ით, ticket-ითა და expiry-ით; არა გლობალური ignore |
 
-> 🏭 დააასკანირეთ საბოლოო rendered YAML, შეინახეთ შედეგები და scanner-ების
+> 🏭 გაუშვით linter საბოლოო rendered YAML-ზე, შეინახეთ შედეგები და scanner-ების
 > ვერსიები, critical rule-ები შეათანხმეთ admission policy-სთან, რომ CI-ის
-> გავლა გამოირიცხოს.
+> გვერდის ავლა გამოირიცხოს.
 
 ## 27.7. როგორ გამოიყენება ეს production-ში
 
@@ -891,9 +891,9 @@ kubectl apply --dry-run=server -f manifests/
   ფიქსირდება trusted CI image-ში ან lockfile-ში. rule-ების განახლება
   review-ს გადის: ახალი ვერსია შესაძლოა ლეგიტიმური finding-ები დაამატოს,
   მაგრამ gate-ს შეუმჩნევლად არ უნდა შესუსტოს.
-- **შემოწმდება საბოლოო YAML.** Helm/Kustomize/GitOps შესწევს ხელი
+- **შემოწმდება საბოლოო YAML.** Helm/Kustomize/GitOps-ს შეუძლია
   შეცვალოს values, image და securityContext. CI იმ rendered artifact-ს
-  ასკანირებს, რომელსაც ხელს მოაწერენ/გამოიყენებენ, არა მხოლოდ template
+  linter-ით ამოწმებს, რომელსაც ხელს მოაწერენ/გამოიყენებენ, არა მხოლოდ template
   source-ს.
 - **Policy-as-code აპლიკაციასა და platform policy-სთან ერთად ცხოვრობს.**
   გუნდის rule-ები `opa test`-ით ტესტირდება; სავალდებულო cluster-wide
@@ -901,7 +901,7 @@ kubectl apply --dry-run=server -f manifests/
   ჰყავს owner, მიზეზი და ვადის გასვლის თარიღი.
 - **სტატიკური ანალიზი ჯაჭვის ნაწილია.** მის შემდეგ მოდის SBOM,
   vulnerability scan, ხელმოწერა და registry promotion; გაშვების წინ
-  ქმედებს admission. Runtime control-ები აღმოაჩენს იმას, რაც წყაროებით
+  მოქმედებს admission. Runtime control-ები აღმოაჩენს იმას, რაც წყაროებით
   არ ჩანს.
 - **report-ები audit-ისთვის გამოსადეგია.** CI ინახავს scanner-ის
   ვერსიას, შედეგებსა და commit-ის მიმართვას. report-ები არ უნდა
@@ -913,7 +913,7 @@ kubectl apply --dry-run=server -f manifests/
 - **Static analysis** - საწყისი Dockerfile-ის, manifest-ებისა და
   policy-ის შემოწმება workload-ის გაშვების გარეშე.
 - **`kubesec`** - Kubernetes manifest-ების scanner, რომელიც security
-  score-სა და control-ებს გამოაქვს.
+  score-სა და control-ებს გამოსცემს.
 - **`kube-linter`** - Kubernetes YAML-ისა და Helm chart-ების linter
   best-practice check-ების ნაკრებით.
 - **`hadolint`** - Dockerfile-ის linter; rule-ები `DL####` კოდებით
@@ -923,11 +923,11 @@ kubectl apply --dry-run=server -f manifests/
 - **`conftest`** - CLI structured configuration-ის შემოწმებისთვის
   OPA/Rego rule-ებით.
 - **Rego** - OPA-ის policy-ების აღწერის ენა.
-- **CI gate** - სავალდებულო შემოწმება, რომელი pipeline-ის შემდეგ
+- **CI gate** - სავალდებულო შემოწმება, რომელიც pipeline-ის შემდეგ
   ეტაპს ბლოკავს non-zero exit code-ის დროს.
 - **Rendered manifest** - საბოლოო YAML `helm template`-ის ან
   `kustomize build`-ის შემდეგ.
-- **False positive** - finding, რომელი კონკრეტული resource-ისთვის
+- **False positive** - finding, რომელიც კონკრეტული resource-ისთვის
   არ გამოდგება; მოითხოვს ვიწრო დოკუმენტირებულ exception-ს, არა
   კონტროლის გლობალურ გამორთვას.
 
@@ -939,7 +939,7 @@ kubectl apply --dry-run=server -f manifests/
 - კურსის პრაქტიკაში `kubesec` score-სა და security control-ებს
   აჩვენებს, ხოლო `kube-linter` Kubernetes best practices-ს ამოწმებს,
   non-root-ის, read-only root filesystem-ისა და mutable tag-ების
-  ჩათვლით. `kubesec`-ის gate JSON-მასივს არჩევს და თითოეული შედეგისთვის
+  ჩათვლით. `kubesec`-ის gate JSON-მასივს აანალიზებს და თითოეული შედეგისთვის
   ამოწმებს ვალიდურობას, `scoring.critical`-ის არარსებობასა და versioned
   score threshold-ს.
 - `hadolint` Dockerfile-ის structural პრობლემებს აღმოაჩენს `DL####`
@@ -967,7 +967,7 @@ image reference-ის, Dockerfile-ის ან ლოკალური policy
 დაიმახსოვროთ კავშირი SecurityContext-თან: `runAsNonRoot`,
 `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`,
 `capabilities.drop: ["ALL"]` - ტიპური baseline, რომელსაც ანალიზის
-საშუალებები ამოწმებენ. CI-სთვის მნიშვნელოვანია გვესმოდეს, რომ failure-მა
+საშუალებებმა შესაძლოა შეამოწმონ. CI-სთვის მნიშვნელოვანია გვესმოდეს, რომ failure-მა
 უნდა დაბლოკოს artifact-ის წინსვლა, ხოლო გასწორების შემდეგ შემოწმება
 ხელახლა უნდა გაეშვას.
 
@@ -983,11 +983,11 @@ admission იმ რისკებს იცავს, რომლებსა
 ## 27.11. კითხვები თვითშემოწმებისთვის
 
 <details>
-<summary>1. რატომ შესწევს ხელი წარმატებით გამოყენებულ Kubernetes YAML-ს მაინც არაუსაფრთხო იყოს?</summary>
+<summary>1. რატომ შეიძლება წარმატებით გამოყენებული Kubernetes YAML მაინც არაუსაფრთხო იყოს?</summary>
 
 API ამოწმებს სინტაქსსა და schema-ს, მაგრამ root-პროცესს, writable root
 filesystem-ს, `privileged: true`-ს ან `:latest`-ს შეცდომად არ ითვლის.
-ასეთ manifest-ს წარმატებით შესწევს ხელი workload შექმნას, თუნდაც ის
+ასეთ manifest-ს წარმატებით შეუძლია workload შექმნას, თუნდაც ის
 secure-by-default პრაქტიკას ეწინააღმდეგებოდეს. Static analysis ამ
 რისკებს merge-სა და deploy-ის დაწყებამდე პოულობს, admission-ი და
 runtime control-ები მას მოგვიანებით ავსებენ.
@@ -996,9 +996,9 @@ runtime control-ები მას მოგვიანებით ავს�
 <details>
 <summary>2. რით განსხვავდება `kubesec`-ის score თქვენი ორგანიზაციის სავალდებულო policy-სგან?</summary>
 
-`kubesec` ცნობილი control-ების მიხედვით score-სა და finding-ს გამოაქვს,
+`kubesec` ცნობილი control-ების მიხედვით score-სა და finding-ს გამოსცემს,
 ესე იგი სწრაფი საერთო სიგნალი, არა authority კონკრეტული ორგანიზაციისთვის.
-ორგანიზაციულ policy-ს შესწევს ხელი, მაგალითად, მოითხოვდეს internal
+ორგანიზაციულ policy-ს შეუძლია, მაგალითად, მოითხოვოს internal
 registry, valid digest ან owner label, რასაც generic score არ ამტკიცებს.
 ასეთი invariant-ები ფორმალდება versioned Rego-ში `conftest`-ის
 მეშვეობით და საჭიროებისამებრ ორმაგდება admission-ში.
@@ -1022,7 +1022,7 @@ Hadolint აანალიზებს Dockerfile-ს, მაგრამ ა�
 `RUN`-ს და packages-ს CVE-ის ბაზასთან არ ადარებს. scanner საჭიროა final
 image-ისა და მისი დამოკიდებულებებისთვის, ხოლო hadolint structural
 issues-ს იჭერს, როგორიცაა root final user, mutable base tag ან shell-form
-`CMD`. კოდი `DL####` წასაკითხია, რადგან მისი მნიშვნელობა შესწევს ხელი
+`CMD`. კოდი `DL####` წასაკითხია, რადგან მისი მნიშვნელობა შეიძლება
 ეხებოდეს უსაფრთხოებას, reproducibility-ს, image size-ს ან signals-ის
 დამუშავებას.
 </details>
@@ -1035,17 +1035,17 @@ issues-ს იჭერს, როგორიცაა root final user, mutable
 `registry.example.com/` და SHA-256 digest-ს regular/init container-ებსა
 და image volume-ებში, ასევე effective `runAsNonRoot`-ს,
 `readOnlyRootFilesystem`-ს, `allowPrivilegeEscalation`-ს
-container-ებში. `opa test`-ის test-ები policy-ს თავად ცილობრივი
+container-ებში. `opa test`-ის test-ები policy-ს თავად შემთხვევითი
 შესუსტებისგან იცავს.
 </details>
 
 <details>
-<summary>6. რატომ უნდა დააასკანიროს CI-მ rendered Helm/Kustomize output, არა მხოლოდ template-ები?</summary>
+<summary>6. რატომ უნდა დაასკანიროს CI-მ rendered Helm/Kustomize output, არა მხოლოდ template-ები?</summary>
 
 Template-ები ჯერ არ არიან ის resource, რომელიც API-ს გაეგზავნება: values,
-Kustomize და GitOps შესწევს ხელი შეცვალოს image ან `securityContext`.
+Kustomize-სა და GitOps-ს შეუძლია შეცვალოს image ან `securityContext`.
 Linter-სა და policy-ს საბოლოო rendered manifest უნდა ხედავდეს. სხვაგვარად
-CI შესწევს ხელი template-ისთვის მწვანე იყოს, ხოლო deploy-ს სხვა
+CI შეიძლება template-ისთვის მწვანე იყოს, ხოლო deploy-ს სხვა
 არაუსაფრთხო კონფიგურაცია ექნება.
 </details>
 
@@ -1063,7 +1063,7 @@ dry-run ხელახლა უნდა გავლენ.
 <details>
 <summary>8. რატომ არის `set -o pipefail` მნიშვნელოვანი scanner-ის ბრძანებისთვის, რომლის output `tee`-ში გადმოიცემა?</summary>
 
-`pipefail`-ის გარეშე shell-ს შესწევს ხელი დააბრუნოს ბოლო წარმატებული
+`pipefail`-ის გარეშე shell-ს შეუძლია დააბრუნოს ბოლო წარმატებული
 ბრძანების `tee`-ის exit status, დამალავს რა scanner-ის ჩავარდნას. ის
 საწყისი ბრძანების failure-ს მთელი pipeline-ის განმავლობაში ინახავს.
 თუმცა `kubesec`-ისთვის ეს არასაკმარისია: JSON ცხადად უნდა შემოწმდეს
@@ -1076,7 +1076,7 @@ critical finding-ს არ ანაზღაურებს.
 <summary>9. **Flashback (7-ე თავი).** `kube-bench`/CIS Benchmark (7-ე თავი) და `kubesec`/`kube-linter` (ეს თავი) ორივე სტატიკურად ამოწმებს კონფიგურაციას, მაგრამ სხვადასხვა ეტაპზე: ერთი - უკვე მოქმედ control plane/node-ს, მეორე - manifest-ს deploy-ის დაწყებამდე. თუ ორივე ინსტრუმენტი ტექნიკურად ხელმისაწვდომია, რომელი უფრო ადრე დაიჭერს საშიშ პარამეტრს და რატომ არის უფრო ადრეული აღმოჩენა ჩვეულებრივ იაფი?</summary>
 
 `kubesec` და `kube-linter` manifest-ს build/deploy-ის დაწყებამდე
-შემოწმდება, ხოლო `kube-bench` უკვე მოქმედ control plane-ს ან node-ს
+შეამოწმებენ, ხოლო `kube-bench` უკვე მოქმედ control plane-ს ან node-ს
 ხედავს. ადრეული finding pull request-ში გასწორდება artifact-ის
 გამოქვეყნებისა და workload-ის გაშვების დაწყებამდე, incident response-ის,
 rollout-ისა და გაჩერების გარეშე. `kube-bench` მაინც საჭიროა როგორც

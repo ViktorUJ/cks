@@ -161,8 +161,8 @@ enableProfiling: false
 En `kube-controller-manager`, `--profiling` sigue siendo un CLI-flag normal, por lo que su hallazgo
 (`1.3.2`) se corrige exactamente igual que en 07.3, sin esta salvedad.
 
-El mismo ciclo — ejecutar `kube-bench`, localizar el `FAIL`, editar el manifiesto y comprobar el
-resultado — se aplica también en los worker nodes, pero con los targets y el conjunto de flags de
+El mismo ciclo - ejecutar `kube-bench`, localizar el `FAIL`, editar el manifiesto y comprobar el
+resultado - se aplica también en los worker nodes, pero con los targets y el conjunto de flags de
 `node` (`kubelet`, no los componentes del control plane). La sección 07.5 analiza precisamente este
 tipo de hallazgo.
 
@@ -191,7 +191,7 @@ conflicto o una ruta inexistente a un archivo referenciado por el flag. Orden de
 
 Kubelet se ejecuta en cada nodo y tiene permisos para ejecutar Pod. Una API read-only abierta,
 el acceso anónimo o una authorization débil permiten obtener datos del nodo y, en algunos
-casos, desarrollar la vulneración. `protectKernelDefaults: true` hace que kubelet termine la
+casos, ampliar el alcance de la vulneración. `protectKernelDefaults: true` hace que kubelet termine la
 inicialización con un error si los kernel flags que kubelet espera para su funcionamiento tienen
 otros valores. Con `protectKernelDefaults: false`, kubelet intenta por sí mismo llevar estos
 parámetros a los valores esperados.
@@ -229,7 +229,7 @@ Si falta `--config`, no le asigne una ruta predeterminada: kubelet usa los built
 luego `--config-dir` (si está configurado), tras lo cual los CLI flags pueden sobrescribir los
 valores finales. Como evidencia del effective state, compruebe igualmente `/configz` al final.
 
-Para el API de configuración de kubelet, establezca los campos equivalentes:
+Para la API de configuración de kubelet, establezca los campos equivalentes:
 
 ```yaml
 # /var/lib/kubelet/config.yaml
@@ -274,10 +274,10 @@ sudo systemctl --no-pager --full status kubelet
 sudo journalctl -u kubelet -n 100 --no-pager
 ```
 
-Compruebe que el read-only port no esté escuchando realmente y que el API protegido responda solo
+Compruebe que el read-only port no esté escuchando realmente y que la API protegida responda solo
 con credentials y authorization correctas. Al final, no compruebe solo los archivos: `/configz`
 muestra la configuración final después del base config, los drop-ins `*.conf` y los CLI overrides.
-Para ello, la solicitud debe estar autorizada para el API de kubelet (por ejemplo, mediante un
+Para ello, la solicitud debe estar autorizada para la API de kubelet (por ejemplo, mediante un
 kubeconfig administrativo a través del API-server proxy):
 
 ```bash
@@ -293,7 +293,7 @@ else
   echo 'OK: read-only kubelet port is closed'
 fi
 
-# Muestre el API de kubelet protegido si está escuchando.
+# Muestre la API de kubelet protegida si está escuchando.
 grep ':10250' <<<"$listeners"
 kubectl get nodes
 
@@ -373,7 +373,7 @@ el data directory y el proceso etcd no le pertenecen.
 
 ## 07.7. Nueva ejecución, diagnóstico y evidencia de la corrección
 
-Para cada `FAIL` o `WARN` consciente, siga un procedimiento breve: (1) registre la versión de
+Para cada `FAIL` o `WARN` aceptado deliberadamente, siga un procedimiento breve: (1) registre la versión de
 Kubernetes, la versión o digest de `kube-bench`, el profile seleccionado y el CIS check ID del
 informe; (2) haga una copia de seguridad del archivo u objeto activo - para un static Pod alojado
 en filesystem, guarde el backup **fuera de `staticPodPath`**: kubelet no filtra los archivos de
@@ -525,14 +525,14 @@ en vez de cambiar mecánicamente todos los elementos.
 
 Kubelet debe detectar el cambio del manifest y volver a crear el static Pod, pero un error de YAML
 o un flag no admitido puede dejar el control plane no disponible. Tras editar, se comprueban el
-contenedor nuevo mediante `crictl ps`, la disponibilidad del API mediante
+contenedor nuevo mediante `crictl ps`, la disponibilidad de la API mediante
 `kubectl get --raw='/readyz?verbose'` y el targeted rerun del check afectado.
 </details>
 
 <details>
 <summary>3. ¿En qué componentes del control plane se debe desactivar profiling y es idéntico el modo de configuración?</summary>
 
-profiling debe estar desactivado en `kube-apiserver`, `kube-controller-manager` y
+Profiling debe estar desactivado en `kube-apiserver`, `kube-controller-manager` y
 `kube-scheduler`: no se puede limitar a apiserver, CIS comprueba los profiling endpoints de los
 tres componentes. El modo de configuración no siempre es idéntico: `kube-apiserver` y
 `kube-controller-manager` usan el CLI-flag `--profiling=false`, pero en `kube-scheduler` ese flag

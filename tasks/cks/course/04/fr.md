@@ -258,7 +258,7 @@ Assurez-vous d’abord que le CNI implémente réellement `NetworkPolicy`. Kuber
 **Limites de NetworkPolicy : vérifiez-les séparément.**
 
 - **Il s’agit d’un filtrage du trafic des Pod, et non d’une isolation complète des tenant.** NetworkPolicy réduit les chemins réseau accessibles, mais ne protège ni le kernel ni le node, Kubernetes API/RBAC, Secret, admission ou scheduler. Complétez-la avec TLS, host firewall et les moyens spécifiques au CNI.
-- **L’exception du nœud local est définie par la spécification Kubernetes.** Le trafic vers et depuis un Pod avec le node sur lequel il s’exécute est toujours autorisé, indépendamment de l’IP du Pod ou du node ; l’ingress depuis le node local vers un Pod isolé est également autorisé. C’est une règle portable de la spécification, pas une différence entre CNI.
+- **L’exception du node local est définie par la spécification Kubernetes.** Le trafic vers et depuis un Pod avec le node sur lequel il s’exécute est toujours autorisé, indépendamment de l’IP du Pod ou du node ; l’ingress depuis le node local vers un Pod isolé est également autorisé. C’est une règle portable de la spécification, pas une différence entre CNI.
 - **`hostNetwork` et les host-aware controls dépendent du CNI.** Ce trafic ressemble souvent à une IP de node, et `podSelector` et `namespaceSelector` peuvent donc agir différemment de ce qui est attendu. Vérifiez-le avec votre CNI.
 - **Tous les protocoles n’ont pas la même sémantique portable.** La NetworkPolicy core la définit pour TCP, UDP et SCTP (SCTP sous réserve de prise en charge du CNI). Pour ICMP, ARP et les autres protocoles, allow/deny est implementation-defined ; `ping` ne prouve donc pas de façon portable que default-deny a fonctionné ou non.
 - **Ne construisez pas de règles `ipBlock` portables autour du routage interne.** L’ordre de NAT et la policy dépendent de l’implémentation. Pour le Service `ClusterIP`, le pod CIDR ou une adresse après SNAT, sélectionnez les Pod avec des sélecteurs ; réservez `ipBlock` aux adresses externes documentées.
@@ -311,7 +311,7 @@ Pour une `NetworkPolicy` standard, utilisez pour vérifier le rôle de la source
 | La politique existe, le trafic n’est pas bloqué | Le CNI ne prend pas en charge `NetworkPolicy`, la politique a sélectionné de mauvais labels ou la direction n’est pas isolée |
 | Toutes les requêtes ont cessé de fonctionner | Default-deny egress a été appliqué sans DNS ni allow vers une dépendance obligatoire |
 | Le trafic entre namespace est trop largement autorisé | `namespaceSelector` et `podSelector` sont écrits dans des éléments distincts de la liste, donc OR s’est appliqué |
-| La policy ne sélectionne pas le Pod | Le label est défini dans le Deployment template différemment que dans `podSelector` ; vérifier `kubectl get pod --show-labels` |
+| La policy ne sélectionne pas le Pod | Le label est défini dans le Deployment template autrement que dans `podSelector` ; vérifier `kubectl get pod --show-labels` |
 | Une adresse externe n’est pas bloquée | Aucune egress isolation n’est définie, `ipBlock` ne correspond pas à l’adresse réelle, l’ordre de NAT diffère de celui attendu ou le trafic contourne le point attendu |
 
 Pour le diagnostic pédagogique ci-dessus, le tag `nicolaka/netshoot:v0.16` est utilisé ; le tag peut changer ou être absent dans un environnement offline. En production et dans les labs reproductibles, pin-nez l’image par digest et assurez au préalable son pre-pull/la disponibilité du registry.
@@ -355,19 +355,19 @@ Pour le diagnostic pédagogique ci-dessus, le tag `nicolaka/netshoot:v0.16` est 
 **Dans le travail réel.** NetworkPolicy limite les dommages lors de la compromission d’une application et sépare les tenant les uns des autres. La compétence la plus utile n’est pas d’écrire une grande règle, mais de dresser une carte minimale des dépendances réseau réelles et de réaliser un rollout sûr sans perturber le service.
 
 > ### 🔴 Regard de l’attaquant
-> **Asset:** Service backend et API internes.
+> **Asset :** Service backend et API internes.
 >
-> **Starting foothold:** RCE dans le Pod `frontend`.
+> **Starting foothold :** RCE dans le Pod `frontend`.
 >
-> **Attacker objective:** découvrir les endpoints internes et atteindre le backend.
+> **Attacker objective :** découvrir les endpoints internes et atteindre le backend.
 >
-> **Abuse path:** DNS discovery -> accès via le Service -> accès direct au Pod/IP si le réseau n’est pas isolé.
+> **Abuse path :** DNS discovery -> accès via le Service -> accès direct au Pod/IP si le réseau n’est pas isolé.
 >
-> **Expected evidence:** CNI/Hubble flows, requêtes DNS et dropped packets lors du blocage.
+> **Expected evidence :** CNI/Hubble flows, requêtes DNS et dropped packets lors du blocage.
 >
-> **Control:** default-deny pour ingress et egress, plus des règles explicites selon identity/labels et les ports.
+> **Control :** default-deny pour ingress et egress, plus des règles explicites selon identity/labels et les ports.
 >
-> **Retest:** la même requête depuis `frontend` ne passe que vers le backend autorisé ; une requête depuis un Pod non approuvé est bloquée.
+> **Retest :** la même requête depuis `frontend` ne passe que vers le backend autorisé ; une requête depuis un Pod non approuvé est bloquée.
 
 ## 04.11. Questions d’auto-évaluation
 

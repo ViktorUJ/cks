@@ -1,22 +1,19 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
 # Лаба 111 - эталонное решение
 
-Все команды выполняются на worker. Сначала задайте общие переменные и убедитесь, что
-используются установленные pinned binaries:
+Все команды выполняются на worker. Это обычные команды инструментов (trivy, kubesec,
+kube-linter, hadolint, podman, syft, bom, cosign), которые есть на экзамене; скриптов нет; там, где
+нужно сравнить несколько результатов, это делается глазами по выводу. Сначала задайте общие
+переменные:
 
 ```bash
-export ROOT=/home/ubuntu/cks-111
-export ART=/var/work/tests/artifacts
-export BASE_TAG=nginx:1.27.3-alpine
-cd "$ROOT"
-# A tag is mutable. Discover the canonical registry manifest digest once, then pin it.
-trivy image --format json "$BASE_TAG" > /tmp/cks-111-base.json
-export BASE_REPO_DIGEST=$(jq -er '.Metadata.RepoDigests[0]' /tmp/cks-111-base.json)
-export IMAGE="$BASE_TAG@${BASE_REPO_DIGEST#*@}"
-printf 'base_image=%s
-repo_digest=%s
-' "$IMAGE" "$BASE_REPO_DIGEST"
-trivy --version; kubesec version; kube-linter version; hadolint --version
-syft version; bom version; cosign version
+export ROOT=/home/ubuntu/cks-111 ART=/var/work/tests/artifacts BASE_TAG=nginx:1.27.3-alpine
+cd $ROOT
+# Tag изменяемый: один раз узнаём manifest digest из Trivy и дальше используем tag@digest.
+trivy image --format json $BASE_TAG > /tmp/cks-111-base.json
+export IMAGE=$BASE_TAG@$(jq -r '.Metadata.RepoDigests[0]' /tmp/cks-111-base.json | cut -d@ -f2)
+echo $IMAGE
 ```
 
 ## 0. Подготовка: podman и registry
@@ -48,7 +45,7 @@ Registry работает по HTTP: digest опубликованного об�
 образы только из registry, поэтому по-прежнему обращается к Docker Hub; если увидите
 `TOOMANYREQUESTS`, подождите или выполните `podman login docker.io` под своей учётной записью.
 
-## 1. Trivy report
+## 1. Отчёт Trivy
 
 ```bash
 mkdir -p "$ART/1"
@@ -70,72 +67,72 @@ TARGET_CVE=CVE-XXXX-XXXXX
 ```
 
 ```bash
-source <(grep -v '^#' ~/cks-111/candidates.txt)
-mkdir -p "$ART/1b"
-for ref in "$CANDIDATE_1" "$CANDIDATE_2" "$CANDIDATE_3"; do
-  out=$(mktemp)
-  trivy image --scanners vuln --format json --output "$out" "$ref"
-  if jq -e --arg cve "$TARGET_CVE" '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | index($cve) != null' "$out" >/dev/null; then
-    echo "FOUND $TARGET_CVE in $ref"
-    cp "$out" "$ART/1b/target-scan.json"
-    echo "OFFENDING_IMAGE=$ref" > "$ART/1b/answer.txt"
-  fi
-  rm -f "$out"
-done
-cat "$ART/1b/answer.txt"
+source ~/cks-111/candidates.txt
+trivy image --scanners vuln --format json --output /tmp/cand1.json $CANDIDATE_1
+trivy image --scanners vuln --format json --output /tmp/cand2.json $CANDIDATE_2
+trivy image --scanners vuln --format json --output /tmp/cand3.json $CANDIDATE_3
+grep -l $TARGET_CVE /tmp/cand?.json        # какой отчёт содержит TARGET_CVE
 ```
 
-```
-FOUND CVE-XXXX-XXXXX in python:3.9-slim@sha256:...
-OFFENDING_IMAGE=python:3.9-slim@sha256:...
-```
-
-## 1c. Workload image triage by CRITICAL severity
+Допустим, это `/tmp/cand1.json` (подставьте свой номер):
 
 ```bash
-mkdir -p "$ART/1c" "$ART/1c/bom" 2>/dev/null; true
-mapfile -t triage < <(kubectl -n cks-111 get deployment -l cks.io/task=1c \
-  -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.spec.template.spec.containers[0].image}{"\n"}{end}')
+mkdir -p $ART/1b
+cp /tmp/cand1.json $ART/1b/target-scan.json
+echo "OFFENDING_IMAGE=$CANDIDATE_1" > $ART/1b/answer.txt
+cat $ART/1b/answer.txt
+# OFFENDING_IMAGE=python:3.9-slim@sha256:...
+```
 
-declare -A crit_count
-for line in "${triage[@]}"; do
-  name=$(awk '{print $1}' <<<"$line"); ref=$(awk '{print $2}' <<<"$line")
-  out=$(mktemp)
-  trivy image --scanners vuln --severity CRITICAL --format json --output "$out" "$ref"
-  crit_count["$name"]=$(jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length' "$out")
-  rm -f "$out"
-  echo "$name $ref ${crit_count[$name]}"
+## 1c. Разбор образов workload по уровню CRITICAL
+
+Образы берём из LIVE Deployments и сканируем каждый; число уникальных CRITICAL выводится рядом с
+именем Deployment:
+
+```bash
+mkdir -p $ART/1c
+kubectl -n cks-111 get deployment -l cks.io/task=1c \
+  -o jsonpath='{range .items[*]}{.metadata.name} {.spec.template.spec.containers[0].image}{"\n"}{end}' |
+while read name ref; do
+  trivy image --scanners vuln --severity CRITICAL --format json --output /tmp/$name.json $ref
+  echo "$name $(jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length' /tmp/$name.json)"
 done
+```
 
-mapfile -t ranked < <(for n in "${!crit_count[@]}"; do printf '%s %s\n' "${crit_count[$n]}" "$n"; done | sort -rn -k1,1 | awk '{print $2}')
-most="${ranked[0]}"; least1="${ranked[-1]}"; least2="${ranked[-2]}"
-printf 'MOST_VULNERABLE=%s\nLEAST_VULNERABLE_1=%s\nLEAST_VULNERABLE_2=%s\n' "$most" "$least1" "$least2" \
-  | tee "$ART/1c/ranking.txt"
+По выводу найдите Deployment с наибольшим числом (самый уязвимый) и два с наименьшим. Запишите
+имена в `ranking.txt` (вместо `dep-a`, `dep-b`, `dep-c` - ваши имена):
 
-most_ref=$(kubectl -n cks-111 get deployment "$most" -o jsonpath='{.spec.template.spec.containers[0].image}')
-trivy image --format cyclonedx --output "$ART/1c/cyclonedx.json" "$most_ref"
+```bash
+cat > $ART/1c/ranking.txt <<EOF
+MOST_VULNERABLE=dep-a
+LEAST_VULNERABLE_1=dep-b
+LEAST_VULNERABLE_2=dep-c
+EOF
+# dep-d - четвёртый Deployment (второй по числу CRITICAL), в ranking.txt он не записывается
+```
 
-for n in "${ranked[@]}"; do
-  if [[ "$n" == "$least1" || "$n" == "$least2" ]]; then
-    kubectl -n cks-111 scale deployment/"$n" --replicas=1
-  else
-    kubectl -n cks-111 scale deployment/"$n" --replicas=0
-  fi
-done
+CycloneDX SBOM самого уязвимого Deployment (образ из его Deployment) и scale остальных:
+
+```bash
+kubectl -n cks-111 get deployment dep-a -o jsonpath='{.spec.template.spec.containers[0].image}'; echo
+trivy image --format cyclonedx --output $ART/1c/cyclonedx.json <образ из вывода выше>
+kubectl -n cks-111 scale deployment dep-a --replicas=0      # самый уязвимый
+kubectl -n cks-111 scale deployment dep-d --replicas=0      # четвёртый (не входит в два наименее уязвимых)
+kubectl -n cks-111 get deployment -l cks.io/task=1c
 ```
 
 ## 2. Отчёты до исправления
 
-`hadolint`, `kubesec` и `kube-linter` возвращают ненулевой статус при findings; это
-ожидаемый результат. `PIPESTATUS` сохраняет фактический текст отчёта, не подменяя его.
+`hadolint`, `kubesec` и `kube-linter` возвращают ненулевой статус при findings; это ожидаемый
+результат, отчёт сохраняется как есть.
 
 ```bash
-mkdir -p "$ART/2"
-hadolint "$ROOT/Dockerfile" | tee "$ART/2/hadolint-before.txt"; test "${PIPESTATUS[0]}" -ge 0
-kubesec scan "$ROOT/deployment.yaml" > "$ART/2/kubesec-before.json" || true
-kube-linter lint "$ROOT/deployment.yaml" --format json > "$ART/2/kube-linter-before.json" || true
-jq '.[0].scoring' "$ART/2/kubesec-before.json"
-jq '{summary: .Summary, findings: (.Reports | length)}' "$ART/2/kube-linter-before.json"
+mkdir -p $ART/2
+hadolint $ROOT/Dockerfile > $ART/2/hadolint-before.txt
+kubesec scan $ROOT/deployment.yaml > $ART/2/kubesec-before.json
+kube-linter lint $ROOT/deployment.yaml --format json > $ART/2/kube-linter-before.json
+jq '.[0].scoring' $ART/2/kubesec-before.json
+jq '{summary: .Summary, findings: (.Reports | length)}' $ART/2/kube-linter-before.json
 ```
 
 ## 3. Исправить Dockerfile
@@ -152,7 +149,7 @@ USER 101
 CMD ["nginx", "-g", "daemon off;"]
 EOF
 mkdir -p "$ART/3"
-hadolint "$ROOT/Dockerfile" | tee "$ART/3/hadolint-after.txt"
+hadolint "$ROOT/Dockerfile" > "$ART/3/hadolint-after.txt"
 # Чистый Dockerfile даёт ПУСТОЙ вывод hadolint (код возврата 0) - пустой файл здесь ожидаем и корректен.
 grep -nE '^(FROM|COPY|USER)' "$ROOT/Dockerfile"
 ```
@@ -263,36 +260,42 @@ trivy image --list-all-pkgs --format json "$IMAGE" > /tmp/cks-111/packages.json
 cat "$ART/5/version-search.txt"
 ```
 
-## 5b. Find a package version in workload images and remove offending containers
+## 5b. Найти версию пакета в образах workload и удалить проблемные контейнеры
 
 ```bash
-mkdir -p "$ART/5b/bom"
-mapfile -t containers < <(kubectl -n cks-111 get deployment pkg-audit-app \
-  -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{" "}{.image}{"\n"}{end}')
+mkdir -p $ART/5b/bom
+kubectl -n cks-111 get deployment pkg-audit-app \
+  -o jsonpath='{range .spec.template.spec.containers[*]}{.name} {.image}{"\n"}{end}'
+# c1 <образ 1> / c2 <образ 2> / c3 <образ 3>
+```
 
-declare -A pkgset
-for line in "${containers[@]}"; do
-  cname=$(awk '{print $1}' <<<"$line"); ref=$(awk '{print $2}' <<<"$line")
-  bom generate --format json --output "$ART/5b/bom/$cname.spdx.json" --image "$ref"
-  pkgset["$cname"]=$(jq -r '.packages[]? | select((.name // "") != "" and (.versionInfo // "") != "") | "\(.name)=\(.versionInfo)"' "$ART/5b/bom/$cname.spdx.json" | sort -u)
+SBOM каждого образа (подставьте образы из вывода) и список `пакет=версия` для каждого:
+
+```bash
+bom generate --format json --output $ART/5b/bom/c1.spdx.json --image <образ c1>
+bom generate --format json --output $ART/5b/bom/c2.spdx.json --image <образ c2>
+bom generate --format json --output $ART/5b/bom/c3.spdx.json --image <образ c3>
+for c in c1 c2 c3; do
+  jq -r '.packages[]? | select(.versionInfo) | "\(.name)=\(.versionInfo)"' $ART/5b/bom/$c.spdx.json | sort -u > /tmp/$c.pkgs
 done
+comm -12 /tmp/c1.pkgs /tmp/c2.pkgs | wc -l     # сколько общих пакетов у каждой пары образов
+comm -12 /tmp/c1.pkgs /tmp/c3.pkgs | wc -l
+comm -12 /tmp/c2.pkgs /tmp/c3.pkgs | wc -l
+```
 
-names=("${!pkgset[@]}")
-found=""
-for ((i=0; i<${#names[@]}; i++)); do
-  for ((j=i+1; j<${#names[@]}; j++)); do
-    shared=$(comm -12 <(printf '%s\n' "${pkgset[${names[$i]}]}") <(printf '%s\n' "${pkgset[${names[$j]}]}"))
-    [[ -n "$shared" ]] && { found="$shared"; a="${names[$i]}"; b="${names[$j]}"; break 2; }
-  done
-done
-pkg=$(head -1 <<<"$found" | cut -d= -f1); ver=$(head -1 <<<"$found" | cut -d= -f2)
-printf 'TARGET_PACKAGE=%s\nTARGET_VERSION=%s\n' "$pkg" "$ver" | tee "$ART/5b/answer.txt"
-echo "offending containers: $a $b"
+Пара с общими пакетами - это offending контейнеры (допустим, `c1` и `c2`). Общих пакетов у них
+много: подходит **любой** `name=version`, которого нет в третьем образе:
 
-# Remove exactly the offending containers, keep the clean one, re-apply.
-kubectl -n cks-111 get deployment pkg-audit-app -o json \
-  | jq --arg a "$a" --arg b "$b" '.spec.template.spec.containers |= map(select(.name != $a and .name != $b))' \
-  | kubectl apply -f -
+```bash
+comm -12 /tmp/c1.pkgs /tmp/c2.pkgs | grep -vxFf /tmp/c3.pkgs | head -3
+```
+
+Запишите найденную пару и удалите ИМЕННО эти два контейнера (`kubectl edit`), оставив "чистый":
+
+```bash
+printf 'TARGET_PACKAGE=%s\nTARGET_VERSION=%s\n' <name> <version> > $ART/5b/answer.txt     # например apt и 3.0.3
+cat $ART/5b/answer.txt
+kubectl -n cks-111 edit deployment pkg-audit-app        # удалить два offending контейнера
 kubectl -n cks-111 rollout status deployment/pkg-audit-app --timeout=120s
 ```
 
@@ -316,27 +319,28 @@ mkdir -p "$ART/7"
 # Для ссылки вида tag@digest Syft записывает в metadata.component.version только tag; ссылка
 # без tag ("nginx@sha256:...") даёт version = manifest digest, который и проверяется.
 syft "nginx@${IMAGE#*@}" -o "cyclonedx-json=$ART/7/syft.cdx.json"
+```
+
+После `syft` дождитесь завершения и вставляйте дальнейшие команды отдельно: `syft` (как и `apt-get`)
+сбрасывает буфер ввода терминала, и строки, вставленные сразу за ним, пропадают.
+
+```bash
 jq -r '.metadata.component.version' "$ART/7/syft.cdx.json"   # sha256:<manifest-digest>
-set -o pipefail
 cosign verify \
   --certificate-oidc-issuer https://accounts.google.com \
   --certificate-identity keyless@distroless.iam.gserviceaccount.com \
-  gcr.io/distroless/static-debian13:nonroot \
-  2>&1 | tee "$ART/7/cosign-verify.txt"
-cosign_rc=${PIPESTATUS[0]}
-set +o pipefail
-[[ "$cosign_rc" -eq 0 ]]
+  gcr.io/distroless/static-debian13:nonroot > $ART/7/cosign-verify.txt 2>&1
+echo "exit code: $?"      # 0 = подпись проверена
 
 # gcr.io/distroless/static:nonroot (без суффикса -debian13) считается deprecated и больше
 # не обновляется согласно официальному README Distroless - используем текущий
 # поддерживаемый тег gcr.io/distroless/static-debian13:nonroot. Успех cosign verify
 # определяется exit code, а не литеральной строкой "Verified OK" - такой строки нет в
 # реальном выводе cosign (успешный вывод начинается строкой "Verification for <image> --"
-# и списком выполненных проверок). Сохраняем reference отдельно для evidence, не для
-# pass/fail проверки.
-printf '\nreference=gcr.io/distroless/static-debian13:nonroot\n' >> "$ART/7/cosign-verify.txt"
-jq '.bomFormat, (.components | length)' "$ART/7/syft.cdx.json"
-test -s "$ART/7/cosign-verify.txt"
+# и списком выполненных проверок). cosign пишет ход работы в stderr, поэтому 2>&1
+# обязателен - иначе артефакт останется пустым.
+printf '\nreference=gcr.io/distroless/static-debian13:nonroot\n' >> $ART/7/cosign-verify.txt
+jq '.bomFormat, (.components | length)' $ART/7/syft.cdx.json
 ```
 
 ## 8. `trivy sbom`: сканирование готового SBOM-файла
@@ -346,17 +350,10 @@ CycloneDX SBOM из задания 7 описывает состав компо�
 registry за самим image.
 
 ```bash
-mkdir -p "$ART/8"
-printf '%s\n' \
-  "trivy sbom --format json --output $ART/8/sbom-scan.json $ART/7/syft.cdx.json" \
-  > "$ART/8/sbom-scan-command.txt"
-
-trivy sbom \
-  --format json \
-  --output "$ART/8/sbom-scan.json" \
-  "$ART/7/syft.cdx.json"
-
-jq '{artifact: .ArtifactType, os: .Metadata.OS.Family, results: (.Results | length), vulns: ([.Results[]?.Vulnerabilities[]?] | length)}' "$ART/8/sbom-scan.json"
+mkdir -p $ART/8
+echo "trivy sbom --format json --output $ART/8/sbom-scan.json $ART/7/syft.cdx.json" > $ART/8/sbom-scan-command.txt
+trivy sbom --format json --output $ART/8/sbom-scan.json $ART/7/syft.cdx.json
+jq '{artifact: .ArtifactType, os: .Metadata.OS.Family, results: (.Results | length)}' $ART/8/sbom-scan.json
 ```
 
 Trivy определяет ОС по компоненту `operating-system` из CycloneDX (`alpine 3.20.5`) и
@@ -370,6 +367,11 @@ Trivy определяет ОС по компоненту `operating-system` и�
 
 ```bash
 sudo install-kyverno
+```
+
+Вставляйте следующие команды после завершения установки (установщик сбрасывает буфер ввода):
+
+```bash
 kubectl -n kyverno get deployment kyverno-admission-controller
 kubectl -n kyverno wait --for=condition=Available deployment/kyverno-admission-controller --timeout=180s
 ```
@@ -383,24 +385,17 @@ Docker build context в задании 9c (`COPY . /usr/share/nginx/html` в Doc
 
 ```bash
 export KEYDIR=/home/ubuntu/.cks111-cosign
-install -d -m 0700 "$KEYDIR"
-mkdir -p "$ART/9a" "$ART/9b" "$ART/9c"
-
-(
-  cd "$KEYDIR"
-  cosign generate-key-pair
-)
-chmod 0600 "$KEYDIR/cosign.key"
-chmod 0644 "$KEYDIR/cosign.pub"
+mkdir -p $KEYDIR $ART/9a $ART/9b $ART/9c
+cd $KEYDIR && cosign generate-key-pair && cd $ROOT
 
 # cosign sign пишет ход работы в stderr, поэтому 2>&1 обязателен - иначе артефакт останется пустым.
-cosign sign --key "$KEYDIR/cosign.key" --yes "$HARDENED_IMAGE" 2>&1 | tee "$ART/9a/cosign-sign.txt"
-# Реально проверяем подпись тем же public key, а не только наличие текста sign-команды.
-cosign verify --key "$KEYDIR/cosign.pub" "$HARDENED_IMAGE" | tee "$ART/9a/cosign-verify.txt"
+cosign sign --key $KEYDIR/cosign.key --yes $HARDENED_IMAGE > $ART/9a/cosign-sign.txt 2>&1
+cosign verify --key $KEYDIR/cosign.pub $HARDENED_IMAGE > $ART/9a/cosign-verify.txt 2>&1
+cat $ART/9a/cosign-verify.txt | head -3
 ```
 
-Создайте `ImageValidatingPolicy`, ссылающуюся на публичный ключ, которым только что
-подписан `$HARDENED_IMAGE`. `matchImageReferences` ограничивает policy ровно repository
+Создайте `ImageValidatingPolicy`, ссылающуюся на публичный ключ той пары, закрытым ключом
+которой только что подписан `$HARDENED_IMAGE`. `matchImageReferences` ограничивает policy ровно repository
 вашего образа: для OCI references нужны отдельные разделители `:` (tag) и `@` (digest),
 иначе префикс `${HARDENED_REPO}*` захватит, например, другой repository с тем же началом
 имени. Это не даёт policy блокировать остальные Pod кластера.
@@ -422,7 +417,7 @@ spec:
     - apiGroups: [""]
       apiVersions: ["v1"]
       operations: ["CREATE", "UPDATE"]
-      resources: ["pods"]
+      resources: ["pods", "pods/ephemeralcontainers"]
   matchImageReferences:
   - glob: "${HARDENED_REPO}:*"
   - glob: "${HARDENED_REPO}@*"
@@ -457,14 +452,10 @@ ReplicaSet/Pod, и наблюдаемый `Running` может быть тот �
 POLICY_CREATED=$(kubectl get imagevalidatingpolicy require-signed-catalog-images \
   -o jsonpath='{.metadata.creationTimestamp}')
 
-# Сразу после создания policy первый вызов webhook Kyverno (проверка подписи в registry)
-# может упереться в таймаут 10 с (`failed calling webhook ... context deadline exceeded`);
-# при failurePolicy=Fail Pod тогда не создаётся. Повторите создание, пока webhook не прогреется.
-for attempt in $(seq 1 10); do
-  kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" \
-    --restart=Never --command -- sleep 3600 && break
-  sleep 10
-done
+# Сразу после создания policy первый вызов webhook Kyverno (проверка подписи в registry) может
+# упереться в таймаут 10 с (`failed calling webhook ... context deadline exceeded`): при
+# failurePolicy=Fail Pod тогда не создаётся. Просто повторите команду через несколько секунд.
+kubectl run signed-admission-check -n cks-111 --image=$HARDENED_IMAGE --restart=Never --command -- sleep 3600
 kubectl wait --for=condition=Ready pod/signed-admission-check -n cks-111 --timeout=60s
 
 kubectl get pod signed-admission-check -n cks-111 -o json \
@@ -475,7 +466,8 @@ kubectl get pod signed-admission-check -n cks-111 -o json \
       image: .spec.containers[0].image,
       phase: .status.phase,
       ready: ([.status.conditions[]? | select(.type == "Ready") | .status] | any(. == "True"))
-    }' | tee "$ART/9b/signed-admission-check.json"
+    }' > "$ART/9b/signed-admission-check.json"
+cat "$ART/9b/signed-admission-check.json"
 ```
 
 Критерий (`creationTimestamp` имеет точность 1 с, поэтому сравнение нестрогое): `createdAfterPolicy == true` и `ready == true`. Это - и только это - доказывает,
@@ -506,10 +498,10 @@ export HARDENED_DIGEST="${HARDENED_IMAGE#*@}"
 
 # Обязательная проверка: unsigned candidate должен быть физически другим artifact,
 # а не тем же digest, что уже подписанный HARDENED_IMAGE.
-[[ "$UNSIGNED_DIGEST" != "$HARDENED_DIGEST" ]] || { echo "UNSIGNED_DIGEST совпал с HARDENED_DIGEST - соберите с другим build-arg/меткой"; exit 1; }
+[ "$UNSIGNED_DIGEST" != "$HARDENED_DIGEST" ] && echo "digests differ: OK"
 printf 'hardened_digest=%s\nunsigned_digest=%s\nunsigned_image=%s\ndistinct=true\n' \
-  "$HARDENED_DIGEST" "$UNSIGNED_DIGEST" "$UNSIGNED_IMAGE" \
-  | tee "$ART/9c/digest-comparison.txt"
+  "$HARDENED_DIGEST" "$UNSIGNED_DIGEST" "$UNSIGNED_IMAGE" > "$ART/9c/digest-comparison.txt"
+cat "$ART/9c/digest-comparison.txt"
 ```
 
 `$ROOT/Dockerfile` из задания 3 должен принимать этот build-arg (например,
@@ -526,26 +518,25 @@ printf 'hardened_digest=%s\nunsigned_digest=%s\nunsigned_image=%s\ndistinct=true
 
 ```bash
 curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
-  "http://$REGISTRY/v2/catalog/manifests/$UNSIGNED_DIGEST" | tee "$ART/9c/unsigned-exists.txt"
-grep -qi "docker-content-digest: $UNSIGNED_DIGEST" "$ART/9c/unsigned-exists.txt"
+  "http://$REGISTRY/v2/catalog/manifests/$UNSIGNED_DIGEST" > "$ART/9c/unsigned-exists.txt"
+cat "$ART/9c/unsigned-exists.txt"        # HTTP/1.1 200 OK и docker-content-digest: $UNSIGNED_DIGEST
 ```
 
 Явно доказываем отсутствие валидной подписи этим же ключом - **до** попытки создания
 Pod, чтобы denial было предсказуемо специфичным для signature, а не для чего-то ещё:
 
 ```bash
-cosign verify --key "$KEYDIR/cosign.pub" "$UNSIGNED_IMAGE" > "$ART/9c/unsigned-not-signed.txt" 2>&1 || true
-grep -Eiq 'error|no matching signatures' "$ART/9c/unsigned-not-signed.txt"
+cosign verify --key "$KEYDIR/cosign.pub" "$UNSIGNED_IMAGE" > "$ART/9c/unsigned-not-signed.txt" 2>&1
+cat "$ART/9c/unsigned-not-signed.txt"     # error: no matching signatures
 ```
 
 Только теперь пробуем создать Pod и подтверждаем, что denial ссылается именно на policy/
 signature, а не на generic admission-ошибку:
 
 ```bash
-kubectl run catalog-unsigned-probe -n cks-111 --image="$UNSIGNED_IMAGE" --restart=Never \
-  2>&1 | tee "$ART/9c/admission-deny.txt" || true
-grep -F 'catalog image must have a valid release signature' "$ART/9c/admission-deny.txt"
-kubectl get pod catalog-unsigned-probe -n cks-111 2>&1 | grep -q 'not found'
+kubectl run catalog-unsigned-probe -n cks-111 --image="$UNSIGNED_IMAGE" --restart=Never > "$ART/9c/admission-deny.txt" 2>&1
+cat "$ART/9c/admission-deny.txt"        # ... catalog image must have a valid release signature
+kubectl get pod catalog-unsigned-probe -n cks-111       # NotFound: Pod не создан
 ```
 
 Разница с наивной проверкой: если бы вместо этого мы взяли digest из другого repository

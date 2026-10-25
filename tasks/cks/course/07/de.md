@@ -53,7 +53,7 @@ Die Checks sind nach Rollen und Komponenten gruppiert. Namen der Profile und Num
 
 ## 07.2. kube-bench ausführen und den Bericht lesen
 
-Wenden Sie die folgenden Befehle erst an, nachdem Sie bestätigt haben, dass die installierte `kube-bench`-Version ein unterstütztes benchmark mapping für Ihren Cluster enthält: Im Stand vom 2026-09-08 fehlt Kubernetes `1.36` im generic mapping (siehe §07.1).
+Wenden Sie die folgenden Befehle erst an, nachdem Sie bestätigt haben, dass die installierte `kube-bench`-Version ein unterstütztes benchmark mapping für Ihren Cluster enthält: Mit Stand vom 2026-09-08 fehlt Kubernetes `1.36` im generic mapping (siehe §07.1).
 
 Führen Sie `kube-bench` auf der Node aus, deren Dateien es lesen soll. Auf einer Control-Plane-Node werden in der Regel die Abschnitte `master` und `etcd` benötigt, auf einer Worker-Node `node`. In einem Trainingscluster oder bei SSH-Zugriff auf die Node ist die transparenteste Variante der lokale Aufruf:
 
@@ -104,7 +104,7 @@ below parameter.
 --profiling=false
 ```
 
-Die Remediation nennt die genaue Datei und das genaue Flag. Erstellen Sie vor der Änderung eine Sicherungskopie **außerhalb** von `/etc/kubernetes/manifests/`: kubelet liest alle Dateien dieses Verzeichnisses, deren Name nicht mit einem Punkt beginnt, unabhängig von der Erweiterung, und kann versuchen, aus einer versehentlich daneben abgelegten Kopie einen static Pod zu erstellen - bei übereinstimmendem Pod-Namen ist das Verhalten nicht definiert, und die veraltete Spezifikation aus dem Backup kann still die aktuelle Manifest-Datei überstimmen.
+Die Remediation nennt die genaue Datei und das genaue Flag. Erstellen Sie vor der Änderung eine Sicherungskopie **außerhalb** von `/etc/kubernetes/manifests/`: kubelet liest alle Dateien dieses Verzeichnisses, deren Name nicht mit einem Punkt beginnt, unabhängig von der Erweiterung, und kann versuchen, aus einer versehentlich daneben abgelegten Kopie einen static Pod zu erstellen - bei übereinstimmendem Pod-Namen ist das Verhalten nicht definiert, und die veraltete Spezifikation aus dem Backup kann sich stillschweigend gegen die aktuelle Manifest-Datei durchsetzen.
 
 ```bash
 sudo install -d -m 0700 /etc/kubernetes/backup
@@ -294,10 +294,10 @@ welchem Benutzer der Prozess tatsächlich läuft.
 Diese Anforderung muss von der Runtime Identity der konkreten Installation getrennt werden.
 In einer gewöhnlichen kubeadm Control Plane laufen Static Pods standardmäßig als `root`;
 mit `RootlessControlPlane` verwendet kubeadm eine eigene Non-root Identity (für etcd:
-`kubeadm-etcd`). Prüfen Sie daher vor dem Ändern des Ownership das tatsächliche Data
+`kubeadm-etcd`). Prüfen Sie daher vor dem Ändern des Ownerships das tatsächliche Data
 Directory, die Anwendbarkeit des gewählten CIS Profile auf Ihre Installation und das
-Vorhandensein des benötigten Account-/Group-Mapping `etcd`/`etcd` auf dem Host - ersetzen
-Sie die Literal-Anforderung des Benchmark nicht durch den Benutzer des Prozesses.
+Vorhandensein des benötigten Account-/Group-Mappings `etcd`/`etcd` auf dem Host - ersetzen
+Sie die Literal-Anforderung des Benchmarks nicht durch den Benutzer des Prozesses.
 
 Wenn die Umgebung genau diesen Check erfüllen soll und das Mapping `etcd:etcd` für den Host
 gültig ist, wenden Sie die minimale Remediation auf das Verzeichnis selbst an und prüfen
@@ -320,7 +320,7 @@ sudo kube-bench run --targets master --check 1.1.12
 ```
 
 Die Zugriffsrechte sind ein separater Check `1.1.11` („permissions 700 oder restriktiver“);
-wird auch dieser korrigiert, wenden und prüfen Sie ihn getrennt:
+wird auch dieser korrigiert, wenden Sie die Korrektur an und prüfen Sie ihn getrennt erneut:
 
 ```bash
 sudo chmod 700 "$DATA_DIR"
@@ -332,8 +332,8 @@ tatsächlichen Data Directory und der Profil-Anwendbarkeit ausgeführt“ gilt a
 benachbarte CIS-Befunde zu etcd - Rechte und Eigentümer der Pod-spec-Datei
 (`/etc/kubernetes/manifests/etcd.yaml`) und TLS-Keys
 (`/etc/kubernetes/pki/etcd/*.key`). Öffnen Sie `2379`/`2380` nicht nach außen und
-übertragen Sie das Beispiel nicht unverändert auf einen Managed Cluster, in dem Ihnen Data
-Directory und etcd-Prozess nicht gehören.
+übertragen Sie das Beispiel nicht unverändert auf einen Managed Cluster, in dem Ihnen das Data
+Directory und der etcd-Prozess nicht gehören.
 
 
 ## 07.7. Wiederholungslauf, Diagnose und Nachweis der Behebung
@@ -400,9 +400,9 @@ Typische Fehler und Diagnose:
 | Symptom | Wahrscheinliche Ursache | Was prüfen |
 |---|---|---|
 | API ist nach der Änderung nicht erreichbar | YAML-Fehler oder nicht unterstütztes Flag des Static Pod | `journalctl -u kubelet`, `crictl ps -a`, Sicherungskopie des Manifests |
-| kubelet startet nach `protectKernelDefaults` nicht | Das Sysctl der node entspricht nicht der erforderlichen Baseline | `journalctl -u kubelet`, Sysctl-Quelle und Betriebssystem-Policy |
+| kubelet startet nach `protectKernelDefaults` nicht | Das Sysctl der Node entspricht nicht der erforderlichen Baseline | `journalctl -u kubelet`, Sysctl-Quelle und Betriebssystem-Policy |
 | `kube-bench` zeigt weiterhin `FAIL` | Eine inaktive Datei wurde geändert oder ein widersprüchliches Flag gesetzt | `systemctl cat kubelet`, `ps`, `crictl inspect` |
-| etcd startet nach Änderung der Rechte nicht | Der Prozessbenutzer hat Zugriff auf Data Directory oder Key verloren | `stat`, Prozesseigentümer, etcd-Logs |
+| etcd startet nach Änderung der Rechte nicht | Der Prozessbenutzer hat Zugriff auf das Data Directory oder den Key verloren | `stat`, Prozesseigentümer, etcd-Logs |
 | Prüfung in Managed Kubernetes besteht nicht | Die Control Plane gehört nicht dem Benutzer und ein Teil der Empfehlungen ist nicht anwendbar | Provider-Dokumentation, customer- und provider-owned Controls trennen |
 
 > 🏭 Versioned CIS Baseline, regelmäßige Drift-Prüfung, Eigentümer von Ausnahmen und Evidence nach dem Rollout.
@@ -431,7 +431,7 @@ Typische Fehler und Diagnose:
 
 - **CIS Kubernetes Benchmark** - CIS-Empfehlungen zur sicheren Kubernetes-Konfiguration.
 - **kube-bench** - Werkzeug, das die Konfiguration anhand von CIS-Benchmark-Profilen prüft.
-- **static Pod** - ein Pod, der durch ein lokales Manifest einer node beschrieben und von
+- **static Pod** - ein Pod, der durch ein lokales Manifest einer Node beschrieben und von
   kubelet ohne Steuerung über die API gestartet wird.
 - **profiling** - Endpoints zur Leistungsdiagnose eines Prozesses; sie werden über die aktive
   Konfigurationsquelle der Komponente deaktiviert. Für `kube-scheduler` mit `--config` ist
@@ -471,7 +471,7 @@ Typische Fehler und Diagnose:
 ## 07.11. Wie dies in Prüfung und realer Arbeit hilft
 
 **In der Prüfung.** Die Aufgabe nennt gewöhnlich einen oder mehrere `FAIL` aus `kube-bench`
-und gibt Zugang zur node. Finden Sie schnell, ob die Komponente ein Static Pod, ein
+und gibt Zugang zur Node. Finden Sie schnell, ob die Komponente ein Static Pod, ein
 kubelet-Service oder etcd ist, erstellen Sie eine Sicherung, korrigieren Sie die aktive
 Datei, warten Sie auf den Neustart und weisen Sie das Ergebnis nach. Merken Sie sich
 insbesondere die häufigen Punkte: Profiling bei drei Komponenten,
@@ -492,7 +492,7 @@ machen Cluster-Upgrades vorhersehbar.
 `WARN` gewöhnlich sagt, dass sich der Zustand nicht eindeutig bestimmen lässt oder eine
 manuelle Entscheidung nötig ist. Lesen Sie bei `WARN` den Remediation-Text, bestätigen Sie
 die Anwendbarkeit auf Managed Control Plane, CNI oder Architektur und dokumentieren Sie dann
-die Ausnahme oder beheben sie, statt alle Punkte mechanisch zu ändern.
+die Ausnahme oder beheben Sie den Befund, statt alle Punkte mechanisch zu ändern.
 </details>
 
 <details>
@@ -545,15 +545,15 @@ Ein Private Key ist geheimes Material und benötigt daher den maximal eingeschr�
 eine typische Baseline ist der Modus `0600`. Der Eigentümer ist nicht universell: In einer
 gewöhnlichen root-run kubeadm-Installation ist dies oft `root:root`, bei einer Non-root
 Control Plane muss der Key der Service Identity gehören, die ihn tatsächlich benötigt - ein
-mechanisches Ändern des Eigentümers zu `root:root` ohne Prüfung der Runtime Identity kann
+mechanisches Ändern des Eigentümers auf `root:root` ohne Prüfung der Runtime Identity kann
 einem solchen Prozess den Zugriff auf seinen eigenen Key entziehen.
 
 Wird ein konkreter CIS Control geprüft, gleichen Sie dessen Literal-Anforderung getrennt ab:
 Beispielsweise erwartet der Check `1.1.19` in `cis-1.12` für Kubernetes PKI `root:root`;
-dies ist eine Anforderung des jeweiligen Benchmark und keine universelle Regel für jedes
+dies ist eine Anforderung des jeweiligen Benchmarks und keine universelle Regel für jedes
 Runtime-Modell.
 
-Ein Zertifikat enthält den öffentlichen Teil einer TLS-Identity, deshalb ist Modus `0644`
+Ein Zertifikat enthält den öffentlichen Teil einer TLS-Identity, deshalb ist der Modus `0644`
 oft zulässig; Ownership und tatsächliche Pfade werden dennoch mit Deployment und gewähltem
 Benchmark abgeglichen.
 </details>

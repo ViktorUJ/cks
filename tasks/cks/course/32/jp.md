@@ -57,7 +57,7 @@ flowchart TB
 | **どの identity が示されているか？** | `.user.username`、`.user.groups`、`.user.uid`; impersonation の場合は `.impersonatedUser` |
 | **Constrained impersonation か？** | `.authenticationMetadata.impersonationConstraint`。constrained impersonation が使われたときだけ存在し、authentication の方法や ServiceAccount token 全般を示すものではない |
 | **どこから、何を使って？** | `.sourceIPs`、`.userAgent` - クライアント/proxy が報告する値であり、それ単独で送信元の証拠にはならない |
-| **何をしようとしたか？** | `.verb`、`.requestURI`、`.objectRef`（group/resource/namespace/name); authn/authz/admission plugin による audit annotation `.annotations` |
+| **何をしようとしたか？** | `.verb`、`.requestURI`、`.objectRef`（group/resource/namespace/name）; authn/authz/admission plugin による audit annotation `.annotations` |
 | **いつ、どのフェーズで？** | `.requestReceivedTimestamp`、`.stageTimestamp`、`.stage` |
 | **成功したか？** | `.responseStatus.code`、`.responseStatus.reason` |
 | **複数の記録をどう結びつけるか？** | `.auditID` - 同一 request の各 stage に共通する識別子 |
@@ -374,8 +374,7 @@ sudo ls -l /var/log/kubernetes/audit/audit.log
 ```
 
 API server が戻らない場合は、すぐに `journalctl -u kubelet`、`crictl ps -a`/`crictl logs` で
-exited した container、そして manifest の YAML を確認してください。必要なら保存した `.bak`
-ファイルを manifest directory の**外**に戻して復元してください。
+exited した container、そして manifest の YAML を確認してください。必要なら`/root/k8s-manifest-backup` に保存した timestamp 付き `kube-apiserver.yaml` backup ファイルを manifest directory の**外**に戻して復元してください。
 `/etc/kubernetes/manifests/` 内の backup は、kubelet によって別の static Pod manifest として
 認識される可能性があります。
 
@@ -943,10 +942,10 @@ CKS lab 112 は Falco、audit、immutability を統合します。お使いの�
 これは 6 つの domain のうち最後の 1 つです。ヒントなしで 15〜20 分かけて、コース全体が
 1 つのつながった全体像を成しており、6 つの孤立したブロックではないことを確認してください。
 
-1. Falco を起動する（または既存の alert を read する）、そして 1 つの alert を output の
+1. Falco を起動し（または既存の alert を read し）、1 つの alert を output の
    フィールドを通して具体的な Kubernetes workload に結びつけてください（第29章）。
 2. execution → persistence → exfiltration の signal の連鎖を説明し、その連鎖の中でどの
-   signal を最初に気づくかを示してください（第30章）。
+   signal に最初に気づくかを示してください（第30章）。
 3. テスト用の Pod に `readOnlyRootFilesystem: true` を適用し、それがどの具体的な
    post-exploitation テクニックを制限するかを説明してください（第31章）。
 4. **混合課題。** API アクセスの制限（第12章、Cluster Hardening domain）と audit log

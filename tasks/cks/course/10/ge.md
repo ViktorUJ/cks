@@ -34,14 +34,14 @@ authentication/authorization-ის შემდეგ მხოლოდ create
 layer-ს გვერდს უვლიან. პირობითი **API-ავტორიზაციისთვის** საჭიროა გარე/Webhook
 authorizer ან სხვა authorization/policy layer; source IP დამატებით იზღუდება ქსელის
 დონეზე - firewall-ით, load balancer-ით ან NetworkPolicy-ით, სადაც ეს გამოსადეგია.
-Admission policy ვარგისია მხოლოდ იმ მოთხოვნებისთვის, რომლებსაც ის ნამდვილად წყვეტს,
+Admission policy ვარგისია მხოლოდ იმ მოთხოვნებისთვის, რომლებზეც ის ნამდვილად ვრცელდება,
 და არა როგორც RBAC-პირობების შემცვლელი.
 
-შეტევის სცენარი ტიპურია: დეველოპერს ან ServiceAccount-ს „დროებით" მისცეს
+შეტევის სცენარი ტიპურია: დეველოპერს ან ServiceAccount-ს „დროებით“ მისცეს
 `cluster-admin`, ან controller-მა მიიღო `verbs: ["*"]`. მისი token-ის კომპრომეტაციის
 შემდეგ შემტევს შეუძლია წაიკითხოს Secret credentials-ით, გაუშვას `pods/exec`
 აპლიკაციაში, შექმნას workload უფრო პრივილეგირებული ServiceAccount-ის სახელით ან
-თავად მისცეს თავს ახალი role. namespace-ის თავდაპირველი კომპრომეტაცია კლასტერის
+თავად მისცეს თავს ახალი role. ერთი namespace-ის თავდაპირველი კომპრომეტაცია კლასტერის
 კომპრომეტაციად იქცევა.
 
 ```mermaid
@@ -69,13 +69,13 @@ API-ოპერაციებია საჭირო, რომელ resour
 მხოლოდ ერთ namespace-ში. `ClusterRoleBinding` აფართოებს scope-ს მთელ კლასტერზე და
 საჭიროებს ცალკე დასაბუთებას.
 
-> 🎯 შეამოწმეთ კონკრეტული identity, verb, resource და scope წყვილი `can-i`-ით: საჭირო
+> 🎯 შეამოწმეთ კონკრეტული identity, verb, resource და scope `can-i`-ის წყვილით: საჭირო
 > მოქმედება - `yes`, საშიში მეზობელი - `no`.
 
 ## 10.2. ფაქტობრივი უფლებების აუდიტი: `kubectl auth can-i`
 
 YAML აჩვენებს განზრახვას, მაგრამ არა საბოლოო ავტორიზაციას: subject-მა წვდომა
-შეიძლება მიიღოს რამდენიმე binding-იდან, embedded role-იდან, group-იდან ან
+შეიძლება მიიღოს რამდენიმე binding-იდან, built-in role-იდან, group-იდან ან
 აგრეგირებული `ClusterRole`-იდან. შეამოწმეთ API server-ის პასუხი ბრძანებით
 `kubectl auth can-i`.
 
@@ -142,8 +142,8 @@ namespace-ში და არ არის cluster-wide inventory. კრიტ
 
 `--list` მოსახერხებელია review-სთვის, მაგრამ არ ცვლის კრიტიკული ნებართვების
 შემოწმებას: გამოტანა შეიძლება გრძელი იყოს, ხოლო wildcard კონკრეტულ რისკს ფარავს.
-acceptance-ტესტში ყოველთვის შეამოწმეთ წყვილი „საჭირო მოქმედება = `yes`" და
-„საშიში მეზობელი მოქმედება = `no`". cluster-scoped resource-ისთვის ნუ მიუთითებთ
+acceptance-ტესტში ყოველთვის შეამოწმეთ წყვილი „საჭირო მოქმედება = `yes`“ და
+„საშიში მეზობელი მოქმედება = `no`“. cluster-scoped resource-ისთვის ნუ მიუთითებთ
 namespace-ს:
 
 ```bash
@@ -267,7 +267,7 @@ impersonator. ნუ გააფართოებთ constrained role-ს მ�
 read-only სცენარში.
 
 inventory-სთვის ჯერ მოძებნეთ, საიდან შეიძლებოდა მოსულიყო შესაძლებლობა, შემდეგ
-დაათვალიერეთ წესები და subject-ები. embedded role-ები ნუ დაარედაქტირებთ, სანამ არ
+დაათვალიერეთ წესები და subject-ები. built-in role-ები ნუ დაარედაქტირებთ, სანამ არ
 გაიგებთ, ვინ იყენებს მათ.
 
 ```bash
@@ -294,13 +294,13 @@ kubectl get clusterrole "$ROLE_NAME" -o yaml
 | `create`/`update`/`patch` RoleBinding-სა და ClusterRoleBinding-ზე | ხელმისაწვდომ role-თან ერთად შეიძლება გადასცეს უფლებები; ClusterRoleBinding ამას მთელ კლასტერზე აკეთებს. | აუკრძალეთ აპლიკაციას; გამოაცალკევეთ წვდომის გაცემა workload-ის დეველოპმენტისგან. |
 | `get`/`list`/`watch` `secrets`-ზე | Secret ხშირად შეიცავს password-ს, registry credential-ს, key-ს ან bearer token-ს; `list`/`watch` ავლენს ბევრი Secret-ის მნიშვნელობას. | `get`-ისთვის მიუთითეთ კონკრეტული Secret `resourceNames`-ით, ან საერთოდ ნუ მისცემთ აპლიკაციას API-წვდომას. |
 | `create` `serviceaccounts/token`-ზე | გასცემს არჩეული ServiceAccount-ის token-ს და შეიძლება გახდეს მისი უფლებებით სარგებლობის გზა. | დაუშვით მხოლოდ სანდო ავტომატიზაციისთვის, კონკრეტული ServiceAccount-ებისთვის. |
-| `create` `pods/exec`-ზე | აძლევს ინტერაქტიულ command-ების შესრულების შესაძლებლობას უკვე მომუშავე Pod-ში და წვდომას მის ქსელზე, ფაილურ სისტემასა და mount-ილ Secret-ზე. | ნუ ჩართავთ ჩვეულებრივ role-ებში; გამოიყენეთ ხანმოკლე break-glass წვდომა და აუდიტი. |
+| `create` `pods/exec`-ზე | აძლევს command-ების ინტერაქტიული შესრულების შესაძლებლობას უკვე მომუშავე Pod-ში და წვდომას მის ქსელზე, ფაილურ სისტემასა და mount-ილ Secret-ზე. | ნუ ჩართავთ ჩვეულებრივ role-ებში; გამოიყენეთ ხანმოკლე break-glass წვდომა და აუდიტი. |
 | `create` `pods/portforward`-ზე | აყალიბებს ტუნელს Pod-ის port-ებამდე, გვერდს უვლის ჩვეულებრივ ქსელურ ექსპოზიციას. | გასცით წერტილოვნად დიაგნოსტიკისთვის და გააუქმეთ ინციდენტის შემდეგ. |
 | `create` workload-ზე (`pods`, `deployments`, `jobs` და ა. შ.) | Pod/workload-ის შექმნა namespace-ში თავისთავად აძლევს ძლიერ ირიბ წვდომას: შეიძლება ავირჩიოთ ამ namespace-ის ნებისმიერი ServiceAccount და Pod spec-იდან მივუთითოთ Secret, ConfigMap და ხელმისაწვდომი storage, თუნდაც საწყისი identity-ისთვის ცალკე `get secrets`-ის გარეშე. ეს საშუალებას იძლევა მოხდეს სხვა workload-ის მონაცემების ან API-უფლებების მიღება. თუ policy უშვებს privileged/host-level Pod-ს, შედეგები node-ზეც შეიძლება გავრცელდეს. | ნუ გასცემთ არასანდო tenant-identity-ს საჭიროების გარეშე; workload-ის შექმნა ჩათვალეთ პრივილეგირებულ უფლებად, შემოფარგლეთ Pod Security, ServiceAccount-, Secret/storage-დიზაინი და admission policy. |
 | `nodes` | node-ობიექტებზე წვდომა ავლენს ინფრასტრუქტურის შესახებ ინფორმაციას; node-ის შეცვლა cluster-wide ოპერაციაა. | გამორიცხეთ tenant-role-ებიდან; გასცით ცალკე ოპერაციულ identity-ებზე. |
 | `get` `nodes/proxy`-ზე | უშვებს proxy-მოთხოვნებს kubelet-თან. ეს არ არის read-only წვდომა: kubelet proxy-ოპერაციებმა შეიძლება გვერდი აუარონ admission-ს და API server-ის ჩვეულებრივ audit-ს. | ნუ გასცემთ workload-სა და tenant-role-ებზე; მიაწოდეთ მხოლოდ მკაცრად კონტროლირებად ოპერაციულ identity-ს. |
 
-Subresource იწერება ხაზგასმულით: `resources: ["pods/exec"]`. `exec`-ისა და
+Subresource იწერება დახრილი ხაზით: `resources: ["pods/exec"]`. `exec`-ისა და
 `portforward`-ისთვის ჩვეულებრივ საჭიროა სწორედ `create`, და არა `get`. ნუ
 ჩაანაცვლებთ ზუსტ წესს `resources: ["pods/exec"]` წესით ყველა `pods`-ზე: ეს
 სხვადასხვა API-გზაა და სხვადასხვა რისკი. პირიქით, `get` `nodes/proxy`-ზე - ცალკე
@@ -633,7 +633,7 @@ owner-ის მიხედვით.
 
   authorizer chain-ის შემადგენლობა და მიმდევრობა security-review-ის ნაწილი
   უნდა იყოს.
-- **პერიოდული აუდიტი.** გადაწერეთ inventory `ClusterRoleBinding`-ისთვის,
+- **პერიოდული აუდიტი.** აღრიცხეთ inventory `ClusterRoleBinding`-ისთვის,
   subject-ებისთვის `system:serviceaccount`, built-in role-ებისა და
   aggregator-ებისთვის; შეამოწმეთ კრიტიკული კონტრაქტები `kubectl auth
   can-i`-ის მეშვეობით.
@@ -716,7 +716,7 @@ RBAC-ს ამოწმებად security-საზღვრად აქც
 >
 > **Retest:** ნებადართული API call მუშაობს, ხოლო აკრძალული აბრუნებს `403`-ს.
 >
-> **ATT&CK:** [T1528 — Steal Application Access
+> **ATT&CK:** [T1528 - Steal Application Access
 > Token](https://attack.mitre.org/techniques/T1528/).
 
 ## 10.11. კითხვები თვითშემოწმებისთვის
@@ -803,7 +803,7 @@ Pod-ში მისი ქსელით, ფაილური სისტ�
 `get nodes/proxy` უშვებს proxy-მოთხოვნებს kubelet-თან, ხოლო ასეთმა
 ოპერაციებმა შეიძლება გვერდი აუარონ admission-ს და API server-ის
 ჩვეულებრივ audit-ს. ამიტომ ეს არ არის Node-ობიექტის უწყინარი წაკითხვა.
-უფლების გაცემა შეუძლებელია workload-ზე ან tenant-role-ებზე; ის
+უფლების გაცემა დაუშვებელია workload-ზე ან tenant-role-ებზე; ის
 დასაშვებია მხოლოდ მკაცრად კონტროლირებადი ოპერაციული identity-სთვის,
 სასურველია უფრო ვიწრო `nodes/metrics`, `nodes/stats` და სხვა
 fine-grained subresource-ებით.

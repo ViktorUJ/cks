@@ -82,7 +82,7 @@ kubectl -n kube-system get configmap cilium-config -o yaml
 
 ## 23.3. Cilium transparent encryption: Modell und Grenzen
 
-Cilium verschlüsselt Traffic im Datapath der Nodes. Wenn ein Pod auf `node-a` Daten an einen Pod auf `node-b` sendet, kapselt/verschlüsselt Cilium das ursprüngliche Paket ein, sendet ein Outer Packet zwischen den Node IP und Cilium auf `node-b` prüft den Peer, entschlüsselt und liefert das ursprüngliche Paket an den Ziel-Pod aus. Für Kubernetes Service, DNS und die Anwendung ist dies transparent: URL oder Port müssen nicht geändert und keine TLS-Bibliothek ergänzt werden.
+Cilium verschlüsselt Traffic im Datapath der Nodes. Wenn ein Pod auf `node-a` Daten an einen Pod auf `node-b` sendet, kapselt Cilium das ursprüngliche Paket ein und verschlüsselt es, sendet ein Outer Packet zwischen den Node-IPs, und Cilium auf `node-b` prüft den Peer, entschlüsselt und liefert das ursprüngliche Paket an den Ziel-Pod aus. Für Kubernetes Service, DNS und die Anwendung ist dies transparent: URL oder Port müssen nicht geändert und keine TLS-Bibliothek ergänzt werden.
 
 ```mermaid
 sequenceDiagram
@@ -98,9 +98,9 @@ sequenceDiagram
     CA-->>A: Response
 ```
 
-**Transparent** bedeutet nicht „überall und vor allem verschlüsselt“. An der Anwendungsschnittstelle oder innerhalb eines Namespace kann plaintext vor der Verschlüsselung/nach der Entschlüsselung sichtbar sein. Verschlüsselung macht auch eine unsichere Anwendung nicht sicher: Sie blockiert keine SQL injection, erteilt keine Benutzerautorisierung und beschränkt keinen kompromittierten Pod. Für diese Aufgaben werden Application Security, mTLS/Authorization, RBAC und NetworkPolicy benötigt.
+**Transparent** bedeutet nicht „überall und gegen alles verschlüsselt“. An der Anwendungsschnittstelle oder innerhalb eines Namespace kann plaintext vor der Verschlüsselung/nach der Entschlüsselung sichtbar sein. Verschlüsselung macht auch eine unsichere Anwendung nicht sicher: Sie blockiert keine SQL injection, erteilt keine Benutzerautorisierung und beschränkt keinen kompromittierten Pod. Für diese Aufgaben werden Application Security, mTLS/Authorization, RBAC und NetworkPolicy benötigt.
 
-Cilium unterstützt zwei verbreitete backend:
+Cilium unterstützt zwei verbreitete backends:
 
 | Eigenschaft | WireGuard | IPsec |
 |---|---|---|
@@ -111,7 +111,7 @@ Cilium unterstützt zwei verbreitete backend:
 | Betriebliche Auswahl | gewöhnlich einfache Wahl für unterstützte Linux-Umgebung | nötig, wenn es der bestehende IPsec-/Netzwerkstandard erfordert |
 | Mit tcpdump prüfen | UDP am WireGuard port, ohne HTTP payload | `esp`, ohne HTTP payload |
 
-In Cilium 1.20 ist auch der **Beta**-backend `ztunnel` encryption dokumentiert. Dies ist eine forward-looking Production-Erweiterung, nicht der Hauptweg für CKS; für das Prüfungsszenario reichen hier WireGuard oder IPsec.
+In Cilium 1.20 ist auch das **Beta**-backend `ztunnel` encryption dokumentiert. Dies ist eine forward-looking Production-Erweiterung, nicht der Hauptweg für CKS; für das Prüfungsszenario reichen hier WireGuard oder IPsec.
 
 Es wird **ein** backend ausgewählt. WireGuard und IPsec gleichzeitig als „doppelten Schutz“ zu aktivieren, ist keine normale Cilium-Konfiguration und erschwert nur die Fehlerbehebung. Prüfen Sie exakte Helm values und unterstützte Kombinationen anhand der Dokumentation der im Cluster installierten Version: Werte aus einem alten Artikel passen möglicherweise nicht zu einem neuen Cilium.
 
@@ -123,7 +123,7 @@ WireGuard verwendet ein private/public key pair pro Peer. Cilium verwaltet die S
 
 Dies ist keine Workload Identity: Zwei Pods auf demselben Node haben keine unterschiedlichen WireGuard Identities, und der Server erfährt den ServiceAccount des Clients nicht aus einem WireGuard key. Für ein solches gegenseitiges Vertrauen wird service mesh mTLS benötigt.
 
-Unten ist eine typische Helm-Konfiguration dargestellt. Führen Sie sie über Ihr version-pinned GitOps oder den festgehaltenen Helm release aus, nachdem Sie die values des konkreten Cilium release geprüft haben. `encryption.nodeEncryption=true` erweitert den Schutz auf Node-to-Node Traffic. Cilium schließt für WireGuard standardmäßig Nodes mit dem label `node-role.kubernetes.io/control-plane` aus der Node-to-Node encryption aus: Das verhindert ein Bootstrap-Problem beim Aktualisieren eines public key. Betrachten Sie den Control Plane nicht automatisch als von dieser Einstellung abgedeckt; aktivieren Sie sie erst nach dem Verständnis der Auswirkungen auf Control Plane und Host Traffic.
+Unten ist eine typische Helm-Konfiguration dargestellt. Führen Sie sie über Ihr version-pinned GitOps oder den festgehaltenen Helm release aus, nachdem Sie die values des konkreten Cilium release geprüft haben. `encryption.nodeEncryption=true` erweitert den Schutz auf Node-to-Node Traffic. Cilium schließt für WireGuard standardmäßig Nodes mit dem label `node-role.kubernetes.io/control-plane` aus der Node-to-Node encryption aus: Das verhindert ein Bootstrap-Problem beim Aktualisieren eines public key. Betrachten Sie die Control Plane nicht automatisch als von dieser Einstellung abgedeckt; aktivieren Sie sie erst nach dem Verständnis der Auswirkungen auf Control Plane und Host Traffic.
 
 ```bash
 # Beispiel: bereits genehmigte Version und values aus dem Repository einsetzen.
@@ -181,7 +181,7 @@ encryption:
       enabled: true
 ```
 
-`encryption.strictMode.egress` wird nur für IPv4 unterstützt, daher muss `cidr` der tatsächliche IPv4 Pod CIDR sein; der Modus hat außerdem Einschränkungen bei direct routing, Node CIDR und ausgewählten Interfaces. `encryption.strictMode.ingress` verwirft cluster-internen Pod Traffic, der nicht über den WireGuard tunnel eingetroffen ist; dies ist kein universeller strict mode für IPsec. Prüfen Sie vor der Aktivierung die Anforderungen des Cilium release an native/direct routing und device configuration, und bestätigen Sie dann durch einen negativen Test, dass ein plaintext Pod-to-Pod Packet zwischen Nodes nicht durchgeht. Aktivieren Sie strict mode nicht als Ersatz für die Prüfung von NetworkPolicy, Firewall und Verfügbarkeit des Control Plane.
+`encryption.strictMode.egress` wird nur für IPv4 unterstützt, daher muss `cidr` der tatsächliche IPv4 Pod CIDR sein; der Modus hat außerdem Einschränkungen bei direct routing, Node CIDR und ausgewählten Interfaces. `encryption.strictMode.ingress` verwirft cluster-internen Pod Traffic, der nicht über den WireGuard tunnel eingetroffen ist; dies ist kein universeller strict mode für IPsec. Prüfen Sie vor der Aktivierung die Anforderungen des Cilium release an native/direct routing und device configuration, und bestätigen Sie dann durch einen negativen Test, dass ein plaintext Pod-to-Pod Packet zwischen Nodes nicht durchgeht. Aktivieren Sie strict mode nicht als Ersatz für die Prüfung von NetworkPolicy, Firewall und Verfügbarkeit der Control Plane.
 
 > 🏭 Bei kompromittiertem Node: isolieren, evidence sichern, alten peer aus dem Vertrauen nehmen; private key gelangt nicht in Ticket, Git oder Chat.
 
@@ -199,11 +199,11 @@ Cilium automatisiert den Lifecycle von keys, doch das Security Design muss weite
 
 `kubectl get secret -A` und ein breites Recht, Secrets zu lesen, gewähren Zugriff nicht nur auf IPsec material, sondern auf viele andere Secrets. Beschränken Sie RBAC und auditieren Sie den Zugriff auf `kube-system`.
 
-> 🔬 IPsec ist ein alternativer Cilium-backend mit key rotation, ESP-Diagnose, kompatibler Cilium CLI und key-overlap window.
+> 🔬 IPsec ist ein alternatives Cilium-backend mit key rotation, ESP-Diagnose, kompatibler Cilium CLI und key-overlap window.
 
 ## 23.5. IPsec: wann es benötigt wird und wie key management nicht beschädigt wird
 
-IPsec in Cilium bietet ebenfalls transparentes Node-to-Node Encryption, verwendet jedoch IPsec ESP Security Associations. Es wird oft ausgewählt, wenn Unternehmensanforderungen oder vorhandene Netzwerkinfrastruktur IPsec verlangen. Ein Paket auf dem physical interface erscheint als ESP (IP protocol 50); Application HTTP darf darin nicht lesbar sein. Übertragen Sie nicht das allgemeine IKE/NAT-T-Modell mit UDP/4500 auf diesen Fall: Es ist kein Teil dieses Cilium-Mechanismus.
+IPsec in Cilium bietet ebenfalls transparente Node-to-Node Encryption, verwendet jedoch IPsec ESP Security Associations. Es wird oft ausgewählt, wenn Unternehmensanforderungen oder vorhandene Netzwerkinfrastruktur IPsec verlangen. Ein Paket auf dem physical interface erscheint als ESP (IP protocol 50); Application HTTP darf darin nicht lesbar sein. Übertragen Sie nicht das allgemeine IKE/NAT-T-Modell mit UDP/4500 auf diesen Fall: Es ist kein Teil dieses Cilium-Mechanismus.
 
 Ein typischer Wechsel für einen Cilium release mit IPsec-Unterstützung beginnt mit dem key Secret: Der agent muss `cilium-ipsec-keys` **vor** dem Aktivieren von `encryption.type=ipsec` erhalten. Führen Sie das Erstellen nur von einer administrativen Maschine aus, auf der eine unterstützte kompatible Cilium CLI installiert ist und kubeconfig vorhanden ist. Existiert das Secret bereits, überschreiben Sie es nicht versehentlich - prüfen Sie zuerst Owner und version-specific rotation procedure:
 
@@ -258,7 +258,7 @@ Hier endet die Einrichtung von Cilium transport encryption. Istio wird unmittelb
 
 > 🎯 Istio mTLS bindet ein certificate an Workload Identity; unterscheiden Sie `PeerAuthentication: STRICT` von `DestinationRule` mit `ISTIO_MUTUAL` und prüfen Sie proxy/injection.
 
-> 🔬 **Upstream Identity Primitive.** Kubernetes v1.37 stabilisierte Pod Certificates und ClusterTrustBundles. Sie bieten X.509 primitives auf Kubernetes-Ebene, machen eine Istio/SPIFFE Identity Plane jedoch nicht automatisch überflüssig: Signer, Trust Model und mesh enforcement sind getrennte Architekturentscheidungen. Siehe [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_DE.md).
+> 🔬 **Upstream Identity Primitive.** Kubernetes v1.37 stabilisierte Pod Certificates und ClusterTrustBundles. Sie bieten X.509 primitives auf Kubernetes-Ebene, machen eine Istio/SPIFFE Identity Plane jedoch nicht automatisch überflüssig: Signer, Trust Model und mesh enforcement sind getrennte Architekturentscheidungen. Siehe [Kubernetes v1.37 Security Delta (nur auf Russisch)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 23.6. Istio: sidecar, SPIFFE Workload Identity und `PeerAuthentication`
 
@@ -272,13 +272,14 @@ Istio löst einen anderen Teil der Aufgabe: Workload-Proxys erhalten Zertifikate
 | Frage | Cilium WireGuard/IPsec | Istio mTLS |
 |---|---|---|
 | Hauptvorteil | Transparentes Node-to-Node Encryption ohne Änderung der Anwendung oder des Service | Workload Identity, gegenseitige Authentifizierung und `STRICT` gegen plaintext Client |
-| Was nicht gelöst wird | gibt dem Server keine Identity des Client Workload; verschlüsselt Same-Node Flow nicht | verbirgt Outer L3/L4 metadata nicht vor underlay und deckt non-mesh Flow nicht ab; ersetzt NetworkPolicy nicht |
+| Was nicht gelöst wird | gibt dem Server keine Identity des Client Workload; verschlüsselt Same-Node Flow per Design nicht | verbirgt Outer L3/L4 metadata nicht vor underlay und deckt non-mesh Flow nicht ab; ersetzt NetworkPolicy nicht |
 | Preis/Einschränkung | kompatibles CNI/Kernel, Firewall und MTU erforderlich; Schlüssel gehören zu Nodes | Control Plane, Zertifikate und proxy/ambient Dataplane erforderlich; sidecar mode fügt Container und Overhead hinzu |
 | Was belegt werden muss | Cilium agent Status und Outer WireGuard/ESP auf physical NIC | Injection/Enrollment, Proxy-/Zertifikatstatus und mTLS/`STRICT` Tests |
 
 Dies ist keine obligatorische „doppelte Verschlüsselung“. Sind **beide** Workloads bereits im mesh, Trust wurde geprüft und `PeerAuthentication: STRICT` wird tatsächlich angewendet, verschlüsselt mTLS bereits Application Payload zwischen Proxys. Cilium Node Encryption muss nicht allein zum erneuten Verschlüsseln desselben Payload aktiviert werden.
 
 Cilium bietet einen eigenständigen Wert, wenn das Bedrohungsmodell Schutz des Node-to-Node Underlay erfordert: Inner Pod IP/port und andere L3/L4 metadata vor dem physischen Netzwerk zu verbergen, sensitiven Cross-Node Flow außerhalb des mesh abzudecken oder eine Policy-/Compliance-Anforderung an Verschlüsselung zwischen Nodes zu erfüllen. Beide Schichten sind nur nötig, wenn **beide** Ziele gelten: Workload Identity/mTLS **und** Schutz des Underlay oder Non-Mesh Traffic. Benötigt eine Anwendung keine Workload Identity oder mesh-kompatibles Verhalten, wird Istio nicht automatisch aktiviert - zunächst werden Bedrohungsmodell, Kompatibilität und Overhead bewertet.
+
 Istio sidecar (`istio-proxy`, Envoy) fängt inbound/outbound Workload Traffic ab. Istiod stellt ein Workload-Zertifikat auf Grundlage des Kubernetes ServiceAccount aus; Proxys stellen mTLS her und prüfen die Identity des Peer. Die Workload Identity hat die Form einer SPIFFE ID: `spiffe://<trust-domain>/ns/<namespace>/sa/<service-account>`. Die Anwendung lauscht gewöhnlich weiter auf einem normalen HTTP port, weil TLS im sidecar und nicht im App Container beendet wird.
 
 Im **Ambient Mode** fügt Istio nicht jedem Pod einen separaten sidecar hinzu: Stattdessen läuft auf jedem Node `ztunnel` (**Zero Trust Tunnel**) - ein spezieller Node-level proxy. Er übernimmt L3/L4-Aufgaben des mesh, einschließlich mTLS und Authentication, ohne dass die Anwendung selbst mit TLS arbeiten muss.
@@ -302,7 +303,7 @@ flowchart TB
 
 ### Injection aktivieren und sidecar prüfen
 
-Aktivieren Sie Injection für einen Lern-Namespace vor dem Erstellen des Pod. Verwenden Sie in Production das revision label der Istio-Installation, die vom Change Process kontrolliert wird; mischen Sie unterschiedliche revision nicht ohne Migrationsplan.
+Aktivieren Sie Injection für einen Lern-Namespace vor dem Erstellen des Pod. Verwenden Sie in Production das revision label der Istio-Installation, die vom Change Process kontrolliert wird; mischen Sie unterschiedliche revisions nicht ohne Migrationsplan.
 
 ```bash
 kubectl create namespace mesh-demo
@@ -315,7 +316,7 @@ kubectl -n mesh-demo get pod -l app=server \
   -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.containers[*].name}{"\n"}{end}'
 ```
 
-In der Containerliste muss `istio-proxy` neben `server` stehen. Das Fehlen eines sidecar ist kein kosmetischer Fehler: Ein plaintext Client wird nicht zu einem mTLS Client, und `STRICT` lehnt ihn erwartungsgemäß ab. Führen Sie für einen bereits vorhandenen Deployment nach dem Label einen controlled rollout durch:
+In der Containerliste muss `istio-proxy` neben `server` stehen. Das Fehlen eines sidecar ist kein kosmetischer Fehler: Ein plaintext Client wird nicht zu einem mTLS Client, und `STRICT` lehnt ihn erwartungsgemäß ab. Führen Sie für ein bereits vorhandenes Deployment nach dem Label einen controlled rollout durch:
 
 ```bash
 kubectl -n mesh-demo rollout restart deployment/server
@@ -368,7 +369,7 @@ mTLS prüfen -> STRICT enger Scope -> STRICT Namespace -> temporäre Ausnahme en
 
 ### `DestinationRule`: Client darf TLS nicht deaktivieren
 
-Istio auto mTLS kann TLS automatisch auswählen, doch ein explizites `DestinationRule` ist als überprüfbare clientseitige Absicht in einem Lernstand oder bei organisatorischer Forderung nach expliziter Konfiguration nützlich. `PeerAuthentication` schützt den Inbound Server, während `DestinationRule` TLS für Outbound Client Traffic festlegt - dies sind unterschiedliche Seiten der Verbindung.
+Istio auto mTLS kann TLS automatisch auswählen, doch ein explizites `DestinationRule` ist als überprüfbare clientseitige Absicht in einer Lernumgebung oder bei organisatorischer Forderung nach expliziter Konfiguration nützlich. `PeerAuthentication` schützt den Inbound Server, während `DestinationRule` TLS für Outbound Client Traffic festlegt - dies sind unterschiedliche Seiten der Verbindung.
 
 ```yaml
 apiVersion: networking.istio.io/v1
@@ -643,7 +644,7 @@ prüfen Sie, dass sein plaintext `curl` an den Service kein HTTP `200` zurückgi
 zulässiger identity muss weiterhin funktionieren. Verwenden Sie für engere Regeln die policy API des
 release, etwa `AuthorizationPolicy` zusammen mit `MeshTLSAuthentication`. Die Linkerd policy API und das
 Verhalten von unauthorized traffic haben sich zwischen Versionen geändert: Prüfen Sie vor dem Aufbau
-eines default-deny CRD und policy mode des installierten release. mTLS belegt identity und schützt den
+eines default-deny zunächst die CRD und den policy mode des installierten release. mTLS belegt identity und schützt den
 Kanal, bedeutet aber nicht zwangsläufig „jede identity darf jeden endpoint aufrufen“ - Autorisierung
 muss separat konfiguriert werden.
 
@@ -657,7 +658,7 @@ tcpdump auf `any` gleichzeitig ein inner plaintext packet auf einem virtuellen i
 encrypted packet auf der physical NIC sehen. Formulieren Sie für einen Nachweis zunächst, *wo* jede
 Schicht sichtbar sein muss.
 
-| Capture-Punkt | Bei alleinigem Cilium encryption | Bei Cilium + Istio/Linkerd |
+| Capture-Punkt | Bei alleiniger Cilium encryption | Bei Cilium + Istio/Linkerd |
 |---|---|---|
 | app container / loopback zum proxy | häufig plaintext HTTP | app↔local proxy kann plaintext sein |
 | veth/CNI vor node encryption | der ursprüngliche inner flow kann lesbar sein | mTLS ciphertext zwischen mesh proxys |
@@ -763,7 +764,7 @@ Production-traffic.
   traffic. Beschränken Sie den BPF filter auf das node-IP-Paar und wiederholen Sie die Anfrage in einem
   kurzen Zeitfenster.
 - **`tcpdump` sieht TLS statt HTTP.** Das ist für den mesh auf dem inner path erwartbar, belegt aber
-  nicht Cilium. Auf der physical NIC wird bei aktivierten beiden Schichten outer WireGuard/IPsec
+  nicht Cilium. Auf der physical NIC wird bei beiden aktivierten Schichten outer WireGuard/IPsec
   erwartet.
 - **Eine große response hängt, eine kleine funktioniert.** Verdächtigen Sie MTU/MSS. Deaktivieren Sie
   encryption nicht als „Behebung“; messen Sie die path MTU und passen Sie CNI/underlay gemäß der
@@ -831,8 +832,8 @@ funktioniert.
    firewall-Änderung erfordern die Wiederholung von status, functional flow und capture. Das
    Vorhandensein von YAML in Git ersetzt kein runtime evidence.
 6. **Failure planen.** Ist die CA/identity control plane nicht erreichbar, laufen Zertifikate
-   irgendwann ab; erhält der Cilium agent kein key, degradiert der cross-node flow. Richten Sie alert
-   vor expiry/rollout outage ein und dokumentieren Sie rollback.
+   irgendwann ab; erhält der Cilium agent keinen key, degradiert der cross-node flow. Richten Sie einen alert
+   vor expiry/rollout outage ein und dokumentieren Sie den rollback.
 
 Eine gute layered policy für Production sieht so aus: NetworkPolicy erlaubt nur den benötigten service
 flow; mesh `STRICT` verlangt einen authentifizierten mTLS peer; Cilium verschlüsselt den cross-node
@@ -887,7 +888,7 @@ erweitert wird.
 
 ## 23.16. Nutzen auf der Prüfung und in der Praxis
 
-**Bei der CKS-Prüfung.** Können Sie CNI encryption von mTLS unterscheiden, den Cilium encryption status
+**Bei der CKS-Prüfung.** Sie sollten CNI encryption von mTLS unterscheiden, den Cilium encryption status
 finden und Ursachen für cross-node failure ermitteln, `PeerAuthentication`/`DestinationRule` lesen und
 belegen, dass ein plain client `STRICT` nicht passiert. Behaupten Sie nicht, dass NetworkPolicy Pakete
 verschlüsselt: Das ist eine typische Falle. Prüfen Sie zügig container list, Service endpoints, node
@@ -1020,7 +1021,7 @@ Vor dem Lab ist es hilfreich, die CKA-Grundlagen aufzufrischen: [Kapitel 30 CKA 
 
 Als Fortsetzung speziell für natives Cilium mTLS (ohne Istio-sidecar) - **Lab 115: Cilium
 Mutual Authentication mit SPIRE** (Advanced-/Production-Track, nicht Teil der formalen
-CKS-Core-Prüfungsanforderung): [tasks/cks/labs/115](../../labs/115/README_RU.MD).
+CKS-Core-Prüfungsanforderung): [tasks/cks/labs/115](../../labs/115/README_DE.MD).
 
 Verwenden Sie für den eigenständigen Test einen disposable cluster und separate namespaces. Prüfen Sie
 `STRICT` nicht durch Abschalten eines Production-sidecar oder ein packet capture mit sensitivem payload

@@ -280,7 +280,7 @@ spec:
     command: ["sh", "-c", "sleep 3600"]
 ```
 
-Esta es una interfaz legacy. Para manifest nuevos use `securityContext.appArmorProfile`;
+Esta es una interfaz legacy. Para manifests nuevos use `securityContext.appArmorProfile`;
 no cree un objeto a la vez con el campo nuevo y la anotación, especialmente con valores diferentes.
 Durante la migración, primero averigüe la versión de Kubernetes y el runtime, sustituya la annotation
 por el campo de API equivalente, aplíquelo en un nodo de prueba y compruebe `/proc/1/attr/current`.
@@ -393,7 +393,7 @@ es `REVIEW_REQUIRED`, no una prueba de ausencia de denial.
 **En el examen.** Determine rápidamente el nodo, compruebe `aa-status`, cargue o sustituya el
 profile requerido mediante `apparmor_parser`, páselo a `aa-enforce`/`aa-complain` según la
 condición y defina el Pod con el `appArmorProfile` actual. Tras aplicarlo, no mire solo
-YAML: `kubectl describe pod`, `/proc/1/attr/current` y la evidencia de audit de AppArmor consciente de la fuente
+YAML: `kubectl describe pod`, `/proc/1/attr/current` y la evidencia de audit de AppArmor que tiene en cuenta la fuente
 distinguen un error de scheduling/entrega de profile de un denial real. Busque el denial ante todo
 mediante `ausearch` con auditd activo o `/var/log/audit/audit.log`; use `journalctl -k` y `dmesg`
 como fallback del nodo concreto. Reconozca la annotation antigua, pero
@@ -460,7 +460,7 @@ cree un Pod nuevo; el proceso antiguo no demuestra la asignación de la policy c
 #### En `complain` la aplicación funciona, y en `enforce` recibe `Permission denied`
 
 Normalmente falta en la policy el `allow` necesario para una ruta u operación, por ejemplo un directorio de
-runtime, un certificate, un Unix-socket o un archivo que la aplicación lee solo después del
+runtime, un certificado, un Unix-socket o un archivo que la aplicación lee solo después del
 inicio. En `complain`, la ausencia de allow normalmente solo se registra; en `enforce`, se
 bloquea. Un `deny` explícito es distinto: bloquea también en `complain`, así que no lo elimine
 para comprobarlo.
@@ -527,7 +527,7 @@ objetivo; no considere el directorio de kubelet como un mecanismo de entrega de 
 >
 > **Attacker objective:** realizar una acción fuera de la aplicación: acceder a un path protegido o ejecutar un syscall prohibido.
 >
-> **Abuse path:** intentar salir de los límites del profile si está cargado, nombrado incorrectamente o se encuentra en `complain` en lugar de `enforce`.
+> **Abuse path:** intentar salir de los límites del profile si está cargado o nombrado incorrectamente, o se encuentra en `complain` en lugar de `enforce`.
 >
 > **Expected evidence:** AppArmor profile efectivo y un evento denial en una fuente de audit disponible:
 > `ausearch`/`audit.log` o `journalctl -k`/`dmesg` como fallback.
@@ -573,7 +573,7 @@ Se permiten `RuntimeDefault`, `Localhost` y `Unconfined`. `RuntimeDefault` sirve
 <summary>6. ¿Cómo se escribe la legacy AppArmor annotation para un contenedor llamado `app` y un profile
    `k8s-demo`?</summary>
 
-La clave debe terminar en el nombre exacto del contenedor, y para Localhost el valor recibe el prefijo legacy. En este caso, la entrada es: `container.apparmor.security.beta.kubernetes.io/app: localhost/k8s-demo`. Es una anotación beta para audit y migración; en manifest nuevos se usa `securityContext.appArmorProfile` y no se mezclan ambas interfaces.
+La clave debe terminar en el nombre exacto del contenedor, y para Localhost el valor recibe el prefijo legacy. En este caso, la entrada es: `container.apparmor.security.beta.kubernetes.io/app: localhost/k8s-demo`. Es una anotación beta para audit y migración; en los manifests nuevos se usa `securityContext.appArmorProfile` y no se mezclan ambas interfaces.
 </details>
 
 <details>

@@ -47,7 +47,7 @@ chmod 0644 /var/lib/cks-lab108-checker/baseline-admission-plugins.txt
 # Kyverno (задание 1: студент сам устанавливает через install-kyverno), Gatekeeper
 # предустановлен здесь bootstrap-ом: задание посвящено починке уже готовой (слегка
 # неполной) policy, а не установке admission engine с нуля - это уже покрыто заданием 1.
-GATEKEEPER_VERSION="v3.17.1"  # текущий stable release gatekeeper-library на дату лабы
+GATEKEEPER_VERSION="v3.23.1"
 kubectl apply -f "https://raw.githubusercontent.com/open-policy-agent/gatekeeper/${GATEKEEPER_VERSION}/deploy/gatekeeper.yaml"
 kubectl -n gatekeeper-system wait --for=condition=Available --timeout=180s deployment/gatekeeper-controller-manager
 kubectl -n gatekeeper-system wait --for=condition=Available --timeout=180s deployment/gatekeeper-audit
@@ -125,5 +125,50 @@ spec:
       kinds: ["Pod"]
     namespaces: ["gatekeeper-108"]
 EOF_CONSTRAINT
+
+# До выдачи лабы проверяем *эффективное* baseline-поведение Gatekeeper:
+# два исходных registry denied именно исходным Constraint, missing registry allowed,
+# trusted registry allowed. Это защищает от успешного apply CRD при неготовом webhook.
+gatekeeper_preflight_pod() {
+  local pod_name="$1" image_name="$2" expected="$3"
+  local output status
+  if output=$(kubectl apply --dry-run=server -f - 2>&1 <<EOF_PREFLIGHT
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ${pod_name}
+  namespace: gatekeeper-108
+spec:
+  containers:
+  - name: app
+    image: ${image_name}
+EOF_PREFLIGHT
+  ); then
+    status=0
+  else
+    status=$?
+  fi
+  if [[ "$expected" == "allow" ]]; then
+    [[ "$status" -eq 0 ]]
+  else
+    [[ "$status" -ne 0 && "$output" == *'validation.gatekeeper.sh'* && "$output" == *'[deny-bad-registries]'* ]]
+  fi
+}
+
+preflight_ok=false
+for attempt in $(seq 1 30); do
+  if gatekeeper_preflight_pod bootstrap-old-untrusted untrusted-registry.example/app:1 deny \
+    && gatekeeper_preflight_pod bootstrap-old-docker-fake docker-fake.test/app:1 deny \
+    && gatekeeper_preflight_pod bootstrap-new-bad very-bad-registry.test/app:1 allow \
+    && gatekeeper_preflight_pod bootstrap-trusted registry.k8s.io/pause:3.10 allow; then
+    preflight_ok=true
+    break
+  fi
+  sleep 4
+done
+if [[ "$preflight_ok" != "true" ]]; then
+  echo "FATAL: Gatekeeper baseline admission contract was not proven: old registries must deny, missing registry and trusted image must allow" >&2
+  exit 1
+fi
 
 echo "*** CKS lab 108 bootstrap is ready; install Kyverno from the worker ***"

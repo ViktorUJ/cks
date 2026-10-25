@@ -47,7 +47,7 @@ Scénario typique : un développeur ajoute un `Deployment` pour une API. Il indi
 | `kube-linter` | les best practices Kubernetes sont-elles respectées ? | que l'image ne contient aucune CVE |
 | `hadolint` | le Dockerfile est-il sûr et reproductible ? | que l'image finale respecte la runtime policy |
 | `conftest` + OPA | la policy-as-code locale passe-t-elle ? | que la policy est déjà reliée à l'admission |
-| Trivy, signature, admission | y a-t-il des CVE, l'artifact est-il de confiance, le cluster l'admet-il ? | ne remplacent pas le lint du source |
+| Trivy, signature, admission | y a-t-il des CVE, l'artifact est-il de confiance, le cluster l'admet-il ? | ne remplacent pas le lint des sources |
 
 Dans ce chapitre, `kubesec` et `kube-linter` sont des outils de pratique pour analyser les manifests Kubernetes. `hadolint` et `conftest` sont aussi utiles dans le cours et les labos : le premier analyse un Dockerfile, le second vérifie la policy locale d'une organisation. À l'examen, utilisez uniquement l'outil et l'environnement précisés dans la tâche.
 
@@ -110,7 +110,7 @@ helm template payments-api ./chart --namespace payments \
   --values ./chart/values-production.yaml | kubesec scan /dev/stdin
 ```
 
-N'envoyez pas de manifests privés à un scanner public en ligne. Un binary local ou un conteneur CI approuvé conserve le source dans votre execution environment.
+N'envoyez pas de manifests privés à un scanner public en ligne. Un binary local ou un conteneur CI approuvé conserve les sources dans votre execution environment.
 
 > 🎯 `kube-linter` est une analyse statique orientée Kubernetes : lisez le finding, corrigez le manifest et répétez le lint jusqu'à obtenir un résultat propre.
 
@@ -186,7 +186,7 @@ kubectl apply --dry-run=server -f manifests/api.yaml
 
 ### Configuration des checks sans affaiblir tout le pipeline
 
-Certaines checks nécessitent une configuration pour une workload legacy. Sans `doNotAutoAddDefaults: true`, `include` ajoute des checks à l'ensemble par défaut au lieu de le remplacer. Si vous avez besoin d'une baseline de sécurité exactement vérifiable, désactivez l'ajout automatique des defaults et énumérez l'ensemble complet. Ne désactivez pas `run-as-non-root` pour tout le repository à cause d'un seul DaemonSet système : placez le manifest système dans un chemin séparé, ajoutez une exception justifiée à la policy et limitez qui peut modifier cette exception.
+Certains checks nécessitent une configuration pour une workload legacy. Sans `doNotAutoAddDefaults: true`, `include` ajoute des checks à l'ensemble par défaut au lieu de le remplacer. Si vous avez besoin d'une baseline de sécurité exactement vérifiable, désactivez l'ajout automatique des defaults et énumérez l'ensemble complet. Ne désactivez pas `run-as-non-root` pour tout le repository à cause d'un seul DaemonSet système : placez le manifest système dans un chemin séparé, ajoutez une exception justifiée à la policy et limitez qui peut modifier cette exception.
 
 ```yaml
 # .kube-linter.yaml
@@ -642,7 +642,7 @@ kubesec scan manifests/api.yaml --format json \
 
 1. Créez ou utilisez un manifest avec `:latest` et sans `runAsNonRoot`, `readOnlyRootFilesystem` ni `allowPrivilegeEscalation`.
 2. Exécutez `kubesec scan`, `kube-linter lint` et `conftest test`. Conservez la sortie initiale : elle explique pourquoi CI doit s'arrêter.
-3. Corrigez le source, pas la sortie : un tag/digest versionné, un utilisateur non-root au niveau de l'image, un `securityContext` de Pod, `drop: ["ALL"]` et un `emptyDir` pour le répertoire réellement inscriptible.
+3. Corrigez la source, pas la sortie : un tag/digest versionné, un utilisateur non-root au niveau de l'image, un `securityContext` de Pod, `drop: ["ALL"]` et un `emptyDir` pour le répertoire réellement inscriptible.
 4. Exécutez à nouveau toutes les vérifications, y compris `hadolint Dockerfile` et `opa test policy/`. Vérifiez que les commandes renvoient `0`.
 5. Vérifiez la compatibilité API sans créer la workload : `kubectl apply --dry-run=server -f manifests/`. Si la production utilise un chart rendu, vérifiez le YAML rendu lui-même.
 6. Exécutez build, SBOM, image scan, signing et deployment gates seulement après que le gate d'analyse statique est vert. Ne transformez pas CI en « warning only » avant que l'équipe ait décidé quelle acceptation du risque est permise.
@@ -680,18 +680,18 @@ Erreurs fréquentes et diagnostic :
 | `kube-linter` signale encore `run-as-non-root` | le champ a été ajouté en dehors de `spec.template.spec`, ou un override de conteneur précis annule le réglage | vérifier la resource rendue avec `kubectl kustomize`/`helm template` et le chemin `spec.template.spec.securityContext` |
 | l'application échoue après `readOnlyRootFilesystem: true` | le processus écrit un cache, PID ou fichier temporaire dans le root filesystem | identifier le chemin à partir des logs, monter un `emptyDir` étroit uniquement là ; ne désactivez pas toute la racine en lecture seule |
 | `hadolint` passe mais l'image s'exécute en root | le Dockerfile ne contient pas `USER`, tandis que le manifest ne vérifie que le runtime du cluster | ajouter un `USER` non-root dans le stage final et conserver le guard du manifest |
-| `conftest` ne trouve pas une rule | un template a été transmis au lieu du YAML rendu, ou le chemin `--policy` est incorrect | tester la fixture d'entrée, exécuter `opa test`, puis lint le rendu lui-même |
+| `conftest` ne trouve pas une rule | un template a été transmis au lieu du YAML rendu, ou le chemin `--policy` est incorrect | tester la fixture d'entrée, exécuter `opa test`, puis linter le rendu lui-même |
 | CI est vert après `kubesec ... | tee` | `tee` a conservé le JSON, mais le résultat de sécurité n'a pas été vérifié | activez `set -o pipefail` et `jq -e` : vérifiez `.valid == true`, `scoring.critical` vide et un seuil de score versionné pour tout le tableau JSON |
 | une workload système critique nécessite une exception | la rule s'applique à égalité à l'application et à CNI/CSI | utilisez un scope séparé et une exception least-privilege avec owner, ticket et expiration ; n'utilisez pas un ignore global |
 
-> 🏭 Lint le YAML rendu final, conservez les résultats et versions des scanners, et alignez les rules critiques sur l'admission policy pour empêcher un contournement de CI.
+> 🏭 Lintez le YAML rendu final, conservez les résultats et versions des scanners, et alignez les rules critiques sur l'admission policy pour empêcher un contournement de CI.
 
 ## 27.7. Application en production
 
-- **Lint s'exécute avant le build.** Le développeur reçoit du feedback dans pre-commit/l'éditeur ou un job CI distinct avant de dépenser des ressources pour le build, le push et un integration environment. Une PR ne peut pas être merge tant que les findings obligatoires ne sont pas corrigés ou qu'une exception étroite n'est pas approuvée.
+- **Lint s'exécute avant le build.** Le développeur reçoit du feedback dans pre-commit/l'éditeur ou un job CI distinct avant de dépenser des ressources pour le build, le push et un integration environment. Une PR ne peut pas être mergée tant que les findings obligatoires ne sont pas corrigés ou qu'une exception étroite n'est pas approuvée.
 - **Les outils et rules sont épinglés.** Les versions de `kube-linter`, `kubesec`, `hadolint`, `conftest` et OPA sont épinglées dans une CI image de confiance ou un lockfile. La mise à jour des rules passe en review : une nouvelle version peut ajouter des findings légitimes mais ne doit pas affaiblir silencieusement le gate.
-- **Le YAML final est vérifié.** Helm/Kustomize/GitOps peuvent modifier les values, images et securityContext. CI lint l'artifact rendu qui sera signé/appliqué, pas seulement le source du template.
-- **Policy-as-code vit avec les policies applicative et de plateforme.** Les rules d'équipe sont testées avec `opa test` ; les controls obligatoires à l'échelle du cluster sont dupliqués ou centralisés dans l'admission. Une exception a un owner, une raison et une date d'expiration.
+- **Le YAML final est vérifié.** Helm/Kustomize/GitOps peuvent modifier les values, images et securityContext. CI lint l'artifact rendu qui sera signé/appliqué, pas seulement la source du template.
+- **Policy-as-code vit à côté de l'application et de la policy de plateforme.** Les rules d'équipe sont testées avec `opa test` ; les controls obligatoires à l'échelle du cluster sont dupliqués ou centralisés dans l'admission. Une exception a un owner, une raison et une date d'expiration.
 - **L'analyse statique fait partie de la chaîne.** Elle est suivie de SBOM, vulnerability scanning, signature et promotion de registry ; l'admission s'applique avant le runtime. Les controls runtime trouvent ce que l'inspection des sources ne peut voir.
 - **Les rapports conviennent à l'audit.** CI conserve la version du scanner, les résultats et un lien vers le commit. Les rapports ne doivent contenir ni credentials, ni clés privées, ni données Secret de production.
 
@@ -762,7 +762,7 @@ Les templates ne sont pas encore la resource envoyée à l'API : values, Kustomi
 </details>
 
 <details>
-<summary>7. Que faut-il faire après un finding : désactiver la rule, corriger le source ou accepter une exception étroite ?</summary>
+<summary>7. Que faut-il faire après un finding : désactiver la rule, corriger la source ou accepter une exception étroite ?</summary>
 
 La voie normale consiste à corriger le Dockerfile, manifest ou policy source et à répéter les vérifications. Un `--ignore` global masque une violation systémique ; limitez une exception légitime à une rule et un scope précis, et documentez sa raison, son owner et son échéance de review. Après une correction, lint, `conftest`, les tests de policy et le server dry-run doivent repasser.
 </details>

@@ -4,7 +4,7 @@
 
 > **Problem.** Eine untergeschobene Dependency, ein kompromittiertes CI-Token oder ein geänderter Tag in der Registry können fremden Code unter einem vertrauten Image-Namen in einen Pod liefern. Ohne ein an den Digest gebundenes Inventar lässt sich nicht schnell feststellen, welche Komponenten in einen Artifact eingeflossen sind, wer ihn gebaut hat und aus welchem Ausgangszustand. Das lässt eine verwundbare Dependency oder einen bösartigen Build bis zum Start beim Konsumenten unbemerkt.
 
-> **Was folgt.** In [Kapitel 24](../24/de.md) haben wir die Zusammensetzung des final Image reduziert und seine Version fixiert. Jetzt muss die folgende Frage beantwortet werden können: Welche Komponenten und Versionen sind noch in den ausgelieferten Artifact gelangt, von wem und wie wurde er gebaut. Das ist die Domäne **Supply Chain Security** von CKS (20 %). Eine Inventarisierung über SBOM macht eine verwundbare Komponente beobachtbar, und eine kontrollierte CI/CD- sowie Registry-Kette schafft eine Vertrauenskette bis zum Deployment.
+> **Was folgt.** In [Kapitel 24](../24/de.md) haben wir die Zusammensetzung des finalen Image reduziert und seine Version fixiert. Jetzt muss die folgende Frage beantwortet werden können: Welche Komponenten und Versionen sind noch in den ausgelieferten Artifact gelangt, und von wem und wie wurde er gebaut? Das ist die Domäne **Supply Chain Security** von CKS (20 %). Eine Inventarisierung über SBOM macht eine verwundbare Komponente beobachtbar, und eine kontrollierte CI/CD- sowie Registry-Kette schafft eine Vertrauenskette bis zum Deployment.
 
 > **Was Sie aus CKA wissen müssen.** Die Grundbegriffe Image, Layers, Dockerfile, Tag, Digest und Registry werden in [CKA-Kapitel 23](../../../cka/course/23/de.md) behandelt. Hier wird der Bau eines Containers nicht wiederholt: Das Image wird als Liefer-Artifact betrachtet, sein Inventar erstellt und der Weg vom Quellcode bis Kubernetes geprüft.
 
@@ -55,7 +55,7 @@ Man kann den Schutz nicht auf einen einzigen Scanner reduzieren. SBOM zeigt die 
 
 ## 25.2. SBOM: Komponenteninventar und Formate SPDX 2.3 JSON/CycloneDX
 
-**SBOM** (Software Bill of Materials) - eine maschinenlesbare Liste der Komponenten eines Artifact: Pakete, Bibliotheken, ihre Versionen, Identifikatoren, Lizenzen und manchmal Dependency-Beziehungen. Für ein Container-Image liest der Generator das Filesystem und die Package-Metadata der Layer; ein SBOM beantwortet vor allem die Frage „was wurde in diesem Artifact gefunden". Das ist kein Beweis für die Abwesenheit von CVEs und selbst kein kryptografischer Herkunftsnachweis.
+**SBOM** (Software Bill of Materials) - eine maschinenlesbare Liste der Komponenten eines Artifact: Pakete, Bibliotheken, ihre Versionen, Identifikatoren, Lizenzen und manchmal Dependency-Beziehungen. Für ein Container-Image liest der Generator das Filesystem und die Package-Metadata der Layer; ein SBOM beantwortet vor allem die Frage „was wurde in diesem Artifact gefunden“. Das ist kein Beweis für die Abwesenheit von CVEs und selbst kein kryptografischer Herkunftsnachweis.
 
 Am weitesten verbreitet sind zwei offene Formate:
 
@@ -73,7 +73,7 @@ SBOM hat auch Grenzen der Genauigkeit:
 - SBOM spiegelt den Moment der Generierung wider. Nach einem Rebuild des Base Image oder einem Wechsel einer Dependency oder des Digest entsteht ein neues SBOM;
 - ein einzelner Versions-String bedeutet noch keine Verwundbarkeit: Wichtig ist der Abgleich mit Vendor Advisory, OS-Distribution, Architektur und Fix-Status.
 
-**Runtime-SBOM und die vollständige Build-Kette sind unterschiedliche Inventare.** Das SBOM des final Multi-Stage-Image beschreibt das, was zur Runtime gelangt ist; Dependencies aus verworfenen Builder-Stages fehlen darin folgerichtig. Selbst eine Analyse mit `--scope all-layers` erfasst die Layer des finalen Image, nicht alle verschwundenen Build-Stages. Für ein vollständiges Inventar der Supply Chain werden zusätzlich Source, Lock Files, Build Attestations und Provenance benötigt: Das Fehlen eines Pakets im finalen SBOM beweist nicht, dass es während des Build-Prozesses nicht vorhanden war.
+**Runtime-SBOM und die vollständige Build-Kette sind unterschiedliche Inventare.** Das SBOM des finalen Multi-Stage-Image beschreibt das, was zur Runtime gelangt ist; Dependencies aus verworfenen Builder-Stages fehlen darin folgerichtig. Selbst eine Analyse mit `--scope all-layers` erfasst die Layer des finalen Image, nicht alle verschwundenen Build-Stages. Für ein vollständiges Inventar der Supply Chain werden zusätzlich Source, Lock Files, Build Attestations und Provenance benötigt: Das Fehlen eines Pakets im finalen SBOM beweist nicht, dass es während des Build-Prozesses nicht vorhanden war.
 
 Praktische Regel: Bewahren Sie das SBOM zusammen mit demjenigen Artifact und demjenigen immutable Digest auf, für den es erstellt wurde. Die Datei `api-1.4.2.spdx.json`, erstellt für `api:1.4.2`, ist unzureichend, wenn dieser Tag später umgeschrieben wurde; die Verbindung muss zu `@sha256:...` bestehen.
 
@@ -183,7 +183,7 @@ flowchart TB
     style query fill:#f4b400,color:#000
 ```
 
-> 🎯 Finden Sie für ein vorgegebenes Image-Digest das exakte Package und seine Version im SBOM; eine Suche nur nach dem Namen beweist die Anwendbarkeit eines Advisory nicht.
+> 🎯 Finden Sie für einen vorgegebenen Image-Digest das exakte Package und seine Version im SBOM; eine Suche nur nach dem Namen beweist die Anwendbarkeit eines Advisory nicht.
 
 ## 25.4. Lesen des SBOM: Package und konkrete Version finden
 
@@ -221,7 +221,7 @@ jq -r '
 ' api.cyclonedx.json
 ```
 
-`purl` (Package URL) hilft, Packages mit gleichem Namen aus verschiedenen Ecosystems zu unterscheiden. Halten Sie bei einer echten Untersuchung im Ticket fest: Image-Digest, Name/Version des Package, SBOM-Dateiname und Advisory/CVE. Dann kann ein anderer Ingenieur das Ergebnis reproduzieren, statt „ungefähr so ein Paket" in einem anderen Rebuild zu suchen.
+`purl` (Package URL) hilft, Packages mit gleichem Namen aus verschiedenen Ecosystems zu unterscheiden. Halten Sie bei einer echten Untersuchung im Ticket fest: Image-Digest, Name/Version des Package, SBOM-Dateiname und Advisory/CVE. Dann kann ein anderer Ingenieur das Ergebnis reproduzieren, statt „ungefähr so ein Paket“ in einem anderen Rebuild zu suchen.
 
 Nach dem Finden der Komponente verknüpfen Sie das SBOM mit dem Cluster. Die Image References, die die Pods tatsächlich verwenden, lassen sich so anzeigen:
 
@@ -245,7 +245,7 @@ Ein typischer Fehler ist, das gesamte Deployment zu löschen, sobald eine Übere
 
 ## 25.5. CI/CD, Artifact Repositories, Provenance und SLSA
 
-**CI** baut, testet, scannt und veröffentlicht den Artifact; **CD** befördert einen bereits vorbereiteten Artifact zwischen Umgebungen oder wendet Manifest im Cluster an. Ohne eine Grenze zwischen beiden kann sich CI unbemerkt in eine privilegierte Deploy Shell verwandeln. Eine sinnvolle Rollentrennung: CI hat ein begrenztes Recht, in ein Staging Repository zu publizieren, CD erhält einen fertigen Digest und befördert nur einen genehmigten immutable Artifact.
+**CI** baut, testet, scannt und veröffentlicht den Artifact; **CD** befördert einen bereits vorbereiteten Artifact zwischen Umgebungen oder wendet ein Manifest im Cluster an. Ohne eine Grenze zwischen beiden kann sich CI unbemerkt in eine privilegierte Deploy Shell verwandeln. Eine sinnvolle Rollentrennung: CI hat ein begrenztes Recht, in ein Staging Repository zu publizieren, CD erhält einen fertigen Digest und befördert nur einen genehmigten immutable Artifact.
 
 **Artifact Repository** speichert Build-Ergebnisse: OCI Images in der Container Registry, Packages, Charts, SBOM, Attestations und Provenance. Die Registry ist nicht nur ein Cache von Docker Hub: Sie muss eine vertrauenswürdige Quelle für Releases sein, immutable Digests speichern, Push/Pull einschränken und nach Möglichkeit das Überschreiben eines Release-Tags verbieten. Beispiele für Implementierungen sind Harbor, Amazon ECR, Google Artifact Registry, Azure Container Registry, GitHub Container Registry oder eine interne OCI-Registry. Das konkrete Produkt ist zweitrangig; wichtig sind Zugriffskontrolle, Retention, Audit und Unveränderlichkeit der Release Artifacts.
 
@@ -269,7 +269,7 @@ flowchart TB
 
 > 🔬 Die Verbindung von SBOM, Provenance und Signatur mit dem Digest im SLSA-Modell.
 
-[SLSA](https://slsa.dev/) (Supply-chain Levels for Software Artifacts) teilt in Version 1.2 die Anforderungen in unabhängige Tracks auf. Deshalb gibt es bei SLSA keine einheitliche Skala „einfach bis hoch": Der Build Track beschreibt Garantien für Build und Provenance, und der Source Track hat eigene Anforderungen an die Source.
+[SLSA](https://slsa.dev/) (Supply-chain Levels for Software Artifacts) teilt in Version 1.2 die Anforderungen in unabhängige Tracks auf. Deshalb gibt es bei SLSA keine einheitliche Skala „einfach bis hoch“: Der Build Track beschreibt Garantien für Build und Provenance, und der Source Track hat eigene Anforderungen an die Source.
 
 | Track | Level SLSA v1.2 | Praktische Bedeutung |
 |---|---|---|
@@ -279,7 +279,7 @@ flowchart TB
 | Build | L3 | Eine gehärtete Build-Platform wird verwendet. |
 | Source | L1-L4 | Separate Levels von Anforderungen an die Source; sie lassen sich nicht aus dem Level des Build Track ableiten. |
 
-Prüfen Sie für die Anforderungen jedes Levels die Spezifikationen des [Build Track](https://slsa.dev/spec/v1.2/build-track-basics) und des [Source Track](https://slsa.dev/spec/v1.2/source-requirements), nicht eine autorenspezifische vierstufige Skala. Erklären Sie ein Projekt nicht als „SLSA Level N" nur deshalb, weil es ein SBOM generiert: Anzugeben sind Track, Version der Specification und Nachweise für die Erfüllung der entsprechenden Anforderungen.
+Prüfen Sie für die Anforderungen jedes Levels die Spezifikationen des [Build Track](https://slsa.dev/spec/v1.2/build-track-basics) und des [Source Track](https://slsa.dev/spec/v1.2/source-requirements), nicht eine autorenspezifische vierstufige Skala. Erklären Sie ein Projekt nicht als „SLSA Level N“ nur deshalb, weil es ein SBOM generiert: Anzugeben sind Track, Version der Specification und Nachweise für die Erfüllung der entsprechenden Anforderungen.
 
 BuildKit kann SBOM/Provenance-Attestations zusammen mit dem Image/Index erstellen und veröffentlichen:
 
@@ -300,7 +300,7 @@ In der Praxis sehen Verbesserungen so aus:
 - Protected Branches, Required Review und Audit Log von Registry/CI verwenden;
 - in CD den Digest deployen, keinen erneuten Build aus einer anderen Environment ausführen.
 
-Für einen OCI-Index ist das nicht ein universeller Digest, sondern eine Kette: `Digest von Release/Index → Digest des Platform Manifest → SBOM/Provenance/Scan Evidence`. Wählen Sie zuerst die Ziel-Platform, lösen Sie den Index bis zu deren Manifest auf und finden Sie die dazugehörige Attestation; prüfen Sie dann das in-toto `subject.digest`. Docker speichert das Attestation Manifest beim Root-Index, doch sein `subject` muss auf das Ziel-Platform-Manifest zeigen (oder ein Objekt darin). Für ein Single-Platform-Image-Release können Digest des Release und Digest des Platform Manifest übereinstimmen, das darf aber nicht vorausgesetzt werden.
+Für einen OCI-Index ist das nicht ein universeller Digest, sondern eine Kette: `Digest von Release/Index → Digest des Platform Manifest → SBOM/Provenance/Scan Evidence`. Wählen Sie zuerst die Ziel-Platform, lösen Sie den Index bis zu deren Manifest auf und finden Sie die dazugehörige Attestation; prüfen Sie dann das in-toto `subject.digest`. Docker speichert das Attestation Manifest beim Root-Index, doch sein `subject` muss auf das Ziel-Platform-Manifest zeigen (oder ein Objekt darin). Für ein Single-Platform-Image-Release können der Digest des Release und der Digest des Platform Manifest übereinstimmen, das darf aber nicht vorausgesetzt werden.
 
 Eine minimale SLSA-/in-toto-Provenance ist ein Statement mit einem `subject`, der an das entsprechende Platform Manifest gebunden ist. Die Struktur kann zum Beispiel so aussehen:
 
@@ -322,7 +322,7 @@ Eine minimale SLSA-/in-toto-Provenance ist ein Statement mit einem `subject`, de
 }
 ```
 
-Lösen Sie vor der Verwendung der Provenance zuerst das vertrauenswürdige Release/Index bis zum Ziel-Platform-Manifest auf und vergleichen Sie dann dessen `subject.digest.sha256` mit dem Digest genau dieses Manifest. Das lässt sich prüfen, ohne einen Tag zu erraten:
+Lösen Sie vor der Verwendung der Provenance zuerst das vertrauenswürdige Release/Index bis zum Ziel-Platform-Manifest auf und vergleichen Sie dann deren `subject.digest.sha256` mit dem Digest genau dieses Manifest. Das lässt sich prüfen, ohne einen Tag zu erraten:
 
 ```bash
 PLATFORM_MANIFEST_DIGEST='sha256:<64-hex-platform-manifest-digest>'
@@ -336,7 +336,7 @@ Ein erfolgreiches `jq` beweist die Bindung des Statement an das erwartete Platfo
 
 ## 25.6. SBOM bei der Suche nach verwundbaren Komponenten
 
-Erscheint eine CVE oder ein Vendor Advisory, verkürzt SBOM die Incident-Frage von „welche unserer tausenden Images sind betroffen?" zu „welche Digests enthalten das betroffene Package/die Version?". Das wird auch für die **späte Entdeckung** benötigt: Zur Build-Zeit konnte der Scanner das Problem möglicherweise nicht finden, weil die CVE oder Informationen über betroffene Versionen noch nicht veröffentlicht waren. Das Scan-Ergebnis spiegelt die Wissensbasis zum Prüfzeitpunkt wider und garantiert nicht die Abwesenheit künftiger Advisories in einem bereits laufenden Image.
+Erscheint eine CVE oder ein Vendor Advisory, verkürzt SBOM die Incident-Frage von „welche unserer tausenden Images sind betroffen?“ zu „welche Digests enthalten das betroffene Package/die Version?“. Das wird auch für die **späte Entdeckung** benötigt: Zur Build-Zeit konnte der Scanner das Problem möglicherweise nicht finden, weil die CVE oder Informationen über betroffene Versionen noch nicht veröffentlicht waren. Das Scan-Ergebnis spiegelt die Wissensbasis zum Prüfzeitpunkt wider und garantiert nicht die Abwesenheit künftiger Advisories in einem bereits laufenden Image.
 
 Deshalb sollte man außerhalb der Build Pipeline **regelmäßig gespeicherte SBOMs erneut mit der aktualisierten CVE-Datenbank abgleichen**: planmäßig und außerplanmäßig bei Veröffentlichung einer neuen bedeutsamen CVE oder eines Vendor Advisory. Eine solche Prüfung baut den Artifact nicht neu: Sie bewertet denselben immutable Digest anhand aktueller Daten und sollte eine Triage betroffener Releases auslösen.
 
@@ -372,7 +372,7 @@ SBOM ersetzt keinen Vulnerability Scanner. Es liefert das Inventar, der Scanner 
 
 **VEX** (Vulnerability Exploitability eXchange) ergänzt dieses Modell: SBOM beantwortet, was in einen Artifact eingeht, Scanner oder Advisory gleichen die Komponente mit einer CVE ab, und VEX hält den bestätigten Status der Anwendbarkeit oder Ausnutzbarkeit einer konkreten Verwundbarkeit für ein gegebenes Produkt fest. Das Vorhandensein eines Package/Version und einer CVE bedeutet noch nicht, dass die Verwundbarkeit anwendbar oder ausnutzbar ist; VEX hebt die Prüfung und den Fix nicht auf, sondern macht die Entscheidung nachprüfbar.
 
-Verwechseln Sie außerdem „nicht im SBOM gefunden" nicht mit „sicher". Gründe für das Fehlen können ein unvollständiger Detector, statisches Linking, ein falsches Image, ein veraltetes SBOM oder ein Package unter anderem Namen sein. Ergänzen Sie die Suche bei einem kritischen Incident durch Lock File, Source Repository, Release Notes des Base Image und die Runtime Image ID.
+Verwechseln Sie außerdem „nicht im SBOM gefunden“ nicht mit „sicher“. Gründe für das Fehlen können ein unvollständiger Detector, statisches Linking, ein falsches Image, ein veraltetes SBOM oder ein Package unter anderem Namen sein. Ergänzen Sie die Suche bei einem kritischen Incident durch Lock File, Source Repository, Release Notes des Base Image und die Runtime Image ID.
 
 > 🎯 Das praktische Ergebnis ist ein valides SPDX JSON und ein reproduzierbares Auffinden von Package/Version für das Image aus der Aufgabe, nicht nur ein erfolgreich ausgeführter Befehl.
 
@@ -405,9 +405,9 @@ jq -r '
 ' out.spdx.json
 ```
 
-Wenn die Lab ein anderes Paar `Package/Version` vorgibt, ändern Sie nur den Value in `select`, nicht das Prüfschema selbst. Gleichen Sie die erhaltene Version mit der Bedingung ab: Eine Suche nach dem Package ohne Versionsvergleich beweist nicht, dass genau die verwundbare Komponente gefunden wurde.
+Wenn das Lab ein anderes Paar `Package/Version` vorgibt, ändern Sie nur den Value in `select`, nicht das Prüfschema selbst. Gleichen Sie die erhaltene Version mit der Bedingung ab: Eine Suche nach dem Package ohne Versionsvergleich beweist nicht, dass genau die verwundbare Komponente gefunden wurde.
 
-Für eine zusätzliche Cross-Check der Generierung desselben Image mit Syft:
+Für einen zusätzlichen Cross-Check der Generierung desselben Image mit Syft:
 
 ```bash
 syft "$IMAGE" -o spdx-json > syft.spdx.json
@@ -450,7 +450,7 @@ Kriterium für die Bereitschaft der Prüfung: Es gibt ein nicht-leeres SPDX 2.3 
 
 - **Software Supply Chain** - der Weg von Source, Dependencies, Build Systems und Artifacts bis zum laufenden Workload.
 - **Artifact** - das Ergebnis eines Build, zum Beispiel ein OCI Image, SBOM, Chart oder Provenance.
-- **Artifact Repository** - ein kontrolliertes Ablageort für Artifacts: Registry, Package- oder Chart-Repository.
+- **Artifact Repository** - ein kontrollierter Ablageort für Artifacts: Registry, Package- oder Chart-Repository.
 - **SBOM** - ein maschinenlesbares Inventar von Komponenten und Versionen eines Software Artifact.
 - **SPDX 2.3 JSON** - die in diesem Kapitel verwendete JSON-Repräsentation des SPDX-Standards für Packages, Lizenzen und ihre Beziehungen; sein JSON-Modell sollte nicht mit SPDX 3.0 vermischt werden.
 - **CycloneDX** - ein OWASP-Format für Component-Inventar und Security-Analyse.
@@ -476,7 +476,7 @@ Kriterium für die Bereitschaft der Prüfung: Es gibt ein nicht-leeres SPDX 2.3 
 
 **Auf der Prüfung.** Schnell `bom generate --image ... --format json` ausführen können, SPDX 2.3 JSON prüfen und Package/Version finden - das ist die praktische Fähigkeit aus Lab 111 und ein typisches Mock-Szenario. Verwechseln Sie nicht das Format von Syft, den JSON-Feldnamen und den Image-Tag mit dem Digest. Bei Bedarf ist die Dokumentation von `kubernetes-sigs/bom` erlaubt: Prüfen Sie zuerst `--help`, speichern Sie dann den benötigten Artifact und zeigen Sie das Suchergebnis.
 
-**In der Praxis.** SBOM verkürzt die Reaktionszeit auf CVEs, doch der Wert entsteht nur bei Release-Disziplin: bekannter Digest, kontrollierte Registry, aufbewahrte Provenance und Scan Evidence. Das erlaubt es, nicht zu sagen „wir denken, das Image ist gefixt", sondern „im Cluster läuft dieser Digest; sein SBOM enthält die betroffene Version nicht; er wurde von einer genehmigten Pipeline gebaut und geprüft".
+**In der Praxis.** SBOM verkürzt die Reaktionszeit auf CVEs, doch der Wert entsteht nur bei Release-Disziplin: bekannter Digest, kontrollierte Registry, aufbewahrte Provenance und Scan Evidence. Das erlaubt es, nicht zu sagen „wir denken, das Image ist gefixt“, sondern „im Cluster läuft dieser Digest; sein SBOM enthält die betroffene Version nicht; er wurde von einer genehmigten Pipeline gebaut und geprüft“.
 
 ## 25.12. Fragen zur Selbstkontrolle
 
@@ -531,7 +531,7 @@ CD soll einen bereits geprüften immutable Digest befördern, keinen neuen Artif
 <details>
 <summary>9. Welchen Sinn gibt SLSA der Provenance und dem isolierten Builder?</summary>
 
-In SLSA verknüpft die Provenance den Output mit Build Definition, Source und Builder. Für Multi-Arch wird zuerst der Digest von Release/Index bis zum Ziel-Platform-Manifest aufgelöst und dessen `subject.digest` mit dem Digest dieses Manifest (oder eines zulässigen Objekts darin) abgeglichen; eine Übereinstimmung mit dem Root-Index wird nicht vorausgesetzt. Im Build Track verlangt L1 das Vorhandensein von Provenance, L2 eine signierte Provenance von einer gehosteten Build-Platform, und L3 eine gehärtete Build-Platform. Ein isolierter Builder verringert das Risiko einer Unterschiebung der gemeinsamen Arbeitsumgebung, das Level muss aber mit Angabe des Track und der Nachweise deklariert werden.
+In SLSA verknüpft die Provenance den Output mit Build Definition, Source und Builder. Für Multi-Arch wird zuerst der Digest von Release/Index bis zum Ziel-Platform-Manifest aufgelöst und deren `subject.digest` mit dem Digest dieses Manifest (oder eines zulässigen Objekts darin) abgeglichen; eine Übereinstimmung mit dem Root-Index wird nicht vorausgesetzt. Im Build Track verlangt L1 das Vorhandensein von Provenance, L2 eine signierte Provenance von einer gehosteten Build-Platform, und L3 eine gehärtete Build-Platform. Ein isolierter Builder verringert das Risiko einer Unterschiebung der gemeinsamen Arbeitsumgebung, das Level muss aber mit Angabe des Track und der Nachweise deklariert werden.
 </details>
 
 <details>
@@ -541,7 +541,7 @@ Nach der Aktualisierung einer Dependency oder des Base Image wird ein neuer Dige
 </details>
 
 <details>
-<summary>11. **Flashback (Kapitel 32).** SBOM/Provenance (dieses Kapitel) beantworten die Frage "woraus besteht dieser Artifact und wie wurde er gebaut". Das Kubernetes Audit Log (Kapitel 32) beantwortet die Frage "wer hat wann mit dem API Server interagiert". Wenn die vollständige Kette "wer hat genau dieses Image mit diesem SBOM zu diesem Zeitpunkt deployt" bewiesen werden muss - für welche der beiden Quellen genügt die Evidence allein nicht, und wie schließt ihre gemeinsame Nutzung das, was jede einzeln nicht schließt?</summary>
+<summary>11. **Flashback (Kapitel 32).** SBOM/Provenance (dieses Kapitel) beantworten die Frage „woraus besteht dieser Artifact und wie wurde er gebaut“. Das Kubernetes Audit Log (Kapitel 32) beantwortet die Frage „wer hat wann mit dem API Server interagiert“. Wenn die vollständige Kette „wer hat genau dieses Image mit diesem SBOM zu diesem Zeitpunkt deployt“ bewiesen werden muss - für welche der beiden Quellen genügt die Evidence allein nicht, und wie schließt ihre gemeinsame Nutzung das, was jede einzeln nicht schließt?</summary>
 
 Allein SBOM/Provenance genügt nicht: Sie beweisen die Zusammensetzung und den Build-Prozess eines Digest, aber keine API-Aktion des Deployment. Allein das Audit Log genügt ebenfalls nicht: Es zeigt Identity, Zeitpunkt und API-Objekt, aber nicht die Zusammensetzung des Image und die Verlässlichkeit seines Builds. Der Abgleich des Image-Digest aus Manifest/Audit mit dem Digest, an den SBOM und Provenance gebunden sind, verknüpft den Urheber des Deploy mit einem konkreten nachprüfbaren Artifact.
 </details>

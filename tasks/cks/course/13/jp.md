@@ -104,7 +104,7 @@ uname -r
 
 `kubectl version` は API server を確認できますが、control-plane package と worker node の inventory の代わりにはなりません。managed Kubernetes では provider が control plane を update することがあります。それでも control-plane version、support calendar、node image/AMI、provider が branch support を終了する deadline を確認する必要があります。
 
-patch SLA を持つことは有用です。reachable exploit を持つ critical CVE には短い response window を、ほかには次の planned window を割り当てます。severity だけでは priority になりません。低い CVSS でも external component で authentication 不要の CVE は、難しい prerequisites を持つ local CVE より重要になり得ます。
+patch SLA を持つことは有用です。reachable exploit を持つ critical CVE には短い response window を、ほかには次の planned window を割り当てます。severity だけでは priority になりません。低い CVSS でも外部から到達可能な component で authentication 不要の CVE は、難しい prerequisites を持つ local CVE より重要になり得ます。
 
 > 🎯 sequence: preflight → 最初の control plane の `kubeadm upgrade apply` → health → 各 worker の `kubeadm upgrade node`、`cordon`/`drain`、kubelet、verification、`uncordon`。
 
@@ -154,7 +154,7 @@ production change 前には advisory と release notes を読み、backup、CNI/
 
 Kubernetes v1.35+ への移行を計画する前に、**各 node**で preflight を行います。kubelet と runtime は cgroup v2 および一致した `systemd` cgroup driver で動作する必要があります。`failCgroupV1` は feature gate ではなく `KubeletConfiguration` field であり、v1.35 から default は `true` です。cgroup v1 を延命するために `failCgroupV1: false` で無効にしないでください。一時 override は短期で文書化された migration measure としてのみ許されます。check が失敗する場合は、production で preflight を bypass せず、まず stage で OS/runtime を移行して node image を確認します。
 
-Kubernetes v1.36 では `KubeletCgroupDriverFromCRI` は GA です。CRI runtime が `RuntimeConfig` call を support する場合、kubelet は runtime から driver を取得して自らの `cgroupDriver` を無視します。runtime が support しなければ kubelet は自分の configuration の `cgroupDriver` を使用します。そのため `/var/lib/kubelet/config.yaml` と `/etc/containerd/config.toml` の paths を固定しないでください。まず installed CRI runtime の active `--config`/`--config-dir` kubelet、unit、process、documented config source を特定します。
+Kubernetes v1.36 では `KubeletCgroupDriverFromCRI` は GA です。CRI runtime が `RuntimeConfig` call を support する場合、kubelet は runtime から driver を取得して自らの `cgroupDriver` を無視します。runtime が support しなければ kubelet は自分の configuration の `cgroupDriver` を使用します。そのため `/var/lib/kubelet/config.yaml` と `/etc/containerd/config.toml` の paths を固定しないでください。まず active な kubelet の `--config`/`--config-dir`、unit、process、および installed CRI runtime の documented config source を特定します。
 
 ```yaml
 # startup configuration から見つけた active KubeletConfiguration 内。
@@ -374,7 +374,7 @@ Kubernetes packages は independent runtime、kernel、OS packages を update �
 </details>
 
 <details>
-<summary>9. **Flashback（第26章）。** version skew（本章）と image digest pinning（第26章）はどちらも「現在動く正確な version」を確認可能な fact にします。「compatible version」（version skew）と「identical version」（digest）はどう異なり、kubelet/API server には前者で十分な一方、production container image には後者が必須なのはなぜですか？</summary>
+<summary>9. **Flashback（第26章）。** version skew（本章）と image digest pinning（第26章）はどちらも「現在動く正確な version」を仮定ではなく確認可能な fact にします。「compatible version」（version skew）と「identical version」（digest）はどう異なり、kubelet/API server には前者で十分な一方、production container image には後者が必須なのはなぜですか？</summary>
 
 version skew は interacting components の minor versions 間に許容される関係を定めます。kubelet と API server は異なっていても、指定 range で compatible であり得ます。一方 digest は image の不変な正確な bytes を識別し、tag はその保証をしません。Kubernetes の rolling lifecycle には制限された version compatibility が必要で、production image は正確な content に再現可能に固定する必要があります。
 </details>

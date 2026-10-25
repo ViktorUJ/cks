@@ -20,8 +20,8 @@
 > らを supply-chain の脅威に適用します。単に image を小さくするだけでなく、final artifact
 > から余分なものを排除します。
 
-> 🧠 最小 final image は CVE と post-exploitation tool を減らしますが、RCE 対策、
-> `SecurityContext`、network、detection に代わりません。
+> 🧠 最小 final image は CVE と post-exploitation tool を減らすが、RCE 対策、
+> `SecurityContext`、network、detection の代わりにはならない。
 
 ## 24.1. 脅威モデル: image 内の余分なものが攻撃者の手段になる
 
@@ -293,7 +293,7 @@ External cache は正しい `--secret` があれば許可されます。危険�
 FROM node:22.23.2-alpine@sha256:<検証済み-digest> AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
-# build ツール（TypeScript、Vite、webpack など)は通常 devDependencies にある。
+# build ツール（TypeScript、Vite、webpack など）は通常 devDependencies にある。
 RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
     npm ci
 COPY . .
@@ -365,7 +365,7 @@ RUN apk add --no-cache --virtual .build-deps build-base \
  && apk del .build-deps
 ```
 
-これは command が final stage にある場合にのみ有用です。通常より良い選択はもっと単純です。
+これは command が final stage にある場合にのみ有用です。通常、より良い選択はもっと単純です。
 `apk`、compiler、cache がある stage を multi-stage build を通じて全く runtime に移さない
 ことです。
 
@@ -402,7 +402,7 @@ dive "$IMAGE"
 - `COPY . .` による大きな layer - たいてい context が広すぎるか Dockerfile の順序が誤って
   いる;
 - package cache、compiler、tests、`.git`、`.env`、private key、`.npmrc` - Dockerfile/
-  .dockerignore を修正し、見つかった secret を直ちに revoke する理由になる;
+  .dockerignore を修正し、見つかった secret を直ちにローテーションする理由になる;
 - `RUN install` と別の `RUN rm` の後の「wasted bytes」 - 削除が遅すぎ、新しい layer で行わ
   れている;
 - `User` が空か `root` - Dockerfile が non-root user を設定していない。
@@ -502,7 +502,7 @@ container のファイルシステムにはなりません。Debug image も具�
   `drop: ["ALL"]`、`allowPrivilegeEscalation: false`、read-only root を追加します。
 - **Secret は build argument ではない。** CI は build 中だけ short-lived credential を発行
   します。BuildKit/Podman secret mount、scoped registry permission、`.dockerignore` は
-  漏洩の可能性を減らします。layer への漏洩はロテーションを意味し、単なる再buildではありま
+  漏洩の可能性を減らします。layer への漏洩はローテーションを意味し、単なる再buildではありま
   せん。
 - **デバッグは runtime から分離される。** observability と承認された ephemeral debug
   image が application image 内の shell に代わります。これは production artifact を CI と
@@ -517,7 +517,7 @@ container のファイルシステムにはなりません。Debug image も具�
   ファイル、interface。
 - **Base image** - `FROM` instruction にある image で、初期の filesystem stage を定める。
 - **Build context** - builder に渡されるファイル; `.dockerignore` で制限される。
-- **distroless** - package manager と通常 shell を持たない最小 runtime image。
+- **distroless** - package manager を持たず、通常は shell も持たない最小 runtime image。
 - **`scratch`** - filesystem のない空の base image; static artifact に適する。
 - **Multi-stage build** - build と runtime の別々の stage を `COPY --from=` で結ぶ
   Dockerfile。
@@ -584,7 +584,7 @@ image で機能できます。
 ## 24.11. Self-check question
 
 <details>
-<summary>1. shellとpackage managerがruntime imageにあることが、application自体の脆弱性を修正しないにもかかわらず、なぜRCEの影響を増大させるのですか？</summary>
+<summary>1. それらがないことはapplication自体の脆弱性を修正しないにもかかわらず、なぜruntime imageにshellとpackage managerがあるとRCEの影響が増大するのですか？</summary>
 
 RCE後、shell、`curl`/`wget`、compiler、package managerは攻撃者にpayloadのダウンロード、ツールのインストール、filesystemの調査のための即戦力手段を与えます。それらの欠如はpost-exploitationの範囲を縮小しますが、元のRCEを修正せず、SecurityContext、NetworkPolicy、runtime detectionに代わりません。したがって最小化はdefence in depthであり、それ自体がsecurity boundaryではありません。
 </details>

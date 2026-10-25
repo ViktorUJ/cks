@@ -1,3 +1,5 @@
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
+
 # Лаба 109 - Шифрование Secret в etcd и минимальный доступ
 
 ## Цель
@@ -51,17 +53,18 @@ base64 - это просто кодирование, обратимое без �
 | `vpc` | VPC `10.10.0.0/16` с публичными подсетями |
 | `ssh-keys` | SSH-ключи для worker и control-plane |
 | `k8s-1` | одноузловой kubeadm control-plane: Kubernetes **1.36.0**, containerd, **Calico** |
-| `worker` | рабочая машина с `kubectl`, `etcdctl` 3.6.0 и helper `etcdctl-109` |
+| `worker` | рабочая машина с `kubectl`; на control-plane (`ssh control-plane`) установлен стандартный `etcdctl` 3.6.0, как на экзамене |
 
 Control-plane намеренно принимает обычные Pod - отдельный Kubernetes worker не создаётся.
 До начала заданий bootstrap создаёт namespace `encryption-109` и безобидный
 `legacy-secret`. Этот Secret создан **до** EncryptionConfiguration, поэтому служит
 контролируемым доказательством plaintext состояния.
 
-`etcdctl-109` на рабочей машине создаёт SSH tunnel к loopback endpoint etcd и использует
-TLS-материалы в root-only каталоге. Это намеренно ограниченный механизм учебной среды;
-в production нельзя переносить etcd private key на worker и нельзя давать пользователям
-прямой доступ к etcd.
+Операции над узлом выполняются на самом control-plane, как на экзамене: зайдите на него
+(`ssh control-plane`), работайте там и выйдите (`exit`); `kubectl` - с рабочей машины. Raw-запись
+etcd читается стандартным `etcdctl` из документации Kubernetes с kubeadm-сертификатами из
+`/etc/kubernetes/pki/etcd/` (`ca.crt`, `server.crt`, `server.key`). Готовые примеры команд -
+в разделе «Где взять примеры в документации» эталонного решения.
 
 ## Развёртывание
 
@@ -81,20 +84,20 @@ check_result
 ---
 | **1** | **Доказать исходный plaintext Secret** |
 | :---: | :--- |
-| Что делаем | До включения шифрования запросите raw запись `/registry/secrets/encryption-109/legacy-secret` через `sudo etcdctl-109 get ... --print-value-only`, пропустите через `strings` и сохраните результат в `/var/work/109/plaintext-proof.txt`. |
-| Критерии приёмки | Файл непустой, содержит ровно marker `cks-109-legacy-plaintext` и не содержит `k8s:enc:`. Это доказательство исходного состояния: `Secret.data` - base64, не encryption at rest. |
+| Что делаем | • До включения шифрования запросите raw запись `/registry/secrets/encryption-109/legacy-secret` стандартным `etcdctl get ... --print-value-only`<br/>• Зайдите на control-plane (`ssh control-plane`) и работайте на нём, как на экзамене: пропустите вывод через `strings` и сохраните результат в файл на control-plane (`/tmp/plaintext-proof.txt`), затем скопируйте его на рабочую машину командой `scp` в `/var/work/109/plaintext-proof.txt` |
+| Критерии приёмки | • Файл содержит полный вывод `strings` исходной raw-записи (совпадает со снимком bootstrap, включая marker `cks-109-legacy-plaintext`) и не содержит `k8s:enc:`<br/>• Вручную набранная строка не принимается<br/>• Это доказательство исходного состояния: `Secret.data` - base64, не encryption at rest |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
 
-Это задание нужно выполнить ПЕРВЫМ, до задания 2 - как только вы включите EncryptionConfiguration и перепишете Secret, plaintext-доказательство исчезнет и вы не сможете зафиксировать его post-hoc. `etcdctl-109` уже настроен на SSH tunnel и TLS - используйте именно этот helper, а не пытайтесь подключиться к etcd напрямую.
+Это задание нужно выполнить ПЕРВЫМ, до задания 2 - как только вы включите EncryptionConfiguration и перепишете Secret, plaintext-доказательство исчезнет и вы не сможете зафиксировать его post-hoc. Команда `etcdctl` с флагами `--cacert/--cert/--key` берётся из официальной документации Kubernetes (раздел «Verify that newly written data is encrypted» на странице Encrypting Confidential Data at Rest); пути к сертификатам kubeadm: `/etc/kubernetes/pki/etcd/ca.crt`, `server.crt`, `server.key`. Точные ссылки - в разделе «Где взять примеры в документации» эталонного решения.
 </details>
 
 ---
 | **2** | **Создать EncryptionConfiguration для Secret** |
 | :---: | :--- |
-| Что делаем | На control-plane создайте `/etc/kubernetes/enc/encryption-config.yaml`, owner `root:root`, mode `0600`. Формат: `apiserver.config.k8s.io/v1`, `EncryptionConfiguration`; для `secrets` первым provider задайте `aescbc` с именованным base64-ключом из **32 случайных bytes**, затем `identity: {}`. |
-| Критерии приёмки | Файл защищён mode `0600`; config содержит `secrets`, `aescbc` и корректный 32-byte key. `identity` допустим только последним временным fallback для legacy plaintext. |
+| Что делаем | • На control-plane создайте `/etc/kubernetes/enc/encryption-config.yaml`, owner `root:root`, mode `0600`<br/>• Формат: `apiserver.config.k8s.io/v1`, `EncryptionConfiguration`<br/>• Для `secrets` первым provider задайте `aescbc` с именованным base64-ключом из **32 случайных bytes**, затем `identity: {}` |
+| Критерии приёмки | • Файл `root:root` mode `0600` в каталоге `root:root` mode `0700`<br/>• Основной действующий provider для `secrets` - **первый** `aescbc` с корректным named base64 key из 32 bytes<br/>• `identity` допустим только последним временным fallback для legacy plaintext<br/>• Symlink на файл/каталог запрещён |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -105,20 +108,20 @@ check_result
 ---
 | **3** | **Подключить config к static kube-apiserver** |
 | :---: | :--- |
-| Что делаем | Аккуратно измените `/etc/kubernetes/manifests/kube-apiserver.yaml`: добавьте flag `--encryption-provider-config=/etc/kubernetes/enc/encryption-config.yaml`, read-only `volumeMount` `/etc/kubernetes/enc` и соответствующий `hostPath` volume `/etc/kubernetes/enc`. Сохраните backup manifest до правки. |
-| Критерии приёмки | Работающий manifest содержит flag, mount и hostPath; после restart static Pod `kubectl get --raw='/readyz'` возвращает `ok`. |
+| Что делаем | • Аккуратно измените `/etc/kubernetes/manifests/kube-apiserver.yaml`: добавьте flag `--encryption-provider-config=/etc/kubernetes/enc/encryption-config.yaml`, read-only `volumeMount` `/etc/kubernetes/enc` и соответствующий `hostPath` volume `/etc/kubernetes/enc`<br/>• Сохраните backup manifest до правки |
+| Критерии приёмки | • Работающий manifest содержит flag, mount и hostPath<br/>• После restart static Pod `kubectl get --raw='/readyz'` возвращает `ok` |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
 
-Три отдельных изменения нужны одновременно: сам флаг `--encryption-provider-config`, `volumeMounts` (внутри контейнера) И `volumes` (hostPath на уровне Pod spec) - забыть любое из трёх приведёт либо к CrashLoopBackOff (флаг указывает на файл, которого контейнер не видит), либо к тому, что флаг просто не будет передан. Сохраните копию оригинального manifest (`sudo cp kube-apiserver.yaml kube-apiserver.yaml.bak`) перед правкой - если что-то пойдёт не так, у вас будет путь для быстрого восстановления.
+Три отдельных изменения нужны одновременно: сам флаг `--encryption-provider-config`, `volumeMounts` (внутри контейнера) И `volumes` (hostPath на уровне Pod spec) - забыть любое из трёх приведёт либо к CrashLoopBackOff (флаг указывает на файл, которого контейнер не видит), либо к тому, что флаг просто не будет передан. Сохраните backup **вне** `/etc/kubernetes/manifests`, например `sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/kube-apiserver.yaml.bak-109`. Kubelet читает дополнительные не скрытые файлы из каталога static manifests; соседний `kube-apiserver.yaml.bak` может быть воспринят как второй static Pod и заблокировать применение новой конфигурации.
 </details>
 
 ---
 | **4** | **Re-encrypt и доказать ciphertext** |
 | :---: | :--- |
-| Что делаем | После готовности API server создайте в `encryption-109` Secret `encrypted-secret` с literal `token=cks-109-fresh-ciphertext`. Перепишите все ранее существующие Secret через API (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`). Проверьте оба Secret через API и raw etcd. Только после этой проверки удалите временный `identity` fallback, перезапустите static kube-apiserver и снова проверьте `/readyz` и чтение обоих Secret. |
-| Критерии приёмки | `legacy-secret` и `encrypted-secret` читаются через API с исходными значениями; raw value каждого начинается с `k8s:enc:aescbc:v1:`; legacy marker больше не виден в raw etcd; в финальной конфигурации отсутствует `identity`, API healthy. |
+| Что делаем | • После готовности API server создайте в `encryption-109` Secret `encrypted-secret` с literal `token=cks-109-fresh-ciphertext`<br/>• Перепишите все ранее существующие Secret через API (`kubectl get secrets --all-namespaces -o json \| kubectl replace -f -`)<br/>• Проверьте оба Secret через API и raw etcd<br/>• Только после этой проверки удалите временный `identity` fallback, перезапустите static kube-apiserver и снова проверьте `/readyz` и чтение обоих Secret |
+| Критерии приёмки | • `legacy-secret` и `encrypted-secret` читаются через API с исходными значениями<br/>• Raw value каждого начинается с `k8s:enc:aescbc:v1:`<br/>• Legacy marker больше не виден в raw etcd<br/>• Исходные payload/UID всего bootstrap Secret corpus сохранены, все записи зашифрованы первым действующим ключом<br/>• Ключ из финального файла способен расшифровать ciphertext обоих canary Secret<br/>• В финальной конфигурации отсутствует `identity`, API healthy |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
@@ -129,8 +132,8 @@ check_result
 ---
 | **5** | **Минимизировать RBAC и отключить automount** |
 | :---: | :--- |
-| Что делаем | Создайте ServiceAccount `secret-reader` в `encryption-109` с `automountServiceAccountToken: false`. Role `secret-reader-109` должна давать только `get` только Secret `encrypted-secret`; привяжите её одноимённым RoleBinding. Создайте Pod `secret-reader-109` c этим ServiceAccount, `automountServiceAccountToken: false`, образом `registry.k8s.io/pause:3.10`. |
-| Критерии приёмки | ServiceAccount может `get encrypted-secret`, но не `list secrets` и не `get legacy-secret`; Pod Running и не имеет автоматически добавленного `kube-api-access-*` volume. |
+| Что делаем | • Создайте ServiceAccount `secret-reader` в `encryption-109` с `automountServiceAccountToken: false`<br/>• Role `secret-reader-109` должна давать только `get` только Secret `encrypted-secret`<br/>• Привяжите её одноимённым RoleBinding<br/>• Создайте Pod `secret-reader-109` с этим ServiceAccount, `automountServiceAccountToken: false`, образом `registry.k8s.io/pause:3.10` |
+| Критерии приёмки | • Effective RBAC для ServiceAccount с его штатными группами позволяет `get encrypted-secret` в `encryption-109` и запрещает другие Secret-операции, в том числе доступ к Secret других namespace<br/>• Role/RoleBinding точные<br/>• Pod Running с одним `pause:3.10`, без автоматически либо вручную смонтированных ServiceAccount token и других credential-bearing sources (Secret/hostPath/CSI/PVC volumes, Secret env/envFrom)<br/>• Безобидные emptyDir/ConfigMap volumes допустимы<br/>• `automountServiceAccountToken: false` в Pod и ServiceAccount |
 
 <details>
 <summary>💡 Подсказка к заданию 5</summary>
@@ -149,19 +152,6 @@ check_result
 etcd-записи и отсутствие migration-only `identity` в финальной конфигурации. Перед массовым re-encryption в реальной среде требуется snapshot, план
 ротации ключей и контролируемое окно; эта лаба не является production runbook.
 
-## Статический DoD
-
-Перед сдачей проверьте, что в `tasks/cks/labs/109` есть только полный CKS-набор:
-
-- `README_RU.MD` и `worker/files/solutions/1_RU.MD`; переводов и CKA-материалов нет;
-- `env.hcl` фиксирует `k8_version = "1.36.0"` и CNI `calico`;
-- присутствуют `vpc`, `ssh-keys`, `k8s-1` и `worker` Terragrunt-конфигурации;
-- control-plane bootstrap создаёт legacy plaintext canary, worker bootstrap устанавливает
-  pinned `etcdctl` и helper;
-- `tests.bats` содержит `0 Init` и ровно пять тематических acceptance tests;
-- документация, тесты и решение покрывают plaintext proof, EncryptionConfiguration,
-  apiserver flag/mount, re-encryption с `k8s:enc`, RBAC и automount.
-
 ## Решение
 
 Эталонное решение: [worker/files/solutions/1_RU.MD](worker/files/solutions/1_RU.MD)
@@ -176,10 +166,10 @@ TASK=109 make delete_cks_task
 
 **KMS v2 (опциональный walkthrough).** Внешний KMS-plugin подключается к API server как
 provider `kms` в `EncryptionConfiguration`; его endpoint - локальный Unix socket, а ключ
-provider получает стабильное имя, например `kms-v2-primary`. API server генерирует
-случайный **DEK** для шифрования каждой записи Secret, KMS-plugin шифрует (wrap) этот DEK
-своим **KEK** (ключом, управляемым внешним key manager), а etcd хранит ciphertext Secret
-и wrapped DEK. Таким образом, KEK не лежит в etcd; availability, ACL и backup KMS становятся
+provider получает стабильное имя, например `kms-v2-primary`. В KMS v2 API server получает через plugin зашифрованный seed (wrapped под внешним
+**KEK**) и на его основе выводит ключи для шифрования отдельных объектов. KMS v2
+использует seed/DEK на уровне API server, а не отдельный вызов KMS для каждого Secret.
+В etcd сохраняются ciphertext Secret и необходимые данные для восстановления ключа. Таким образом, KEK не лежит в etcd; availability, ACL и backup KMS становятся
 частью модели безопасности. Минимальный **иллюстративный** provider (endpoint должен
 соответствовать установленному plugin) выглядит так:
 

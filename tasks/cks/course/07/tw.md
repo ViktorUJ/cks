@@ -3,9 +3,9 @@
 # 第 07 章。CIS Benchmark 與 kube-bench
 
 > **問題。** 叢集很少是透過 Kubernetes 本身的漏洞被攻破的:通常是已經取得 Pod 或節點
-> 存取權的攻擊者,在旁邊發現一個不安全的小細節——多餘的開放埠、元件的弱 flag、任何人
+> 存取權的攻擊者,在旁邊發現一個不安全的小細節-多餘的開放埠、元件的弱 flag、任何人
 > 都能讀取的金鑰。這些細節單獨看並不起眼,但合在一起就能開出一條路,通往未經檢查的
-> API、etcd 中的 Secrets,或節點上的權限提升——而這些沒有一項能從應用程式的程式碼中
+> API、etcd 中的 Secrets,或節點上的權限提升-而這些沒有一項能從應用程式的程式碼中
 > 看出來。
 
 > **接下來。** NetworkPolicy 限制了攻擊者在 workload 之間移動的路徑。現在我們要檢查
@@ -129,12 +129,12 @@ Kubernetes API 並不代表 control-plane 的 check 也能被存取。
 | `FAIL` | 找出叢集實際使用哪個元件與哪個設定來源,然後修正並驗證 |
 | `WARN` | 閱讀建議文字;手動確認、記錄例外情況,或直接修正 |
 
-正是這個循環——執行 `kube-bench`、在自己的報告中找出具體的 `FAIL`/`WARN`、修正、
-再驗證——就是本章的整個工作流程。每個叢集發現的項目都不同:它取決於部署方式、
+正是這個循環-執行 `kube-bench`、在自己的報告中找出具體的 `FAIL`/`WARN`、修正、
+再驗證-就是本章的整個工作流程。每個叢集發現的項目都不同:它取決於部署方式、
 kubeadm 發行版、元件版本,以及已經套用過的 hardening。因此本章接下來不會按 CIS
 建議編號依序講解,而是針對 control plane 與節點的每個元件各分一個小節
 (`kube-apiserver`、`kube-controller-manager` 和 `kube-scheduler`、`kubelet`、
-`etcd`)——這些是實際 `kube-bench` 報告中最常見的發現類別,以及如何安全地修正它們,
+`etcd`)-這些是實際 `kube-bench` 報告中最常見的發現類別,以及如何安全地修正它們,
 而不是 benchmark 全部項目的完整清單。
 
 ## 07.3. 範例:找出並修正 kube-apiserver 的 FAIL
@@ -144,7 +144,7 @@ control-plane 節點磁碟上的清單 `/etc/kubernetes/manifests/kube-apiserver
 並在其變更時自動重新建立 Pod。因此應該編輯的是這個檔案本身,而不是透過 `kubectl`
 編輯 Pod 物件。
 
-修正方式不需要自己想——`kube-bench` 會在報告中直接給出。每個 `FAIL` 都會在
+修正方式不需要自己想-`kube-bench` 會在報告中直接給出。每個 `FAIL` 都會在
 `== Remediations ==` 章節中附上對應的項目,例如:
 
 ```text
@@ -159,7 +159,7 @@ below parameter.
 
 Remediation 指出了確切的檔案與確切的 flag。修改前請在 `/etc/kubernetes/manifests/`
 **之外**先建立備份:kubelet 會讀取該目錄中所有名稱不以句點開頭的檔案,而不論其副檔名
-為何,並可能嘗試把不小心留在旁邊的副本當成 static Pod 建立——一旦 Pod 名稱相同,行為
+為何,並可能嘗試把不小心留在旁邊的副本當成 static Pod 建立-一旦 Pod 名稱相同,行為
 就不確定,備份中過時的規格可能會悄悄蓋過目前有效的 manifest。
 
 ```bash
@@ -229,12 +229,12 @@ scheduler 的健康狀態,並把 `kube-bench` 的落差記錄為所用 benchmark
 對 `kube-controller-manager` 而言,`--profiling` 仍是正常的 CLI flag,因此它的發現
 (`1.3.2`)完全按照 07.3 的方式修正,沒有這個附加條件。
 
-完全相同的循環——執行 `kube-bench`、找出 `FAIL`、編輯清單、驗證——也適用於
+完全相同的循環-執行 `kube-bench`、找出 `FAIL`、編輯清單、驗證-也適用於
 worker 節點,只是使用 `node` 的 targets 與 flag 集合(`kubelet`,而不是
 control-plane 元件)。07.5 節正是討論這個發現。
 
 **在考試中,速度比完整性更重要。** 典型的 CKS 任務會這樣描述:「kube-apiserver/
-kubelet 的 kube-bench 報告中有某個 ID 的 FAIL——請修正它」,而評分依據正是修正這件
+kubelet 的 kube-bench 報告中有某個 ID 的 FAIL-請修正它」,而評分依據正是修正這件
 事本身,而不是對所有發現的全面總覽。快速演算法:開啟具體 ID 的
 `== Remediations ==` → 判斷是 static Pod 還是 systemd 服務(kubelet)→ 編輯需要的
 檔案 → 等待重啟 → 用同樣的 `--check <ID>` 重新驗證,而不是整個 target。
@@ -244,9 +244,9 @@ kubelet 的 kube-bench 報告中有某個 ID 的 FAIL——請修正它」,而�
 存在。恢復順序:
 
 1. 檢查實際發生了什麼:`sudo crictl ps -a --name <component>` 和
-   `sudo journalctl -u kubelet -n 100 --no-pager`——kubelet 會記錄它無法從新清單
+   `sudo journalctl -u kubelet -n 100 --no-pager`-kubelet 會記錄它無法從新清單
    啟動 static Pod 的原因。
-2. 如果不能很快找出原因,就用清單的備份還原——這比在考試時間壓力下解析複雜的
+2. 如果不能很快找出原因,就用清單的備份還原-這比在考試時間壓力下解析複雜的
    YAML 更快。
 3. 恢復後更精確地重新修改,再次等待 `Ready`,才能繼續處理下一個發現。
 
@@ -362,7 +362,7 @@ kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" \
 ```
 
 對於外部使用者,對 `10250` 的存取仍必須受防火牆與網路拓撲限制。
-`authorization-mode=Webhook` 本身並不會讓埠變得安全——它只是讓 kubelet 向
+`authorization-mode=Webhook` 本身並不會讓埠變得安全-它只是讓 kubelet 向
 Kubernetes API 詢問已驗證主體的權限。
 
 ## 07.6. 範例:找出並修正 etcd 的 FAIL
@@ -384,14 +384,14 @@ For example, chown etcd:etcd /var/lib/etcd
 
 Remediation 明確指出:先透過 `ps` 確定實際的 data directory,再把它的 ownership
 改為 `etcd:etcd`。這裡的 `ps` 命令是用來找出真正的 `--data-dir`,而不是用來推斷
-期望的擁有者——check `1.1.12` 本身要求字面上的 `etcd:etcd`,無論該程序實際上是以
+期望的擁有者-check `1.1.12` 本身要求字面上的 `etcd:etcd`,無論該程序實際上是以
 哪個使用者執行的。
 
 這項要求必須與具體安裝的 runtime identity 區分開來。在一般的 kubeadm control
 plane 中,static Pod 預設以 `root` 執行;若使用 `RootlessControlPlane`,kubeadm
 會使用獨立的 non-root identity(對 etcd 而言是 `kubeadm-etcd`)。因此在變更
 ownership 之前,請先檢查實際的 data directory、所選 CIS profile 是否適用於你的
-安裝,以及 host 上是否存在所需的 `etcd`/`etcd` 帳號/群組 mapping——不要用程序的
+安裝,以及 host 上是否存在所需的 `etcd`/`etcd` 帳號/群組 mapping-不要用程序的
 使用者取代 benchmark 的字面要求。
 
 如果環境確實需要滿足這個 check,且 `etcd:etcd` 的 mapping 對該 host 是有效的,就
@@ -422,7 +422,7 @@ sudo kube-bench run --targets master --check 1.1.11
 ```
 
 「remediation 給出命令,但套用前要先驗證實際的 data directory 與 profile 的
-適用性」這個相同原則,也適用於相鄰的 etcd CIS 發現——pod spec 檔案
+適用性」這個相同原則,也適用於相鄰的 etcd CIS 發現-pod spec 檔案
 (`/etc/kubernetes/manifests/etcd.yaml`)以及 TLS 金鑰
 (`/etc/kubernetes/pki/etcd/*.key`)的權限與擁有者。不要把 `2379`/`2380` 對外開放,
 也不要把這個範例原封不動地搬到 data directory 與 etcd 程序不屬於你的 managed
@@ -432,7 +432,7 @@ sudo kube-bench run --targets master --check 1.1.11
 
 對每一個 `FAIL` 或經過判斷後接受的 `WARN`,依照一套簡短的程序行動:(1)從報告中
 記下 Kubernetes 版本、`kube-bench` 的版本或 digest、所選 profile 與 CIS check
-ID;(2)備份活動中的檔案或物件——對於檔案系統托管的 static Pod,備份必須存放在
+ID;(2)備份活動中的檔案或物件-對於檔案系統托管的 static Pod,備份必須存放在
 **`staticPodPath` 之外**:kubelet 不會依副檔名過濾該目錄中的檔案,可能把 `.backup`
 當成另一份清單處理;(3)只變更一項 control;(4)等待重啟,並檢查元件與叢集的
 健康狀態;(5)只重新執行受影響的 target 或 check(例如對支援此語法的版本執行
@@ -583,7 +583,7 @@ profiling 必須在 `kube-apiserver`、`kube-controller-manager` 與
 `kube-scheduler` 上停用:不能只處理 apiserver,CIS 會檢查這三個元件的
 profiling 端點。設定方式並不總是相同:`kube-apiserver` 與
 `kube-controller-manager` 使用 CLI flag `--profiling=false`,但
-`kube-scheduler` 的這個 flag 已經 deprecated——如果它以 `--config=<path>`
+`kube-scheduler` 的這個 flag 已經 deprecated-如果它以 `--config=<path>`
 啟動,就必須透過 `KubeSchedulerConfiguration` 中的 `enableProfiling: false`
 停用 profiling,而不是透過 CLI。停用 profiling 不等於停用 metrics。
 </details>
@@ -613,7 +613,7 @@ identity。因此應先檢查 data directory、benchmark 的適用性與 UID/GID
 private key 是機密材料,因此需要最嚴格的存取限制;典型的 baseline 是模式
 `0600`。擁有者並非固定不變:在一般以 root 執行的 kubeadm 安裝中,通常是
 `root:root`,而在 non-root control plane 中,金鑰應屬於實際需要它的 service
-identity——如果不檢查 runtime identity 就機械式地把擁有者改成 `root:root`,可能
+identity-如果不檢查 runtime identity 就機械式地把擁有者改成 `root:root`,可能
 會讓該程序失去對自己金鑰的存取權。
 
 如果檢查的是具體的 CIS control,應另外核對其字面要求:例如 `cis-1.12` 的 check
@@ -645,7 +645,7 @@ kubelet 則用 `sudo systemctl status kubelet` 與 `journalctl -u kubelet`;
 [cis-benchmarks-kube-bench-fix-controlplane](https://killercoda.com/killer-shell-cks/scenario/cis-benchmarks-kube-bench-fix-controlplane)
 
 另外可參考:[CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes)
-與 [kube-bench](https://github.com/aquasecurity/kube-bench)——profile 與檢查項目
+與 [kube-bench](https://github.com/aquasecurity/kube-bench)-profile 與檢查項目
 說明的第一手資料來源。
 
 ---

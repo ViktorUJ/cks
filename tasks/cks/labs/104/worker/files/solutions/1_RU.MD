@@ -1,3 +1,5 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
 # Лаба 104 - эталонное решение: RBAC, ServiceAccount token и anonymous API
 
 > Выполняйте команды с рабочей машины, если в шаге не указано иное. Namespace
@@ -26,8 +28,8 @@ k auth can-i delete secrets -n security-104 \
 ## 2. Projected токен ServiceAccount
 
 TokenRequest volume выдаёт короткоживущий токен; обычное автомонтирование отключено.
-Не фиксируем `audience: kubernetes.default.svc`: для kubeadm это не гарантированно
-значение, принимаемое API server. Если `audience` опущена, kubelet использует identifier
+Не фиксируем `audience: kubernetes.default.svc`: для kubeadm это не обязательно
+значение, которое принимает API server. Если `audience` опущена, kubelet использует identifier
 API server по умолчанию. Отдельную audience допустимо указать только после проверки
 `--api-audiences` (либо default из `--service-account-issuer`) на control-plane.
 `expirationSeconds` обязан быть в диапазоне `600`-`3600` включительно - Kubernetes API
@@ -81,6 +83,31 @@ k auth can-i delete secrets -n security-104 \
   --as=system:serviceaccount:security-104:api-client
 # no
 ```
+
+Проверяем не только наличие файла, но и то, что именно смонтированный projected token
+реально аутентифицируется как ожидаемый ServiceAccount, отправив его в `TokenReview`:
+
+```bash
+TOKEN=$(k exec -n security-104 token-client -- cat /var/run/secrets/tokens/api-token)
+
+k create -o jsonpath='{.status.authenticated}{" "}{.status.user.username}{"\n"}' -f - <<EOF
+apiVersion: authentication.k8s.io/v1
+kind: TokenReview
+spec:
+  token: $TOKEN
+EOF
+# true system:serviceaccount:security-104:api-client
+```
+
+Для лабораторной работы эта проверка обязательна: наличие файла само по себе не доказывает,
+что projected token валиден и аутентифицируется как ожидаемый ServiceAccount. `TokenReview`
+должен вернуть `authenticated: true` и username
+`system:serviceaccount:security-104:api-client`.
+
+На экзамене отдельно выполнять `TokenReview` не нужно, если этого не требует условие задачи:
+там достаточно быстро создать корректный projected token volume и проверить результат тем
+способом, который нужен в конкретном задании. Здесь `TokenReview` - учебная verification-проверка,
+которая одновременно соответствует критерию приёмки лабораторной работы.
 
 ## 3. Pod без токена API
 
@@ -202,8 +229,8 @@ k get po -n kube-system -l component=kube-apiserver
 # STATUS должен стать Running - если ещё нет, подождите пару секунд и повторите
 ```
 
-Проверьте все три поведения: `/version` отклоняет анонимные запросы, а `/livez`/`/readyz`
-- принимают:
+Проверьте все три поведения: `/version` отклоняет анонимные запросы, а `/livez`/`/readyz` -
+принимают:
 
 ```bash
 SERVER=$(k config view --minify -o jsonpath='{.clusters[0].cluster.server}')
@@ -259,20 +286,37 @@ k delete clusterrolebinding lab104-unintended-anonymous-access
 k delete clusterrole lab104-anonymous-debug-access
 ```
 
-Подтверждаем отзыв реальным негативным контролем от имени именно неаутентифицированной
-идентичности, а не просто отсутствием объекта:
+Подтверждаем отзыв негативным контролем от имени именно неаутентифицированной идентичности
+(`system:anonymous` + группа `system:unauthenticated`, и больше ничего) через
+`SubjectAccessReview` - его создаёт admin-контекст, поэтому список групп не приходится
+искусственно расширять:
 
 ```bash
-k auth can-i get pods -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
-k auth can-i get secrets -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
-k auth can-i get configmaps -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
-# no / no / no
+for R in pods secrets configmaps; do
+  for NS in $(k get ns -o jsonpath='{.items[*].metadata.name}'); do
+    ALLOWED=$(k create -o jsonpath='{.status.allowed}' -f - <<EOF
+apiVersion: authorization.k8s.io/v1
+kind: SubjectAccessReview
+spec:
+  user: system:anonymous
+  groups: ["system:unauthenticated"]
+  resourceAttributes:
+    namespace: $NS
+    resource: $R
+    verb: get
+EOF
+    )
+    printf '%-12s %-24s %s\n' "$R" "$NS" "$ALLOWED"
+  done
+done
+# для каждой строки ожидается false
 ```
 
-Второй `--as-group=system:authenticated` нужен только чтобы impersonated-идентичность вообще
-могла выполнить сам запрос `can-i` (SelfSubjectAccessReview); без него `system:anonymous`
-получит `Forbidden` вместо `no`, что не доказывает отзыв прав. Эта группа не даёт доступа к
-Pod/Secret/ConfigMap - если бы lab-owned binding остался, ответ был бы `yes`.
+Не добавляйте `--as-group=system:authenticated` в `can-i --as=system:anonymous`: реальный
+неаутентифицированный запрос в эту группу не входит, и проверка перестанет отражать
+настоящую anonymous-идентичность. Проверяем каждый namespace отдельно, потому что
+RoleBinding действует только в своём namespace: отсутствие cluster-wide привязки не
+доказывает отсутствие локальной, а критерий приёмки требует, чтобы доступа не было ни в одном namespace.
 
 В конце выполните `check_result`.
 
@@ -299,7 +343,7 @@ k exec -n security-104 app-vulnerable -- cat /proc/1/environ \
 внутри контейнера; сам процесс приложения всё равно должен запускаться под этим UID, иначе
 он не сможет прочитать файл.
 
-Поле - неизменяемое; Pod нужно удалить и создать заново с тем же именем. Снова дешевле
+Большинство полей Pod (в том числе `volumes`) неизменяемы, поэтому Pod нужно удалить и создать заново с тем же именем. Снова дешевле
 сгенерировать скелет через `--dry-run` и дописать volume в `vim`, чем писать весь YAML:
 
 ```bash
@@ -457,7 +501,7 @@ k -n security-104-baseline get sa default \
 это самый частый в реальности случай, когда разработчик просто не думает про SA. Поле
 `automountServiceAccountToken` должно ОТСУТСТВОВАТЬ в спеке Pod - явное указание `false`
 доказывало бы только точечную настройку самого Pod (как в задании 3), а не то, что
-namespace-level baseline реально работает:
+namespace-level baseline реально работает.
 
 Здесь не нужен даже `--dry-run` - раз в Pod не добавляется ни одного поля про SA/automount,
 `kubectl run` без флагов создаёт ровно то, что нужно, напрямую:
@@ -519,7 +563,7 @@ EOF
 Правило RBAC стоит первым - более специфичное правило должно предшествовать общему
 catch-all, иначе `Metadata` перехватит событие раньше. `omitStages: [RequestReceived]`
 на уровне всей policy убирает лишнюю запись до обработки запроса - у неё нет
-`requestObject`/`responseStatus`, которые всё равно фильтрует checker (`stage ==
+`requestObject`/`responseStatus`, и checker такие записи всё равно отбрасывает (`stage ==
 "ResponseComplete"`), а с catch-all `Metadata`-правилом на ВСЕ остальные запросы кластера
 эта стадия удваивала бы объём audit.log без пользы.
 
@@ -553,8 +597,8 @@ exit
 exit
 ```
 
-`systemctl restart kubelet` форсирует немедленную пересборку static Pod - так же, как в
-задании 5, быстрее ждать не нужно:
+`systemctl restart kubelet` форсирует немедленную пересборку static Pod - как и в
+задании 5, это быстрее, чем ждать, пока kubelet сам заметит изменение файла:
 
 ```bash
 k get po -n kube-system -l component=kube-apiserver
@@ -631,7 +675,7 @@ source of truth - **событие во времени** (audit log), котор
 
 В конце выполните `check_result`.
 
-## 10. Decode, create and mount a Secret
+## 10. Декодирование, создание и монтирование Secret
 
 `legacy-config` уже существует. Читаем оба значения через API, а не гадаем:
 
@@ -687,7 +731,7 @@ k exec -n security-104 secret-workflow -- cat /etc/rehydrated/SERVICE_TOKEN
 
 В конце выполните `check_result`.
 
-## 11. Repair existing Role and bind it to an SA from another namespace
+## 11. Исправление существующей Role и привязка её к SA из другого namespace
 
 Существующий Role `pod-role` в `rbac-a` разрешает `get`, `list`, `delete` - убираем
 лишний `delete`, добавляем нужный `watch`:
@@ -722,7 +766,7 @@ k run rbac-a-workload -n rbac-a --image=busybox:1.36 \
 
 В конце выполните `check_result`.
 
-## 12. Client certificate user via CSR + namespaced RBAC
+## 12. Пользователь с клиентским сертификатом через CSR + namespaced RBAC
 
 Генерируем private key и CSR с `CN=john` - RBAC для сертификат-based пользователя
 связывается через `kind: User`, а не `ServiceAccount`, и у `User` нет собственного API
@@ -800,7 +844,7 @@ curl -s -o /dev/null -w '%{http_code}\n' --cacert /tmp/cluster-ca.crt \
   "$SERVER/api/v1/namespaces/security-104/pods"     # 403
 ```
 
-То же самое доказательство, но через привычный `kubectl`, а не `curl` - собираем John отдельный
+То же самое доказательство, но через привычный `kubectl`, а не `curl` - собираем для John отдельный
 kubeconfig из уже выпущенного сертификата (`set-credentials` с `--client-certificate`/
 `--client-key`, а не `--token`, потому что identity здесь именно client-cert, а не
 ServiceAccount token):

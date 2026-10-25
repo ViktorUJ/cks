@@ -115,7 +115,7 @@ flowchart TB
 - `kubesec`および`hadolint`と併せた`kube-linter`。
 - `RuntimeClass`によるsandboxed containers: gVisor（`runsc`）とKata Containers。
 
-能力から章への完全な対応表は[コースの目次](../README_JP.md#能力--章)にあります。ここで重要なのはその論理です。policyはアクセスを制限し、hardeningは攻撃対象領域を減らし、supply chainは信頼できないアーティファクトを許さず、runtime保護とauditは残ったリスクの検知に役立ちます。
+能力から章への完全な対応表は[コースの目次](../README_JP.md#コンピテンシー--章)にあります。ここで重要なのはその論理です。policyはアクセスを制限し、hardeningは攻撃対象領域を減らし、supply chainは信頼できないアーティファクトを許さず、runtime保護とauditは残ったリスクの検知に役立ちます。
 
 ## 01.4 CKAの前提条件: このコースで繰り返さないこと
 

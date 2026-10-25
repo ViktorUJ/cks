@@ -3,6 +3,11 @@ set -euo pipefail
 
 export KUBECONFIG=/root/.kube/config
 
+# Интерактивный `apt-get install` в Ubuntu 22.04 показывает диалог needrestart (OK/Cancel) и теряет
+# вставленные в терминал команды. Только выводим список сервисов, не показывая диалог.
+mkdir -p /etc/needrestart/conf.d
+echo "\$nrconf{restart} = 'l';" > /etc/needrestart/conf.d/99-cks-lab.conf
+
 echo "*** control-plane / workload node CKS lab 112 bootstrap"
 until kubectl get nodes --no-headers >/dev/null 2>&1; do sleep 5; done
 
@@ -112,7 +117,7 @@ chmod 0755 /usr/local/bin/install-kyverno
 
 # Task 9's controlled admission-bypass/Falco abuse fixture must be a safe, lab-owned
 # fixture isolated from external systems (ADVERSARIAL_ACCEPTANCE_STANDARD.md), not a live
-# dependency on Docker Hub reachability at grading time. Pull the two base images once here
+# dependency on Docker Hub reachability at grading time. Pull the three base images once here
 # at bootstrap time and retag them under lab-owned repository names; they stay in
 # containerd's local content store under the k8s.io namespace, so kubelet (via CRI,
 # imagePullPolicy: IfNotPresent) and `crictl` both resolve them from cache afterwards without
@@ -120,8 +125,12 @@ chmod 0755 /usr/local/bin/install-kyverno
 install -d -m 0755 /etc/cks112
 ctr -n k8s.io images pull docker.io/library/busybox:1.36 >/dev/null
 ctr -n k8s.io images pull docker.io/library/alpine:3.20 >/dev/null
+# Keep prefix-trap content digest distinct: Falco/CRI may resolve any of an
+# image digest's aliases, making a retagged untrusted image a false-negative.
+ctr -n k8s.io images pull docker.io/library/alpine:3.21 >/dev/null
 ctr -n k8s.io images tag docker.io/library/busybox:1.36 cks112.local:5000/cks112/trusted:1 >/dev/null
 ctr -n k8s.io images tag docker.io/library/alpine:3.20 cks112.local:5000/cks112/untrusted:1 >/dev/null
+ctr -n k8s.io images tag docker.io/library/alpine:3.21 cks112.local:5000/cks112/trusted-evil:1 >/dev/null
 
 # Direct-to-runtime launcher for task 9. It talks to containerd over CRI (crictl), so the
 # container is created WITHOUT kube-apiserver/admission, yet stays visible to Falco's
@@ -159,11 +168,18 @@ RUN_EOF
 cat >/usr/local/bin/cks112-rm <<'RM_EOF'
 #!/usr/bin/env bash
 # usage: cks112-rm <unique-id>  (removes the sandbox and its container created by cks112-run)
-for pod in $(crictl pods --name "^$1\$" -q 2>/dev/null); do
+set -euo pipefail
+id=${1:?usage: cks112-rm unique-id}
+failed=0
+for pod in $(crictl pods --name "^${id}\$" -q); do
+  for ctr_id in $(crictl ps -a --pod "$pod" -q); do
+    crictl stop "$ctr_id" >/dev/null 2>&1 || true
+    crictl rm "$ctr_id" >/dev/null 2>&1 || failed=1
+  done
   crictl stopp "$pod" >/dev/null 2>&1 || true
-  crictl rmp "$pod" >/dev/null 2>&1 || true
+  crictl rmp "$pod" >/dev/null 2>&1 || failed=1
 done
-exit 0
+[[ "$failed" -eq 0 ]]
 RM_EOF
 chmod 0755 /usr/local/bin/cks112-run /usr/local/bin/cks112-rm
 
@@ -173,6 +189,7 @@ export CKS112_TRUSTED_REPO='cks112/trusted'
 export CKS112_UNTRUSTED_REPO='cks112/untrusted'
 export CKS112_TRUSTED_IMAGE='cks112.local:5000/cks112/trusted:1'
 export CKS112_UNTRUSTED_IMAGE='cks112.local:5000/cks112/untrusted:1'
+export CKS112_PREFIX_IMAGE='cks112.local:5000/cks112/trusted-evil:1'
 EOF
 chmod 0644 /etc/cks112/registry.env
 

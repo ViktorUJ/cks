@@ -96,7 +96,7 @@ ne doit pas être téléversé.
 
 L'option `-nodes` laisse la clé privée sans passphrase. Cela est nécessaire, car le controller doit lire la
 clé sans saisie interactive. Dans ce cas, la protection provient d'un RBAC strict pour le Secret, d'un accès
-restreint à etcd et du encryption at rest - et non d'une passphrase dans le fichier de clé.
+restreint à etcd et de l'encryption at rest - et non d'une passphrase dans le fichier de clé.
 
 > 🏭 Une CA de confiance, un renouvellement automatisé, un propriétaire, une alerte avant expiration et une rotation de Secret testée.
 
@@ -238,7 +238,7 @@ Même un Ingress TLS correct laisse un risque si HTTP reste disponible : un util
 lien et un cookie ou un formulaire circule avant la première réponse HTTPS. Pour **ingress-nginx**, la
 présence d'un bloc `spec.tls` active par défaut la redirection HTTP -> HTTPS (généralement `308`), sauf si
 la configuration du controller la remplace. Par conséquent, définir simultanément `ssl-redirect` et
-`force-ssl-redirect` n'est ni nécessaire ni une recette obligatoire correcte pour un Ingress TLS ordinaire.
+`force-ssl-redirect` n'est ni nécessaire ni correct en tant que recette obligatoire pour un Ingress TLS ordinaire.
 
 Il s'agit de la sémantique d'ingress-nginx, non de l'API Ingress. Si vous devez explicitement remplacer la
 configuration d'ingress-nginx pour un Ingress avec `spec.tls`, utilisez uniquement son annotation spécifique
@@ -841,7 +841,7 @@ tandis qu'une référence cross-namespace nécessiterait un `ReferenceGrant` dan
 
 ## Pratique
 
-🧪 TP 103 (CIS, Secure Ingress TLS, TLS hardening et vérification des binaires) :
+🧪 Lab 103 (CIS, Secure Ingress TLS, TLS hardening et vérification des binaires) :
 [tasks/cks/labs/103](../../labs/103/README_FR.MD)
 
 🌐 Pratique interactive supplémentaire (killer.sh/killercoda, ressource externe) : [ingress-create](https://killercoda.com/killer-shell-cks/scenario/ingress-create) · [ingress-secure](https://killercoda.com/killer-shell-cks/scenario/ingress-secure)

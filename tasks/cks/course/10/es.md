@@ -546,7 +546,7 @@ del workload.
 - **Role por defecto.** Los equipos y aplicaciones reciben `Role`/`RoleBinding` namespaced;
   `ClusterRoleBinding` requiere propietario, motivo, vencimiento y security-review.
 - **ServiceAccount por defecto.** No otorgue permisos de aplicación al ServiceAccount `default`.
-  Si workload no usa Kubernetes API, establezca `automountServiceAccountToken: false`; de lo
+  Si el workload no usa la API de Kubernetes, establezca `automountServiceAccountToken: false`; de lo
   contrario, cree un ServiceAccount independiente con permisos mínimos. Así, la auditoría y
   revocación de acceso siguen siendo precisas.
 - **RBAC como código.** Mantenga sus propias roles en Git, compruebe el diff de reglas y labels

@@ -66,7 +66,7 @@ kubectl auth can-i get secrets -n cks-104 --as="$SA"
 
 Sans `--as`, `can-i` répond toujours pour l'identity sous laquelle vous exécutez `kubectl` - votre propre kubeconfig, et non l'identity testée. Un exercice porte presque toujours sur un ServiceAccount, un utilisateur ou un groupe précis ; la vérification a donc besoin de `--as=<identity>` : sans lui, `yes`/`no` ne prouve rien sur la cible de l'audit, seulement sur vos propres droits.
 
-`--as-group` ne remplace pas `--as` et n'est pas une alternative autonome : c'est une liste de groupes additional impersonated appliqués uniquement avec un utilisateur impersonated. Si un exercice teste les droits obtenus via un group binding, définissez `--as` et **également** les `--as-group` requis :
+`--as-group` ne remplace pas `--as` et n'est pas une alternative autonome : c'est une liste de groupes impersonated supplémentaires appliqués uniquement avec un utilisateur impersonated. Si un exercice teste les droits obtenus via un group binding, définissez `--as` et **également** les `--as-group` requis :
 
 ```bash
 kubectl auth can-i list pods -n cks-104 \
@@ -187,7 +187,7 @@ Toutes les règles ne se valent pas. L'accès read-only à `pods` et `get` sur `
 | `create`/`update`/`patch` sur RoleBinding et ClusterRoleBinding | Avec un rôle accessible, peut transmettre des permissions ; ClusterRoleBinding le fait pour tout le cluster. | L'interdire aux applications ; séparer l'octroi d'accès du développement des workloads. |
 | `get`/`list`/`watch` sur `secrets` | Un Secret contient souvent un mot de passe, un registry credential, une clé ou un bearer token ; `list`/`watch` divulguent les valeurs de nombreux Secret. | Indiquer un Secret précis avec `resourceNames` pour `get`, ou ne donner aucun accès API à l'application. |
 | `create` sur `serviceaccounts/token` | Émet un token pour le ServiceAccount choisi et peut devenir un moyen d'utiliser ses permissions. | Ne l'autoriser que pour une automatisation de confiance et sur des ServiceAccount précis. |
-| `create` sur `pods/exec` | Donne l'exécution interactive de commandes dans un Pod déjà en cours, ainsi que l'accès à son réseau, son filesystem et ses Secret mounted. | Ne pas l'inclure dans les rôles ordinaires ; utiliser un accès break-glass de courte durée et l'audit. |
+| `create` sur `pods/exec` | Donne l'exécution interactive de commandes dans un Pod déjà en cours d'exécution, ainsi que l'accès à son réseau, son filesystem et ses Secret mounted. | Ne pas l'inclure dans les rôles ordinaires ; utiliser un accès break-glass de courte durée et l'audit. |
 | `create` sur `pods/portforward` | Crée un tunnel vers les ports d'un Pod en contournant l'exposition réseau ordinaire. | L'accorder de façon ciblée pour le diagnostic et le retirer après l'incident. |
 | `create` d'un workload (`pods`, `deployments`, `jobs`, etc.) | La création d'un Pod/workload dans un namespace procure à elle seule un fort accès indirect : il est possible de choisir n'importe quel ServiceAccount de ce namespace et de référencer dans un Pod spec un Secret, un ConfigMap et un stockage accessible, même sans `get secrets` séparé pour l'identity d'origine. Cela peut permettre d'obtenir les données ou les permissions API d'un autre workload. Si la policy autorise un Pod privileged/host-level, les conséquences peuvent s'étendre au node. | Ne pas l'accorder inutilement à des tenant identity non fiables ; considérer la création de workload comme un droit privilégié et limiter Pod Security, ServiceAccount, la conception Secret/storage et admission policy. |
 | `nodes` | L'accès aux objets Node divulgue des informations d'infrastructure ; modifier un Node est une opération cluster-wide. | L'exclure des rôles tenant ; l'accorder à des identity opérationnelles distinctes. |
@@ -222,7 +222,7 @@ l'audit : il est impossible de savoir dans le YAML si l'accès à `secrets`, `po
 > 🧠 RBAC est additif : un rôle étroit n'annule pas un Allow accordé ; `escalate`, `bind`, `impersonate`, les bindings, Secret et les subresource dangereux peuvent transmettre les droits d'autrui.
 
 ```yaml
-# Dangereux : tout l'API de namespace actuel et futur
+# Dangereux : toute l'API actuelle et future du namespace
 rules:
 - apiGroups: ["*"]
   resources: ["*"]
@@ -477,13 +477,13 @@ selon l'objectif réel du ServiceAccount, les logs d'audit et le propriétaire d
 - **Role par défaut.** Les équipes et applications reçoivent des `Role`/`RoleBinding` namespaced ;
   `ClusterRoleBinding` requiert un propriétaire, une raison, une date d'expiration et une security review.
 - **ServiceAccount par défaut.** Ne donnez pas de permissions applicatives au ServiceAccount `default`.
-  Si un workload n'appelle pas Kubernetes API, définissez `automountServiceAccountToken:
+  Si un workload n'appelle pas Kubernetes API, définissez `automountServiceAccountToken :
   false` ; sinon, créez un ServiceAccount dédié avec des permissions minimales. Ainsi, l'audit et la révocation
   d'accès restent ciblés.
 - **RBAC as code.** Conservez les rôles personnalisés dans Git et vérifiez dans CI le diff des règles et des labels
   d'aggregation. Bloquez explicitement wildcard, `escalate`, `bind`, `impersonate` et l'accès à
   Secret sans exception explicite.
-- **Configuration d'authorization de API server.** Déterminez d'abord laquelle des deux méthodes de
+- **Configuration d'authorization de l'API server.** Déterminez d'abord laquelle des deux méthodes de
   configuration mutuellement exclusives est utilisée.
 
   Pour une configuration command-line, vérifiez que `--authorization-mode` contient la chaîne requise,
@@ -493,7 +493,7 @@ selon l'objectif réel du ServiceAccount, les logs d'audit et le propriétaire d
   `--authorization-mode` : vérifiez `type: RBAC`, ainsi que le contenu et l'ordre de `authorizers`
   directement dans `AuthorizationConfiguration`.
 
-  La composition et l'ordre de la authorizer chain doivent faire partie de la security review.
+  La composition et l'ordre de l'authorizer chain doivent faire partie de la security review.
 - **Audit périodique.** Inventoriez les `ClusterRoleBinding`, les subjects `system:serviceaccount`, les
   rôles intégrés et les agrégateurs ; vérifiez les contrats critiques avec `kubectl auth can-i`.
 - **Break-glass plutôt qu'un admin permanent.** L'accès d'urgence doit être une identity distincte et de courte
@@ -505,7 +505,7 @@ selon l'objectif réel du ServiceAccount, les logs d'audit et le propriétaire d
   une tâche précise.
 - **verb** - opération Kubernetes API, par exemple `get`, `list`, `create`, `bind` ou
   `escalate`.
-- **resource / subresource** - objet API et son sous-ressource, par exemple `pods` et `pods/exec`.
+- **resource / subresource** - objet API et sa sous-ressource, par exemple `pods` et `pods/exec`.
 - **`resourceNames`** - restriction d'une règle à des noms d'objets précis là où API server la
   prend en charge.
 - **impersonation** - exécution d'une requête au nom d'une autre identity au moyen des en-têtes API.
@@ -597,7 +597,7 @@ Ce sont des subresource API distincts, écrits `pods/exec` et `pods/portforward`
 <details>
 <summary>6. Pourquoi `resourceNames` ne limite-t-il pas `create` et `deletecollection` d'une ressource de premier niveau, mais peut-il s'appliquer à un subresource nommé tel que `pods/exec` ?</summary>
 
-Pour `create` et `deletecollection` d'une ressource de premier niveau, le nom de l'objet ne fait pas partie de l'URL de la requête ; API server ne peut donc pas le limiter avec `resourceNames`. Ce n'est pas une restriction universelle pour tous les subresource. Un subresource nommé tel que `pods/exec` peut être limité parce que la requête adresse un Pod précis.
+Pour `create` et `deletecollection` d'une ressource de premier niveau, le nom de l'objet ne fait pas partie de l'URL de la requête ; API server ne peut donc pas le limiter avec `resourceNames`. Ce n'est pas une restriction universelle pour tous les subresource. Un subresource nommé tel que `pods/exec` peut être limité avec `resourceNames` parce que la requête adresse un Pod précis.
 </details>
 
 <details>
@@ -615,7 +615,7 @@ Le contrôleur RBAC ajoute les règles d'une ClusterRole portant ce label au rô
 <details>
 <summary>9. **Flashback (chapitre 04).** La `NetworkPolicy` du chapitre 04 est une allow-list : d'abord default-deny, puis des permissions étroites. Où la même logique « tout refuser, puis autoriser explicitement » s'applique-t-elle dans la conception RBAC, et quand une requête reçoit-elle réellement default-deny ?</summary>
 
-Dans RBAC, commencez par l'absence des permissions nécessaires et ajoutez seulement des `apiGroups`, `resources` et `verbs` précis, avec une portée minimale. Une requête est refusée lorsqu'aucun `RoleBinding` ou `ClusterRoleBinding` applicable n'accorde Allow. Vérifiez non seulement le binding où le subject apparaît directement, mais aussi les permissions reçues par ses groupes, par exemple `system:serviceaccounts` pour un ServiceAccount. L'absence d'un `RoleBinding` direct sur un utilisateur ou ServiceAccount ne prouve donc pas à elle seule l'absence d'accès ; confirmez la frontière finale avec `kubectl auth can-i` pour une identity précise. À la différence de NetworkPolicy, c'est le RBAC authorizer de API server qui prend la décision, mais le résultat est lui aussi une allow-list explicite.
+Dans RBAC, commencez par l'absence des permissions nécessaires et ajoutez seulement des `apiGroups`, `resources` et `verbs` précis, avec une portée minimale. Une requête est refusée lorsqu'aucun `RoleBinding` ou `ClusterRoleBinding` applicable n'accorde Allow. Vérifiez non seulement le binding où le subject apparaît directement, mais aussi les permissions reçues par ses groupes, par exemple `system:serviceaccounts` pour un ServiceAccount. L'absence d'un `RoleBinding` direct sur un utilisateur ou ServiceAccount ne prouve donc pas à elle seule l'absence d'accès ; confirmez la frontière finale avec `kubectl auth can-i` pour une identity précise. À la différence de NetworkPolicy, c'est le RBAC authorizer de l'API server qui prend la décision, mais le résultat est lui aussi une allow-list explicite.
 </details>
 
 ## Pratique

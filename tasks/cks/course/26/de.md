@@ -3,7 +3,7 @@
 # Kapitel 26. Absicherung der Supply Chain: Registries, Signatur und Validierung von Artefakten
 
 > **Problem.** Ein Angreifer mit Push-Recht auf eine Registry oder Zugriff auf CD kann einen
-> mutable tag austauschen und eine fremde Image aus einem externen oder sogar gewohnten internen
+> mutable tag austauschen und ein fremdes Image aus einem externen oder sogar gewohnten internen
 > Repository ausrollen. Ein erfolgreicher Pull beweist nicht, dass diese Bytes von einer vertrauenswürdigen
 > Pipeline gebaut wurden, und eine Allowlist ohne Signature Verification stoppt kein unsigniertes Artifact. Es braucht
 > einen immutable Digest, die Prüfung des Publishers und fail-closed Admission vor dem Persistieren des Pod.
@@ -17,20 +17,20 @@
 > [CKA-Kapitel 21](../../../cka/course/21/de.md) behandelt, Image, Tag, Digest und Dockerfile in
 > [CKA-Kapitel 23](../../../cka/course/23/de.md). Hier werden diese Mechanismen als
 > Security Control eingesetzt: Ein Tag ist kein Beweis für den Inhalt, und ein erfolgreicher `docker pull`
-> bedeutet nicht, dass die Image zum Start zugelassen ist.
+> bedeutet nicht, dass das Image zum Start zugelassen ist.
 
 > **Die einfache Idee der Signatur.** Sie beantwortet eine Frage: **Wer hat genau diese
-> Bytes der Image freigegeben?** Die Pipeline fixiert zuerst den immutable Digest - den Fingerabdruck des Inhalts - und
-> signiert dann diesen Digest. Vor dem Start gleicht der Verifier den Digest der Image mit der Signatur ab und
+> Bytes des Images freigegeben?** Die Pipeline fixiert zuerst den immutable Digest - den Fingerabdruck des Inhalts - und
+> signiert dann diesen Digest. Vor dem Start gleicht der Verifier den Digest des Images mit der Signatur ab und
 > stellt sicher, dass der Signer vertrauenswürdig ist. Zeigt der Tag jetzt auf andere Bytes, passt die alte Signatur
-> nicht mehr. Die Signatur verschlüsselt die Image nicht und ersetzt keinen Scan auf Malware/CVE: Sie beweist die
+> nicht mehr. Die Signatur verschlüsselt das Image nicht und ersetzt keinen Scan auf Malware/CVE: Sie beweist die
 > Identity des Publishers für einen konkreten Inhalt.
 
-> 🧠 Die Trust Decision wird vor dem Persistieren des `Pod` getroffen: Die Registry-Allowlist verantwortet die Herkunft der Image, die Signatur den vertrauenswürdigen Publisher, und der Digest fixiert den Inhalt.
+> 🧠 Die Trust Decision wird vor dem Persistieren des `Pod` getroffen: Die Registry-Allowlist verantwortet die Herkunft des Images, die Signatur den vertrauenswürdigen Publisher, und der Digest fixiert den Inhalt.
 
 ## 26.1. Was genau geschützt werden muss
 
-Die Supply Chain beginnt vor Kubernetes: Quellcode und CI bauen die Image, die Registry speichert
+Die Supply Chain beginnt vor Kubernetes: Quellcode und CI bauen das Image, die Registry speichert
 sie samt Signatur, GitOps oder `kubectl` übergibt die Referenz an den API-Server, und Admission entscheidet,
 ob der Pod zugelassen wird. Wird eine beliebige Etappe ausgetauscht, kann ein korrektes Manifest fremden
 Code ausführen.
@@ -52,7 +52,7 @@ flowchart TB
 
 Zwei unabhängige Eigenschaften dürfen nicht vermischt werden:
 
-- die **Registry-Allowlist** beantwortet, *woher* eine Image bezogen werden darf: zum Beispiel
+- die **Registry-Allowlist** beantwortet, *woher* ein Image bezogen werden darf: zum Beispiel
   `registry.example.com/platform/*`;
 - die **Signaturprüfung** beantwortet, *wer und für welchen Digest* das Artifact ausgestellt hat;
 - der **Digest** fixiert die Bytes. `:1.4.2` ist ein veränderlicher Name, während
@@ -61,7 +61,7 @@ Zwei unabhängige Eigenschaften dürfen nicht vermischt werden:
 Deshalb muss `registry.example.com/platform/api:1.4.2` vor dem Production-Rollout zu
 `registry.example.com/platform/api:1.4.2@sha256:<geprüfter-digest>` werden. Eine Allowlist
 ersetzt keine Signature Verification: Ein Angreifer mit Push-Recht auf eine vertrauenswürdige Registry kann
-dort weiterhin eine unsignierte Image platzieren. Die Signatur wiederum verbietet
+dort weiterhin ein unsigniertes Image platzieren. Die Signatur wiederum verbietet
 nicht die Nutzung einer nicht zugelassenen Registry.
 
 > 🎯 Implementieren Sie eine fail-closed Admission-Allowlist für die benötigte Registry/das Repository und prüfen Sie normal-, init- und ephemeral Container. Beachten Sie in Kubernetes v1.36 gesondert `spec.volumes[].image.reference`: Solange der Verifier ein solches OCI-Artifact nicht nachweisbar prüfen kann, ist es in einem geschützten Namespace sicherer, image volumes abzulehnen. Native `ValidatingAdmissionPolicy` und Gatekeeper sind direkte Wege zu dieser Aufgabe.
@@ -72,7 +72,7 @@ nicht die Nutzung einer nicht zugelassenen Registry.
 
 Für eine einfache Registry-Allowlist stellt Kubernetes die native `ValidatingAdmissionPolicy`
 (VAP) bereit: ein seit Kubernetes 1.30 stabiler Mechanismus, der keinen Admission-Webhook eines
-Drittanbieters benötigt. Sie eignet sich für CEL-Prüfungen von Prefix/Format der Image, ersetzt aber
+Drittanbieters benötigt. Sie eignet sich für CEL-Prüfungen von Prefix/Format des Images, ersetzt aber
 **nicht die kryptografische Prüfung von Cosign oder Notary**: VAP beweist nicht, wer einen konkreten Digest
 signiert hat. Die untenstehende Policy deckt gleichermaßen normale, init- und ephemeral Container ab; `pods/ephemeralcontainers`
 wird benötigt, um eine Umgehung über `kubectl debug` zu verbieten. Sie lehnt auch image volumes fail-closed ab:
@@ -143,12 +143,12 @@ Audit-Modus, korrigieren Sie bestehende Manifests, und wechseln Sie die Regel da
 
 > **Kompatibilitätshinweis.** Der Haupt-Exam/Lab-Track des Kurses ist Kubernetes v1.35: Kyverno
 > v1.19 unterstützt offiziell Kubernetes v1.33-v1.35. Die allgemeine Training-Baseline des Kurses
-> (Lab-Infrastruktur, `env.hcl`) ist Kubernetes v1.36, daher ist diese Lab eine
+> (Lab-Infrastruktur, `env.hcl`) ist Kubernetes v1.36, daher ist dieses Lab eine
 > zukunftsgerichtete Variante außerhalb der getesteten Support-Matrix von Kyverno 1.19 (siehe Kapitel
 > 20 §20.4). Verwechseln Sie nicht drei unabhängige Kontexte: die Exam-Version, die Training-Version
 > des Clusters und die vom Vendor unterstützte Version eines konkreten Tools können gleichzeitig voneinander abweichen.
 >
-> Die Labs 108 und 111 installieren Kyverno über den Helm Chart `3.9.0`, was dem Release
+> Die Labs 108 und 111 installieren Kyverno über das Helm Chart `3.9.0`, was dem Release
 > **Kyverno 1.19.0** entspricht. Ein bekannter Upstream-Defect [#16947](https://github.com/kyverno/kyverno/issues/16947)
 > betrifft genau `ImageValidatingPolicy`: Für `pods/ephemeralcontainers` wendet ihr Validating-
 > Handler `validations` nicht an, obwohl Webhook und Image Verification aufgerufen werden; das Issue
@@ -207,10 +207,10 @@ kubectl get policyreport -A          # falls Policy Reports im Cluster aktiviert
 ```
 
 Der Prefix im Test ist wichtig: Diese Kyverno-`ValidatingPolicy` prüft nur `registry.example.com/platform/*`, daher
-wird zum Testen der Policy selbst eine Image aus der passenden Registry mit einem falschen Pfad darin benötigt,
+wird zum Testen der Policy selbst ein Image aus der passenden Registry mit einem falschen Pfad darin benötigt,
 nicht eine beliebige fremde Registry.
 
-Fügen Sie nicht `docker.io` als Ganzes "vorübergehend" hinzu: Das verwandelt die Allowlist in ein Allow-All.
+Fügen Sie nicht `docker.io` als Ganzes „vorübergehend“ hinzu: Das verwandelt die Allowlist in ein Allow-All.
 Legen Sie für Systemkomponenten enge separate Prefixes fest, zum Beispiel
 `registry.k8s.io/*`, und dokumentieren Sie die Ausnahme bei der Änderungsprüfung.
 
@@ -310,7 +310,7 @@ kubectl get validatingwebhookconfiguration gatekeeper-validating-webhook-configu
   -o jsonpath='{range .webhooks[*]}{.name}{"\t"}{.failurePolicy}{"\n"}{end}'
 ```
 
-Der Chart-Standardwert kann `Ignore` sein, das heißt ein nicht erreichbarer Webhook lässt die Anfrage durch.
+Der Chart-Standardwert kann `Ignore` sein, das heißt, ein nicht erreichbarer Webhook lässt die Anfrage durch.
 Prüfen Sie in einer Testumgebung gezielt, dass eine Anfrage bei nicht erreichbarem Webhook abgelehnt wird.
 `Fail` erfordert HA, Monitoring und Verfügbarkeit von Gatekeeper: Sonst kann es neue
 Pod bei einem Ausfall des Controllers blockieren.
@@ -493,7 +493,7 @@ cosign sign --key cosign.key "$IMAGE"
 cosign verify --key cosign.pub "$IMAGE"
 ```
 
-Das obige `cosign generate-key-pair` ist nur ein lokales Paar für die Lab. Verwenden Sie in Production
+Das obige `cosign generate-key-pair` ist nur ein lokales Paar für das Lab. Verwenden Sie in Production
 den Keyless-OIDC-Flow unten oder einen separaten Schlüssel, der in einem KMS erstellt und gehalten wird;
 übertragen Sie den lokal erstellten `cosign.key` nicht in die CI. Ein erfolgreicher `cosign verify` bedeutet die
 kryptografische Prüfung der Signatur für die angegebene Image-Reference. Die Policy muss
@@ -508,7 +508,7 @@ Schlüssel und bewahren Sie einen Audit Trail: wer, wann und welchen Digest sign
 
 Der Sigstore-Keyless-Flow erhält nach der OIDC-Authentifizierung der CI ein kurzlebiges Zertifikat und
 schreibt den Nachweis in das Transparency Log. Ein lokaler Private Key muss nicht erstellt oder an
-Entwickler verteilt werden, aber vertraut werden muss nicht "jedem beliebigen Zertifikat", sondern der
+Entwickler verteilt werden, aber vertraut werden muss nicht „jedem beliebigen Zertifikat“, sondern der
 exakten OIDC-Identity des Release-Workflows.
 
 ```bash
@@ -528,7 +528,7 @@ Für einen GitHub-Actions-Workflow muss dem Job das Recht `id-token: write` erte
 Push-Recht auf die Registry und ersetzt keine scoped Registry Credential. Die Identity-Einschränkung muss
 Organisation, Repository, Workflow und das passende Ref/Environment umfassen. Ein zu breites
 `--certificate-identity-regexp='.*'` macht die Keyless Verification nahezu bedeutungslos:
-Jeder OIDC-Benutzer, den der Verifier akzeptiert, könnte die Image signieren.
+Jeder OIDC-Benutzer, den der Verifier akzeptiert, könnte das Image signieren.
 
 > 🎯 Die Signaturprüfung wird erst auf dem Admission-Pfad verbindlich: Eine lokal erfolgreiche Prüfung in der CI hindert einen direkten `kubectl apply` nicht.
 
@@ -605,7 +605,7 @@ Fix-Milestone `1.19.2`; siehe auch den Kompatibilitätshinweis in §26.2). Desha
 Positive-/Negative-Tests dieses gepinnten Releases der normale und der Init-Container. Die untenstehende Anfrage darf
 nur als empirischer Kompatibilitätstest ausgeführt werden; notieren Sie nicht im Voraus ein erwartetes Denial und
 verlassen Sie sich nicht darauf für das Enforcement eines unsignierten Debug-Containers aus einer approved Registry,
-solange die Lab keine korrigierte Version installiert und das Ergebnis nicht durch Ihren Test bestätigt ist.
+solange das Lab keine korrigierte Version installiert und das Ergebnis nicht durch Ihren Test bestätigt ist.
 
 ```bash
 kubectl debug allowed-pod --image=registry.example.com/platform/debug@sha256:<digest> --target=app
@@ -613,7 +613,7 @@ kubectl debug allowed-pod --image=registry.example.com/platform/debug@sha256:<di
 kubectl debug allowed-pod --image=registry.example.com/platform/debug:unsigned --target=app
 ```
 
-Prüfen Sie gesondert eine Image aus einer fremden Registry (`registry.example.com/other-team/debug:1.0`
+Prüfen Sie gesondert ein Image aus einer fremden Registry (`registry.example.com/other-team/debug:1.0`
 oder ähnlich) - eine solche Anfrage lehnt die Allowlist-VAP aus dem vorherigen Abschnitt bereits ab, bevor sie
 zur Signaturprüfung gelangt; für diese ImageValidatingPolicy gehört sie nicht zu
 `matchImageReferences` und testet ihre CEL-Regeln nicht.
@@ -625,7 +625,7 @@ anstelle eines statischen Keys `cosign.keyless.identities` mit dem präzisen Iss
 des konkreten CI-Workflows. Testen Sie signierten und unsignierten Digest, einen falschen Signer,
 ein fehlendes signiertes SBOM und die Nichtverfügbarkeit der Registry.
 
-> 🔬 Notary/Notation ist eine alternative OCI-Signing-Ökosystem; für Kubernetes braucht es trotzdem eine Integration, die allow/deny an die Admission zurückgibt.
+> 🔬 Notary/Notation ist ein alternatives OCI-Signing-Ökosystem; für Kubernetes braucht es trotzdem eine Integration, die allow/deny an die Admission zurückgibt.
 
 **Notary Project** und die CLI `notation` sind ein alternatives OCI-Signing-Ökosystem mit X.509-
 Trust Stores und Trust Policy. `notation verify` ist in CI/CD nützlich:
@@ -639,7 +639,7 @@ notation verify "$IMAGE"
 
 Notary selbst ist kein Kubernetes-Admission-Controller. Seine Trust Policy muss in eine Prüfung
 eines Policy Controllers oder Webhook-Backends umgewandelt werden, das dem API-Server allow/deny zurückgibt.
-Verlangen Sie nicht, dass ein Verifier "alles" automatisch "versteht": Cosign/Sigstore und Notary/Notation
+Verlangen Sie nicht, dass ein Verifier „alles“ automatisch „versteht“: Cosign/Sigstore und Notary/Notation
 verwenden unterschiedliche Trust-Modelle. Wählen Sie einen Standard für das konkrete Repository, dokumentieren
 Sie Trust Root, Allowed Identities und das Rotation-Verfahren, und führen Sie die Migration mit einem
 expliziten Zeitraum doppelter Signatur und doppelter Prüfung durch.
@@ -652,7 +652,7 @@ expliziten Zeitraum doppelter Signatur und doppelter Prüfung durch.
 
 Eine minimal sichere Pipeline sieht so aus:
 
-1. CI baut eine reproduzierbare Image, scannt sie und erhält nach dem Push den Digest.
+1. CI baut ein reproduzierbares Image, scannt es und erhält nach dem Push den Digest.
 2. CI erstellt SBOM/Attestations und signiert diesen Digest mit einem Schlüssel oder einer keyless OIDC Identity.
 3. Die Deployment-Reference verwendet denselben Digest; die Allowlist erlaubt nur die benötigte
    Registry/das Repository, und image volumes werden entweder explizit von einem separaten Verifier geprüft
@@ -686,7 +686,7 @@ und anschließender Entfernung.
 
 ## 26.7. Mini-Glossar
 
-- **Registry-Allowlist** - Policy, die eine Image nur aus bestimmten Registry-/Repository-Prefixes erlaubt.
+- **Registry-Allowlist** - Policy, die ein Image nur aus bestimmten Registry-/Repository-Prefixes erlaubt.
 - **Digest** - immutable SHA-256-Identifier eines konkreten OCI-Manifests/-Artifacts.
 - **Cosign** - Sigstore-Tool zum Signieren und Prüfen von OCI-Artefakten.
 - **Keyless Signing** - Signatur mit einem kurzlebigen Zertifikat, ausgestellt nach OIDC-Authentifizierung, anstelle eines dauerhaften lokalen Signing Key.
@@ -721,28 +721,28 @@ Attestations sind Production-Erweiterungen, bei denen es genügt, ihren Zweck zu
 **In der Praxis.** Die Signatur verbindet einen Production-Workload mit dem Release-Workflow und
 einem konkreten Artifact, und Admission macht diese Regel für jeden Deployment-Pfad
 verbindlich. Zusammen mit Least-Privilege-Rechten der CI, einer geschützten Registry und Audit Logs
-verringert dies die Wahrscheinlichkeit, eine Image auszuführen, die Ihre Pipeline nicht durchlaufen hat.
+verringert dies die Wahrscheinlichkeit, ein Image auszuführen, das Ihre Pipeline nicht durchlaufen hat.
 
 > ### 🔴 Blickwinkel des Angreifers
-> **Asset:** Production-Workload-Reference auf eine Image.
+> **Asset:** Production-Workload-Reference auf ein Image.
 > **Starting foothold:** Möglichkeit, einen Push in die Registry auszuführen, oder eine kompromittierte CI.
-> **Attacker objective:** die Prüfung der Registry-Allowlist/Admission umgehen, indem eine bösartige Image durch Umleiten eines mutable Tags untergeschoben wird, ohne den Digest bereits ausgerollter Workloads zu ändern.
-> **Abuse path:** einen Tag auf eine andere Image umleiten. Ohne Digest Pinning garantiert dieselbe Zeichenkette
+> **Attacker objective:** die Prüfung der Registry-Allowlist/Admission umgehen, indem ein bösartiges Image durch Umleiten eines mutable Tags untergeschoben wird, ohne den Digest bereits ausgerollter Workloads zu ändern.
+> **Abuse path:** einen Tag auf ein anderes Image umleiten. Ohne Digest Pinning garantiert dieselbe Zeichenkette
 > `registry/app:stable` nicht dieselben Bytes: Bei `imagePullPolicy: Always` löst kubelet
-> den Tag bei jedem Start neu auf; bei `IfNotPresent` kann eine gecachte Image die Änderung
+> den Tag bei jedem Start neu auf; bei `IfNotPresent` kann ein gecachtes Image die Änderung
 > vorübergehend verbergen, doch ein neuer Node oder ein gelöschter Cache erhalten beim ersten
 > Pull einen neuen Digest; `Never` schließt den Pull aus, ist aber kein Supply-Chain-Verification-Control.
 > `imagePullPolicy` ersetzt kein Digest Pinning und keine Signature-/Provenance-Verification.
 > **Expected evidence:** gesicherte Antwort einer Admission Denial oder ein Audit Log; für einen Controller-verwalteten Pod auch ein `FailedCreate`-Event beim Owner.
 > **Control:** Digest Pinning, Registry-Allowlist und Admission-Signature-Verification über ImagePolicyWebhook oder Kyverno.
-> **Retest:** Der Workload per Digest ändert sich nach dem Retargeting des Tags nicht, und eine unsignierte Image wird von Admission abgelehnt.
+> **Retest:** Der Workload per Digest ändert sich nach dem Retargeting des Tags nicht, und ein unsigniertes Image wird von Admission abgelehnt.
 
 ## 26.10. Fragen zur Selbstkontrolle
 
 <details>
-<summary>1. Warum beweist eine Allowlist einer trusted Registry nicht, dass die Image von einer vertrauenswürdigen CI erstellt wurde?</summary>
+<summary>1. Warum beweist eine Allowlist einer trusted Registry nicht, dass das Image von einer vertrauenswürdigen CI erstellt wurde?</summary>
 
-Die Allowlist beantwortet nur die Frage, aus welcher Registry/welchem Repository eine Image erlaubt ist. Ein Benutzer mit Push-Recht auf diese trusted Registry kann trotzdem ein unsigniertes oder fremdes Artifact veröffentlichen. Deshalb wird die Herkunft eines konkreten Digest durch eine Signatur und eine eingeschränkte Signer-Identity geprüft.
+Die Allowlist beantwortet nur die Frage, aus welcher Registry/welchem Repository ein Image erlaubt ist. Ein Benutzer mit Push-Recht auf diese trusted Registry kann trotzdem ein unsigniertes oder fremdes Artifact veröffentlichen. Deshalb wird die Herkunft eines konkreten Digest durch eine Signatur und eine eingeschränkte Signer-Identity geprüft.
 </details>
 
 <details>
@@ -760,7 +760,7 @@ Die Policy muss `containers`, `initContainers` und `ephemeralContainers` prüfen
 <details>
 <summary>4. Welche TLS-Dateien und fail-closed Parameter benötigt das `ImagePolicyWebhook`-Backend?</summary>
 
-Im kubeconfig des Backends werden die CA in `certificate-authority` benötigt, und bei der gewählten mTLS-Schema `client-certificate` und `client-key` für den API-Server; die entsprechenden Pfade müssen in den static Pod eingebunden sein. In der `AdmissionConfiguration` wird `defaultAllow: false` gesetzt, damit ein Fehler oder die Nichtverfügbarkeit des Backends keine Image erlaubt. Außerdem werden die bestehenden Admission-Plugins beibehalten, und die API `imagepolicy.k8s.io/v1alpha1` für `ImageReview` wird aktiviert.
+Im kubeconfig des Backends werden die CA in `certificate-authority` benötigt, und bei dem gewählten mTLS-Schema `client-certificate` und `client-key` für den API-Server; die entsprechenden Pfade müssen in den static Pod eingebunden sein. In der `AdmissionConfiguration` wird `defaultAllow: false` gesetzt, damit ein Fehler oder die Nichtverfügbarkeit des Backends kein Image erlaubt. Außerdem werden die bestehenden Admission-Plugins beibehalten, und die API `imagepolicy.k8s.io/v1alpha1` für `ImageReview` wird aktiviert.
 </details>
 
 <details>
@@ -772,7 +772,7 @@ Der Keyless-Flow erhält nach der OIDC-Authentifizierung der CI ein kurzlebiges 
 <details>
 <summary>6. Warum verhindert `cosign verify` in der CI keinen direkten `kubectl apply`?</summary>
 
-Die CI-Prüfung wirkt nur auf dem Pfad, auf dem sie tatsächlich ausgeführt wird. Ein Benutzer oder eine andere Pipeline kann die Kubernetes-API direkt ansprechen und einen Pod mit einer unsignierten Image erstellen. Die obligatorische Prüfung muss sich auf dem Admission-Pfad befinden und vor dem Persistieren des Pod ein Deny zurückgeben.
+Die CI-Prüfung wirkt nur auf dem Pfad, auf dem sie tatsächlich ausgeführt wird. Ein Benutzer oder eine andere Pipeline kann die Kubernetes-API direkt ansprechen und einen Pod mit einem unsignierten Image erstellen. Die obligatorische Prüfung muss sich auf dem Admission-Pfad befinden und vor dem Persistieren des Pod ein Deny zurückgeben.
 </details>
 
 <details>
@@ -782,7 +782,7 @@ Die CI-Prüfung wirkt nur auf dem Pfad, auf dem sie tatsächlich ausgeführt wir
 </details>
 
 <details>
-<summary>8. **Flashback (Kapitel 20).** Frage 6 dieses Kapitels hat bereits gezeigt, dass `cosign verify` in der CI einen direkten `kubectl apply` einer unsignierten Image nicht verhindert. Wie schließt eine Admission Policy aus Kapitel 20 (native `ValidatingAdmissionPolicy` oder Kyverno `ImageValidatingPolicy`) genau diesen Umgehungsweg, und worin unterscheidet sich die "Signature Verification als Admission Policy" in ihrer Zuverlässigkeit von der "Signature Verification nur in der CI-Pipeline"?</summary>
+<summary>8. **Flashback (Kapitel 20).** Frage 6 dieses Kapitels hat bereits gezeigt, dass `cosign verify` in der CI einen direkten `kubectl apply` eines unsignierten Images nicht verhindert. Wie schließt eine Admission Policy aus Kapitel 20 (native `ValidatingAdmissionPolicy` oder Kyverno `ImageValidatingPolicy`) genau diesen Umgehungsweg, und worin unterscheidet sich die „Signature Verification als Admission Policy“ in ihrer Zuverlässigkeit von der „Signature Verification nur in der CI-Pipeline“?</summary>
 
 Die Admission Policy wird von kube-apiserver für jedes passende CREATE/UPDATE eines Pod ausgeführt, daher durchläuft auch ein manueller `kubectl apply` die Prüfung und kann abgelehnt werden. `ImageValidatingPolicy` kann die Signature/Attestation eines konkreten Digest prüfen, während die native VAP zum Beispiel für eine CEL-Allowlist-Reference geeignet ist, aber keinen kryptografischen Verifier ersetzt. Eine Prüfung nur in der CI ist eine freiwillige Pipeline-Etappe; Admission macht die Regel zu fail-closed Enforcement an der Grenze des Clusters.
 </details>

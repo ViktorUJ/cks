@@ -1,6 +1,6 @@
 [Русская версия](ru.md) · [Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 
-# 第 01 章。CKS 考試、與 CKA 的差異及課程結構
+# 第 01 章。導論：CKS 考試、與 CKA 的差異及課程結構
 
 > **問題。** Kubernetes 叢集可能對 CKA 管理員而言看似正常運作，卻仍未受保護：網路、RBAC、映像與日誌的個別決策，若沒有威脅模型和結果驗證，就無法形成防護。此章建立領域、prerequisites 與工具的地圖，讓後續 hardening 措施成為 defense in depth 的一部分，而非互不相關的命令集合。
 
@@ -41,7 +41,7 @@ flowchart TB
 
 ## 01.2 考試格式、版本與文件
 
-CKS 是 performance-based 考試：在提供的叢集和節點上，透過終端機完成實作任務。時間為 2 小時，及格分數為 67%。在檢查時，Important Instructions 指向 **15-20 個實作任務**；這是 Linux Foundation 可能變更的快照參數。註冊和參加 CKS 需要先通過 CKA，但到 CKS 時 CKA 的有效期可以已過：CKA 證書不必保持有效。準備時應有意識地切換 context，並在每次變更後檢查實際狀態。
+CKS 是 performance-based 考試：在提供的叢集和節點上，透過終端機完成實作任務。時間為 2 小時，及格分數為 67%。在檢查時，Important Instructions 指向 **15-20 個實作任務**；這是 Linux Foundation 可能變更的快照參數。註冊和參加 CKS 需要先通過 CKA，但到 CKS 時 CKA 的有效期可能已過：CKA 證書不必保持有效。準備時應有意識地切換 context，並在每次變更後檢查實際狀態。
 
 任務可能指定特定 host：此時從基礎機器 (`base`) 執行 `ssh <host>`，完成工作後返回 `base`。不支援在目標 host 之間巢狀 SSH。`base` 和目標 host 上預先安裝的工具可能不同，因此先確認命令必須在哪裡執行。**標準 CKS 註冊**在 **12 個月**的 eligibility window 內包含兩次實際考試機會（**One Retake**）；取得的證書有效 **2 年**。這不是 simulator 的機會：標準註冊也包含兩次 Killer.sh simulator 機會，每次啟用 **36 小時**並有 **17 題**；**CKS-SINGLE 不包含 simulator 存取權**。請練習完整循環：閱讀條件、選擇 host/context、做最小變更並驗證結果。
 
@@ -50,7 +50,7 @@ CKS 是 performance-based 考試：在提供的叢集和節點上，透過終端
 - **本課程和 core labs `101-114` 的學習版本是 `v1.36`**（其實驗環境中的 `k8_version = "1.36.0"`）：課程中的 Kubernetes-native 命令、flags 和 API 行為都以此版本檢驗；第三方元件的相容性須依其 support matrix 確認。設計上的例外是 lab `113`：其叢集以 `v1.35.x` 啟動，因為任務主題本身就是升級至 `v1.36.x`。
 - **考試環境版本由 Linux Foundation 指定，且可能落後課程版本。** [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) 主頁指出 Kubernetes **v1.35**，但 Important Instructions 和 FAQ 獨立更新，可能暫時顯示其他版本。具體考試以 ExamUI 和指定考試的說明為準。公開的 CNCF curriculum overview 檔名仍為 [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks)，但不會取代 Linux Foundation 為該次考試指定的參數。因此**不要把 `v1.36` 視為考試版本**。
 
-CKS 和 FAQ 頁面獨立更新，可能暫時不一致。考試前直接在 [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) 主頁，再在指定考試的 ExamUI 中確認 Kubernetes 版本、任務數量與格式、及格分數、prerequisite 和允許資源。不要把課程固定的版本或規則當成永久不變。
+CKS 和 FAQ 頁面獨立更新，可能暫時不一致。緊接考試前，先在 [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) 主頁，再在指定考試的 ExamUI 中確認 Kubernetes 版本、任務數量與格式、及格分數、prerequisite 和允許資源。不要把課程固定的版本或規則當成永久不變。
 
 實務上的差異是：物件語法和 admission 行為應以考試環境開啟的版本文件為準，而不是課程版本。
 
@@ -60,7 +60,7 @@ CKS 和 FAQ 頁面獨立更新，可能暫時不一致。考試前直接在 [CKS
 | User Namespaces | `hostUsers: false` 在 v1.36 成為 Stable/GA；lab 可能依賴此行為 | 不要自動將此行為套用到考試：確認版本、runtime 和功能可用性 |
 | 新欄位和 admission 行為 | 對學習有用，但不是考試承諾 | 只使用環境指定版本的 API 和行為 |
 
-LF 另外維護允許資源，而不是 curriculum 和其權重。這是與時間相關的快照：截至最後檢查日 **2026-08-31**，全球 CKS 清單包含任務提供的 **Quick Reference**、Kubernetes 文件和部落格，以及 Falco、`bom`、etcd、NGINX Ingress Controller、Cilium 和 Istio 文件。也允許考試終端機發行版的文件、man pages 和套件。清單可能獨立於 curriculum 變更：考試前請重新檢查 LF 的 [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed) 頁面和 ExamUI 中可用的連結。
+LF 獨立於 curriculum 及其權重另行維護允許資源。這是與時間相關的快照：截至最後檢查日 **2026-08-31**，全球 CKS 清單包含任務提供的 **Quick Reference**、Kubernetes 文件和部落格，以及 Falco、`bom`、etcd、NGINX Ingress Controller、Cilium 和 Istio 文件。也允許考試終端機發行版的文件、man pages 和套件。清單可能獨立於 curriculum 變更：考試前請重新檢查 LF 的 [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed) 頁面和 ExamUI 中可用的連結。
 
 | 資源 | 用途 | 可用性 |
 |---|---|---|
@@ -112,7 +112,7 @@ flowchart TB
 - Cilium transparent encryption 和 mutual authentication，以及 Istio mTLS。
 - CIS Kubernetes Benchmark 和 `kube-bench`。
 - SPDX/CycloneDX 格式的 SBOM，包括 `syft` 和 `bom`。
-- `kubesec` 和 `hadolint` 之外的 `kube-linter`。
+- `kube-linter`，以及 `kubesec` 和 `hadolint`。
 - 透過 `RuntimeClass` 使用 gVisor (`runsc`) 和 Kata Containers 的 Sandboxed containers。
 
 完整的「能力 -> 章節」對照位於[課程目錄](../README_TW.md#能力--章節)。重要的是理解其邏輯：policy 限制存取，hardening 降低攻擊面，supply chain 排除不可信 artifact，而 runtime 防護和 audit 協助發現殘餘風險。
@@ -205,7 +205,7 @@ flowchart TB
 
 - CKS 延續 CKA，檢驗對叢集、workloads、節點和 supply chain 的實際防護。
 - 課程和 core labs `101-114` 的目標版本是 Kubernetes v1.36（lab `113` 以 v1.35.x 啟動，因為主題是升級到 v1.36.x）。
-- 考試要求熟練使用終端機、多个叢集和節點設定。
+- 考試要求熟練使用終端機、多個叢集和節點設定。
 - 六個領域涵蓋叢集設定、hardening、workload、supply chain 和 runtime 防護。
 - 2024 課綱的新重點是 Cilium、CIS、SBOM、KubeLinter 和 sandboxed containers。
 - 工具只有搭配驗證才有價值：必須證明防護生效且攻擊無法通過。

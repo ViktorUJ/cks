@@ -17,7 +17,7 @@
 > configuration-ის ჩანაცვლება image layer-ში ან tool-ების ჩამოტვირთვა container-ის
 > root-ში. ეს არის CKS-ის დომენი **Monitoring, Logging & Runtime Security** (20%).
 > Immutable root filesystem არ კურნავს vulnerability-ს, მაგრამ ავიწროებს გზას
-> execution-იდან persistence-მდე და აჩინავს anomaly-ურ ჩაწერას.
+> execution-იდან persistence-მდე და ხდის anomaly-ურ ჩაწერას უფრო შესამჩნევს.
 
 > **რა გვჭირდება CKA-დან.** `SecurityContext`-ის ველები განხილულია [CKA-ს 20-ე
 > თავში](../../../cka/course/20/ge.md), `emptyDir` და დანარჩენი volume-ები - [CKA-ს 24-ე
@@ -199,7 +199,7 @@ workload-ის read-only root-ში გადაყვანა ეტაპ�
 უფლებები მინიმალური უნდა იყოს: process-ს სჭირდება მისი UID/GID და ჩაწერის
 უფლება მხოლოდ საკუთარ runtime-catalog-ში.
 
-> 🎯 `emptyDir` - ცხადი scratch space Pod-ის lifecycle-ით. შეძელით ვიწრო mount path-ის არჩევა, ახსენით მისი გასუფთავება Pod-ის replacement-ისას და არ ერიოთ persistent storage-ს.
+> 🎯 `emptyDir` - ცხადი scratch space Pod-ის lifecycle-ით. შეძელით ვიწრო mount path-ის არჩევა, ახსენით მისი გასუფთავება Pod-ის replacement-ისას და არ აურიოთ იგი persistent storage-თან.
 
 ## 31.3. `emptyDir`: კონტროლირებადი დროებითი ჩაწერა
 
@@ -228,7 +228,7 @@ flowchart TB
 | ვარიანტი | სად წევს bytes | სასარგებლოა | რისკი და კონტროლი |
 |---|---|---|---|
 | `emptyDir: {}` | node-ის local ephemeral-storage | cache, build artefact Pod-ის life-ის დროს | დააყენეთ `sizeLimit`, გახსოვდეთ eviction disk pressure-ის დროს |
-| `medium: Memory` | tmpfs, node-ის memory | small secret-derived temp, socket, სწრაფი `/tmp` | bytes ითვლება იმ container-ის memory-ში, რომელმაც ჩაწერა; გავსება OOM/eviction-ს გამოიწვევს |
+| `medium: Memory` | tmpfs, node-ის memory | small secret-derived temp, socket, სწრაფი `/tmp` | bytes ითვლება იმ container-ის memory-ში, რომელმაც ჩაწერა; გავსებამ შეიძლება გამოიწვიოს OOM/eviction |
 | ConfigMap/Secret volume | kubelet-projected files | configuration და credential, აპლიკაციისგან წაკითხული | ეს არ არის scratch space და არა generated output-ის ადგილი |
 | PVC | მუდმივი storage | state, survival-ის მოთხოვნის მქონე მონაცემები | ცალკე access model, backup და lifecycle |
 
@@ -253,7 +253,7 @@ containers:
 
 ეს არის container-ის მთელი local ephemeral-storage-ის budget, მათ შორის
 writable layer და logs, და არა ერთი `emptyDir`-ის capacity-ის გარანტია.
-ყოველი საჭირო volume-ის ზომას ცალკე ზღუდავთ `emptyDir.sizeLimit`-ით.
+ყოველი საჭირო volume-ის ზომა ცალკე შეზღუდეთ `emptyDir.sizeLimit`-ით.
 
 მაგალითი უსაფრთხო გაცვლისა initContainer-სა და აპლიკაციას შორის: initContainer
 render-ავს ფაილს ვიწრო საერთო catalog-ში, ხოლო აპლიკაცია მას იმავე
@@ -322,7 +322,7 @@ mount-ისთვის.
 | `/etc/<app>` | generated configuration | ConfigMap/Secret read-only ან initContainer + read-only shared volume |
 | `/app` | plugins, self-update, compiled templates | არ დაუშვათ: artefact წინასწარ ააგეთ; output გაიტანეთ `/work`-ში |
 
-განსაკუთრებით საშიშია „universal" mounts. `emptyDir` `/`-ზე ანადგურებს
+განსაკუთრებით საშიშია „universal“ mounts. `emptyDir` `/`-ზე ანადგურებს
 read-only root-ის აზრს; mount `/app`-ზე თავდამსხმელს უბრუნებს program
 files-ის ჩანაცვლების შესაძლებლობას; hostPath `/var/run/docker.sock`-ზე ან
 node-ის `/`-ზე container-ის პრობლემას საერთოდ node-ის პრობლემად აქცევს.
@@ -378,7 +378,7 @@ flowchart TB
 
 მაგალითი multi-stage Dockerfile-ისა. კონკრეტული digests აქ განზრახ არ არის
 მითითებული: რეალურ release-ში pin-ავენ შემოწმებულ base images digest-ით და
-scan-ავენ **finale** image-ს.
+scan-ავენ **final** image-ს.
 
 ```dockerfile
 # syntax=docker/dockerfile:1
@@ -409,7 +409,7 @@ predictable UID-ს, explicit `runAsUser`. Image-ის metadata შეიძლ
 | distroless | მინიმალური production runtime, shell/package manager-ის გარეშე | debug წინასწარ უნდა დაიგეგმოს production image-ის გარეთ |
 | scratch | უმცირესი შესაძლო layer | ვარგისია უპირველესად static binary-ებისთვის; CA certificates/timezone შეიძლება არ იყოს |
 
-არ დაუბრუნოთ `busybox`, `bash` ან `curl` final image-ს „მოხერხებულობისთვის".
+არ დაუბრუნოთ `busybox`, `bash` ან `curl` final image-ს „მოხერხებულობისთვის“.
 დატოვეთ ისინი builder/debug image-ში. Observability-ისთვის აპლიკაციამ
 structured logs stdout-ზე უნდა ჩაწეროს, გატანოს metrics და health endpoint;
 მხარდაჭერილი დიაგნოსტიკა ცალკე procedure უნდა იყოს და არა დამალული
@@ -423,7 +423,7 @@ ConfigMap და Secret საწინააღმდეგო ამოცა�
 container-ში image-ის rebuild-ის გარეშე. მათი volume mounts ნაგულისხმევად
 **read-only** არის container-ისთვის, ამიტომ ისინი ბუნებრივად ეხამება
 immutable root-ს. არ დააკოპიროთ Secret writable `/tmp`-ში, არ generate-ოთ
-მისგან longliving ფაილი საჭიროების გარეშე და არ გამოიყენოთ ConfigMap
+მისგან ხანგრძლივად არსებული ფაილი საჭიროების გარეშე და არ გამოიყენოთ ConfigMap
 mutable database-ად.
 
 ```yaml
@@ -483,16 +483,16 @@ world-readable-ად ქცევის გარეშე. Rollout-ის შ�
 kubectl exec -n payments api -c api -- sh -c   'id; test -r /var/run/secrets/api-tls/tls.crt && head -c 1 /var/run/secrets/api-tls/tls.crt >/dev/null'
 ```
 
-ბრძანება ამოწმებს access-ს, მაგრამ არ გამოაქვს Secret. `subPath`-ით mount-ისას
+ბრძანება ამოწმებს access-ს, მაგრამ Secret-ს არ ბეჭდავს. `subPath`-ით mount-ისას
 მნიშვნელოვანია გახსოვდეთ: ConfigMap/Secret-ის განახლება ავტომატურად არ
 გამოჩნდება უკვე mount-ულ ფაილში. თუ configuration დინამიურად უნდა
 განახლდეს, mount-ეთ catalog `subPath`-ის გარეშე და შეამოწმეთ, უჭერს თუ არა
 აპლიკაცია მხარს reload-ს; სხვაგვარად გამოიყენეთ controlled rollout.
 
-### Secret არ არის უბრალოდ „base64 სტრიქონი"
+### Secret არ არის უბრალოდ „base64 სტრიქონი“
 
 Secret დაცულია Kubernetes API-ის access-ითა და admission/RBAC-ით, მაგრამ
-mount-ის შემდეგ მას შეუძლია წაიკითხოს container-ში მყოფმა process-მა
+mount-ის შემდეგ მისი წაკითხვა შეუძლია container-ში მყოფ process-ს
 შესაბამისი Unix permissions-ით. ამიტომ:
 
 - არ დაალოგოთ environment variables და mount-ული ფაილების შემცველობა;
@@ -628,7 +628,7 @@ version pin-ავენ და არა `latest`-ზე ტოვებენ:
 Deployment/Job-ის template და არა ერთი უკვე შექმნილი Pod.
 
 შემოწმება განზრახ negative უნდა იყოს. ქვემოთ მოცემული მაგალითი
-`restricted`-ს ვერ გადის `runAsUser: 0`-ის, escalation-ისა და მდგარი
+`restricted`-ს ვერ გადის `runAsUser: 0`-ის, escalation-ისა და
 შეზღუდვების არარსებობის გამო:
 
 ```yaml
@@ -722,7 +722,7 @@ subresource-ის მეშვეობით Pod-ის შექმნის 
 > **Native VAP-ის coverage-ის საზღვარი.** ეს `resourceRules` ემთხვევა
 > მხოლოდ `pods`-ს და `pods/ephemeralcontainers`-ს. ისინი არ უარყოფენ
 > `CREATE`/`UPDATE`-ს თავად Deployment-ის, StatefulSet-ის, DaemonSet-ის,
-> Job-ის ან CronJob-ის, არასაიმედო template-ით: controller მიღებულ იქნება,
+> Job-ის ან CronJob-ის, არაუსაფრთხო template-ით: controller მიღებულ იქნება,
 > ხოლო მისგან შექმნილი Pod მოგვიანებით იქნება უარყოფილი. ეს დასაშვები
 > მინიმალური Pod-level gate-ია, მაგრამ ქმნის „მიღებულ, მაგრამ
 > არამომუშავე" controller-ს. Controller-level fail-fast-ისთვის დაამატეთ
@@ -791,7 +791,7 @@ spec:
       allowPrivilegeEscalation: false
       capabilities:
         drop: ["ALL"]
-      # ერთადერთი განზრახ დარღვევა — readOnlyRootFilesystem არ არის.
+      # ერთადერთი განზრახ დარღვევა - readOnlyRootFilesystem არ არის.
 YAML
 }
 
@@ -837,7 +837,7 @@ kubectl get events -n payments --sort-by=.lastTimestamp | tail -n 20
 
 დროებითი exception-ისთვის შეცვალეთ საწყისი Deny-binding-ის
 `matchResources` ან გაყავით Bindings ერთმანეთს არგადამფარავ scopes-ად
-platform-controlled `namespaceSelector`-ით; ცალკე „allow Binding"
+platform-controlled `namespaceSelector`-ით; ცალკე „allow Binding“
 დამთხვეულ Deny-ს არ აუქმებს. Exception-ს უნდა ჰქონდეს owner, ticket,
 expiry და RBAC, რომელიც developer-ს scope-ის დამოუკიდებლად გაფართოებას
 არ აძლევს.
@@ -849,14 +849,14 @@ expiry და RBAC, რომელიც developer-ს scope-ის დამ�
 > **Compatibility note (მხოლოდ production v1.36-ისთვის).** Kyverno v1.19
 > ოფიციალურად უჭერს მხარს Kubernetes v1.33-v1.35-ს. Kubernetes v1.36 აქ
 > ეხება მხოლოდ production cluster-ს და არა დადასტურებულ CKS-გარემოს
-> v1.35-ს, და არ შედის პროექტის test-ილ support matrix-ში (იხ. თავი 20
+> v1.35-ს, და არ შედის პროექტის ტესტირებულ support matrix-ში (იხ. თავი 20
 > §20.4). ამიტომ production-ში v1.36-ზე ჯერ ამოწმებენ თავსებადობას test
 > cluster-ში; ზემოთ ნაჩვენები native ValidatingAdmissionPolicy პორტაბელურ
 > baseline-ად რჩება.
 
 Kyverno v1.19 - optional production extension native gate-ის ზემოთ, როცა
 საჭიროა მისი PolicyReport, ცენტრალიზებული exceptions, mutation ან
-უფრო ფართო policy lifecycle. მისი CEL-based `ValidatingPolicy`-ს შეუძლია
+უფრო ფართო policy lifecycle. მის CEL-based `ValidatingPolicy`-ს შეუძლია
 გაიმეოროს წესი regular, init და ephemeral containers-ისთვის, მაგრამ
 native მაგალითს ცვლის მხოლოდ ცხადი ოპერაციული საფუძვლის შემთხვევაში.
 Გამოყენებამდე შეადარეთ დაყენებული version-ის CRD schema და დაიწყეთ
@@ -871,11 +871,11 @@ CronJob-ისთვის. `ValidatingPolicy`-სთვის ეს ცხა�
 `spec.autogen.podControllers`-ის გარეშე Pod-only policy ამოწმებს მხოლოდ
 გაგზავნილ Pod-ს და **არ უარყოფს თავად Deployment-ს ან სხვა
 controller-ს**. ეს არ არის უკვე გაშვებული Pod-ების ცვლილება და არა
-securityContext-ის „მემკვიდრეობა" containers-ს შორის: Kyverno validate-ავს
+securityContext-ის „მემკვიდრეობა“ containers-ს შორის: Kyverno validate-ავს
 controller-ის template-ს, ხოლო მისგან შექმნილი Pod შემდეგ ასევე გადის
 ჩვეულებრივ admission-ს. შეამოწმეთ დაყენებული version-ის generated
 წესები/status და ნუ დაეყრდნობით autogen-ს rule-ისთვის, რომელიც Pod-ს არ
-match-ავს ან განზრახ გამორთა generation. კერძოდ, subresource
+match-ავს ან რომელმაც განზრახ გამორთო generation. კერძოდ, subresource
 `pods/ephemeralcontainers` ცალკე admission path-ით მოწმდება, როგორც
 ზემოთ native policy-ში.
 
@@ -966,13 +966,13 @@ bounded volume და დაადასტურეთ შედეგი posit
 path log-ში, შემდეგ დაამატეთ ვიწრო `emptyDir` მხოლოდ მისთვის, შეამოწმეთ
 restart და `/`-ში ჩაწერის აკრძალვა. ბოლოს შეამოწმეთ regular/init/ephemeral
 containers effective Pod spec-ში და გამოიყენეთ bad manifest: `Deny`-ის
-შემდეგ native Binding ვალდებულია მისი უარყოფა.
+შემდეგ native Binding ვალდებულია უარყოს ის.
 
 ## 31.13. მინი-ლექსიკონი, შეჯამება და თვითშემოწმება
 
 **მინი-ლექსიკონი.**
 
-- **Writable layer** - ცვალებადი layer, რომელსაც runtime read-only image
+- **Writable layer** - ცვალებადი layer, რომელიც runtime-ის მიერ read-only image
   layers-ზე ემატება.
 - **Runtime mutation** - გაშვებული container-ის filesystem-ის ან
   configuration-ის შეცვლა.
@@ -1020,7 +1020,7 @@ containers effective Pod spec-ში და გამოიყენეთ bad m
 **კითხვები თვითშემოწმებისთვის.**
 
 <details>
-<summary>1. რატომ არ გადარჩება წერტილოვნად ფაილის შეცვლა writable layer-ში აუცილებლად kubelet-ის container restart-ს, მაგრამ მაინც საშიშია გამოსაძიებელი incident-ისთვის?</summary>
+<summary>1. რატომ არ გადარჩება ფაილის შეცვლა writable layer-ში აუცილებლად kubelet-ის container restart-ს, მაგრამ მაინც საშიშია გამოსაძიებელი incident-ისთვის?</summary>
 
 Writable layer ეკუთვნის კონკრეტულ container instance-ს. Child process-ის restart იმავე container-ში მას არ ასუფთავებს, მაგრამ kubelet-ის restart/recreation ქმნის ახალ instance-ს ახალი layer-ით, თუნდაც Pod API-ობიექტად იგივე დარჩეს. ამიტომ layer არ იძლევა persistence-ს container restart-ებს შორის; მისთვის საჭიროა volume ან გარე storage. სანამ მიმდინარე container ცოცხალია, თავდამსხმელს კვლავ შეუძლია tool-ის დადება, script-ის ან configuration-ის შეცვლა, token-ის შენახვა და მისი გამოყენება lateral movement-ისთვის ან შეტევის გაგრძელებისთვის. ეს ასევე ცვლის evidence-ს და მოითხოვს გამოძიებას destructive containment-მდე.
 </details>
@@ -1034,7 +1034,7 @@ Writable layer ეკუთვნის კონკრეტულ container in
 <details>
 <summary>3. რით განსხვავდება `emptyDir.medium: Memory` ჩვეულებრივი `emptyDir`-ისგან resource-ითა და risk-ით?</summary>
 
-`medium: Memory` ქმნის tmpfs-ს, ხოლო bytes ითვლება იმ container-ის memory-ად, რომელიც წერს; გავსებამ შეიძლება OOM ან eviction გამოიწვიოს. ჩვეულებრივი `emptyDir` იყენებს node-ის local ephemeral-storage-ს writable layer-სა და container logs-თან ერთად. `sizeLimit` volume-ს ზღუდავს, მაგრამ node-ის capacity-ს არ ინახავს; disk-backed scratch-ისთვის ასევე მითითებულია requests/limits `ephemeral-storage`-ისთვის.
+`medium: Memory` ქმნის tmpfs-ს, ხოლო bytes ითვლება იმ container-ის memory-ად, რომელიც წერს; გავსებამ შეიძლება OOM ან eviction გამოიწვიოს. ჩვეულებრივი `emptyDir` იყენებს node-ის local ephemeral-storage-ს writable layer-სა და container logs-თან ერთად. `sizeLimit` volume-ს ზღუდავს, მაგრამ node-ის capacity-ს არ რეზერვირებს; disk-backed scratch-ისთვის ასევე მითითებულია requests/limits `ephemeral-storage`-ისთვის.
 </details>
 
 <details>
@@ -1068,7 +1068,7 @@ Binding-ის `validationActions`-ის `Deny`-ზე გადაყვან
 </details>
 
 <details>
-<summary>9. **Flashback (24-ე თავი).** Distroless image (24-ე თავი) აშორებს shell/package manager-ს image-იდან - ეს **build-time** იმუტაბელურობაა. `readOnlyRootFilesystem` (ეს თავი) კრძალავს ჩაწერას **runtime**-ში - ეს არის runtime იმუტაბელურობა. თუ აპლიკაციას არც image-ში აქვს shell და არც root filesystem-ში ჩაწერის შესაძლებლობა, რომელი პრაქტიკული post-exploitation ნაბიჯი მაინც შესაძლებელია RCE-ის მქონე თავდამსხმელისთვის, და რომელია უკვე ზუსტად დახურული ამ კომბინაციით?</summary>
+<summary>9. **Flashback (24-ე თავი).** Distroless image (24-ე თავი) აშორებს shell/package manager-ს image-იდან - ეს **build-time** იმუტაბელურობაა. `readOnlyRootFilesystem` (ეს თავი) კრძალავს ჩაწერას runtime-ში - ეს არის **runtime** იმუტაბელურობა. თუ აპლიკაციას არც image-ში აქვს shell და არც root filesystem-ში ჩაწერის შესაძლებლობა, რომელი პრაქტიკული post-exploitation ნაბიჯი მაინც შესაძლებელია RCE-ის მქონე თავდამსხმელისთვის, და რომელია უკვე ზუსტად დახურული ამ კომბინაციით?</summary>
 
 RCE-ით თავდამსხმელს კვლავ შეუძლია ხელმისაწვდომი application binary-ის გაშვება, მისთვის ხელმისაწვდომი მონაცემების წაკითხვა და ქსელით გაგზავნა, ამიტომ საჭიროა NetworkPolicy, მინიმალური ServiceAccount და სხვა controls. კომბინაცია ხურავს package-ის shell-ით ჩამოტვირთვას/დაყენებას, ასევე tools-ის ჩაწერას ან files-ის ჩანაცვლებას image layer-ში, მათ შორის `/app`-სა და `/etc`-ში. თუ არსებობს ცხადად writable mount-ული volume, მოქმედებები მასში კვლავ შესაძლებელია და ცალკე უნდა შემოისაზღვროს.
 </details>

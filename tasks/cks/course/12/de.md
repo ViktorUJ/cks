@@ -238,7 +238,7 @@ kubectl get --raw='/readyz?verbose'
 kubectl get nodes
 ```
 
-Kubelet ist die zweite HTTP API auf jeder node. Sie wird separat geschützt: Deaktivieren Sie
+Kubelet ist die zweite HTTP API auf jeder Node. Sie wird separat geschützt: Deaktivieren Sie
 Anonymous Authentication und die Legacy Read-only API. `/var/lib/kubelet/config.yaml` kann
 nicht als universelle Quelle gelten: kubelet kann `--config`, `--config-dir` und Argumente
 aus Unit, Drop-in oder Environment-Datei erhalten. Bestimmen Sie zuerst die tatsächlichen
@@ -272,7 +272,7 @@ authorization:
 --authorization-mode=Webhook
 ```
 
-`10255` ist der historische Read-only, nicht authentisierte kubelet-Port; er muss
+`10255` ist der historische, nicht authentisierte Read-only-Port des kubelet; er muss
 deaktiviert sein. Die gewöhnliche kubelet API auf `10250` darf nicht „für alle geöffnet“
 werden: Sie muss durch Authentication, `Webhook` Authorization und Netzwerkregeln geschützt
 bleiben. Der Legacy-`--insecure-port` des `kube-apiserver` wurde in modernem Kubernetes
@@ -281,7 +281,7 @@ ignorieren. Suchen Sie ihn als Zeichen einer nicht unterstützten oder unsichere
 Konfiguration, statt ihn für Kompatibilität aktivieren zu wollen.
 
 ```bash
-# Auf jeder node: Ein Fehler von ss ist ein Prüffehler, kein Nachweis für einen geschlossenen Port.
+# Auf jeder Node: Ein Fehler von ss ist ein Prüffehler, kein Nachweis für einen geschlossenen Port.
 listeners=$(sudo ss -H -lnt '( sport = :10255 )') || {
   echo 'ERROR: cannot inspect TCP listener 10255' >&2; exit 2;
 }
@@ -343,7 +343,7 @@ kubectl delete rolebinding -n "$NAMESPACE" "$REVIEWED_ROLEBINDING"
 
 Prüfen Sie auch jeden Binding, der der Gruppe `system:unauthenticated` Rechte gibt: Das
 Deaktivieren von Anonymous Access unterbindet ihren gewöhnlichen Weg, doch die Policy muss
-bei späteren Änderungen des Identity Provider minimal und verständlich bleiben.
+bei späteren Änderungen des Identity Providers minimal und verständlich bleiben.
 
 
 ## 12.3. Authorization Modes und NodeRestriction
@@ -428,7 +428,7 @@ In Kubernetes v1.36 fügt `--enable-admission-plugins` Plugins zum built-in
 default-enabled Set hinzu; Defaults müssen in diesem Flag nicht aufgelistet werden. Ist
 `NodeRestriction` nicht aktiviert, fügen Sie es der expliziten Additional List hinzu.
 Enthält `--enable-admission-plugins` bereits andere zusätzliche Plugins, behalten Sie sie
-bei. Stellen Sie getrennt sicher, dass ein benötigter Default oder Plugin nicht über
+bei. Stellen Sie getrennt sicher, dass ein benötigter Default oder ein benötigtes Plugin nicht über
 `--disable-admission-plugins` deaktiviert wird. RBAC steuert die allgemeinen
 role-/binding-basierten Berechtigungen von Benutzern, Gruppen und ServiceAccounts, während
 der `Node` Authorizer die besonderen Rechte von Node Identities bedient. `NodeRestriction`
@@ -497,9 +497,9 @@ Wenden Sie Barrieren dort an, wo die Verantwortung liegt:
   Private Endpoint vereinfacht dies oft, ein Public Endpoint erfordert aber besonders
   strenge Kontrolle der Sources und Authentication.
 
-**kubeadm Discovery ist ein Sonderfall.** Bei Token-based Discovery enthält ConfigMap
+**kubeadm Discovery ist ein Sonderfall.** Bei Token-based Discovery enthält die ConfigMap
 `kube-public/cluster-info` standardmäßig öffentlich verfügbare Discovery-Informationen
-(API-Adresse und CA-Daten); sie ist kein Secret und darf nicht wie ein Secret erteilt oder
+(API-Adresse und CA-Daten); sie ist kein Secret und darf nicht wie ein Secret ausgegeben oder
 geschützt werden. Der Bootstrap Token dagegen ist temporäre Credential-Information für
 Discovery/TLS Bootstrap und verlangt eine getrennte Kontrolle: eingeschränkte Verteilung,
 kurze Lebensdauer, Widerruf und Review von CSR/Auto-approval. Wird Anonymous über
@@ -521,7 +521,7 @@ unterhalten Sie eine separate Konsolensitzung für den Rollback. Das Blockieren 
 den eigenen Administrator oder kubelet kann den Cluster unerreichbar machen.
 
 ```bash
-# Auf der Control Plane: Wer die API abhört; das konkrete Programm hängt von der Runtime ab.
+# Auf der Control Plane: Wer auf den API-Port lauscht; das konkrete Programm hängt von der Runtime ab.
 sudo ss -lntp | grep ':6443'
 
 # Auf der Administrationsmaschine: Endpoint prüfen, ohne die TLS-Prüfung in Production zu deaktivieren.
@@ -577,7 +577,7 @@ Lookup nicht deaktiviert. In modernen Clustern sind Bound, Short-lived Projected
 Kapitel 11 vorzuziehen; Vorhandensein und Verhalten des Flags werden anhand von
 `kube-apiserver --help` und der Dokumentation der verwendeten Version abgeglichen.
 
-Prüfen Sie Konfiguration als Risikosatz und nicht nur ein Flag. Prüfen Sie beim Scheduler
+Prüfen Sie die Konfiguration als Menge von Risiken und nicht nur ein einzelnes Flag. Prüfen Sie beim Scheduler
 zuerst, ob `--config` vorhanden ist: Dann wird das deprecated `--profiling` ignoriert,
 weshalb `enableProfiling: false` in der gefundenen aktiven `KubeSchedulerConfiguration`
 gesetzt wird.
@@ -731,7 +731,7 @@ belegt, dass die Kontrolle funktioniert, statt sie nur zu behaupten.
   und Authorization; für mutierende und unterstützte Custom Requests kommt zusätzlich
   Admission hinzu.
 - Für kubelet wird der Anonymous Access deaktiviert (`--anonymous-auth=false`). Beim
-  kube-apiserver wird Anonymous Access entweder über `AuthenticationConfiguration` auf die
+  kube-apiserver wird Anonymous Access alternativ explizit über `AuthenticationConfiguration` auf die
   Health Endpoints und, solange Public Token Discovery benötigt wird, den exakten Path
   `kube-public/cluster-info` begrenzt; in beiden Fällen werden nur
   unnötige RoleBinding/ClusterRoleBinding für `system:anonymous` und
@@ -767,7 +767,7 @@ impersonierte Identity; beschränken Sie sich nicht auf die Textsuche in einer D
 
 **Prüfungsszenario: Ein kubeadm-Cluster wurde mit `AlwaysAllow` erstellt.** Der aktuelle
 Context kann auf ein Konto zeigen, das nach dem Aktivieren von RBAC keine ausreichenden Rechte
-hat, während kubeconfig (oder eine separate kubeconfig) ein bekanntes administratives Konto
+hat, während das kubeconfig (oder ein separates kubeconfig) ein bekanntes administratives Konto
 enthält. Wählen Sie es vor der Änderung **für jeden Befehl** explizit: Führen Sie nicht
 `kubectl config use-context` aus, damit der ursprüngliche Context erhalten bleibt und Sie
 sich kein falsches erfolgreiches Ergebnis verschaffen.
@@ -789,8 +789,8 @@ sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml
 Ersetzen Sie im Manifest `--authorization-mode=AlwaysAllow` durch
 `--authorization-mode=Node,RBAC`, ohne andere Argumente zu entfernen. Wird
 `--authorization-config` gefunden, fügen Sie nicht gleichzeitig `--authorization-mode` hinzu:
-Korrigieren Sie die aktive strukturierte Konfiguration gemäß ihrem Schema. Eine `can-i`-
-Prüfung **vor** der Korrektur beweist nicht, dass das Admin-Konto RBAC-Rechte besitzt: Mit
+Korrigieren Sie die aktive strukturierte Konfiguration gemäß ihrem Schema. Eine
+`can-i`-Prüfung **vor** der Korrektur beweist nicht, dass das Admin-Konto RBAC-Rechte besitzt: Mit
 `AlwaysAllow` wird sie für jedes authentisierte Subject erfolgreich sein.
 
 ```bash
@@ -854,7 +854,7 @@ bestätigt, nicht nur durch eine Konfigurationszeile.
 </details>
 
 <details>
-<summary>4. Warum darf `AlwaysAllow` nicht als "Reserve" neben `RBAC` hinzugefügt werden?</summary>
+<summary>4. Warum darf `AlwaysAllow` nicht als „Reserve“ neben `RBAC` hinzugefügt werden?</summary>
 
 Die Authorizer-Kette hält sofort an, wenn ein Modul Allow oder Deny zurückgibt; nur
 NoOpinion gibt die Anfrage weiter. `AlwaysAllow` gibt für die Requests, die es erreichen,
@@ -880,7 +880,7 @@ nicht und müssen nach den Regeln des Node Authorizers bewertet werden.
    unter welchen Bedingungen kann ein Public Endpoint gerechtfertigt sein?</summary>
 
 NetworkPolicy wird vom CNI auf Pod Traffic angewendet und muss Host-, externen und
-Control-Plane-Traffic nicht in jeder Topologie gleich abdecken; außerdem wählt die Standard
+Control-Plane-Traffic nicht gleichermaßen abdecken; außerdem wählt die Standard
 Policy kein Ziel-Service anhand seines DNS-Namens aus. Firewall und Security Group begrenzen
 den Zugang der Quellen zu `:6443` auf einer anderen Ebene. Ein Public Endpoint ist nur bei
 ausdrücklicher Begründung, strikter CIDR Allowlist, starker Authentication und Kontrolle der
@@ -934,7 +934,7 @@ und anonymes `curl`.
 🧪 Lab 104 (RBAC-Minimierung, ServiceAccount-Tokens und Einschränkung der API):
 [tasks/cks/labs/104](../../labs/104/README_DE.MD)
 
-🧪 Lab 114 (kubeconfig-Kontexte, Client-Certificate-Extraktion und Reduzierung der Service-Exposition NodePort -> ClusterIP): [tasks/cks/labs/114](../../labs/114/README_RU.MD)
+🧪 Lab 114 (kubeconfig-Kontexte, Client-Certificate-Extraktion und Reduzierung der Service-Exposition NodePort -> ClusterIP): [tasks/cks/labs/114](../../labs/114/README_DE.MD)
 
 🌐 Zusätzliche interaktive Praxis (killer.sh/killercoda, externe Ressource): [apiserver-crash](https://killercoda.com/killer-shell-cks/scenario/apiserver-crash) · [apiserver-misconfigured](https://killercoda.com/killer-shell-cks/scenario/apiserver-misconfigured) · [apiserver-node-restriction](https://killercoda.com/killer-shell-cks/scenario/apiserver-node-restriction)
 

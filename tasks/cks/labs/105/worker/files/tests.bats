@@ -458,13 +458,20 @@ control_plane() {
     sudo docker info >/dev/null
     # Persistent config: the effective unit must not still reference a TCP listener,
     # and the socket override must set group/mode explicitly (not rely on incidental state).
-    ! systemctl cat docker.service 2>/dev/null | grep -q "H tcp://"
+    # NOTE: a bare "! cmd" does NOT trip set -e in bash, so every negative check below is
+    # written as "if cmd; then exit 1; fi" to actually fail the remote script.
+    if systemctl cat docker.service 2>/dev/null | grep -q "H tcp://"; then exit 1; fi
     systemctl cat docker.socket 2>/dev/null | grep -q "SocketGroup=root"
     systemctl cat docker.socket 2>/dev/null | grep -qE "SocketMode=0?660"
-    ! sudo ss -ltn | grep -qE "[:.]2375([[:space:]]|$)"
+    if sudo ss -ltn | grep -qE "[:.]2375([[:space:]]|$)"; then exit 1; fi
+    # Docker API must remain available ONLY through the Unix socket: docker.socket must
+    # not add any non-Unix ListenStream (an empty "ListenStream=" reset line is fine), and
+    # no TCP LISTEN socket may belong to dockerd / docker socket activation on ANY port.
+    if systemctl cat docker.socket 2>/dev/null | grep -E "^[[:space:]]*ListenStream=[^/@[:space:]]"; then exit 1; fi
+    if sudo ss -ltnp 2>/dev/null | grep -E "dockerd|docker\.socket"; then exit 1; fi
     test "$(sudo stat -c "%U %G %a" /var/run/docker.sock)" = "root root 660"
-    ! id -nG developer | tr " " "\n" | grep -qx docker
-    ! sudo -u developer docker ps >/dev/null 2>&1
+    if id -nG developer | tr " " "\n" | grep -qx docker; then exit 1; fi
+    if sudo -u developer docker ps >/dev/null 2>&1; then exit 1; fi
   '
   if [[ "$reload_status" -eq 0 && "$status" -eq 0 ]] \
     && grep -qx 'tcp/2375: closed' "$ARTIFACTS/6/docker-tcp.txt" \
@@ -476,7 +483,7 @@ control_plane() {
     if [[ "$reload_status" -ne 0 ]]; then
       echo "HINT: 'systemctl daemon-reload' followed by restarting BOTH docker.socket and docker.service must succeed. If this fails, your systemd unit override likely has a syntax error."
     else
-      echo "HINT: After a forced daemon-reload + restart of docker.socket and docker.service, ALL of the following must hold: docker.service/docker.socket are 'active' AND 'docker version'/'docker info' succeed (Docker must actually work, not just be stopped); the persistent unit (via 'systemctl cat') has no '-H tcp://' and the socket override sets SocketGroup=root/SocketMode=0660; no TCP listener on 2375; docker.sock is root:root mode 660; 'developer' is NOT in the docker group and 'sudo -u developer docker ps' fails. Check each condition separately with the same commands used here."
+      echo "HINT: After a forced daemon-reload + restart of docker.socket and docker.service, ALL of the following must hold: docker.service/docker.socket are 'active' AND 'docker version'/'docker info' succeed (Docker must actually work, not just be stopped); the persistent unit (via 'systemctl cat') has no '-H tcp://' and the socket override sets SocketGroup=root/SocketMode=0660; docker.socket has no non-Unix ListenStream; no TCP listener on 2375 or on ANY other port belonging to dockerd/docker.socket (the Docker API must be reachable only via the Unix socket); docker.sock is root:root mode 660; 'developer' is NOT in the docker group and 'sudo -u developer docker ps' fails. Check each condition separately with the same commands used here."
     fi
     echo "Docker host must survive a real restart with TCP/2375 closed, socket root:root 660, developer removed from docker group, and the daemon itself still functional"
     result=1
@@ -515,7 +522,20 @@ control_plane() {
   run ssh "${SSH_OPTS[@]}" "$cp" 'sudo modprobe sctp 2>/dev/null; sudo lsmod | grep -c sctp || true'
   lsmod_after_count="$output"
 
+  # The README contract names an exact file: both active directives must live in it, not
+  # merely somewhere in the aggregate effective config.
+  run ssh "${SSH_OPTS[@]}" "$cp" "sudo cat /etc/modprobe.d/60-cks-sctp.conf 2>/dev/null"
+  sctp_file="$output"
+  sctp_file_status=$status
+  sctp_file_ok="no"
+  if [[ "$sctp_file_status" -eq 0 ]] \
+    && grep -Eq '^[[:space:]]*blacklist[[:space:]]+sctp[[:space:]]*(#.*)?$' <<<"$sctp_file" \
+    && grep -Eq '^[[:space:]]*install[[:space:]]+sctp[[:space:]]+/bin/true[[:space:]]*(#.*)?$' <<<"$sctp_file"; then
+    sctp_file_ok="yes"
+  fi
+
   if [[ "$install_count" -ge 1 && "$blacklist_effective_count" -ge 1 ]] \
+    && [[ "$sctp_file_ok" == "yes" ]] \
     && [[ "$lsmod_after_count" == "$lsmod_before_count" ]] \
     && grep -Eq '^lsmod: (absent|present)$' "$ARTIFACTS/7/sctp.txt" \
     && grep -Fq 'install sctp /bin/true' "$ARTIFACTS/7/sctp.txt"; then
@@ -528,10 +548,12 @@ control_plane() {
       echo "HINT: No effective 'install sctp /bin/true' override found via 'modprobe --show-config'. A plain 'blacklist sctp' line only stops auto-loading via alias resolution - a direct 'modprobe sctp' can still succeed unless you also override the install command."
     elif [[ "$lsmod_after_count" != "$lsmod_before_count" ]]; then
       echo "HINT: A direct 'sudo modprobe sctp' call changed the module's loaded state (before=$lsmod_before_count, after=$lsmod_after_count). The install override in /etc/modprobe.d/60-cks-sctp.conf is not actually intercepting a direct 'modprobe sctp' call - re-check the exact syntax 'install sctp /bin/true'."
+    elif [[ "$sctp_file_ok" != "yes" ]]; then
+      echo "HINT: /etc/modprobe.d/60-cks-sctp.conf must exist and contain BOTH active lines 'blacklist sctp' and 'install sctp /bin/true' (not commented out). The effective config is correct, but the required file is missing or incomplete."
     else
       echo "HINT: The fix looks correct on the node, but the evidence file /var/work/tests/artifacts/7/sctp.txt is missing the expected lines ('lsmod: absent' or 'lsmod: present', plus 'install sctp /bin/true')."
     fi
-    echo "install_count=$install_count blacklist_effective_count=$blacklist_effective_count lsmod_before_count=$lsmod_before_count lsmod_after_count=$lsmod_after_count output=$output_combined"
+    echo "sctp_file_ok=$sctp_file_ok install_count=$install_count blacklist_effective_count=$blacklist_effective_count lsmod_before_count=$lsmod_before_count lsmod_after_count=$lsmod_after_count output=$output_combined"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -551,21 +573,31 @@ control_plane() {
   # kubelet is ACTUALLY running with.
   protect_kernel_defaults=$(kubectl get --raw="/api/v1/nodes/${cp}/proxy/configz" --context "$CTX" 2>/dev/null \
     | jq -r '.kubeletconfig.protectKernelDefaults // "missing"' 2>/dev/null || echo "unreachable")
-  if [[ "$status" -eq 0 && "$bpf_value" == "1" && "$overcommit_value" == "1" && "$kubelet_active" == "active" && "$node_ready" == "True" ]] \
-    && grep -Fq 'kernel.unprivileged_bpf_disabled' <<<"$output" \
-    && grep -Fq 'vm.overcommit_memory' <<<"$output" \
+  run_status=$status
+  # sysctl (procps) does NOT strip a trailing '# ...' after the value, so no inline comment
+  # is allowed on these lines (unlike PAM limits.conf). Persistent config: ACTIVE exact assignments only. A commented line or a bare parameter
+  # name would satisfy a plain grep, and a runtime 'sysctl -w' vanishes after reboot.
+  sysctl_config=$(ssh "${SSH_OPTS[@]}" "$cp" "sudo cat /etc/sysctl.d/99-kubernetes.conf 2>/dev/null" || true)
+  persistent_bpf="no"
+  persistent_overcommit="no"
+  grep -Eq '^[[:space:]]*kernel\.unprivileged_bpf_disabled[[:space:]]*=[[:space:]]*1[[:space:]]*$' <<<"$sysctl_config" && persistent_bpf="yes"
+  grep -Eq '^[[:space:]]*vm\.overcommit_memory[[:space:]]*=[[:space:]]*1[[:space:]]*$' <<<"$sysctl_config" && persistent_overcommit="yes"
+  if [[ "$run_status" -eq 0 && "$bpf_value" == "1" && "$overcommit_value" == "1" && "$kubelet_active" == "active" && "$node_ready" == "True" ]] \
+    && [[ "$persistent_bpf" == "yes" && "$persistent_overcommit" == "yes" ]] \
     && [[ "$protect_kernel_defaults" == "true" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
     if [[ "$bpf_value" != "1" || "$overcommit_value" != "1" ]]; then
       echo "HINT: sysctl values are wrong at runtime. Both kernel.unprivileged_bpf_disabled and vm.overcommit_memory must equal 1 - set them in /etc/sysctl.d/99-kubernetes.conf and apply with 'sysctl --system' or a reboot, do not just run 'sysctl -w' once."
+    elif [[ "$persistent_bpf" != "yes" || "$persistent_overcommit" != "yes" ]]; then
+      echo "HINT: /etc/sysctl.d/99-kubernetes.conf must contain active persistent assignments 'kernel.unprivileged_bpf_disabled = 1' and 'vm.overcommit_memory = 1'. Comments, parameter names without '= 1', or a temporary 'sysctl -w' runtime change are not sufficient."
     elif [[ "$protect_kernel_defaults" != "true" ]]; then
       echo "HINT: The EFFECTIVE kubelet configuration (queried via /api/v1/nodes/<node>/proxy/configz, not just grepping config.yaml text) does not show protectKernelDefaults=true (got '$protect_kernel_defaults'). A commented-out or malformed line in config.yaml can satisfy a plain text search while kubelet is actually still running with the default value - restart kubelet after fixing the file and re-check via configz."
     elif [[ "$kubelet_active" != "active" || "$node_ready" != "True" ]]; then
       echo "HINT: kubelet is not active or the node is NotReady after your sysctl change (kubelet=$kubelet_active node_ready=$node_ready). If protectKernelDefaults is true but the sysctls do not match kubelet's expected defaults, kubelet will refuse to start - set the sysctls BEFORE enabling this flag."
     fi
-    echo "bpf=$bpf_value overcommit=$overcommit_value kubelet_active=$kubelet_active node_ready=$node_ready protect_kernel_defaults=$protect_kernel_defaults"
+    echo "persistent_bpf=$persistent_bpf persistent_overcommit=$persistent_overcommit bpf=$bpf_value overcommit=$overcommit_value kubelet_active=$kubelet_active node_ready=$node_ready protect_kernel_defaults=$protect_kernel_defaults"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -650,11 +682,23 @@ control_plane() {
   '
   crash_probe_result="$output"
 
+  # Persistent config: ACTIVE (non-comment) exact entries, not raw substring matches - a
+  # commented line plus a temporary 'sysctl -w' would give the right runtime state and
+  # lose the hardening after reboot.
+  sysctl_config=$(ssh "${SSH_OPTS[@]}" "$cp" "sudo cat /etc/sysctl.d/99-kubernetes.conf 2>/dev/null" || true)
+  limits_config=$(ssh "${SSH_OPTS[@]}" "$cp" "sudo cat /etc/security/limits.conf 2>/dev/null" || true)
+  persistent_dumpable="no"
+  persistent_core_pattern="no"
+  persistent_hard_core="no"
+  persistent_soft_core="no"
+  grep -Eq '^[[:space:]]*fs\.suid_dumpable[[:space:]]*=[[:space:]]*0[[:space:]]*$' <<<"$sysctl_config" && persistent_dumpable="yes"
+  grep -Eq '^[[:space:]]*kernel\.core_pattern[[:space:]]*=[[:space:]]*\|/bin/false[[:space:]]*$' <<<"$sysctl_config" && persistent_core_pattern="yes"
+  grep -Eq '^[[:space:]]*\*[[:space:]]+hard[[:space:]]+core[[:space:]]+0[[:space:]]*(#.*)?$' <<<"$limits_config" && persistent_hard_core="yes"
+  grep -Eq '^[[:space:]]*\*[[:space:]]+soft[[:space:]]+core[[:space:]]+0[[:space:]]*(#.*)?$' <<<"$limits_config" && persistent_soft_core="yes"
+
   if [[ "$dumpable_value" == "0" && "$core_pattern_value" == '|/bin/false' && "$ulimit_value" == "0" ]] \
-    && grep -Fq 'fs.suid_dumpable = 0' <<<"$combined" \
-    && grep -Fq 'kernel.core_pattern = |/bin/false' <<<"$combined" \
-    && grep -Fq '* hard core 0' <<<"$combined" \
-    && grep -Fq '* soft core 0' <<<"$combined" \
+    && [[ "$persistent_dumpable" == "yes" && "$persistent_core_pattern" == "yes" ]] \
+    && [[ "$persistent_hard_core" == "yes" && "$persistent_soft_core" == "yes" ]] \
     && grep -qx "NO_NEW_DUMP" <<<"$crash_probe_result" \
     && grep -qx '0' "$ARTIFACTS/10/coredump.txt" \
     && grep -Fq 'fs.suid_dumpable = 0' "$ARTIFACTS/10/coredump.txt" \
@@ -668,12 +712,14 @@ control_plane() {
       echo "HINT: /proc/sys/kernel/core_pattern must be exactly '|/bin/false' (a pipe handler override). On Ubuntu, fs.suid_dumpable=0 and 'ulimit -c 0' alone do NOT disable core dumps - per 'man 5 core', RLIMIT_CORE is ignored when core_pattern pipes to a program, and Apport (Ubuntu's default handler) intercepts crashes into /var/lib/apport/coredump/ regardless of ulimit. Set kernel.core_pattern = |/bin/false in /etc/sysctl.d/99-kubernetes.conf and apply with 'sysctl --system'."
     elif [[ "$ulimit_value" != "0" ]]; then
       echo "HINT: 'ulimit -c' for a normal user must be 0. Add BOTH '* hard core 0' and '* soft core 0' to /etc/security/limits.conf - only the soft limit is not enough, a process can raise it back up to the hard limit."
+    elif [[ "$persistent_dumpable" != "yes" || "$persistent_core_pattern" != "yes" || "$persistent_hard_core" != "yes" || "$persistent_soft_core" != "yes" ]]; then
+      echo "HINT: Runtime values are right, but the persistent configuration is missing or only commented out: /etc/sysctl.d/99-kubernetes.conf needs active 'fs.suid_dumpable = 0' and 'kernel.core_pattern = |/bin/false', and /etc/security/limits.conf needs active '* hard core 0' and '* soft core 0'. A temporary 'sysctl -w' is lost after reboot."
     elif ! grep -qx "NO_NEW_DUMP" <<<"$crash_probe_result"; then
       echo "HINT: A real SIGSEGV crash produced a NEW retained core dump (found in /var/lib/apport/coredump or /var/crash) despite your sysctl/limits settings. This proves core dumps are not actually disabled end-to-end - double check kernel.core_pattern is really applied (not just written to the file) with 'sysctl --system'."
     else
       echo "HINT: Runtime values look correct, but the evidence file coredump.txt is missing one of the required exact lines: '0', 'fs.suid_dumpable = 0', or 'hard core 0'."
     fi
-    echo "dumpable_value=$dumpable_value core_pattern_value=$core_pattern_value ulimit_value=$ulimit_value crash_probe_result=$crash_probe_result combined=$combined"
+    echo "persistent_dumpable=$persistent_dumpable persistent_core_pattern=$persistent_core_pattern persistent_hard_core=$persistent_hard_core persistent_soft_core=$persistent_soft_core dumpable_value=$dumpable_value core_pattern_value=$core_pattern_value ulimit_value=$ulimit_value crash_probe_result=$crash_probe_result combined=$combined"
     result=1
   fi
   [ "$result" -eq 0 ]

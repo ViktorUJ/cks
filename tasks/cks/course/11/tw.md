@@ -160,7 +160,7 @@ spec:
               fieldPath: metadata.namespace
 ```
 
-官方 `curlimages/curl` image 不以 root 身分執行程序（curl-docker README 指出 `running as curl_user is an explicit design decision`），因此本例明確以 `runAsNonRoot: true` 與 `runAsUser: 10001` 指定 runtime identity，而不是只交由 image metadata 決定。
+官方 `curlimages/curl` image 不以 root 身分執行 process（curl-docker README 指出 `running as curl_user is an explicit design decision`），因此本例明確以 `runAsNonRoot: true` 與 `runAsUser: 10001` 指定 runtime identity，而不是只交由 image metadata 決定。
 
 在 Linux Kubernetes v1.36 中，projected ServiceAccount token 有特殊的 permission semantics：當 Pod 的所有 containers 使用相同 `runAsUser` 時，kubelet 會將 token 指派給該 UID，並強制設為 mode `0600`。所以這個單 container Pod 中，無須 `fsGroup`，token 僅能由 UID `10001` 的 owner 讀取。
 
@@ -185,7 +185,7 @@ kubectl -n cks-104 create token app-sa --duration=10m
 
 在本課程中，應把這種 Secret 視為例外，而不是常見的 credential 發放方式：優先使用 short-lived TokenRequest、OIDC 或 federation。若特定 integration 無法使用有限 lifetime，請記錄例外原因、最小 RBAC、Secret 保護與 rotation/revocation procedure。不要把這種 Secret 當成賦予 Pod API 存取權的一般方法：它沒有自動的短期 rotation，且洩漏時會大幅增加損害。
 
-> 🔬 **Kubernetes v1.37：X.509 workload identity。** Bound ServiceAccount token 仍是本章主要的 JWT identity model。Kubernetes v1.37 也將 Pod Certificates 與 ClusterTrustBundles 穩定化，它們是發放與 rotation X.509 workload credentials 的 built-in primitives。這是 production-current extension，並非 CKS Core 的替代品：請見 [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_TW.md)。
+> 🔬 **Kubernetes v1.37：X.509 workload identity。** Bound ServiceAccount token 仍是本章主要的 JWT identity model。Kubernetes v1.37 也將 Pod Certificates 與 ClusterTrustBundles 穩定化，它們是發放與 rotation X.509 workload credentials 的 built-in primitives。這是 production-current extension，並非 CKS Core 的替代品：請見 [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
 
 ## 11.4. 專用 ServiceAccount 與最小化 RBAC
 
@@ -263,7 +263,7 @@ kubectl auth can-i --list -n cks-104 \
 
 除了普通 read/write 權限，也要分別檢查其他 RBAC escalation paths：建立 `PersistentVolume` 可能讓 Pod 存取資料或 host path；建立/核准 CSR 可發出新的 identity；修改 `ValidatingWebhookConfiguration` 或 `MutatingWebhookConfiguration` 則可變更 admission control。`bind`、`escalate`、`impersonate`、管理 RoleBinding/ClusterRoleBinding，以及這些路徑的權限，只能授予獨立的 administrative roles。不要把使用者加至 `system:masters`：此 group 擁有不受限制的 superuser access，並會略過 RBAC 與 authorization webhooks。
 
-在 Kubernetes 1.36+，Constrained Impersonation 擴展了僅有一個 `impersonate` verb 的舊模型：會套用個別權限，包括 `impersonate:user-info` 和 `impersonate-on:*`。這不是把 impersonation 授得更廣的理由——應限制 subject、groups 與 scope，並使用個別的最小 admin-role 來驗證。
+在 Kubernetes 1.36+，Constrained Impersonation 擴展了僅有一個 `impersonate` verb 的舊模型：會套用個別權限，包括 `impersonate:user-info` 和 `impersonate-on:*`。這不是把 impersonation 授得更廣的理由-應限制 subject、groups 與 scope，並使用個別的最小 admin-role 來驗證。
 
 ## 11.5. 驗證與診斷：token、API 與 RBAC
 
@@ -293,8 +293,8 @@ kubectl -n cks-104 exec api-reader -- sh -ec '
 首先區分 transport、authentication 與 authorization。
 
 - 在收到 HTTP response 前發生 TLS/certificate error：請檢查 CA file、DNS/SAN、endpoint 與 TLS connectivity。
-- HTTP `401 Unauthorized`：API server 未接受 credential——請檢查 token path、signature/issuer、`audience`、`exp`/時間與 token integrity。
-- HTTP `403 Forbidden`：authentication 已通過，但 authorizer 不允許該動作——請檢查 Role/RoleBinding、namespace，以及 targeted `kubectl auth can-i`。
+- HTTP `401 Unauthorized`：API server 未接受 credential-請檢查 token path、signature/issuer、`audience`、`exp`/時間與 token integrity。
+- HTTP `403 Forbidden`：authentication 已通過，但 authorizer 不允許該動作-請檢查 Role/RoleBinding、namespace，以及 targeted `kubectl auth can-i`。
 
 若變更 SA 後 Pod 仍有標準 token，請檢查 Pod 本身的 `spec.automountServiceAccountToken` 並重新建立它。
 
@@ -312,10 +312,10 @@ kubectl -n cks-104 exec api-reader -- sh -ec '
 ## 11.6. 在 production 中的應用方式
 
 - **Token 預設拒絕。** Platform team 為每個 application namespace 的 `default` SA 關閉 `automountServiceAccountToken`。不需要 API 的 workload 也在 Pod template 固定 `automountServiceAccountToken: false`，讓例外能在 code review 中被看見。
-- **一個 workload 對應一個 SA。** 獨立 ServiceAccount 與最小 RBAC bindings 可縮小 blast radius。對單一 namespace 的權限，使用 `RoleBinding`；它可以參照本機的 `Role` 或可重複使用的 `ClusterRole`。只在 subject 確實需要 cluster-wide scope 時才使用 `ClusterRoleBinding`——用於 cluster-scoped resources 和/或所有 namespaces 中相同的 namespaced permissions。
+- **一個 workload 對應一個 SA。** 獨立 ServiceAccount 與最小 RBAC bindings 可縮小 blast radius。對單一 namespace 的權限，使用 `RoleBinding`；它可以參照同一 namespace 的 `Role` 或可重複使用的 `ClusterRole`。只在 subject 確實需要 cluster-wide scope 時才使用 `ClusterRoleBinding`-用於 cluster-scoped resources 和/或所有 namespaces 中相同的 namespaced permissions。
 - **Bound token 取代 static Secret。** Pod 使用 short lifetime 與窄 audience 的 projected token。外部系統使用 TokenRequest、OIDC workload identity 或 cloud federation，而不是複製 service-account-token Secret。
 - **將 cloud identity 與 Kubernetes RBAC 分開。** IRSA、Workload Identity 和類似機制會將 SA 繫結至 cloud role。這不會取代 Kubernetes RBAC：要分別檢查 workload 取得了哪些 API rights 及哪些 cloud permissions。
-- **Control 與 response。** RBAC review、audit logs，以及在 repositories/logs 中搜尋 token，都應定期執行。發生外洩時，刪除遭入侵的 Pod 或 SA、移除 binding、重新建立 workload，並調查 credential 在此之前執行過哪些 requests。
+- **控管與回應。** RBAC review、audit logs，以及在 repositories/logs 中搜尋 token，都應定期執行。發生外洩時，刪除遭入侵的 Pod 或 SA、移除 binding、重新建立 workload，並調查 credential 在此之前執行過哪些 requests。
 
 ## 11.7. 迷你詞彙表
 

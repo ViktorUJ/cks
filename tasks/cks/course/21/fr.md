@@ -361,7 +361,7 @@ KMS améliore la séparation des secrets, mais ajoute des exigences opérationne
   manager restent essentiels pour le startup/cache warm-up, le déchiffrement sans cache, la rotation des clés et
   la récupération ; surveillez la santé de `Status`, la stabilité de `key_id`, la latence de `EncryptRequest`/
   `DecryptRequest`, les erreurs, la disponibilité, le quota et la durée de vie des credentials ;
-- concevez le plugin et KMS pour HA : ils constituent une dépendance critique ; l'indisponibilité du plugin/KEK
+- concevez le plugin et KMS pour HA : ils constituent une dépendance critique ; par conséquent, l'indisponibilité du plugin/KEK
   peut entraîner des échecs de lecture et d'écriture des ressources chiffrées ; vérifiez à l'avance le processus de récupération ;
 - sauvegardez les metadata et documentez les ID de clés, mais **n'exportez pas** les master keys dans un backup etcd ;
 - restreignez IAM/ACL : l'API server ne reçoit que les opérations encrypt/decrypt requises, tandis qu'un administrateur
@@ -440,7 +440,7 @@ kubectl get secrets --all-namespaces -o json | kubectl replace -f -
 
 Pour les réécritures de masse en production, il existe une alternative native Kubernetes : **Storage Version Migration**. Dans Kubernetes 1.36, elle est beta et désactivée par défaut ; après une activation explicite et une configuration suivant la documentation de votre version, la migration réécrit les objets via le storage path de l'API. Elle convient notamment au re-encryption après la modification de `EncryptionConfiguration` ou des clés. Pour CKS, il suffit de comprendre l'ordre des providers et la réécriture forcée des objets ; le `kubectl replace` ci-dessus reste une voie d'examen simple, tandis que Storage Version Migration exige un operational rollout distinct, de l'observability et un processus de rollback/recovery testé.
 
-> 🏭 **Upstream v1.37.** Dans Kubernetes v1.37, l'API et le controller `StorageVersionMigration` intégrés sont devenus GA et enabled by default. Cela modifie le statut actuel en production, mais pas le workflow CKS Core de ce chapitre, qui reste lié au contexte d'examen/de formation. Voir [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_FR.md).
+> 🏭 **Upstream v1.37.** Dans Kubernetes v1.37, l'API et le controller `StorageVersionMigration` intégrés sont devenus GA et enabled by default. Cela modifie le statut actuel en production, mais pas le workflow CKS Core de ce chapitre, qui reste lié au contexte d'examen/de formation. Voir [Kubernetes v1.37 Security Delta (uniquement en russe)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 `kubectl replace` requiert un `resourceVersion` actuel ; une forte concurrence peut provoquer des conflits. En production, exécutez un script contrôlé avec retry, observation de la latence de l'API et un créneau coordonné, plutôt que de coller aveuglément la commande dans le CI. N'écrivez pas sur disque ni dans un log de pipeline le JSON contenant des Secrets.
 
@@ -448,7 +448,7 @@ Une fois le re-encryption et la vérification des clés terminés, retirez `key-
 
 ### Passage de `identity` au chiffrement
 
-Pour un ancien cluster, le début est similaire : placez le nouveau encryption provider en premier, conservez `identity` en dernier, puis réécrivez les ressources.
+Pour un ancien cluster, le début est similaire : placez le nouvel encryption provider en premier, conservez `identity` en dernier, puis réécrivez les ressources.
 
 ```yaml
 providers:
@@ -628,7 +628,7 @@ de l'identité du Pod et du backend externe. Choisissez un modèle après une an
 | Une écriture API se bloque/échoue | plugin KMS ou KMS externe indisponible/lent | vérifiez le socket, TLS, l'état du KMS, le timeout et la HA ; n'affaiblissez pas la sécurité aveuglément |
 | Un Secret se trouve dans Git/un log | le chiffrement au repos ne peut pas aider | faites tourner immédiatement le credential d'origine, restreignez l'accès et retirez l'artefact selon la procédure IR |
 
-> 🏭 **Cas limite de récupération Kubernetes v1.37.** Un chemin Beta de suppression forcée non sûre (`AllowUnsafeMalformedObjectDeletion`) existe pour un objet API illisible/corrompu. C'est une opération susceptible de casser le cluster et un dernier mécanisme de récupération, pas une méthode normale pour corriger une rotation de chiffrement. Pour les détails et limitations, consultez [Delta de sécurité Kubernetes v1.37](../APPENDIX_K8S_137_SECURITY_DELTA_FR.md).
+> 🏭 **Cas limite de récupération Kubernetes v1.37.** Un chemin Beta de suppression forcée non sûre (`AllowUnsafeMalformedObjectDeletion`) existe pour un objet API illisible/corrompu. C'est une opération susceptible de casser le cluster et un dernier mécanisme de récupération, pas une méthode normale pour corriger une rotation de chiffrement. Pour les détails et limitations, consultez [Delta de sécurité Kubernetes v1.37 (uniquement en russe)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 À l'examen, identifiez d'abord le type de cluster. Pour kubeadm, recherchez le manifest de l'API server et les chemins TLS etcd.
 Pour un control plane managé, les réglages peuvent être indisponibles : n'essayez pas de modifier un
@@ -646,7 +646,7 @@ Pour un control plane managé, les réglages peuvent être indisponibles : n'ess
 - **`aesgcm`** - provider AEAD AES-GCM ; les clés doivent être tournées en tenant compte de la limite d'écritures.
 - **`secretbox`** - provider AEAD XSalsa20 + Poly1305 avec une clé de 32 octets.
 - **`kms`** - provider qui délègue les opérations cryptographiques à un plugin KMS externe.
-- **envelope encryption** - un objet est chiffré avec une DEK, tandis que la DEK est protégée par une KEK externe.
+- **envelope encryption** - un objet est chiffré avec une DEK, tandis que la DEK est protégée par un KEK externe.
 - **KEK/DEK** - key encryption key / data encryption key.
 - **re-encryption** - réécriture des anciens objets API via un nouveau provider/une nouvelle clé.
 - **`identity`** - provider sans chiffrement ; autorisé uniquement comme solution de repli temporaire délibérée.
@@ -657,7 +657,7 @@ Pour un control plane managé, les réglages peuvent être indisponibles : n'ess
 - `EncryptionConfiguration` est appliquée par le flag kube-apiserver `--encryption-provider-config` ; le premier
   provider est utilisé pour les nouveaux enregistrements, tandis que les providers sont essayés dans l'ordre pour les lectures.
 - `aescbc`, `aesgcm` et `secretbox` sont des options locales avec une clé dans un fichier protégé ; `kms` permet de
-  déplacer la KEK vers un gestionnaire externe et d'utiliser l'envelope encryption.
+  déplacer le KEK vers un gestionnaire externe et d'utiliser l'envelope encryption.
 - En HA, tournez une clé locale dans cet ordre : backup -> nouvelle clé en seconde position sur tous les API servers -> appliquez la
   configuration partout -> nouvelle clé en première position sur tous les API servers -> appliquez à nouveau la configuration ->
   effectuez le re-encryption des anciens objets -> vérifications -> retirez l'ancienne clé.
@@ -706,7 +706,7 @@ Base64 est un encodage, pas un chiffrement : `kubectl get secret -o yaml` peut �
 <details>
 <summary>5. Quelle est la différence opérationnelle entre les `aescbc`/`aesgcm` locaux et `kms` ?</summary>
 
-Pour les providers locaux, la clé se trouve dans un fichier de configuration du control plane protégé : cela protège un snapshot sans le système de fichiers du nœud, mais ne sépare pas ces secrets. `kms` utilise l'envelope encryption par l'intermédiaire d'un plugin de socket Unix et d'une KEK/HSM externe, ce qui améliore la séparation des responsabilités. En contrepartie, le plugin et le gestionnaire externe deviennent une dépendance critique pour la lecture, l'écriture, la rotation et la restauration.
+Pour les providers locaux, la clé se trouve dans un fichier de configuration du control plane protégé : cela protège un snapshot sans le système de fichiers du nœud, mais ne sépare pas ces secrets. `kms` utilise l'envelope encryption par l'intermédiaire d'un plugin de socket Unix et d'un KEK/HSM externe, ce qui améliore la séparation des responsabilités. En contrepartie, le plugin et le gestionnaire externe deviennent une dépendance critique pour la lecture, l'écriture, la rotation et la restauration.
 </details>
 
 <details>
@@ -730,7 +730,7 @@ Des permissions larges sur `pods/exec`, `pods/attach` ou `pods/ephemeralcontaine
 <details>
 <summary>9. Que faut-il vérifier pour restaurer un snapshot etcd chiffré ?</summary>
 
-Stockez et restaurez le snapshot selon une procédure sûre, mais vérifiez aussi la disponibilité des clés locales requises ou de la même KEK/du même plugin KMS. Testez la restauration à l'avance, documentez les ID de clé et protégez séparément le snapshot avec des ACL, le chiffrement du stockage et la rétention. N'exportez pas les clés maîtresses dans un backup etcd.
+Stockez et restaurez le snapshot selon une procédure sûre, mais vérifiez aussi la disponibilité des clés locales requises ou du même KEK/du même plugin KMS. Testez la restauration à l'avance, documentez les ID de clé et protégez séparément le snapshot avec des ACL, le chiffrement du stockage et la rétention. N'exportez pas les clés maîtresses dans un backup etcd.
 </details>
 
 <details>

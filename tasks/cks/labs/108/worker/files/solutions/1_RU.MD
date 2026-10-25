@@ -1,3 +1,5 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
 # Лаба 108 - эталонное решение: Kyverno admission policies
 
 > Все команды выполняются на рабочей машине. Контекст уже настроен; namespace
@@ -23,7 +25,7 @@ kubectl get crd validatingpolicies.policies.kyverno.io
 kubectl get crd mutatingpolicies.policies.kyverno.io
 ```
 
-Дождитесь, пока хотя бы один Deployment в `kyverno` имеет `AVAILABLE > 0`.
+Дождитесь, пока хотя бы один Deployment в `kyverno` будет иметь `AVAILABLE > 0`.
 
 > **Migration note.** Старые примеры `kyverno.io/v1` `Policy`/`ClusterPolicy` остаются
 > полезны только при сопровождении существующих кластеров. В Kyverno `1.19` они deprecated,
@@ -68,7 +70,7 @@ spec:
 ```
 
 ```bash
-kubectl apply --context "$CTX" -f deny-latest-tag.yaml
+kubectl apply -f deny-latest-tag.yaml
 ```
 
 Задание разрешает ДВЕ формы image reference - non-latest tag ИЛИ digest. Проверьте
@@ -76,7 +78,7 @@ kubectl apply --context "$CTX" -f deny-latest-tag.yaml
 написать policy, которая случайно отклоняет ВСЕ digest references:
 
 ```bash
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -89,13 +91,21 @@ spec:
   - name: app
     image: registry.k8s.io/pause@sha256:5a92cb1de40c9c50e1c72e83bf35b9b32ce88e0d1b93f5e2727d97a44c176f56
 EOF
-# ожидается: успех (никакая ошибка admission)
+# ожидается: успех (никакой ошибки admission)
 ```
+
+Убедитесь, что обработка тега учитывает двоеточие в registry-порту: `registry.example:5000/app`
+не содержит image tag и должно быть отклонено как implicit latest. Digest должен
+приниматься и в других списках контейнеров - например, в `initContainers` и через
+`kubectl debug --image=...` для `ephemeralContainers`.
 
 ## 3. Требовать `runAsNonRoot`
 
-Политика требует значение именно `true` в Pod-level `securityContext`; неявное
-значение и `false` не проходят.
+Policy требует значение именно `true` в Pod-level `securityContext`; неявное
+значение и `false` не проходят. Дополнительно запрещены `runAsUser: 0` на уровне
+Pod и container-level overrides `runAsNonRoot: false` / `runAsUser: 0` во всех
+трёх container lists, иначе container-level securityContext сможет переопределить
+Pod-level `runAsNonRoot: true` и запустить root-процесс.
 
 ```yaml
 # require-run-as-non-root.yaml
@@ -115,14 +125,27 @@ spec:
   - name: policy-108-only
     expression: request.namespace == 'policy-108'
   validations:
-  - message: Pod securityContext.runAsNonRoot must be true.
+  - message: Pod and every container must have an effective non-root security context.
     expression: >-
       has(object.spec.securityContext) &&
-      object.spec.securityContext.?runAsNonRoot.orValue(false)
+      object.spec.securityContext.?runAsNonRoot.orValue(false) &&
+      object.spec.securityContext.?runAsUser.orValue(1) != 0 &&
+      object.spec.containers.all(c,
+        !has(c.securityContext) ||
+        (c.securityContext.?runAsNonRoot.orValue(true) &&
+         c.securityContext.?runAsUser.orValue(1) != 0)) &&
+      object.spec.?initContainers.orValue([]).all(c,
+        !has(c.securityContext) ||
+        (c.securityContext.?runAsNonRoot.orValue(true) &&
+         c.securityContext.?runAsUser.orValue(1) != 0)) &&
+      object.spec.?ephemeralContainers.orValue([]).all(c,
+        !has(c.securityContext) ||
+        (c.securityContext.?runAsNonRoot.orValue(true) &&
+         c.securityContext.?runAsUser.orValue(1) != 0))
 ```
 
 ```bash
-kubectl apply --context "$CTX" -f require-run-as-non-root.yaml
+kubectl apply -f require-run-as-non-root.yaml
 ```
 
 ## 4. Разрешить только утверждённые registry
@@ -162,17 +185,23 @@ spec:
 ```
 
 ```bash
-kubectl apply --context "$CTX" -f allow-approved-registries.yaml
+kubectl apply -f allow-approved-registries.yaml
 ```
 
 Проверка без создания Pod и без image pull. `docker.io` - лишь ОДНО конкретное
 untrusted-значение; проверьте, что policy действительно ALLOWLIST (запрещает ЛЮБОЙ
-registry, кроме двух разрешённых), а не просто денылист `docker.io` буквальной строкой -
+registry, кроме двух разрешённых), а не просто denylist `docker.io` буквальной строкой -
 иначе unqualified image, другой сторонний registry или похожий по написанию host легко
-пройдут мимо:
+пройдут мимо.
+
+Positive controls должны покрывать оба разрешённых prefix (`registry.k8s.io/` и
+`ghcr.io/cks-lab/`) в `containers`, `initContainers` и `ephemeralContainers`; не
+ограничивайте один из registry только обычными контейнерами.
+
+Negative controls (каждый из этих манифестов должен быть отклонён):
 
 ```bash
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -186,7 +215,7 @@ spec:
     image: docker.io/library/busybox:1.36
 EOF
 
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -200,7 +229,7 @@ spec:
     image: busybox:1.36
 EOF
 
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -214,7 +243,7 @@ spec:
     image: quay.io/prometheus/busybox:v0.24.0
 EOF
 
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -233,7 +262,7 @@ EOF
 контейнером, второй - только `initContainers`; отклониться должны оба:
 
 ```bash
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -247,7 +276,7 @@ spec:
     image: docker.io/library/busybox:1.36
 EOF
 
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -310,8 +339,8 @@ spec:
 ```
 
 ```bash
-kubectl apply --context "$CTX" -f add-kyverno-managed-label.yaml
-kubectl apply --dry-run=server --context "$CTX" -o json -f - <<'EOF' \
+kubectl apply -f add-kyverno-managed-label.yaml
+kubectl apply --dry-run=server -o json -f - <<'EOF' \
   | jq -r '.metadata.labels["security.cks.io/managed-by"]'
 apiVersion: v1
 kind: Pod
@@ -327,7 +356,7 @@ spec:
 EOF
 # ожидается: kyverno
 
-kubectl apply --dry-run=server --context "$CTX" -o json -f - <<'EOF' \
+kubectl apply --dry-run=server -o json -f - <<'EOF' \
   | jq -r '.metadata.labels["security.cks.io/managed-by"]'
 apiVersion: v1
 kind: Pod
@@ -346,8 +375,8 @@ EOF
 # ожидается: external (mutation НЕ перезаписывает уже заданное значение)
 ```
 
-Выполните `check_result`. Этап 5 показан в проверке, но он опционален: отсутствие
-mutation policy не должно отменять зачёт первых четырёх этапов.
+Выполните `check_result`. Задание 5 показано в проверке, но оно опционально: отсутствие
+mutation policy не влияет на зачёт заданий 1–4, 6 и 7.
 
 ## 6. ImagePolicyWebhook: внешний backend
 
@@ -363,23 +392,20 @@ Backend уже подготовлен на рабочей машине:
 cat /opt/image-policy-backend/server.py
 ```
 
-Скопируйте его на `control-plane` и создайте namespace + ConfigMap:
+Создайте namespace и ConfigMap с кодом backend'а:
 
 ```bash
-CP=$(kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
-scp -o StrictHostKeyChecking=no /opt/image-policy-backend/server.py "$CP":/tmp/server.py
-
-kubectl create namespace image-policy --context "$CTX" --dry-run=client -o yaml | kubectl apply --context "$CTX" -f -
-kubectl create configmap image-policy-backend-src -n image-policy --context "$CTX" \
+kubectl create namespace image-policy --dry-run=client -o yaml | kubectl apply -f -
+kubectl create configmap image-policy-backend-src -n image-policy \
   --from-file=server.py=/opt/image-policy-backend/server.py \
-  --dry-run=client -o yaml | kubectl apply --context "$CTX" -f -
+  --dry-run=client -o yaml | kubectl apply -f -
 ```
 
 Создайте Service **до** Deployment - нужен `ClusterIP` для правильного SAN в
 сертификате:
 
 ```bash
-cat <<'EOF' | kubectl apply --context "$CTX" -f -
+cat <<'EOF' | kubectl apply -f -
 apiVersion: v1
 kind: Service
 metadata:
@@ -393,7 +419,7 @@ spec:
     targetPort: 8443
 EOF
 
-BACKEND_IP=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o jsonpath='{.spec.clusterIP}')
+BACKEND_IP=$(kubectl get service image-policy-backend -n image-policy -o jsonpath='{.spec.clusterIP}')
 echo "$BACKEND_IP"
 ```
 
@@ -406,15 +432,15 @@ openssl req -x509 -nodes -newkey rsa:2048 -days 3 \
   -subj "/CN=image-policy-backend" \
   -addext "subjectAltName=IP:${BACKEND_IP}"
 
-kubectl create secret tls image-policy-backend-tls -n image-policy --context "$CTX" \
+kubectl create secret tls image-policy-backend-tls -n image-policy \
   --cert="$workdir/tls.crt" --key="$workdir/tls.key" \
-  --dry-run=client -o yaml | kubectl apply --context "$CTX" -f -
+  --dry-run=client -o yaml | kubectl apply -f -
 ```
 
 Разверните Deployment, монтируя и код, и сертификат:
 
 ```bash
-cat <<'EOF' | kubectl apply --context "$CTX" -f -
+cat <<'EOF' | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -451,25 +477,31 @@ spec:
           secretName: image-policy-backend-tls
 EOF
 
-kubectl rollout status deployment/image-policy-backend -n image-policy --context "$CTX" --timeout=90s
+kubectl rollout status deployment/image-policy-backend -n image-policy --timeout=90s
 ```
 
 Скопируйте CA-сертификат (здесь self-signed, поэтому сертификат сервера сам и есть его
 собственный CA) на `control-plane`, чтобы kube-apiserver мог проверить цепочку при
-подключении к backend'у:
+подключении к backend'у, и зайдите на узел:
 
 ```bash
-scp -o StrictHostKeyChecking=no "$workdir/tls.crt" "$CP":/tmp/image-policy-ca.crt
+CP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
+scp "$workdir/tls.crt" "$CP":/tmp/image-policy-ca.crt
+rm -rf "$workdir"
+echo "$BACKEND_IP"     # понадобится на узле
+ssh "$CP"
+sudo -i
 ```
 
-На `control-plane` (по SSH) создайте admission config и kubeconfig для backend. Путь на
-диске **на самом control-plane**, а не на рабочей машине:
+На `control-plane` создайте admission config и kubeconfig для backend. Пути - на диске **самого
+control-plane**:
 
 ```bash
-ssh "$CP" 'sudo mkdir -p /etc/kubernetes/image-policy'
-ssh "$CP" 'sudo mv /tmp/image-policy-ca.crt /etc/kubernetes/image-policy/ca.crt'
+# на control-plane (root)
+mkdir /etc/kubernetes/image-policy
+mv /tmp/image-policy-ca.crt /etc/kubernetes/image-policy/ca.crt
 
-ssh "$CP" "sudo tee /etc/kubernetes/image-policy/admission-config.yaml >/dev/null" <<'EOF'
+cat > /etc/kubernetes/image-policy/admission-config.yaml <<EOF
 apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins:
@@ -483,7 +515,8 @@ plugins:
       defaultAllow: false
 EOF
 
-ssh "$CP" "sudo tee /etc/kubernetes/image-policy/kubeconfig >/dev/null" <<EOF
+BACKEND_IP=10.111.15.20     # впишите ClusterIP, который вывел "echo $BACKEND_IP"
+cat > /etc/kubernetes/image-policy/kubeconfig <<EOF
 apiVersion: v1
 kind: Config
 clusters:
@@ -500,17 +533,16 @@ contexts:
     user: kube-apiserver
 current-context: image-policy
 EOF
-
-rm -rf "$workdir"
 ```
 
-Отредактируйте static manifest **на `control-plane`**. Не заменяйте существующий
-`--enable-admission-plugins` целиком - допишите `ImagePolicyWebhook` к текущему значению
-(обычно там уже есть `NodeRestriction`), добавьте `--admission-control-config-file` и
+Отредактируйте static manifest **на `control-plane`** (вы уже в root-сессии). Не заменяйте
+существующий `--enable-admission-plugins` целиком - допишите `ImagePolicyWebhook` к текущему
+значению (обычно там уже есть `NodeRestriction`), добавьте `--admission-control-config-file` и
 `--runtime-config`, смонтируйте новую директорию как hostPath:
 
 ```bash
-ssh "$CP" 'sudo cat /etc/kubernetes/manifests/kube-apiserver.yaml'
+# на control-plane (root)
+vim /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
 ```yaml
@@ -534,25 +566,39 @@ spec:
       type: DirectoryOrCreate
 ```
 
-kubelet сам подхватит изменение static Pod. Дождитесь восстановления API:
+После сохранения выйдите с узла; kubelet сам подхватит изменение static Pod:
 
 ```bash
-until kubectl get --context "$CTX" --raw=/readyz 2>/dev/null | grep -q '^ok$'; do sleep 5; done
+exit   # из root
+exit   # с control-plane
+```
+
+Дождитесь восстановления API:
+
+```bash
+until kubectl get --raw=/readyz 2>/dev/null | grep -q '^ok$'; do sleep 5; done
 ```
 
 Проверьте оба случая:
 
 ```bash
-kubectl run webhook-latest-must-fail --image=nginx:latest --context "$CTX"
+kubectl run webhook-latest-must-fail --image=nginx:latest
 # Error from server (Forbidden): pods "webhook-latest-must-fail" is forbidden:
 # image policy webhook backend denied one or more images: Images using latest tag are not allowed
 
-kubectl run webhook-pinned-ok --image=nginx:1.27.3 --context "$CTX"
-kubectl get pod webhook-pinned-ok --context "$CTX"
+kubectl run webhook-pinned-ok --image=nginx:1.27.3
+kubectl get pod webhook-pinned-ok
 # STATUS: Running
 ```
 
-`defaultAllow: false` означает fail-closed: если backend недоступен, все image
+`ImagePolicyWebhook` использует backend из `/opt/image-policy-backend/server.py`:
+в `default` и остальных namespace (кроме `policy-108`) он запрещает explicit/implicit
+latest; `policy-108` целиком контролируют три Kyverno-политики из заданий 2–4.
+Это лабораторная изоляция механизмов, а не универсальный production pattern.
+Пользовательская аннотация `alpha.image-policy.k8s.io/break-glass` разрешение НЕ даёт:
+передача аннотаций в ImageReview не является проверкой подлинности.
+
+`defaultAllow: false` означает fail-closed: если backend недоступен, новые Pod/image
 запрещаются, а не разрешаются. Проверьте это явно - но НЕ масштабируйте
 `image-policy-backend` до 0 реплик: `ImagePolicyWebhook` - это cluster-wide admission
 plugin без исключения по namespace в нашей конфигурации, поэтому он проверяет и Pod
@@ -564,27 +610,27 @@ plugin без исключения по namespace в нашей конфигур
 создаёт и не удаляет ни одного Pod, только временно убирает `Endpoints`:
 
 ```bash
-kubectl get service image-policy-backend -n image-policy --context "$CTX" -o jsonpath='{.spec.selector}'
+kubectl get service image-policy-backend -n image-policy -o jsonpath='{.spec.selector}'
 # сохраните это значение, чтобы восстановить его позже
 
-kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
+kubectl patch service image-policy-backend -n image-policy \
   -p '{"spec":{"selector":{"app":"image-policy-backend-detached-for-probe"}}}'
-kubectl get endpoints image-policy-backend -n image-policy --context "$CTX" -w
+kubectl get endpoints image-policy-backend -n image-policy -w
 # Ctrl+C, когда ENDPOINTS опустеет
 
-kubectl run webhook-should-fail-closed --image="nginx:fail-closed-check-$(date +%s%N)" --context "$CTX"
+kubectl run webhook-should-fail-closed --image="nginx:fail-closed-check-$(date +%s%N)"
 # ожидается: Forbidden - backend недоступен, defaultAllow:false запрещает admission
 # (используем ЕЩЁ НЕ виденный тег, а не просто дату в секундах, чтобы не столкнуться с
 # TTL-кэшем ответа backend'а на этот же тег из предыдущей попытки)
 
-kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
+kubectl patch service image-policy-backend -n image-policy \
   -p '{"spec":{"selector":{"app":"image-policy-backend"}}}'
-kubectl get endpoints image-policy-backend -n image-policy --context "$CTX" -w
+kubectl get endpoints image-policy-backend -n image-policy -w
 # Ctrl+C, когда ENDPOINTS снова появится - это тот же самый Pod, что и до пробы, никакой
 # пересборки/пересоздания не потребовалось
 ```
 
-Это то же принципиальное fail-closed решение, что описано в главе 26 для
+Это то же принципиальное fail-closed решение, что описано в [главе 26 курса](../../../../../course/26/ru.md) для
 production-конфигурации ImagePolicyWebhook.
 
 ## 7. Gatekeeper: дописать Rego blocklist в ConstraintTemplate
@@ -669,7 +715,7 @@ EOF
 
 Убедитесь, что отказ действительно пришёл от Gatekeeper (`validation.gatekeeper.sh`), а
 не от одной из Kyverno `ValidatingPolicy` из заданий 2-4 - сообщение об ошибке явно
-называет webhook и имя вашего Constraint. Не решайте задание через `Constraint.spec.parameters`
-- в этой версии policy Constraint их вообще не использует.
+называет webhook и имя вашего Constraint. Не решайте задание через `Constraint.spec.parameters` -
+в этой версии policy Constraint их вообще не использует.
 
 Выполните `check_result`.

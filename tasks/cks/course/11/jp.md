@@ -2,7 +2,7 @@
 
 # 第11章. ServiceAccounts: 最小化とtoken
 
-> **問題。** 脆弱なPod内のshellは、攻撃者にマウント済みServiceAccount bearer tokenへのアクセスを与えます。tokenが`default` accountまたは過剰なRBAC権限を持つidentityに発行されている場合、container外でSecretの読み取り、Podの作成、APIでのさらなるescalationに使用できます。short-lived tokenでも有効期間中は危険です。
+> **問題。** 脆弱なPod内のshellは、攻撃者にmount済みServiceAccount bearer tokenへのアクセスを与えます。tokenが`default` accountまたは過剰なRBAC権限を持つidentityに発行されている場合、container外でSecretの読み取り、Podの作成、APIでのさらなるescalationに使用できます。short-lived tokenでも有効期間中は危険です。
 
 > **次に行うこと。** 第10章でRBACにより権限を減らしました。次はPodが得るidentity自体、すなわちServiceAccountとそのtokenを制限します。侵害されたcontainer内の余計なtokenはKubernetes APIへの入口です。最小のServiceAccountと短命tokenはincidentの影響を減らします。これはCKSのCluster Hardening (15%) domainです。次章ではanonymous requests、network、apiserver settingsの側面からもAPIへのアクセスを閉じます。
 
@@ -183,7 +183,7 @@ Kubernetes v1.33+では`ServiceAccountNodeAudienceRestriction`はBetaでdefault�
 
 courseではこのようなSecretを通常のcredential発行方法ではなくexceptionと考えてください。まずshort-lived TokenRequest、OIDC、またはfederationを優先します。特定integrationがlimited lifetimeで動作できない場合は、exceptionの理由、最小RBAC、Secret protection、rotation/revocation procedureをdocumentしてください。このSecretをPodにAPI accessを与える通常の方法として作成しないでください。これは自動の短いrotationを受けず、leak時の被害をより大きくします。
 
-> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount tokenはこの章の主なJWT identity modelです。Kubernetes v1.37ではPod CertificatesとClusterTrustBundlesもstableになりました。これらはX.509 workload credentialsの発行とrotationのbuilt-in primitivesです。これはCKS Coreの置き換えではなくproduction-current extensionです。[Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_JP.md)を参照してください。
+> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount tokenはこの章の主なJWT identity modelです。Kubernetes v1.37ではPod CertificatesとClusterTrustBundlesもstableになりました。これらはX.509 workload credentialsの発行とrotationのbuilt-in primitivesです。これはCKS Coreの置き換えではなくproduction-current extensionです。[Kubernetes v1.37 Security Delta (ロシア語版のみ)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)を参照してください。
 
 ## 11.4. 専用ServiceAccountと最小RBAC
 

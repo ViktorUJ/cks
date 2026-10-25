@@ -77,12 +77,12 @@ kubectl run metadata-probe --rm -i --restart=Never --image=curlimages/curl:8.11.
 
 この違いがあるため、上の検査は意図的に特定 path に結び付けません。`/latest/meta-data/` を使うコマンドは GCP と Azure では `404` となり、endpoint が実際には応答しているのに「到達不能」と誤読されます。header の要件（`Metadata-Flavor`、`Metadata: true`）は単純な SSRF への防御であり、Pod への防御ではありません。Pod は任意の header を自ら送れるため、header があってもネットワーク経路を閉じる必要はあります。
 
-**二つの結論を混同しないでください。**「Endpoint に到達できる」と「credentials を取得できた」は同じであり、報告で混ぜてはいけません。
+**二つの結論を混同しないでください。**「Endpoint に到達できる」と「credentials を取得できた」は同じではなく、報告で混ぜてはいけません。
 
 - *到達性* は**発見事項と前提条件**です。Pod から metadata service へのネットワーク経路が閉じていません。修正課題を起票するには十分ですが、それ自体は侵害を証明しません。
 - *credentials の取得可能性* は**確認済みの悪用経路**であり、provider 側の他の条件も満たす必要があります。
 
-違いのよい例が AWS です。`HttpTokens=required`（IMDSv2-only）では token なしのアクセスは成功せず、token は別の `PUT` で要求します。その応答は `HttpPutResponseHopLimit` 個の network hop だけ生きます。hop limit が `1` なら own network namespace を持つ Pod まで応答が届きません。つまり endpoint は応答し probe は到達性を示しますが、token、したがって credentials は得られません。`hostNetwork: true` の Pod は追加 hop ではないため、この制限は機能しません。実務では、到達性を別の事実として記録し、credentials の窃取は provider 固有設定を確認してから結論付けます。
+違いのよい例が AWS です。`HttpTokens=required`（IMDSv2-only）では token なしのアクセスは成功せず、token は別の `PUT` で要求します。その応答は `HttpPutResponseHopLimit` 個の network hop だけ生きます。hop limit が `1` なら 独自の network namespace を持つ Pod まで応答が届きません。つまり endpoint は応答し probe は到達性を示しますが、token、したがって credentials は得られません。`hostNetwork: true` の Pod は追加 hop ではないため、この制限は機能しません。実務では、到達性を別の事実として記録し、credentials の窃取は provider 固有設定を確認してから結論付けます。
 
 この層の残りは provider CLI とその account の個別権限を必要とします。`kubectl` はこれらの object を原理的に見られません。
 
@@ -98,11 +98,11 @@ kubectl run metadata-probe --rm -i --restart=Never --image=curlimages/curl:8.11.
 AWS/EKS の例です（GCP では `gcloud container clusters describe` と `gcloud compute instances describe`、Azure では `az aks show` と `az vm show` を使います。質問は同じですが output と field 名は異なります）。
 
 ```bash
-# Question 1: API server がインターネットから見え、誰に見えるか
+# 質問 1: API server がインターネットから見え、誰に見えるか
 aws eks describe-cluster --name "$CLUSTER" \
   --query 'cluster.resourcesVpcConfig.{public:endpointPublicAccess,private:endpointPrivateAccess,cidrs:publicAccessCidrs}'
 
-# Question 3: hop limit `1` は security-first default。`2` は
+# 質問 3: hop limit `1` は security-first default。`2` は
 # Pod 自身が IMDS にアクセスする正当な必要がある場合だけ確認する
 aws ec2 describe-instances --filters "Name=tag:eks:cluster-name,Values=$CLUSTER" \
   --query 'Reservations[].Instances[].{id:InstanceId,imds:MetadataOptions.HttpTokens,hop:MetadataOptions.HttpPutResponseHopLimit}'
@@ -133,12 +133,12 @@ kubectl get clusterrolebinding -o jsonpath='{range .items[?(@.roleRef.name=="clu
 
 このコマンドは、すべての resource への完全アクセスを与えるクラスターで最も広い組み込み role `cluster-admin` を参照する `ClusterRoleBinding` だけを出力します。各 binding について、その名前と role を割り当てられた subject（`User`、`Group`、`ServiceAccount`）の list を表示します。一つの binding が複数の subject を参照できるので、`.subjects[*]` に対する内側の `range` が必要です。
 
-**`cluster-admin` という名前だけの検査では不十分です。** access level は role 名ではなく、その rule と binding の scope の組み合わせで決まります。`apiGroups: ["*"]`、`resources: ["*"]`、`verbs: ["*"]` を持つ `ClusterRole` は実質無制限の Kubernetes resource API 権限を記述しますが、実際の scope は binding に依存します。`ClusterRoleBinding` は全 namespace で cluster-wide に有効にし、同じ `ClusterRole` を参照する `RoleBinding` はその `RoleBinding` が作成された namespace の namespaced permission に制限します。この仕組みにより一組の rule を複数 namespace で再利用できます。さらに `ClusterRole` は cluster-scoped resource（例: `nodes`）、non-resource endpoint（`/healthz`）、`ClusterRoleBinding` による cluster-wide access に使われます。実クラスターでは `platform-superuser`、`ci-deployer`、`monitoring-full` のような無害そうな名前の role が、「とにかく動かす」ため、または `cluster-admin` という単語の review を回避するために作られます。名前検索はこれらをまったく見つけず、role rule だけを binding を調べずに検索すると risk を誤評価します。一 namespace の `RoleBinding` で結ばれた広い権限は、同じ権限を `ClusterRoleBinding` で与えるのとは脅威規模が異なります。
+**`cluster-admin` という名前だけの検査では不十分です。** access level は role 名ではなく、その rule と binding の scope の組み合わせで決まります。`apiGroups: ["*"]`、`resources: ["*"]`、`verbs: ["*"]` を持つ `ClusterRole` は実質無制限の Kubernetes resource API 権限を記述しますが、実際の scope は binding に依存します。`ClusterRoleBinding` は全 namespace で cluster-wide に有効にし、同じ `ClusterRole` を参照する `RoleBinding` はその `RoleBinding` が作成された namespace の namespaced permission に制限します。この仕組みにより、同じ内容の `Role` を複数作る代わりに、一組の rule を複数 namespace で再利用できます。さらに `ClusterRole` は cluster-scoped resource（例: `nodes`）、non-resource endpoint（`/healthz`）、`ClusterRoleBinding` による cluster-wide access に使われます。実クラスターでは `platform-superuser`、`ci-deployer`、`monitoring-full` のような無害そうな名前の role が、「とにかく動かす」ため、または意図的に `cluster-admin` という単語の review を回避するために作られます。名前検索はこれらをまったく見つけず、role rule だけを binding を調べずに検索すると risk を誤評価します。一 namespace の `RoleBinding` で結ばれた広い権限は、同じ権限を `ClusterRoleBinding` で与えるのとは脅威規模が異なります。
 
 厳密には、この role は組み込み `cluster-admin` の**文字通りの同等物ではありません**。組み込み role には二つの rule があり、resource の wildcard に加え、`/healthz`、`/metrics`、`/debug/*` のような non-resource endpoint を覆う `nonResourceURLs` 用の別 wildcard rule があります。第二 rule のない role はそれらの path を与えず、`resourceNames` や aggregation（`aggregationRule`）によって狭められる場合もあります。しかし triage の観点で違いは実質的に小さく、すべての API resource を制御できれば全 Secret の読取り、任意 node 上の Pod 作成、RBAC の変更が可能で、完全な cluster takeover への経路になります。Kubernetes の公式 documentation もこの例を "similar to the built-in `cluster-admin` role" と慎重に表現し、「同一」とは言いません。実務の結論は変わらず、名前でなく権限を検索する必要があります。
 
 ```bash
-# Step A: 名前に関係なく、完全な wildcard 権限を持つ全 ClusterRole を探す
+# 手順 A: 名前に関係なく、完全な wildcard 権限を持つ全 ClusterRole を探す
 kubectl get clusterroles -o json | jq -r '
   .items[]
   | select(any(.rules[]?;
@@ -150,7 +150,7 @@ kubectl get clusterroles -o json | jq -r '
 ```
 
 ```bash
-# Step B: 見つかった role のいずれかを参照する binding を探す
+# 手順 B: 見つかった role のいずれかを参照する binding を探す
 dangerous=$(kubectl get clusterroles -o json | jq -r '
   .items[]
   | select(any(.rules[]?;
@@ -167,7 +167,7 @@ kubectl get clusterrolebinding -o json \
       | "\(.metadata.name) -> ロール \(.roleRef.name) (cluster-wide), subjects: \([.subjects[]? | "\(.kind):\(.name)"] | join(", "))"
     '
 
-# Step B': 同じ role は RoleBinding にも結べる。その場合の権限は
+# 手順 B': 同じ role は RoleBinding にも結べる。その場合の権限は
 # 一 namespace のみだが、上の ClusterRoleBinding 検索で「レビュー済み」にはならない
 kubectl get rolebinding -A -o json \
   | jq -r --argjson names "$(echo "$dangerous" | jq -R . | jq -s .)" '
@@ -177,7 +177,7 @@ kubectl get rolebinding -A -o json \
     '
 ```
 
-Step A は各 role rule を検査します。同一 rule 内で `apiGroups`、`resources`、`verbs` にすべて `*` があれば完全 access です。`any(.rules[]?; ...)` が重要なのは、危険な rule が一番目でなく、無害な rule に並ぶ二番目や三番目の場合があるからです。Step B と B' は見つけた名前を取り、どの binding が実際に使い、誰にどの scope で与えたかを表示します。`ClusterRoleBinding` は cluster-wide access、同じ `ClusterRole` の `RoleBinding` は一 namespace に制限します。同じ role rule でも脅威規模は違い、二種類のいずれかを省くと不完全です。未 binding の危険な role も review 対象ですが、binding 済みなら権限はすでに誰かへ与えられています。
+手順 A は各 role rule を検査します。同一 rule 内で `apiGroups`、`resources`、`verbs` にすべて `*` があれば完全 access です。`any(.rules[]?; ...)` が重要なのは、危険な rule が一番目でなく、無害な rule に並ぶ二番目や三番目の場合があるからです。手順 B と B' は見つけた名前を取り、どの binding が実際に使い、誰にどの scope で与えたかを表示します。`ClusterRoleBinding` は cluster-wide access、同じ `ClusterRole` の `RoleBinding` は一 namespace に制限します。同じ role rule でも脅威規模は違い、二種類のいずれかを省くと不完全です。未 binding の危険な role も review 対象ですが、binding 済みなら権限はすでに誰かへ与えられています。
 
 完全 wildcard に当たらない、より狭いが依然危険な pattern も別途見ます。
 
@@ -194,7 +194,7 @@ kubectl get clusterroles -o json | jq -r '
 
 たとえば `secrets` だけに対する `verbs: ["*"]` は `cluster-admin` ではありませんが、全 cluster secret の読み取りと変更を可能にし、多くの threat model では完全侵害に等しくなります。同様に、admission 層で広い `hostPath` 許可と組み合わさった `create` on `pods`、role に対する `escalate`/`bind`、user に対する `impersonate` は、role 自体が狭く見えても権限昇格の経路を与えます。これらの pattern の詳しい説明は [第10章](../10/jp.md) です。
 
-> **試験では。** filter `?(@.roleRef.name==...)` を伴う nested `range` を一つの jsonpath expression に書くのは、Step 4 が警告するのと同様、急いで入力すると bracket や quote を失いやすいです。より信頼できるのは、各 `kubectl` 呼び出しが filter や nesting なしに一つの field だけを尋ねる単純な loop に分割する方法です。
+> **試験では。** filter `?(@.roleRef.name==...)` を伴う nested `range` を一つの jsonpath expression に書くのは、手順 4 が警告するのと同様、急いで入力すると bracket や quote を失いやすいです。より信頼できるのは、各 `kubectl` 呼び出しが filter や nesting なしに一つの field だけを尋ねる単純な loop に分割する方法です。
 >
 > ```bash
 > for crb in $(kubectl get clusterrolebinding -o name | cut -d/ -f2); do
@@ -207,7 +207,7 @@ kubectl get clusterroles -o json | jq -r '
 > done
 > ```
 >
-> `kubectl get clusterrolebinding -o name` は `clusterrolebinding.rbac.authorization.k8s.io/<name>` の形式で name を出力し、`cut -d/ -f2` は `/` の後の name だけを残します。各 `kubectl get clusterrolebinding "$crb" -o jsonpath='{.roleRef.name}'` は一つの具体的 binding の単純な field だけを検査します。ここには binding 自体を選ぶ `?(...)` filter も nested `range` もなく、見つかった一致の subject 用だけに `range` があるため、実行前に目で再確認しやすくなります。上の one-liner より遅く（binding ごとに API request が一つ）ても、試験クラスターの binding は通常数千件ではなく、秒数の差より入力信頼性の差が重要です。
+> `kubectl get clusterrolebinding -o name` は `clusterrolebinding.rbac.authorization.k8s.io/<name>` の形式で name を出力し、`cut -d/ -f2` は `/` の後の name だけを残します。各 `kubectl get clusterrolebinding "$crb" -o jsonpath='{.roleRef.name}'` は一つの具体的 binding の単純な field だけを検査します。ここには binding 自体を選ぶ `?(...)` filter も nested `range` もなく、見つかった一致の subject 用だけに `range` があるため、実行前に目で再確認しやすくなります。上の one-liner より遅くても（binding ごとに API request が一つ必要です）、試験クラスターの binding は通常数千件ではなく、秒数の差より入力信頼性の差が重要です。
 
 **手順 4 (Cluster)。明示的な危険兆候を持つ workload。**
 
@@ -225,7 +225,7 @@ kubectl get clusterroles -o json | jq -r '
 > done
 > ```
 >
-> 考え方は単純です。一つの command で Pod 名を取得し、loop 内で一 Pod ずつ JSON を取り、目的 field を grep し、見つかれば名前を出します。namespace は先頭行で `NS` 変数に入れます。コマンド中に二度現れるため、timer 下で一方だけを直し忘れると script は何も告げず別 namespace を検索します。変数なら修正箇所は一つで、先頭に見えています。pipe の二つの `grep` は単純なまま検査を正確にします。最初は `hostNetwork` の行だけを残し、次はその行に `true` があることを確認します。これで field はあっても risk のない `"hostNetwork": false` を除外します。`grep -q` は何も出力せず、`if` 用の success/failure code だけを返します。`kubectl -o json` は pretty-printed JSON を出し各 field が独立行なので、二番目の `grep` は隣接 field でなく `hostNetwork` 行だけを受け取ります。多数 Pod を持つ namespace では、規模上の制約はこのページの他の variant と同じです（上の 10,000 Pod の節を参照）。しかし数件から数十件の試験 namespace では問題にならず、早く下書きなしで入力しても壊れにくい command です。同じ手法は任意の boolean field に使え、`hostNetwork` を `hostPID`、`hostIPC`、`privileged` に替えます。
+> 考え方は単純です。一つの command で Pod 名を取得し、loop 内で一 Pod ずつ JSON を取り、目的 field を grep し、見つかれば名前を出します。namespace は先頭行で `NS` 変数に入れます。コマンド中に二度現れるため、timer 下で一方だけを直し忘れると script は何も告げず別 namespace を検索します。変数なら修正箇所は一つで、先頭に見えています。pipe の二つの `grep` は単純なまま検査を正確にします。最初は `hostNetwork` の行だけを残し、次はその行に `true` があることを確認します。これで field はあっても risk のない `"hostNetwork": false` を除外します。`grep -q` は何も出力せず、`if` 用の success/failure code だけを返します。`kubectl -o json` は pretty-printed JSON を出し各 field が独立行なので、二番目の `grep` は隣接 field でなく `hostNetwork` 行だけを受け取ります。多数 Pod を持つ namespace では、規模上の制約はこのページの他の variant と同じです（下の 10,000 Pod の節を参照）。しかし数件から数十件の試験 namespace では問題にならず、早く下書きなしで入力しても壊れにくい command です。同じ手法は任意の boolean field に使え、`hostNetwork` を `hostPID`、`hostIPC`、`privileged` に替えます。
 
 この検査は全 namespace の全 Pod を走査し、container isolation を弱める既知の危険兆候を少なくとも一つ持つものだけを残します。兆候は Pod 全体とその個々の container の両方で確認します。
 
@@ -246,7 +246,7 @@ kubectl get clusterroles -o json | jq -r '
 kubectl get pods -n "$ns" --field-selector=status.phase=Running -o json
 ```
 
-これは `jq` を置き換えるのでなく、そこへ届く JSON volume を減らします。server は終了 Pod を client に送らず、`jq` は server-side filter できない残りの兆候を調べます。以下の `jq` は形式上 `hostNetwork` を別 request で server に移せても、他の兆候とともに確認します。兆候ごとの別 request は七 field 中一つの節約に比べ script を複雑にしすぎ、一つの `jq` expression のほうが明快で保守しやすいためです。
+これは `jq` を置き換えるのでなく、そこへ届く JSON volume を減らします。server は終了 Pod を client に送らず、`jq` は server-side filter できない残りの兆候を調べます。以下の `jq` は形式上 `hostNetwork` を別 request で server に移せても、他の兆候とともに確認します。兆候ごとの別 request は八つの check のうち一つの節約に比べ script を複雑にしすぎ、一つの `jq` expression のほうが明快で保守しやすいためです。
 
 **規模について。** 混同されやすい二種類の負荷を区別します。API server 側は思うほど深刻ではありません。`kubectl get` は既定で large list を**chunk**で要求し、default `--chunk-size` は `500`（"Return large lists in chunks rather than all at once"）です。したがって 10,000 Pod は一巨大 request でなくおよそ二十の連続 request で取得されます。pagination を無効化できるのは `--chunk-size=0` を明示した場合だけです。
 
@@ -294,17 +294,24 @@ for ns in $(kubectl get ns -o jsonpath='{.items[*].metadata.name}'); do
 done
 ```
 
-検査 logic（`containers`/`container_reasons`/`pod_reasons` の三 function と最後の `select`）は上の考え方と同じです。変わったのはデータ取得方法と output format です。行は単に "requires review" と言うのでなく、どの兆候がどの container で該当したかを直接列挙します。たとえば `hostNetwork; privileged:aws-node; capabilities.add=NET_ADMIN:aws-node` です。これがない実クラスター、とくに CNI や他の system DaemonSet（例: `aws-node`）が正当に `hostNetwork` と `privileged` を使う EKS/GKE では、output は同じ `namespace/pod requires review` の長い list になり、予期した system component と本当の発見事項を素早く区別できません。具体的理由を表示すれば、結果ごとに `-o yaml` を開かず「なぜこの Pod が list に入ったか」が分かります。
+検査 logic（`containers`/`container_reasons`/`pod_reasons` の三 function と最後の `select`）は上の考え方と同じです。変わったのはデータ取得方法と output format です。行は単に "requires review" と言うのでなく、どの兆候がどの container で該当したかを直接列挙します。たとえば `hostNetwork; privileged:aws-node; capabilities.add=NET_ADMIN:aws-node` です。これがない実クラスター、とくに CNI や他の system DaemonSet（例: `aws-node`）が正当に `hostNetwork` と `privileged` を使う EKS/GKE では、output は同じ `namespace/pod requires review` の長い list になり、予期した system component と本当の発見事項を素早く区別できません。list 内のある Pod が別の Pod とどう違うのかを、実際に見て取ることができないのです。具体的理由を表示すれば、結果ごとに `-o yaml` を開かず「なぜこの Pod が list に入ったか」が分かります。
 
-コードなしで手順を整理すると、(1) namespace 名を取得して `$ns` へ一つずつ渡す、(2) 現 namespace の Running Pod だけを取得する、(3) 通常・init・ephemeral container を一 stream に結合する、(4) 各 container の具体的理由と name を list にする、(5) Pod-level の `hostNetwork`、`hostPID`、`hostIPC`、`pod.runAsUser=0`、`hostPath` を container の理由と結合する、(6) non-empty の理由を持つ Pod だけを `namespace/pod: reason1; reason2; ...` 形式で出力する、となります。
+同じ内容を手順ごとに、ただしコードなしで示します。
 
-この理由の詳細化は実クラスターで特に重要です。`aws-node`（Amazon VPC CNI）、`cilium`、`calico-node` のような system DaemonSet は、node の network interface と rule を管理するため、正当に `hostNetwork` と `privileged` を使います。理由がなければ、hundreds node のクラスターで同じ `requires review` 行が数百並び、それらが同じ予期された pattern かが分かりません。理由が表示されると、一 namespace の一致が同じ image に同じ兆候 set を示すなら、それは「CNI に必要」という根拠を付ける review list の正当な system component であり、数十の独立調査事項ではないと直ちに分かります。
+1. `for ns in $(kubectl get ns -o jsonpath='{.items[*].metadata.name}')` は namespace 名の一覧を一度の軽いリクエストで取得し（Pod は取得せず名前のみ）、一つずつ変数 `$ns` に渡します。
+2. `kubectl get pods -n "$ns" --field-selector=status.phase=Running -o json` はループ内で現在の namespace の Running な Pod だけを取得します。フィルターなしで `-A` を使ってクラスター全体を取得する場合より JSON は桁違いに小さく、この検査に不要な終了済み・停止した Pod も含まれません。
+3. `containers` は補助 list です。通常 container、init container、ephemeral container を一つの stream にまとめます。どれか一つに危険な設定があれば、メインの container にある場合と同じリスクだからです。
+4. `container_reasons` は一つの container について、該当した具体的な兆候を container 名付きの list で返します: `privileged:<名前>`、`allowPrivilegeEscalation:<名前>`、`capabilities.add=...:<名前>`、`runAsUser=0:<名前>`。container が安全なら list は空になることもあります。
+5. `pod_reasons` は Pod 全体について同じことを行います: `hostNetwork`、`hostPID`、`hostIPC`、`pod.runAsUser=0`、`hostPath=<パス>`。これらを `container_reasons[]` による全 container の理由と結合し、一つのフラットな list にします。
+6. 最後の行は全 Pod（`.items[]`）を走査し、理由の list を変数 `$reasons` に代入し、list が空でない Pod だけを残して `namespace/Pod名: reason1; reason2; ...` の形式で出力します。たとえば `kube-system/aws-node-2sp7j: hostNetwork; privileged:aws-node; capabilities.add=NET_ADMIN:aws-node` です。
+
+この理由の詳細化は実クラスターで特に重要です。`aws-node`（Amazon VPC CNI）、`cilium`、`calico-node` のような system DaemonSet は、node の network interface と rule を管理するため、正当に `hostNetwork` と `privileged` を使います。理由がなければ、数百 node のクラスターで同じ `requires review` 行が数百並び、それらが同じ予期された pattern かが分かりません。理由が表示されると、一 namespace の一致が同じ image に同じ兆候 set を示すなら、それは数十の独立調査事項ではなく、「CNI に必要」という根拠を付けて review list に載せる、おそらく正当な system component だと直ちに分かります。
 
 **手順 4 の追加 variant: namespace 内 chunking を伴う構造化 JSON output。**
 
 > 🏭 数千 Pod のクラスター向け chunked JSON 検査。
 
-上の variant は高速な手動検査に向きます。人が読みやすい一行ですが、他の tool（ticket system や dashboard）には渡しにくく、数千 Pod の namespace では出力前に namespace 全体を client memory に集めます。machine-readable な結果と巨大 namespace への保護が必要なら、より複雑な方法を使います。
+上の variant は高速な手動検査に向きます。人が読みやすい一行ですが、他の tool（ticket system や dashboard）には渡しにくく、数千 Pod の namespace では出力前に namespace 全体を client memory に集めます。machine-readable な結果に加えて巨大 namespace への保護（production の一部の system namespace は `Running` で絞った後でも数百から数千の Pod を含みます）が必要なら、より複雑な方法を使います。
 
 ```bash
 CHUNK_SIZE=200
@@ -386,12 +393,12 @@ jq . "$result_file"
 ここで複雑になった点と理由は次のとおりです。
 
 - **output format は行でなく nested JSON。** 結果は `{namespace: {pod-name: [reasons]}}` と構造化されます。前の text output と同じ情報ですが、後続の自動処理、artifact 保存、再びクラスターへ行かず特定 namespace を `jq` filter する用途に使えます。
-- **namespace 間だけでなく namespace 内で chunking する。** `for ns in ...` は namespace ごとに分けますが、一つの namespace に数千 Pod（production の大規模 data/batch namespace で典型的）があれば、`kubectl get pods -n "$ns" -o json` は API server から `--chunk-size` で取りつつ、client memory では namespace 全体を一 JSON に結合します。内側の `for ((i = 0; i < total; i += CHUNK_SIZE))` は現 namespace の Pod 名を `CHUNK_SIZE`（ここでは 200）の group に分け、`kubectl get pods -n "$ns" <name1> <name2> ...` でその group だけを要求します。peak memory は namespace 全体でなく一 chunk に制限され、各 group 後に progress を表示できます。`--field-selector` は「list 内の任意 name」を support しないため、name は explicit positional argument として渡します。
+- **namespace 間だけでなく namespace 内で chunking する。** `for ns in ...` は namespace ごとに分けますが、一つの namespace に数千 Pod（production の大規模 data/batch namespace で典型的）があれば、`kubectl get pods -n "$ns" -o json` は API server から `--chunk-size` で取りつつ、client memory では**namespace 全体を一 JSON に結合**します。内側の `for ((i = 0; i < total; i += CHUNK_SIZE))` は現 namespace の Pod 名を `CHUNK_SIZE`（ここでは 200）の group に分け、`kubectl get pods -n "$ns" <name1> <name2> ...` でその group だけを要求します。peak memory は namespace 全体でなく一 chunk に制限され、各 group 後に progress を表示できます。`--field-selector` は「list 内の任意 name」を support しないため、name は explicit positional argument として渡します。
 - **chunk 間の `sleep "$SLEEP_BETWEEN_CHUNKS"`。** ここでは 0.2 秒の pause が、数多くの namespace と Pod を持つクラスターで API server に休みなく数百 request を送るのを避け、peak load を下げます。
 - **各 chunk 後の progress 用 `echo ... >&2`。** stdout の最終 JSON と混ざらない stderr に、`namespace kube-system: 200/1400 pods processed` のような行を出します。大規模クラスターでは数分かかることがあり、indication がなければ script が動いているか停止したか分かりません。
-- **chunk と累積結果は shell variable でなく file に置く。** `kubectl get pods ... -o json > "$chunk_file"` は chunk JSON を disk に書き、`jq --slurpfile acc "$result_file" ... "$chunk_file"` は chunk と累積結果を file から読んで command-line argument として渡しません。`CHUNK_SIZE=200` でも full `status` と `managedFields` を持つ実 Pod の JSON は数 MB になり得ます。`jq --argjson chunk "$chunk_json" ...` はそれを通常の process argument として渡すため、OS の総 argv length limit（`ARG_MAX`、system により通常約 128 KB から数 MB）を超えると jq 実行前に shell が `Argument list too long` で終了します。この状況は一 namespace に数百 Pod があるクラスターで起こり、size は Pod 数だけでなく各 Pod の metadata/status volume に依存します。各 iteration の結果は temporary file（`> "${result_file}.new"`、次に `mv`）に保存されるので、途中で中断しても disk 上には古い完全版か新しい完全版だけが残り、壊れた中間 file は残りません。
+- **chunk と累積結果は shell variable でなく file に置く。** `kubectl get pods ... -o json > "$chunk_file"` は chunk JSON を disk に書き、`jq --slurpfile acc "$result_file" ... "$chunk_file"` は chunk と累積結果を file から読んで command-line argument として渡しません。`CHUNK_SIZE=200` でも full `status` と `managedFields` を持つ実 Pod の JSON は数 MB になり得ます。`jq --argjson chunk "$chunk_json" ...` はそれを通常の process argument として渡すため、OS の総 argv length limit（`ARG_MAX`、system により通常約 128 KB から数 MB）を超えると jq 実行前に shell が `Argument list too long` で終了します。この状況は、一 namespace に数百もの Pod があるクラスターで、一見「安全」な `CHUNK_SIZE=200` でも再現し、size は Pod 数だけでなく各 Pod の metadata/status の量にも依存します。各 iteration の結果は temporary file（`> "${result_file}.new"`、次に `mv`）に保存されるので、途中で中断しても disk 上には古い完全版か新しい完全版だけが残り、壊れた中間 file は残りません。
 - **`trap 'rm -f "$result_file" "$chunk_file" "$merge_jq"' EXIT`。** temporary file は通常終了だけでなく error や `Ctrl+C` でも自動削除されます。`trap` がなければ中断した実行ごとに `/tmp` に file が蓄積します。
-- **`merge.jq` の `pod_reasons` は kubectl の name 数依存の異なる structure を扱う。** `kubectl get pods -n "$ns" pod-a pod-b -o json` は複数 name で List（`{"items": [...]}`）を返しますが、最後の 1 Pod の chunk のように一 name では `items` のない Pod object を直接返します。`(.items // [.])` は両方を同じように処理します。`.items` があれば使い、なければ入力 object 全体を一要素 list に包みます。これがなければ一 Pod の最後の chunk で `.items[]` が存在しない field を iterate し、`jq: error: Cannot iterate over null (null)` になります。
+- **一時ファイル `$merge_jq` に保存された主 jq filter は kubectl の name 数依存の異なる structure を扱う。** `kubectl get pods -n "$ns" pod-a pod-b -o json` は複数 name で List（`{"items": [...]}`）を返しますが、最後の 1 Pod の chunk のように一 name では `items` のない Pod object を直接返します。`(.items // [.])` は両方を同じように処理します。`.items` があれば使い、なければ入力 object 全体を一要素 list に包みます。これがなければ一 Pod の最後の chunk で `.items[]` が存在しない field を iterate し、`jq: error: Cannot iterate over null (null)` になります。
 
 これは前の版より「正しい」版ではなく、意識的な trade-off です。小中規模クラスターでの一回限りの手動検査なら、上の text output のほうが読みやすく terminal に copy しやすいです。chunked JSON variant は、結果を自動化へ渡す、namespace が非常に多くの Pod を持つ可能性がある、API server をいたわり visible progress とともに走査したい、すなわち script が単発 diagnostic command から定期実行 tool へ変わる場合に正当化されます。試験でこのシナリオは出ません。この節は timer 下で再現するものではなく production engineering の参考例として扱ってください。
 
@@ -493,13 +500,13 @@ literal value が `Secret` 参照より悪い理由は慎重に整理する必�
 | VCS への混入 | workload manifest は通常 commit するものなので、実際に commit すれば value も一緒に git に行く | workload manifest 自体には key 名だけがある。value は別に git に入る場合がある（例: plain-YAML `Secret`、Helm values） |
 | API 経由の可視性 | Deployment/Pod を読める誰にでも見え、これは `Secrets` reader よりはるかに広い | API で直接読むにはこの namespace の `secrets` 権限が必要（`resourceNames` で狭められる）。**ただし** isolation を保証しない。namespace で Pod/Deployment を作れる subject は、`secrets` の `get`/`list`/`watch` がなくても既存 `Secret` を volume mount または `env` へ渡せる |
 | audit log への混入 | audit policy と level に依存。`Metadata` は body を書かず、`Request` は request body は書くが response は書かず、`RequestResponse` は request/response body の両方を書く | 同じだが event は `Secret` に関するものになり、secret read を別 rule にしやすい。`create`/`update` は `Request` level でも value を明かすことがあり、通常の `get` が返す value は `RequestResponse` のみで log に入る |
-| Encryption at rest | 該当 API resource を適切な `EncryptionConfiguration` rule が覆うなら workload object とともに暗号化できる。直接（例: `deployments.apps`）または wildcard（Kubernetes v1.27+ の `*.apps`、`*.*`）で覆い、その rule の最初の provider が `identity` でなく encrypting provider である必要がある。既定では `--encryption-provider-config` は設定されず、API server は etcd に at-rest encryption なしで保存する | `Secret` も自動では暗号化されない。同じ resource を `EncryptionConfiguration` rule（直接 `secrets` または wildcard）が覆い、list の最初が encrypting provider である必要がある。最初が `identity` なら、resource が形式上「設定に含まれる」場合も新規 record は plaintext で etcd へ行く |
+| Encryption at rest | 該当 API resource を適切な `EncryptionConfiguration` rule が覆うなら workload object とともに暗号化できる。直接（例: `deployments.apps`）または wildcard（Kubernetes v1.27+ の `*.apps`、`*.*`）で覆い、その rule の**最初の** provider が `identity` でなく encrypting provider である必要がある。既定では `--encryption-provider-config` は設定されず、API server は etcd に at-rest encryption なしで保存する | `Secret` も自動では暗号化されない。同じ resource を `EncryptionConfiguration` rule（直接 `secrets` または wildcard）が覆い、list の最初が encrypting provider である必要がある。最初が `identity` なら、resource が形式上「設定に含まれる」場合も新規 record は plaintext で etcd へ行く |
 | 再 build なしの更新 | workload manifest を編集し再適用する必要がある | value は一 object で変わり、workload に触れない |
-| 新 value が container に届くか | いいえ | **volume** なら yes。kubelet が file を更新する（eventually consistent、`subPath` mount は例外）。**environment variable** なら**no**。env は container 起動時に固定されるため Pod restart が必要 |
+| 新 value が container に届くか | いいえ | **volume** ならはい。kubelet が file を更新する（eventually consistent、`subPath` mount は例外）。**environment variable** なら**いいえ**。env は container 起動時に固定されるため Pod restart が必要 |
 
-最後の行は実際の rotation で最も多い誤りです。`Secret` の secret を更新しても、アプリケーションが environment variable から読むなら古い value で動き続けます。無停止 rotation が必要なら secret を file として mount しアプリケーションに再読込させるか、controlled `kubectl rollout restart` で rotation を完了します。
+最後の行は実際の rotation で最も多い誤りです。`Secret` の secret を更新しても、アプリケーションが environment variable から読むなら古い value で動き続けます。無停止 rotation が必要なら secret を file として mount しアプリケーションに再読込させるか、制御された `kubectl rollout restart` で rotation を完了します。
 
-> **試験では。** 問題文は通常もっと単純です。「namespace `X` で password が manifest に直接指定された Pod を探せ」です。cluster 全体の inventory でなく一つの特定 variable を探すため、Step 4 と同様に `jq` なしの `grep` がより信頼できます。
+> **試験では。** 問題文は通常もっと単純です。「namespace `X` で password が manifest に直接指定された Pod を探せ」です。cluster 全体の inventory でなく一つの特定 variable を探すため、手順 4 と同様に `jq` なしの `grep` がより信頼できます。
 >
 > ```bash
 > NS=prod
@@ -524,17 +531,17 @@ literal value が `Secret` 参照より悪い理由は慎重に整理する必�
 
 最後の行は別に強調する価値があります。コードの論理脆弱性は、どの `kubectl` command や image scanner でも発見されず、CKS の範囲にも入りません。CKS が答える別の問いは「攻撃者がその脆弱性を悪用**した後**に何をできるか」です。だからこそコースでは `SecurityContext`、RBAC、NetworkPolicy、runtime detection を重視します。ここでの Code 層 inventory は開発の仕事を置き換えるためでなく、責任範囲を明確に知り、七手順がすべて clean だから cluster が安全だと考えないためにあります。
 
-**七手順すべての結果の読み方。** `cluster-admin` は常に誤りではなく、特定の system component や管理された administrator に必要な場合があります。Step 4 の各 workload について、`privileged`、`allowPrivilegeEscalation`、`hostPath`、追加 capabilities、明示した UID 0 のような具体的兆候を記録します。これは review 用 list であって自動的な脆弱性の証明ではありません。たとえば image UID は PodSpec からは分からない場合があり、正当な例外には owner と期限が必要です。inventory の結果は subject の list、access の根拠、owner、次回 review 日です。名前が怪しく見えるだけで binding を削除せず、最初に目的を確認し最小 role への置換を test してください。
+**七手順すべての結果の読み方。** `cluster-admin` は常に誤りではなく、特定の system component や管理された administrator に必要な場合があります。手順 4 の各 workload について、`privileged`、`allowPrivilegeEscalation`、`hostPath`、追加 capabilities、明示した UID 0 のような具体的兆候を記録します。これは review 用 list であって自動的な脆弱性の証明ではありません。たとえば image UID は PodSpec からは分からない場合があり、正当な例外には owner と期限が必要です。inventory の結果は subject の list、access の根拠、owner、次回 review 日です。名前が怪しく見えるだけで binding を削除せず、最初に目的を確認し最小 role への置換を test してください。
 
 4C が**何ではないか**も重要です。これは defense in depth のモデルであり、問題がどの層で発生し、上下の層でどの compensating control が利用できるかを理解する助けになります。これは**普遍的な優先順位アルゴリズムではなく**、発見事項の list を「層を下から上へ」と修正 queue の完成版として読むのは誤りです。
 
-それでもモデルには有用な heuristic があります。外側の層ほど通常は修正の blast radius が広いことです。Step 1 が API server のインターネット公開と Pod からの IMDS 到達を示し、Step 4 が一 Deployment の `privileged` 実行を示すなら、public endpoint を閉じ IMDS を harden することは全 Pod の attack surface を一度に減らします。一 Deployment の `securityContext` を直しても、攻撃者が外から来る、または別 Pod 経由で node credentials を取るのは防げません。この具体例では Cloud から始めるのが合理的です。
+それでもモデルには有用な heuristic があります。外側の層ほど通常は修正の blast radius が広いことです。手順 1 が API server のインターネット公開と Pod からの IMDS 到達を示し、手順 4 が一 Deployment の `privileged` 実行を示すなら、public endpoint を閉じ IMDS を harden することは全 Pod の attack surface を一度に減らします。一 Deployment の `securityContext` を直しても、攻撃者が外から来る、または別 Pod 経由で node credentials を取るのは防げません。この具体例では Cloud から始めるのが合理的です。
 
 しかし前提が変われば heuristic は崩れます。順序が逆になる三例です。
 
 - **Code の脆弱性が Cloud の弱さより重要。** 公開アプリケーションに active exploitation 中の RCE 脆弱性（Code）があれば、node 上の `HttpPutResponseHopLimit=2`（Cloud）より先に修正します。前者はすでに攻撃者へ code execution を与え、後者は侵入後の潜在的 step にすぎません。
 - **外側層の発見事項はすでに補償されていることがある。**「API server がインターネットから到達できる」は重大に聞こえますが、corporate address allowlist、MFA 付き OIDC、audit が有効なら、実際の risk は container runtime socket を mount する Pod より低いことがあります。後者は即時の node takeover を可能にします。
-- **危険なのは一層の深さでなく層の連鎖。** インターネットから到達できる application の ServiceAccount に結ばれた wildcard `ClusterRole`（Cluster）は、各発見事項を単独で見るより危険です。優先順位は RBAC が code より「深い」ことではなく、その chain が決めます。
+- **危険なのは一層の深さでなく層の連鎖。** インターネットから到達できる application（Code/Container）の ServiceAccount に結ばれた wildcard `ClusterRole`（Cluster）は、各発見事項を単独で見るより危険です。優先順位は RBAC が code より「深い」ことではなく、その chain が決めます。
 
 実務の順序は層でなく risk で決めます。攻撃者からの到達性、動く exploitation path の有無、発動時の被害、修正の blast radius、証拠自体の信頼性で各 finding を評価し、compensating control がすでにあるなら優先度を下げます。それでも 4C は必要で、compensating control をどこに探すか、修正が局所的でなく体系的になる層はどこかを示します。試験では優先順位付けは不要です。課題が修正対象を直接指示します。これは実務の skill です。
 
@@ -546,7 +553,7 @@ literal value が `Secret` 参照より悪い理由は慎重に整理する必�
 
 | Tool | 上の検査のうち対象 | Status |
 |---|---|---|
-| [kube-bench](https://github.com/aquasecurity/kube-bench) | CIS Benchmark に基づく control plane、kubelet、etcd 設定 - 手順 2 と 5 の一部 | active に保守。 [第07章](../07/jp.md) と lab 103 で扱う |
+| [kube-bench](https://github.com/aquasecurity/kube-bench) | CIS Benchmark に基づく control plane、kubelet、etcd 設定 - 手順 2 と 5 の一部 | active に保守。[第07章](../07/jp.md) と lab 103 で扱う |
 | [Kubescape](https://kubescape.io/) | 危険な Pod 設定、広い RBAC 権限、hostPath/hostNetwork/privileged、mutable tag - 手順 3、4、6。live cluster と manifest/Helm を NSA、MITRE、SOC 2 framework で scan | CNCF Incubating、active に開発中 |
 | `trivy k8s` ([Trivy](https://trivy.dev/)) | cluster object の misconfiguration、image の CVE と KBOM - 手順 4、6、Code 層の一部 | active に保守。image scan は [第28章](../28/jp.md) と lab 111 |
 | [kubeaudit](https://github.com/Shopify/kubeaudit) | workload の点検: root、capabilities、`allowPrivilegeEscalation`、`readOnlyRootFilesystem` の欠如 - 手順 4 | upstream は 2024-10-30 に**archive**、read-only。古い記事にはあるが新規 process には不適 |
@@ -669,7 +676,7 @@ flowchart TB
 
 ### 再現可能な threat model
 
-Threat model は risk の list だけでなく、検証できる判断を提供するべきです。Ingress、namespace、operator、cloud integration を変更するときは次を進めます。
+Threat model は risk の list だけでなく、検証できる判断を提供するべきです。Ingress、namespace、operator、cloud integration を変更するときは次の手順を進めます。
 
 1. **asset** を記録する: data、Secret、ServiceAccount、API、cloud role。
 2. **actor** を定義する: external user、workload、CI、operator、administrator。
@@ -691,7 +698,7 @@ flowchart TB
 
 これは全 Pod が metadata に access できる、または API を変更できるという主張ではありません。別々に許可または禁止し、その後 observability で確認すべき二つの flow です。
 
-**OWASP Kubernetes Top 10 — 2025** への実務的な対応付けは、risk class を見失わない助けになります。これは threat model の代替ではなく、一つの flow は複数 category に属し得ます。下の 2022 edition は古い本と course のための **legacy mapping** としてのみ残しており、常に一対一の対応ではありません。
+**OWASP Kubernetes Top 10 - 2025** への実務的な対応付けは、risk class を見失わない助けになります。これは threat model の代替ではなく、一つの flow は複数 category に属し得ます。下の 2022 edition は古い本と course のための **legacy mapping** としてのみ残しており、常に一対一の対応ではありません。
 
 | モデル内のリスク | OWASP Kubernetes Top 10 (2025) の主 category | Legacy mapping: OWASP 2022 | control と evidence の例 |
 |---|---|---|---|
@@ -775,7 +782,7 @@ flowchart TB
 
 ## 02.5. 試験 domain と脅威モデルの対応
 
-モデルは CKS curriculum を置き換えません。chapter が domain ごとにまとめられ、攻撃のどの phase で最大の効果を出すかを示します。
+モデルは CKS curriculum を置き換えません。なぜ chapter が domain ごとにまとめられているのか、そして攻撃のどの phase で最大の効果を出すのかを示します。
 
 | 層または phase | CKS domain | コース chapter | 主な結果 |
 |---|---|---|---|
@@ -786,7 +793,7 @@ flowchart TB
 | Code と build pipeline、initial access | Supply Chain Security - 20% | [24](../24/jp.md)、[25](../25/jp.md)、[26](../26/jp.md)、[27](../27/jp.md)、[28](../28/jp.md) | 信頼でき検証可能な pre-run artifact |
 | Execution、persistence、exfiltration、investigation | Monitoring, Logging and Runtime Security - 20% | [29](../29/jp.md)、[30](../30/jp.md)、[31](../31/jp.md)、[32](../32/jp.md) | detection、investigation、immutability、action evidence |
 
-一つの threat は複数行に関係します。たとえば ServiceAccount token 窃取 risk は第11章の不要な token を mount しない、short-lived projected token、専用 ServiceAccount により減らせます。第04章の NetworkPolicy は Kubernetes API と外部 endpoint への不要 egress を禁じることで、既に侵害された token の使用や exfiltration を制限できます。第10章の RBAC は結果を制限し、Secret の read は第32章の audit が記録します。一つの「最良」control を選ばず、独立した barrier の組を使ってください。
+一つの threat はしばしば複数行に関係します。たとえば ServiceAccount token 窃取 risk は第11章の不要な token を mount しない、short-lived projected token、専用 ServiceAccount により減らせます。第04章の NetworkPolicy は Kubernetes API と外部 endpoint への不要 egress を禁じることで、既に侵害された token の使用や exfiltration を制限できます。第10章の RBAC は結果を制限し、Secret の read は第32章の audit が記録します。一つの「最良」control を選ばず、独立した barrier の組を使ってください。
 
 > 🔬 脅威モデリングを練習するための engineering artifact。
 
@@ -885,7 +892,7 @@ digest は mutable tag でなく検証可能な artifact version を固定する
 ## 参考資料
 
 - [OWASP: Kubernetes Top 10](https://owasp.org/www-project-kubernetes-top-ten/)
-- [Kubernetes: security overview](https://kubernetes.io/docs/concepts/security/overview/)
+- [Kubernetes: セキュリティの概要](https://kubernetes.io/docs/concepts/security/overview/)
 
 ---
 [目次](../README_JP.md) · [第01章](../01/jp.md) · [第03章](../03/jp.md)

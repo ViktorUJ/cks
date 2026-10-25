@@ -29,7 +29,7 @@ flowchart TB
     style alert fill:#326ce5,color:#fff
 ```
 
-Falco は event の流れを rule と対比します。rule は compromise を証明しません。container 内の shell は通常の debug かもしれず、`/etc/shadow` の読み取りは特別な agent の期待された動作かもしれません。そのため有用な alert には context が必要です。時刻、rule 名、priority、process、command、container、Pod、namespace、node です。次に engineer が この signal を deployment、user、audit log、workload の task と結びつけます。
+Falco は event の流れを rule と対比します。rule は compromise を証明しません。container 内の shell は通常の debug かもしれず、`/etc/shadow` の読み取りは特別な agent の期待された動作かもしれません。そのため有用な alert には context が必要です。時刻、rule 名、priority、process、command、container、Pod、namespace、node です。次に engineer がこの signal を deployment、user、audit log、workload の task と結びつけます。
 
 | Control | いつ動くか | どの問いに答えるか | 何を代替しないか |
 |---|---|---|---|
@@ -41,12 +41,12 @@ Falco は event の流れを rule と対比します。rule は compromise を�
 Falco は次の signal に特に有用です。
 
 - application container 内の shell または package manager
-- 感度の高い path、device、socket へのアクセス（`/etc/shadow`、`/dev/mem`、`/var/run/docker.sock`）。path `/etc/shadow` は通常 container の filesystem に属し、host filesystem が明示的に mount された場合のみ node の file を意味します。
+- 機密性の高い path、device、socket へのアクセス（`/etc/shadow`、`/dev/mem`、`/var/run/docker.sock`）。path `/etc/shadow` は通常 container の filesystem に属し、host filesystem が明示的に mount された場合のみ node の file を意味します。
 - 予期しない command、capability、namespace を持つ process の起動
 - system path への書き込み、kernel module のロード、network の変更の試み
 - 対応する event source と rule が有効な場合の疑わしい network 接続
 
-Falco を反応の design なしに blocking barrier にしないでください。alert に対する典型的な安全な action は context を保存する、access を制限する、workload を traffic から外す、または確認済みに compromise された Deployment をゼロに scale することです。一つの共通 rule で自動的に任意の Pod を削除するのは risky です。false positive が outage になる可能性があります。
+Falco を反応の design なしに blocking barrier にしないでください。alert に対する典型的な安全な action は context を保存する、access を制限する、workload を traffic から外す、またはcompromise が確認された Deployment をゼロに scale することです。一つの共通 rule で自動的に任意の Pod を削除するのは risky です。false positive が outage になる可能性があります。
 
 > 🧠 実践的な chain はシンプルです。process の syscall → node の kernel event → Falco driver → CRI/Kubernetes metadata を持つ rule engine → alert。まさに metadata が `execve` や `openat` を調査可能な Pod/namespace/container context に変えます。
 
@@ -127,7 +127,7 @@ sudo systemctl status "$falco_unit" --no-pager
 sudo journalctl -u "$falco_unit" -b --no-pager | tail -n 80
 ```
 
-package configuration の後に alias が既に存在する場合は、`start`、`restart`、`status`、`journalctl` にそれを使いますが、`enable` には使いません。手動または noninteractive の設定では、まず明示的に一つの driver-specific unit を選び、それに `enable --now` を実行し、その後の runtime command で作成された alias に移ります。実際の unit 名と driver 選択の流れは [Falco packages のインストール](https://falco.org/docs/setup/packages/)で確認してください。
+package configuration の後に alias が既に存在する場合は、`start`、`restart`、`status`、`journalctl` にそれを使いますが、`enable` には使いません。手動または noninteractive の設定では、まず明示的に一つの driver-specific unit を選び、それに `enable --now` を実行し、その後の runtime command には作成された alias を使います。実際の unit 名と driver 選択の流れは [Falco packages のインストール](https://falco.org/docs/setup/packages/)で確認してください。
 
 agent が起動しない場合、rule を盲目的に変更するのではなく、まず journal、kernel、ロードされた module を確認します。systemd の場合:
 
@@ -163,7 +163,7 @@ kubectl -n falco rollout status daemonset/falco --timeout=5m
 kubectl -n falco logs daemonset/falco -c falco --tail=80
 ```
 
-DaemonSet は各対応する node に Pod を持つ必要があります。desired/current/ready を比較し、Pod のない node を確認してください。taint、nodeSelector、tolerations、不対応の architecture、driver error はしばしば不完全な coverage を説明します。
+DaemonSet は各対応する node に Pod を持つ必要があります。desired/current/ready を比較し、Pod のない node を確認してください。taint、nodeSelector、tolerations、非対応の architecture、driver error はしばしば不完全な coverage を説明します。
 
 ```bash
 kubectl -n falco get daemonset falco \
@@ -187,7 +187,7 @@ package-install での Falco の通常の path:
 | `/etc/falco/falco_rules.local.yaml` | local override と custom rule | 自分の rule を置く好ましい場所 |
 | `/etc/falco/rules.d/` | package/container configuration の追加 rule file | 現在の configuration の `rules_files` に含まれている場合のみ使用する |
 
-実際にロードされる rule の list と順序は、適用された Falco configuration の `rules_files` によって決まり、startup log で確認します。古い名前 `rules_file` は Falco 0.38 以前に属し現在 deprecated です。新しい configuration と資料では `rules_files` を使用してください。
+実際にロードされる rule の list と順序は、適用された Falco configuration の `rules_files` によって決まり、startup log で確認します。古い名前 `rules_file` は Falco 0.38 より前に属し現在 deprecated です。新しい configuration と資料では `rules_files` を使用してください。
 
 ```bash
 sudo grep -n '^rules_files:' /etc/falco/falco.yaml
@@ -198,7 +198,7 @@ sudo sed -n '1,120p' /etc/falco/falco_rules.local.yaml
 sudo falco -c /etc/falco/falco.yaml --dry-run
 ```
 
-まず既存の standard rule とそのフィールドを探します。これは記憶で condition を書くより速く安全です。
+まず既存の standard rule とその field を探します。これは記憶で condition を書くより速く安全です。
 
 ```bash
 sudo grep -nE '^- rule:|^- macro:|^- list:' /etc/falco/falco_rules.yaml | head -n 50
@@ -300,7 +300,7 @@ kubectl -n falco logs daemonset/falco -c falco --tail=120
 | `falco_rules.yaml` を変更する | package の更新が local change を上書きし、upstream との比較が難しくなる | override は `falco_rules.local.yaml` または別の接続ファイルに保存する |
 | output に namespace/Pod がない | alert を workload に迅速に結びつけられない | `%k8s.ns.name`、`%k8s.pod.name`、container と process の field を追加する |
 | condition が `proc.name=sh` だけ | container 外での多数の false positive | `container`、event の type、正確な context を追加する |
-| 常に全 namespace を除外する | 攻撃者に静かな zone を与える | 最小限、文書化された、一時的な exception にする |
+| namespace 全体を恒久的に除外する | 攻撃者に静かな zone を与える | 最小限、文書化された、一時的な exception にする |
 | local-file だけを validate するか常に restart する | upstream rule の macro がロードされない可能性があり、restart は不要な detection の断絶を生む | 実際の順序で完全な config を validate し、hot reload を確認する。restart は fallback として使う |
 
 ## 29.6. Shell イベントを生成し alert を読む
@@ -406,7 +406,7 @@ kubectl -n falco describe daemonset falco
 
 ### Production extension: lifecycle rule と alert の配信
 
-以下の practice は上記の基本的なインストールと確認を補完します。rule の管理された lifecycle と centralized な配信のために必要ですが、各 node での local alert の確認を代替しません。
+以下の practice は production extension として上記の基本的なインストールと確認を補完します。rule の管理された lifecycle と centralized な配信のために必要ですが、各 node での local alert の確認を代替しません。
 
 - **lifecycle rule artifact を明示的に選ぶ。** 確認済みの厳密に固定された ruleset には、正確な `falco-rules` reference を指定し、Helm install/upgrade で（§29.3 のように）`falcoctl artifact follow` を無効にしてください。一度だけの `falcoctl artifact install` command 自体は、follow が有効なままでは ruleset を固定しません。package-install では、`falcoctl-artifact-follow` サービスが動いていないことを確認し、policy が strict pinning を要求する場合は無効にしてください。
 
@@ -435,7 +435,7 @@ kubectl -n falco describe daemonset falco
 `READY == DESIRED` は DaemonSet の scheduling を証明しますが、blind spot の不在は証明しません。過負荷の時、Falco は rule が評価される前に syscall event を失う可能性があります。event の loss は process、file、container metadata の内部状態も壊す可能性があります。native metrics を有効にし、ゼロでない、または増加する drop に alert してください。Falco の metrics はデフォルトで無効です。Prometheus には有効な metrics、web server、その Prometheus endpoint が必要です。
 
 ```yaml
-# falco.yaml — 具体的に利用可能な option は固定した Falco の version で確認してください。
+# falco.yaml - 具体的に利用可能な option は固定した Falco の version で確認してください。
 metrics:
   enabled: true
   kernel_event_counters_enabled: true
@@ -531,7 +531,7 @@ Rules artifact は engine と互換性がある必要があります。rollout �
 
 **試験では。** Falco がどこで動いているかを迅速に判断し、有効な rules file を見つけ、local rule を作成または変更し、syntax を確認し、指定された action を生成し、必要な field を持つ alert を必要なファイルに出力する必要があります。典型的な scenario: `/dev/mem` を開く process を持つ Pod を見つけ、container context、`fd.name=/dev/mem` の確認、対応する `open*` syscall を持つ local rule を追加します。output には最低限 command、container ID、`%k8s.ns.name`、`%k8s.pod.name` を含め、制御された event で alert を確認してください。Pod と namespace は動作する Falco driver と CRI/Kubernetes metadata のおかげで現れます。これらの field のためだけに任意の plugin を有効にしないでください。まず `falco --list` と正しい runtime socket で field の可用性を確認してください。理由なく upstream rule を編集せず、起動 command だけに限定しないでください。基準は通常、具体的な event/output を確認します。
 
-**実務では。** Falco は manifest に見えない compromise 後の action、shell、socket へのアクセス、感度の高い path への書き込み、予期しない process に気づくのに役立ちます。価値を生むのは agent 自体ではなく、node の完全な coverage、versioned rule、質の高い context、管理された noise level、alert と incident-response プロセスの結びつきです。
+**実務では。** Falco は manifest に見えない compromise 後の action、shell、socket へのアクセス、機密性の高い path への書き込み、予期しない process に気づくのに役立ちます。価値を生むのは agent 自体ではなく、node の完全な coverage、versioned rule、質の高い context、管理された noise level、alert と incident-response プロセスの結びつきです。
 
 > ### 🔴 攻撃者の視点
 > **Asset:** security team のための runtime 異常の可視性。
@@ -605,7 +605,7 @@ runtime domain の practice は Falco の rule、Kubernetes audit log、containe
 🧪 Lab 112 (Runtime: Falco, audit ログ, immutability): [tasks/cks/labs/112](../../labs/112/README_JP.MD)
 🌐 追加の対話型 practice (killer.sh/killercoda, 外部リソース): [falco-change-rule](https://killercoda.com/killer-shell-cks/scenario/falco-change-rule)
 
-試験形式の task と `check_result` の扱いには [CKA の lab 資料](../../../cka/labs/112/README_JP.MD)も使用してください。CKS lab の内容は、この Falco、audit log、runtime-immutability の task をこの format で拡張しています。
+試験形式の task と `check_result` の扱いには [CKA の lab 資料](../../../cka/labs/112/README_JP.MD)も使用してください。CKS lab の内容は、この format を Falco、audit log、runtime-immutability の task で拡張しています。
 
 有用な documentation: [Falco documentation](https://falco.org/docs/) ·
 [Falco rules](https://falco.org/docs/concepts/rules/) ·

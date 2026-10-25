@@ -4,7 +4,7 @@
 
 > **პრობლემა.** RBAC-ს კანონიერად შეუძლია CI-ს Deployment-ის შექმნის უფლება მისცეს, მაგრამ
 > არ ამოწმებს, არის თუ არა image აღებული სანდო registry-დან, აქვს თუ არა Pod-ს
-> საშიშ ველები, და შეიცავს თუ არა ობიექტი სავალდებულო ორგანიზაციულ label-ებს. YAML-ის
+> საშიში ველები, და შეიცავს თუ არა ობიექტი სავალდებულო ორგანიზაციულ label-ებს. YAML-ის
 > ხელით review მარტივად შემოივლება template-ით, API-კლიენტით ან pipeline-ის შეცდომით;
 > policy-ის გარეშე ობიექტი მოხვდება etcd-ში და გაეშვება. Admission-კონტროლი ვალდებულია
 > შემოწმოს ან უსაფრთხოდ შეავსოს ასეთი request მისი შენახვამდე.
@@ -89,33 +89,33 @@ exceptions-ები დაშორდება ერთმანეთს.
 
 > 🏭 `failurePolicy` განსაზღვრავს რეაქციას **ტექნიკურ ან evaluation-შეცდომაზე** admission webhook path-ზე, არა ცალსახა policy-გადაწყვეტილებაზე. ის მოქმედებს, მაგალითად, timeout-ის, TLS/DNS/Service/Pod-შეცდომის, არასათანადო HTTP/AdmissionReview response-ის, ასევე `matchConditions`-ის გამოთვლის შეცდომის შემთხვევაში.
 >
-> `matchConditions` API server-ი გამოთვლის webhook-ის გამოძახებამდე. თუ თუნდაც ერთი condition დააბრუნა `false`, webhook რეგულარულად გამოტოვება. თუ არცერთი არ არის `false`, მაგრამ თუნდაც ერთი დასრულდა შეცდომით, webhook არ გამოძახება: `Fail`-ის დროს API server უკუაგდებს request-ს, `Ignore`-ის დროს აგრძელებს მას ამ webhook-ის გარეშე. თუ webhook წარმატებით გამოძახდა და ცალსახად დააბრუნა `allowed: false`, request უკუაგდება როგორც `Fail`-ისას, ისევე `Ignore`-ისას.
+> `matchConditions` API server-ი გამოთვლის webhook-ის გამოძახებამდე. თუ თუნდაც ერთი condition დააბრუნა `false`, webhook სტანდარტულად გამოიტოვება. თუ არცერთი არ არის `false`, მაგრამ თუნდაც ერთი დასრულდა შეცდომით, webhook არ გამოიძახება: `Fail`-ის დროს API server უკუაგდებს request-ს, `Ignore`-ის დროს აგრძელებს მას ამ webhook-ის გარეშე. თუ webhook წარმატებით გამოძახდა და ცალსახად დააბრუნა `allowed: false`, request უკუაგდება როგორც `Fail`-ისას, ისევე `Ignore`-ისას.
 >
 > `Fail`-ის დროს ასეთი ტექნიკური/evaluation-შეცდომაც უკუაგდებს create/update-ს: policy-ის ჩუმად შემოვლა შეუძლებელია, მაგრამ webhook-ის ჩავარდნას **ან მისი `matchConditions`-ის შეცდომას** შეუძლია deploy-ისა და control plane-ის ოპერაციების ნაწილის შეჩერება. ამიტომ security-კრიტიკული webhook უნდა იყოს ერთ Pod-ზე უფრო საიმედო: რამდენიმე replica ამცირებს ჩავარდნის რისკს, PDB არ ანებებს ნებაყოფლობით disruption-ს ერთდროულად წაშალოს ყველა replica, სწორი TLS უზრუნველყოფს სანდო HTTPS-კავშირს, ხოლო error/latency-ის მეტრიკები და alerts-ები საშუალებას გვაძლევს შევნიშნოთ დეგრადაცია outage-მდე.
 >
-> `Ignore`-ის დროს API ხელმისაწვდომია, მაგრამ ასეთი შეცდომის მომენტში ობიექტი გაივლის **ამ webhook-ის შემოწმების გარეშე** — ეს არის policy-ის შემოვლის შეგნებული ფანჯარა, არა უფრო "მსუბუქი deny"-ის რეჟიმი. კრიტიკული, მოწიფული აკრძალვისთვის ხშირად ირჩევენ `Fail`-ს; `Ignore` შესაძლოა იყოს დროებითი კომპრომისი rollout-ზე ან არაკრიტიკული კონტროლისთვის, თუ bypass-ის რისკი ცალსახად მიღებულია.
+> `Ignore`-ის დროს API ხელმისაწვდომია, მაგრამ ასეთი შეცდომის მომენტში ობიექტი გაივლის **ამ webhook-ის შემოწმების გარეშე** - ეს არის policy-ის შემოვლის შეგნებული ფანჯარა, არა უფრო "მსუბუქი deny"-ის რეჟიმი. კრიტიკული, მოწიფული აკრძალვისთვის ხშირად ირჩევენ `Fail`-ს; `Ignore` შესაძლოა იყოს დროებითი კომპრომისი rollout-ზე ან არაკრიტიკული კონტროლისთვის, თუ bypass-ის რისკი ცალსახად მიღებულია.
 
 ## 20.2. Webhook: ხელმისაწვდომობაც security-გადაწყვეტილებაა
 
 Gatekeeper და Kyverno ჩვეულებრივ მუშაობს როგორც admission webhook: `kube-apiserver`
 HTTPS-ით უგზავნის მათ `AdmissionReview`-ს, შემდეგ ელოდება პასუხს `allowed: true/false`
 და შესაძლო JSON patches-ს. Webhook-ს `MutatingWebhookConfiguration`-ში ან
-`ValidatingWebhookConfiguration`-ში აქვს ორი განსაკუთრებით მნიშვნელოვანი პარამეტრი:
+`ValidatingWebhookConfiguration`-ში აქვს ხუთი განსაკუთრებით მნიშვნელოვანი პარამეტრი:
 
 | პარამეტრი | მნიშვნელობა უსაფრთხოებისთვის | რისკი |
 |---|---|---|
 | `failurePolicy: Fail` | webhook path-ის ან `matchConditions`-ის შეცდომა (თუ არცერთი condition არ არის `false`) უკუაგდებს request-ს | engine-ის outage-ი ან შეცდომაში მყოფი CEL condition ბლოკავს deploy-ს და ზოგჯერ control plane-ის ოპერაციებს |
 | `failurePolicy: Ignore` | ასეთი შეცდომის დროს API server აგრძელებს request-ს ამ webhook-შემოწმების გარეშე | policy-ის შემოვლის ფანჯარა ჩავარდნის ან condition-შეცდომის დროს |
 | `timeoutSeconds` | ზღუდავს API server-ის მოლოდინის დროს | ზედმეტად დიდი timeout აყოვნებს ყველა create/update-ს |
-| `namespaceSelector`/`objectSelector` | ავიწროვებს webhook-ის scope-ს | არასწორი selector-ს შეუძლია გამოტოვოს კრიტიკული namespace |
-| `matchPolicy` | განსაზღვრავს API-ვერსიების შესატყვისებას | არაერსახული match-ს შეუძლია წესი უფრო ფართოდ ან ვიწროდ გამოიყენოს |
+| `namespaceSelector`/`objectSelector` | ავიწროვებს webhook-ის scope-ს | არასწორ selector-ს შეუძლია გამოტოვოს კრიტიკული namespace |
+| `matchPolicy` | განსაზღვრავს API-ვერსიების შესატყვისებას | მოულოდნელ match-ს შეუძლია წესი უფრო ფართოდ ან ვიწროდ გამოიყენოს |
 
 არ ცვალოთ დაუფიქრებლად `failurePolicy` Helm chart-ით დაყენებულ webhook-ზე: chart-ს
 შესაძლოა შეცვლილი გადააწეროს. ჯერ დარწმუნდით, რომ engine-ს აქვს რამდენიმე replica,
 PodDisruptionBudget, TLS და alert შეცდომებზე/latency-ზე. ახალი აკრძალვის შემოღება
-უსაფრთხოა როგორც audit/warn, არსებული დარღვევების გამოსწორება და მხოლოდ შემდეგ
+უფრო უსაფრთხოა როგორც audit/warn, არსებული დარღვევების გამოსწორება და მხოლოდ შემდეგ
 enforcement-ის ჩართვა. კრიტიკული, მოწიფული წესისთვის ჩვეულებრივ ირჩევენ `Fail`-ს;
-პირველი rollout-ისთვის უფრო მნიშვნელოვანია არ გააჩერო კლასტერი და არ ჩააგდო ეს
+პირველი rollout-ისთვის უფრო მნიშვნელოვანია, რომ კლასტერი არ გაჩერდეს და ეს არ ჩაითვალოს
 მოქმედი დაცვის მტკიცებულებად.
 
 Webhook-ის მინიმალურ კონფიგურაციას ცალსახად უნდა ჰქონდეს დაწერილი endpoint, TLS-ის
@@ -158,9 +158,9 @@ webhooks:
     expression: "request.namespace != 'kube-system'"
 ```
 
-Custom namespace label `namespaceSelector`-ში — security boundary-ის ნაწილია: identity-ს,
+Custom namespace label `namespaceSelector`-ში - security boundary-ის ნაწილია: identity-ს,
 რომლისთვისაც წესი სავალდებულოა, არ უნდა ჰქონდეს ამ label-ის წაშლის ან შეცვლის
-უფლება. ფიქსირებული scope-ისთვის უსაფრთხოა შესატყვისება ურეცხივი
+უფლება. ფიქსირებული scope-ისთვის უფრო უსაფრთხოა შესატყვისება უცვლელი
 `kubernetes.io/metadata.name`-ის მიხედვით; custom enforcement labels-ს ცვლის
 მხოლოდ platform/security როლი. იგივე ეხება `objectSelector`-ს: label, რომლის
 შეცვლაც მომხმარებელს თავად შეუძლია საკუთარ ობიექტზე scope-დან გამოსასვლელად,
@@ -211,13 +211,13 @@ kubectl -n kyverno get pods
 
 Admission ამოწმებს მხოლოდ API-request-ს. ის არ ანაცვლებს image scanning-ს, runtime
 detection-ს, NetworkPolicy-ს, RBAC-ს და audit logs-ს. Image, დაშვებული admission-ში,
-ისევ უნდა გაივლის supply-chain-შემოწმებებს 25-28 თავებიდან; უკვე გაშვებულ პროცესს
+ისევ უნდა გაიაროს supply-chain-შემოწმებებს 25-28 თავებიდან; უკვე გაშვებულ პროცესს
 აკონტროლებს 29-32 თავები.
 
 > 🎯 დაუკავშირეთ `ConstraintTemplate` (code/schema) `Constraint`-ს (scope/პარამეტრები/`enforcementAction`), შემდეგ დაამტკიცეთ `dryrun` → `deny`.
 >
 > ამ მაგალითში template აცხადებს ტიპს `K8sRequiredLabels`, მისი Rego-შემოწმებას და
-> დაშვებულ პარამეტრს `labels`; constraint `pods-must-have-owner` — ამ ტიპის კონკრეტული
+> დაშვებულ პარამეტრს `labels`; constraint `pods-must-have-owner` - ამ ტიპის კონკრეტული
 > instance-ია. მიაკვლიეთ კავშირს: `match` ზღუდავს Pod-ს და გამორიცხულ namespaces-ს,
 > `parameters.labels: ["owner"]` გადასცემს Rego-ს მოთხოვნას, ხოლო `enforcementAction`
 > ირჩევს რეაქციას ნაპოვნ დარღვევაზე.
@@ -228,40 +228,40 @@ detection-ს, NetworkPolicy-ს, RBAC-ს და audit logs-ს. Image, და�
 > `owner`-ის გარეშე: API უნდა უკუაგდოს ის. საკონტროლო დადებით სცენარად Pod-ი
 > `owner`-ით ორივე რეჟიმში უნდა იქნას მიღებული. ამისთვის არ გამოიყენოთ მხოლოდ
 > არსებული Pod ან `--dry-run`: ისინი არ ამტკიცებენ, რომ admission და audit ახალ
-> ობიექტზეც გამოსრულა.
+> ობიექტზეც იმუშავეს.
 
 ## 20.3. OPA/Gatekeeper: `ConstraintTemplate` და `Constraint`
 
-**OPA** (Open Policy Agent) — engine-ია, რომელსაც შეუძლია policy-გადაწყვეტილებების
+**OPA** (Open Policy Agent) - engine-ია, რომელსაც შეუძლია policy-გადაწყვეტილებების
 მიღება. **Gatekeeper** მას აკავშირებს Kubernetes-ის admission-თან: როცა ვინმე ცდილობს
 ობიექტის შექმნას ან შეცვლას, API server ობიექტს გადასცემს Gatekeeper-ს შესამოწმებლად.
-თუ წესი აღმოაჩენს დარღვევას, Gatekeeper აცნობებს შედეგს — ჩაწეროს ის როგორც
+თუ წესი აღმოაჩენს დარღვევას, Gatekeeper აცნობებს შედეგს - ჩაწეროს ის როგორც
 დაკვირვება, გააფრთხილოს ან უკუაგდოს request. პირველი წაკითხვისთვის არ არის
 საჭირო Rego-ს ან CEL-ის ცოდნა: ჯერ მნიშვნელოვანია გავიგოთ, **რომელი წესი
 მოწმდება, სად მოქმედებს ის და რა მოხდება დარღვევის შემთხვევაში**.
 
-ამისთვის Gatekeeper policy-ს ორ რესურსად ყოფს — ეს არ არის დუბლირება, არამედ
+ამისთვის Gatekeeper policy-ს ორ რესურსად ყოფს - ეს არ არის დუბლირება, არამედ
 შესაძლებლობა წესი ერთხელ დაიწეროს და სხვადასხვანაირად გამოყენდეს:
 
-1. `ConstraintTemplate` — **წესის template/ჩანახატი**. მასში ინახება Rego- ან
+1. `ConstraintTemplate` - **წესის template/ჩანახატი**. მასში ინახება Rego- ან
    CEL-შემმოწმებელი კოდი, სამიზნე admission handler და დაშვებული პარამეტრების
    OpenAPI schema. Schema ამოწმებს თავად `Constraint`-ის პარამეტრებს, არა Pod-ს
-   პირდაპირ: მაგალითად, რომ `labels` — სტრიქონების სია. Template-ის გამოყენების
-   შემდეგ Gatekeeper ქმნის CRD-ს (Custom Resource Definition) — ანუ Kubernetes-ის
-   API-ში ამ წესისთვის რეგისტრირებს ახალი ტიპის რესურსს.
-2. `Constraint` — **წესის ჩართული instance**. ის ირჩევს `match`-scope-ს (რომელი
+   პირდაპირ: მაგალითად, რომ `labels` - სტრიქონების სია. Template-ის გამოყენების
+   შემდეგ Gatekeeper ქმნის CRD-ს (Custom Resource Definition) - ანუ Kubernetes-ის
+   API-ში ამ წესისთვის არეგისტრირებს ახალი ტიპის რესურსს.
+2. `Constraint` - **წესის ჩართული instance**. ის ირჩევს `match`-scope-ს (რომელი
    ობიექტები და namespaces მოწმდება), გადასცემს მნიშვნელობებს `parameters`-ში და
-   განსაზღვრავს `enforcementAction`-ს — რა უნდა გაკეთდეს დარღვევის შემთხვევაში.
+   განსაზღვრავს `enforcementAction`-ს - რა უნდა გაკეთდეს დარღვევის შემთხვევაში.
    ერთი template შესაძლოა ხელახლა გამოყენებულ იქნას სხვადასხვა გუნდისთვის,
    namespaces-ისთვის ან სავალდებულო labels-ის ნაკრებისთვის, ცალკე constraint-ის
    შექმნით ყოველი შემთხვევისთვის.
 
 დაიმახსოვრეთ flow: **template განსაზღვრავს წესს → constraint მას აკონფიგურირებს
-და ჩართავს → ობიექტის შექმნა/შეცვლა ხდება `match`-ის ტოლფასი → Gatekeeper
+და ჩართავს → ობიექტის შექმნა/შეცვლა ხვდება `match`-ში → Gatekeeper
 უშვებს შემოწმებას `parameters`-ით → `enforcementAction` განსაზღვრავს შედეგს**.
 ეს მოგვაგონებს კლასს და instance-ს: template შეიცავს code-ს, რომელიც მოითხოვს
-review-ს და tests-ს; constraint-ს ჩვეულებრივ ხშირად ცვლიან, როცა ფართოვდება
-policy-ის დაფარვის ზონა. ერთ target-ში ერთი engine-ს ირჩევენ: legacy `rego`-ს
+review-ს და tests-ს; constraint-ს ჩვეულებრივ უფრო ხშირად ცვლიან, როცა ფართოვდება
+policy-ის დაფარვის ზონა. ერთ target-ში აირჩიეთ ერთი engine: legacy `rego`-ს
 აქვს უფრო მაღალი პრიორიტეტი, ხოლო `code[]`-ში CEL-ს (`K8sNativeValidation`)
 აქვს პრიორიტეტი Rego-ზე.
 
@@ -283,7 +283,7 @@ kubectl -n gatekeeper-system get deploy,pods
 kubectl get crd | grep -E 'gatekeeper|constraints.gatekeeper' 
 ```
 
-ქვემოთ მოცემული policy მოითხოვს label `owner`-ს Pod-ისთვის სისტემურ namespaces-ის
+ქვემოთ მოცემული policy მოითხოვს label `owner`-ს Pod-ისთვის სისტემური namespaces-ის
 გარეთ. ის უფრო კომპაქტურია, ვიდრე `privileged`-ის შემოწმება, მაგრამ აჩვენებს
 მოდელის ყველა ნაწილს და აძლევს გასაგებ უკუგდებას.
 
@@ -323,7 +323,7 @@ spec:
       violation[{"msg": msg}] {
         # Constraint-ის spec.parameters.labels-იდან ვიღებთ თითო მნიშვნელობას.
         required := input.parameters.labels[_]
-        # input.review.object — Pod მიმდინარე admission request-იდან.
+        # input.review.object - Pod მიმდინარე admission request-იდან.
         not input.review.object.metadata.labels[required]
         # message გამოჩნდება audit status-ში ან deny-ის უკუგდებისას.
         msg := sprintf("missing required label: %v", [required])
@@ -360,23 +360,23 @@ spec:
 ამავდროულად ის constraint-ის `spec.parameters`-ს გადასცემს `input.parameters`-ში.
 ამიტომ ამ მაგალითში `input.parameters.labels` ტოლია `["owner"]`.
 
-Rego-ში წესი — ლოგიკური **AND**-ით შეერთებული პირობების ნაკრებია. ის ქვემოდან
+Rego-ში წესი - ლოგიკური **AND**-ით შეერთებული პირობების ნაკრებია. ის ქვემოდან
 ზემოთ იკითხება როგორც "შექმენი violation, თუ სხეულში ყველა სტრიქონი შესრულდა":
 
 - `required := input.parameters.labels[_]` გადაივლის ყოველ სავალდებულო label-ს;
   `_` ნიშნავს "მასივის მორიგი ელემენტი". აქ ერთადერთი მნიშვნელობა იქნება `owner`.
 - `not input.review.object.metadata.labels[required]` ჭეშმარიტია, როცა
   incoming Pod-ს ეს label-key არ აქვს.
-- `msg := ...` ქმნის გასაგებ message-ს, ხოლო `violation[{"msg": msg}]` — სპეციალური
+- `msg := ...` ქმნის გასაგებ message-ს, ხოლო `violation[{"msg": msg}]` - სპეციალური
   შედეგია, რომელსაც Gatekeeper თვლის დარღვევად. `dryrun`-ის დროს ის მოხვდება
   `status.violations`-ში; `deny`-ის დროს API server დააბრუნებს ამ message-ს და
   Pod-ს არ შექმნის.
 
-პირველი policy-სთვის საკმარისია დავიმახსოვროთ Rego-ის ოთხი იდეა: `input` —
+პირველი policy-სთვის საკმარისია დავიმახსოვროთ Rego-ის ოთხი იდეა: `input` -
 read-only შემავალი მონაცემები, `:=` ინახავს ნაპოვნ მნიშვნელობას ცვლადში, `[_]`
 გადაივლის სიას, `not` აღწერს არარსებობას/შეუსრულებლობას. ცალკე `if/else`-ის
 დაწერა საჭირო არ არის: თუ წესის სხეულის დამტკიცება ვერ ხერხდება, `violation`
-არ ქმნის. ეს policy ამოწმებს key `owner`-ის **არსებობას**; თუ ორგანიზაციას
+არ ქმნის. ეს policy ამოწმებს key `owner`-ის **არსებობას**; თუ ორგანიზაციისთვის
 საჭიროა არაცარიელი ან ფორმატირებული value, ეს ცალკე პირობა უნდა იყოს.
 
 #### გამოცდისთვის სწრაფი pattern: namespace-scope და `latest`-ის აკრძალვა
@@ -472,8 +472,8 @@ spec:
 გამოცდაზე არ ცადოთ ჯერ უნივერსალური framework-ის შექმნა: აიღეთ მინიმალური
 `ConstraintTemplate`, დააფიქსირეთ ზუსტი `kind`/`match` და ერთი `violation`-პირობა.
 შემდეგ შემოწმეთ უარყოფითი და დადებითი შემთხვევები: `team-a`-ში Pod-ი
-`nginx:latest`-ით ჯერ უნდა გამოჩნდეს violations-ში, `deny`-ზე გადასვლის შემდეგ —
-უკუგდებულ იქნას, ხოლო Pod-ი `nginx:1.27`-ით — გაიაროს. Scope ცალკე შემოწმეთ:
+`nginx:latest`-ით ჯერ უნდა გამოჩნდეს violations-ში, `deny`-ზე გადასვლის შემდეგ -
+უკუგდებულ იქნას, ხოლო Pod-ი `nginx:1.27`-ით - გაიაროს. Scope ცალკე შემოწმეთ:
 იმავე ცდას `team-a`-ს გარეთ ამ constraint-თან შესატყვისობა არ უნდა ჰქონდეს.
 
 ```bash
@@ -486,7 +486,7 @@ kubectl describe k8srequiredlabels pods-must-have-owner
 `enforcementAction: dryrun` აგროვებს დარღვევებს `status.violations`-ში, მაგრამ
 request-ს არ ბლოკავს. უკვე არსებული Pod-ების გასწორებისა და scope-ის შემოწმების
 შემდეგ ჩავანაცვლოთ ის `deny`-ით. Gatekeeper-ის ზოგიერთი ვერსია ასევე
-მხარდაჭერს action `warn`-ს; ზუსტად ხელმისაწვდომ actions-ს ამოწმეთ დაყენებული
+მხარს უჭერს action `warn`-ს; ზუსტად ხელმისაწვდომ actions-ს ამოწმეთ დაყენებული
 CRD-ის მიხედვით, არა სხვა ვერსიის შემთხვევითი მაგალითის მიხედვით.
 
 ```bash
@@ -535,7 +535,7 @@ violation[{"msg": msg}] {
 
 ## 20.4. Kyverno 1.19: CEL-based policy types
 
-> **Compatibility-შესახებ შენიშვნა.** Kyverno v1.19 ოფიციალურად მხარდაჭერს Kubernetes
+> **Compatibility-ის შესახებ შენიშვნა.** Kyverno v1.19 ოფიციალურად მხარს უჭერს Kubernetes
 > v1.33-v1.35-ს (`kyverno.io/docs/installation/releases/`, გამოცემული 2026 წლის
 > აგვისტოში). ამ თავის core-ლაბა (Lab108) სრულდება Kubernetes v1.36-ზე - ეს არის
 > შეგნებული forward-looking კომბინაცია, რომელიც **არ შედის** Kyverno v1.19-ის
@@ -550,35 +550,35 @@ violation[{"msg": msg}] {
 
 ### როგორ წავიკითხოთ Kyverno-ს CEL policy
 
-Kyverno — Kubernetes policy engine-ია: მისი controllers და admission webhook კითხულობს
+Kyverno - Kubernetes policy engine-ია: მისი controllers და admission webhook კითხულობს
 policy-რესურსებს API-დან და რეაგირებს ობიექტებთან ოპერაციებზე. ახალ CEL-based
-policy-ტიპებში policy — ჩვეულებრივი YAML-რესურსია, ხოლო CEL — მოკლე
+policy-ტიპებში policy - ჩვეულებრივი YAML-რესურსია, ხოლო CEL - მოკლე
 გამონათქვამების ენა `expression`-ველის შიგნით. ის არ ანაცვლებს YAML-ს და არ
 წარმოადგენს shell-სკრიპტს: expression იღებს შემავალ მონაცემებს, მაგალითად
-`object` — მიმდინარე admission request-ის ობიექტს, — და გამოთვლის მნიშვნელობას.
+`object` - მიმდინარე admission request-ის ობიექტს, - და გამოთვლის მნიშვნელობას.
 
 პირველი წაკითხვისთვის ყოველი მაგალითი გაატარეთ ერთ flow-ზე: **რომელი ოპერაცია
-და resource შესატყვისებულია `matchConstraints`-თან → რომელი დამატებითი
+და resource ემთხვევა `matchConstraints`-ს → რომელი დამატებითი
 პირობები გავიდა → რას აკეთებს policy**. `ValidatingPolicy` გამოთვლის ლოგიკურ
 expression-ს: `true` უშვებს ობიექტს, `false` ქმნის დარღვევას; action `Audit`
 მხოლოდ აფიქსირებს ამას, ხოლო `Deny` უკუაგდებს request-ს. `MutatingPolicy` აბრუნებს
 ობიექტის ცვლილებას მისი შენახვამდე. `GeneratingPolicy` background controller-ს
-ითხოვს, source resource-ის ტოლფასის შემდეგ შექმნას ან სინქრონიზაცია გაუწიოს სხვა
+ითხოვს, source resource-ის match-ის შემდეგ შექმნას ან სინქრონიზაცია გაუწიოს სხვა
 ობიექტს. ამიტომ generation არ არის მყისიერი admission deny.
 
 ჯერ ტიპი აირჩიეთ შედეგის მიხედვით, არა CEL-ის სინტაქსის მიხედვით:
-`ValidatingPolicy` — შემოწმება და საჭიროებისას აკრძალვა, `MutatingPolicy` —
-უსაფრთხო default-ის დამატება, `GeneratingPolicy` — დაკავშირებული რესურსის
-შექმნა, `DeletingPolicy` — წაშლა წესის მიხედვით, `ImageValidatingPolicy` —
-image-ის შემოწმება. Cluster-wide ტიპები მოქმედებს დაკავშირებული scope-ის
+`ValidatingPolicy` - შემოწმება და საჭიროებისას აკრძალვა, `MutatingPolicy` -
+უსაფრთხო default-ის დამატება, `GeneratingPolicy` - დაკავშირებული რესურსის
+შექმნა, `DeletingPolicy` - წაშლა წესის მიხედვით, `ImageValidatingPolicy` -
+image-ის შემოწმება. Cluster-wide ტიპები მოქმედებს მითითებული scope-ის
 მიხედვით; `Namespaced...` ვარიანტები ცხოვრობს და მოქმედებს მხოლოდ საკუთარ
-namespace-ში. არ ერეოთ ეს რესურსები legacy `Policy`/`ClusterPolicy`-სთან: მათ
+namespace-ში. არ აურიოთ ეს რესურსები legacy `Policy`/`ClusterPolicy`-სთან: მათ
 სხვა API და სხვა ველები აქვთ.
 
 Kyverno 1.19-იდან საბაზისო გზაა `policies.kyverno.io/v1` ჯგუფის ცალკეული
 CEL-based cluster-wide ტიპები: `ValidatingPolicy`, `MutatingPolicy`,
 `GeneratingPolicy`, `DeletingPolicy` და `ImageValidatingPolicy`. თითოეულისთვის
-არსებობს namespaced-ვარიანტი — `NamespacedValidatingPolicy`,
+არსებობს namespaced-ვარიანტი - `NamespacedValidatingPolicy`,
 `NamespacedMutatingPolicy`, `NamespacedGeneratingPolicy`,
 `NamespacedDeletingPolicy` ან `NamespacedImageValidatingPolicy`, რომელიც
 მოქმედებს მხოლოდ საკუთარ namespace-ში. Legacy `Policy` და `ClusterPolicy`
@@ -676,7 +676,7 @@ spec:
   - patchType: ApplyConfiguration
     applyConfiguration:
       expression: >-
-        // Object{...} — Kubernetes ობიექტის სასურველი fragment-ის CEL-representation.
+        // Object{...} - Kubernetes ობიექტის სასურველი fragment-ის CEL-representation.
         Object{
           metadata: Object.metadata{
             // ვამატებთ label-ს, დანარჩენი metadata.labels-ის ჩანაცვლების გარეშე.
@@ -688,8 +688,8 @@ spec:
 ### `GeneratingPolicy`: default-deny ახალი Namespace-სთვის
 
 `GeneratingPolicy` რეაგირებს source object-ზე და ითხოვს, რომ ცალკე background
-controller-მა შექმნას downstream resource. ამ მაგალითში source — ახალი
-Namespace-ია, ხოლო შედეგი — `NetworkPolicy` მის შიგნით. YAML template ნაცნობად
+controller-მა შექმნას downstream resource. ამ მაგალითში source - ახალი
+Namespace-ია, ხოლო შედეგი - `NetworkPolicy` მის შიგნით. YAML template კვლავ
 იკითხება, ხოლო CEL გამოთვლის და ჩაანაცვლებს Namespace-ის სახელს.
 `synchronize.enabled: true`-ის დროს Kyverno აგრძელებს გენერირებული ობიექტის
 policy-სთან შედარებას და სინქრონიზაციას. ეს არ არის Kubernetes
@@ -711,7 +711,7 @@ spec:
       enabled: true
   matchConstraints:
     resourceRules:
-    # Trigger — core/v1 Namespace-ის შექმნა.
+    # Trigger - core/v1 Namespace-ის შექმნა.
     - apiGroups: [""]
       apiVersions: ["v1"]
       operations: ["CREATE"]
@@ -751,7 +751,7 @@ spec:
 ეს არის მხოლოდ ingress-ის default deny. Egress, DNS და დაშვებული კავშირები
 ცალკე `NetworkPolicy`-ებით დააფიქსირეთ - იხილეთ [4-ე თავი](../04/ge.md).
 
-`GeneratingPolicy` — provisioning/reconciliation-მექანიზმია, არა ატომური
+`GeneratingPolicy` - provisioning/reconciliation-მექანიზმია, არა ატომური
 admission-ბარიერი: Namespace შექმნილია უფრო ადრე, ვიდრე background controller
 გარანტირებულად შექმნის downstream `NetworkPolicy`-ს. სანამ namespace-ს
 workload identity-ს გადასცემდეთ, დაადასტურეთ ფაქტობრივი baseline, მაგალითად
@@ -793,7 +793,7 @@ done
 | კრიტერიუმი | Gatekeeper / OPA | Kyverno |
 |---|---|---|
 | შემმოწმებელი ენა | Rego ან CEL `ConstraintTemplate`-ში | CEL და YAML templates |
-| რესურსის მოდელი | `ConstraintTemplate` Rego/CEL-ით + `Constraint` | ცალკეული CEL-based policy types, ჩათვლით namespaced ვარიანტების |
+| რესურსის მოდელი | `ConstraintTemplate` Rego/CEL-ით + `Constraint` | ცალკეული CEL-based policy types, namespaced ვარიანტების ჩათვლით |
 | Validate | დიახ | დიახ |
 | Mutate | ცალკეული mutator resources, შესაძლებლობები დამოკიდებულია ვერსიაზე | `MutatingPolicy` |
 | Generate | არ არის საბაზისო სცენარი | `GeneratingPolicy` |
@@ -808,7 +808,7 @@ done
 მხოლოდ ერთნაირი წესებისთვის: ორი webhook ზრდის latency-ს, ოპერაციულ
 ზედაპირს და წინააღმდეგობრივი უკუგდებების რისკს. დასაშვებია
 პასუხისმგებლობის განაწილება, თუ ის დოკუმენტირებულია: მაგალითად, Gatekeeper
-რთული Rego constraints-ისთვის, Kyverno — mutation-ისა და image
+რთული Rego constraints-ისთვის, Kyverno - mutation-ისა და image
 verification-ისთვის.
 
 ორივე შემთხვევაში policy - კოდია: `ConstraintTemplate`/`Constraint` ან
@@ -821,7 +821,7 @@ Gatekeeper-ისთვის გამოიყენეთ დეკლარ�
 `gator test`-ს აძლევს exit code 1-ს, თუმცა policy სწორად მუშაობს. Kyverno
 შემოწმეთ `kyverno test --require-tests`-ით, რომ test manifest-ის არარსებობამ
 green pipeline არ გამოიღოს. CI-მ უნდა დამთავრდეს შეცდომით, თუ დაშვებული
-manifest უკუგდებულია ან აკრძალული — მიღებულია. Exception უნდა იყოს ვიწრო,
+manifest უკუგდებულია ან აკრძალული - მიღებულია. Exception უნდა იყოს ვიწრო,
 დროში შეზღუდული და review-ში ხილული - არა გლობალური
 `excludedNamespaces: ["*"]`.
 
@@ -831,7 +831,7 @@ manifest უკუგდებულია ან აკრძალული �
 
 დადებითი და უარყოფითი manifests policy-ის გვერდით უნდა ცხოვრობდეს Git-ში.
 შეინახეთ template და constraint `templates-and-constraints/template.yaml`-სა
-და `templates-and-constraints/constraint.yaml`-ში, fixtures — `allowed.yaml`-სა
+და `templates-and-constraints/constraint.yaml`-ში, fixtures - `allowed.yaml`-სა
 და `denied.yaml`-ში, ხოლო გვერდით შექმენით `suite.yaml`:
 
 ```yaml
@@ -875,7 +875,7 @@ denied-ისთვის მოსალოდნელ assertions-ად გ�
 ჩაშენებულ validation-ს CEL-ზე. Kubernetes 1.36-ში `MutatingAdmissionPolicy` (MAP)
 და `MutatingAdmissionPolicyBinding` გახდნენ stable და ჩართული default-ით. MAP -
 ეს in-process mutation-ია API server-ის შიგნით: CEL აბრუნებს ან
-`ApplyConfiguration`-ს, რომელიც შედუღდება server-side apply-ის წესებით, ან
+`ApplyConfiguration`-ს, რომელიც server-side apply-ის წესებით ერწყმის ობიექტს, ან
 `JSONPatch`-ს. ორივე native API-სთვის binding სავალდებულოა: ზუსტად ის აკავშირებს
 policy-ს scope-თან, ხოლო binding-ის გარეშე policy არ მოქმედებს.
 
@@ -891,7 +891,7 @@ policy reports-სთვის, image signature verification-სთვის, �
 `policy.example.com/native-mutation=true`. `ApplyConfiguration` მოსახერხებელია
 ველის დამატებისთვის; მასივებზე ან paths-ზე ზუსტი ოპერაციებისთვის გამოიყენეთ
 `JSONPatch` CEL-სიით `JSONPatch{...}`. `spec.reinvocationPolicy` სავალდებულოა:
-`Never` MAP-ს ხელახლა არ იძახებს, ხოლო `IfNeeded` საშუალებას აძლევს ხელახალი
+`Never` MAP-ს ხელახლა არ იძახებს, ხოლო `IfNeeded` საშუალებას აძლევს ხელახალ
 შეფასებას სხვა admission-ეტაპების mutation-ის შემდეგ. სხვა mutating
 plugins/webhooks-თან რიგი გარანტირებული არ არის, ამიტომ mutation უნდა იყოს
 idempotent-ური. არ გამოიყენოთ mutation სავალდებულო security validation-ის
@@ -959,7 +959,7 @@ kubectl -n native-map-on create --dry-run=server -o yaml -f /tmp/native-map-pod.
 # Binding-ის უარყოფითი ტესტი: namespace-ში selector-label-ის გარეშე mutation არ არსებობს.
 if kubectl -n native-map-off create --dry-run=server -o yaml \
   -f /tmp/native-map-pod.yaml | grep -q 'admission.example.com/mutated: "true"'; then
-  echo "MAP scope-ის გარეთ გამოყენდა"
+  echo "MAP scope-ის გარეთ იქნა გამოყენებული"
   exit 1
 fi
 ```
@@ -1114,17 +1114,17 @@ SUBJECT='system:serviceaccount:team-a:ci'
 kubectl auth can-i get configmap/team-a-replica-limit   -n policy-system --as="$SUBJECT"
 ```
 
-> 🔬 **Deep Dive — Manifest-Based Admission Control.** Training baseline Kubernetes v1.36-ში ფუნქცია Alpha-ს სტატუსშია და default-ით გამორთულია. Upstream Kubernetes v1.37-ში ის Beta-ზე გადავიდა და enabled by default გახდა. ამ თავის საბაზისო workflow ბმულია v1.36-თან; production-current delta იხილეთ [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_GE.md)-ში.
+> 🔬 **Deep Dive - Manifest-Based Admission Control.** Training baseline Kubernetes v1.36-ში ფუნქცია Alpha-ს სტატუსშია და default-ით გამორთულია. Upstream Kubernetes v1.37-ში ის Beta-ზე გადავიდა და enabled by default გახდა. ამ თავის საბაზისო workflow მიბმულია v1.36-თან; production-current delta იხილეთ [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)-ში.
 >
 > v1.36-ში ჩართეთ feature gate `ManifestBasedAdmissionControlConfig`; ფუნქცია
-> ატვირთავს webhook და CEL policy manifests-ს API server-ის დისკიდან. გადასცემეთ
+> ჩატვირთავს webhook და CEL policy manifests-ს API server-ის დისკიდან. გადასცემეთ
 > `--admission-control-config-file`-ის მეშვეობით `AdmissionConfiguration` ცალკე
 > აბსოლუტური `staticManifestsDir`-ით საჭირო admission plugin-ისთვის. ასეთი
 > policies აქტიურია start-ისას, დამოუკიდებელია etcd-სგან და შესწევს უნარი
 > დაიცვას API-based admission configuration წაშლისგან ან შეცვლისგან. ეს
 > ექსპერიმენტული control-plane ფუნქციაა: **ყოველი** static admission
-> object-ის `metadata.name` v1.36-ში ვალდებულია დაიწყოს `.static.k8s.io`-ით
-> [ასე: დაბოლოვდეს]; არასწორი static manifest პირველადი ჩატვირთვისას შესწევს
+> object-ის `metadata.name` v1.36-ში ვალდებულია დაბოლოვდეს `.static.k8s.io`-ით;
+> არასწორი static manifest პირველადი ჩატვირთვისას შესწევს
 > უნარი API server-ს ready-ობა არ მისცეს. Static manifests შეზღუდულია
 > მხარდაჭერილი admission resources-ით; policy-ებს არ შეუძლიათ `paramKind`-ის
 > გამოყენება, ხოლო `ValidatingAdmissionPolicyBinding`-სა და
@@ -1144,7 +1144,7 @@ kubectl auth can-i get configmap/team-a-replica-limit   -n policy-system --as="$
 | Mutate | არა | დიახ, `ApplyConfiguration` ან `JSONPatch` | Kyverno - დიახ; Gatekeeper - ცალკეული mutator resources |
 | Generate / reports / signature verification | არა | არა | ხელმისაწვდომია engine-ის მიხედვით |
 | რთული ლოგიკა | შეზღუდული CEL-ითა და API context-ით | შეზღუდული CEL-ითა და API context-ით | Rego ან policy engine-ის features |
-| Lifecycle | upstream Kubernetes API | upstream Kubernetes API | ცალკეული დაყენება, განახლება და CRD |
+| სასიცოცხლო ციკლი | upstream Kubernetes API | upstream Kubernetes API | ცალკეული დაყენება, განახლება და CRD |
 
 Native CEL - კარგი პირველი ვარიანტია მცირე, სუფთა validation-ისთვის ან
 mutation-ისთვის. Engine გამართლებულია, როცა საჭიროა generation, signature
@@ -1200,7 +1200,7 @@ EOF
 # მოსალოდნელია: admission webhook ან ValidatingAdmissionPolicy ... denied the request
 ```
 
-`Enforce`-ის შემდეგ Kyverno-ის დარღვევას ეძებენ API-ის პასუხში და policy
+`Enforce`-ის შემდეგ Kyverno-ში დარღვევას ეძებენ API-ის პასუხში და policy
 report-ში, თუ reports ჩართულია. Gatekeeper-ში ამოწმებენ Constraint-ის
 `status.violations`-ს და უკუგდების message-ს. VAP-ისთვის საკმარისია
 policy/binding-ის სტატუსი და API server-ის უკუგდება; MAP-ისთვის დამატებით
@@ -1229,7 +1229,7 @@ namespace-ის ან label-ის მიხედვით.
 | შეცდომა | შედეგი | უსაფრთხო მიდგომა |
 |---|---|---|
 | მაშინვე ჩართეთ `Deny`/`Enforce` ყველა namespace-ზე | ბლოკირდება legacy workload და system components | audit/warn -> დარღვევების სია -> remediation -> enforcement |
-| გამორიცხეთ `kube-system`, მაგრამ არა engine-ის საკუთარი namespace | engine-ს შესწევს უნარი დაბლოკოს თავად თავი | ცალსახად გამორიცხეთ მხოლოდ საჭირო system namespaces |
+| გამორიცხეთ `kube-system`, მაგრამ არა engine-ის საკუთარი namespace | engine-ს შესწევს უნარი დაბლოკოს საკუთარი თავი | ცალსახად გამორიცხეთ მხოლოდ საჭირო system namespaces |
 | ამოწმეთ მხოლოდ `containers` | bypass `initContainers`-ის ან `ephemeralContainers`-ის მეშვეობით | დაფარეთ ყველა container list ან გამოიყენეთ PSA |
 | გამოიყენეთ mutation security requirement-ის ნაცვლად | YAML გამოიყურება უსაფრთხოდ, მაგრამ image/architecture ისევ არასათანადოა | mutate-ით მხოლოდ უსაფრთხო defaults; სავალდებულო invariants validate-ეთ |
 | `failurePolicy: Ignore` სამუდამოდ | outage-ის დროს policy შემოივლება | alert, HA, rollout-ის კონტროლი, შემდეგ შეგნებული `Fail` კრიტიკული წესებისთვის |
@@ -1239,8 +1239,8 @@ namespace-ის ან label-ის მიხედვით.
 
 Gatekeeper/Kyverno-ის განახლებამდე შემოწმეთ CRD migration, compatibility
 Kubernetes v1.36-თან, certificate rotation, resource requests/limits და PDB.
-Admission-ის outage - ინციდენტია: წინასწარ განსაზღვრეთ, ვის შესწევს
-დროებით შევკვეთოს scope ან დააბრუნოს release, და ეს ცვლილება ჟურნალში
+Admission-ის outage - ინციდენტია: წინასწარ განსაზღვრეთ, ვის შეუძლია
+დროებით შეზღუდოს scope ან დააბრუნოს release, და ეს ცვლილება ჟურნალში
 გაატარეთ GitOps/audit-ის მეშვეობით.
 
 > 🏭 Policy as code: owner, Git review, fixtures, CI, ვიწრო exceptions, admission-მეტრიკები და შემოწმებადი rollout.
@@ -1313,7 +1313,7 @@ Admission-ის outage - ინციდენტია: წინასწა�
 - VAP CEL-ით მუშაობს API server-ში გარეგანი webhook-ის გარეშე და ვარგა
   მხოლოდ validation-ისთვის. Kubernetes 1.36-ში stable MAP ავსებს native
   stack-ს mutation-ით `ApplyConfiguration`-ის ან `JSONPatch`-ის მეშვეობით,
-  მაგრამ არ შესწევს უნარი generation.
+  მაგრამ generation-ს ვერ ახორციელებს.
 - საიმედო rollout: მცირე scope -> audit/warn -> violations-ის გასწორება ->
   `Enforce`/`Deny`, მიღებული და უკუგდებული manifest-ის შემოწმებით.
 
@@ -1331,7 +1331,7 @@ production-ორიენტირებული დამატებებ�
 curriculum-ის გარანტირებული დავალებები. გამოცდის წინ შემოწმეთ Linux
 Foundation/CNCF-ის აქტუალური გამოცემა.
 
-**რეალურ სამუშაოში.** Admission policy არაუსაფრთხო კონფიგურაციას აწვდის
+**რეალურ სამუშაოში.** Admission policy აჩერებს არაუსაფრთხო კონფიგურაციას
 workload-ის გაშვებამდე, ნაცვლად მისი ინციდენტის შემდეგ ძებნისა. Kubernetes
 1.36-ის native MAP/VAP და Kyverno 1.19 სასარგებლოა როგორც production
 extension კონკრეტული კლასტერისა და engine-ის compatibility-ის შემოწმების
@@ -1344,10 +1344,10 @@ registry-ზე, ხელმოწერებზე და არტეფა�
 ## 20.13. კითხვები თვითშემოწმებისთვის
 
 <details>
-<summary>1. რატომ არ შესწევს RBAC-ს თავად ძალა, დაუკრძალოს `privileged: true` მომხმარებელს, რომელსაც Pod-ის შექმნის უფლება აქვს?</summary>
+<summary>1. რატომ არ შესწევს RBAC-ს თავად ძალა, აუკრძალოს `privileged: true` მომხმარებელს, რომელსაც Pod-ის შექმნის უფლება აქვს?</summary>
 
 RBAC წყვეტს, აქვს თუ არა identity-ს verb `create` Pod-ისთვის, და არ ინსპექტირებას
-უწევს YAML-ის ველებს. მომხმარებელს დაშვებით შესწევს გაგზავნოს Pod
+უწევს YAML-ის ველებს. უფლების მქონე მომხმარებელს შეუძლია გააგზავნოს Pod
 `privileged: true`-ით, თუ validating admission ცალკე წესს არ დაადგენს. PSA,
 VAP, Gatekeeper ან Kyverno ამოწმებს ზუსტად ობიექტის შემცველობას etcd-მდე.
 </details>
@@ -1357,8 +1357,8 @@ VAP, Gatekeeper ან Kyverno ამოწმებს ზუსტად ო�
 
 Mutating admission სრულდება validating-ის წინ, ამიტომ validation-ი ხედავს
 უკვე შეცვლილ ობიექტს. Webhooks შესაძლოა ხელახლა გამოძახდნენ სხვა mutating
-webhook-ის მიერ ცვლილების შემდეგ, ხოლო MAP `IfNeeded`-ით ასევე ანებებს
-ხელახალი შეფასების. ამიტომ mutation-ის ხელახალი გამოყენება არ უნდა
+webhook-ის მიერ ცვლილების შემდეგ, ხოლო MAP `IfNeeded`-ით ასევე უშვებს
+ხელახალ შეფასებას. ამიტომ mutation-ის ხელახალი გამოყენება არ უნდა
 ამატებდეს იმავე volume-ს, label-ს ან sidecar-ს მეორედ.
 </details>
 
@@ -1367,7 +1367,7 @@ webhook-ის მიერ ცვლილების შემდეგ, ხ�
 
 `ConstraintTemplate` განსაზღვრავს policy-ის ახალ ტიპს: Rego- ან CEL-კოდს,
 admission target-ს და პარამეტრების OpenAPI schema-ს; გამოყენების შემდეგ
-Gatekeeper ქმნის constraint kind-ის CRD-ს. `Constraint` — ამ ტიპის instance-ია
+Gatekeeper ქმნის constraint kind-ის CRD-ს. `Constraint` - ამ ტიპის instance-ია
 პარამეტრებით, `match`-scope-ითა და `enforcementAction`-ით. Template
 მოითხოვს review-ს და tests-ს policy code-ის მსგავსად, ხოლო constraint-ს
 ჩვეულებრივ ცვლიან, როცა ფართოვდება დაფარვის ზონა.

@@ -831,7 +831,7 @@ el L7-proxy de Cilium rechazará entonces una solicitud que no coincida, normalm
 
 `toFQDNs` no resuelve un nombre al aplicar YAML: el DNS-proxy de Cilium observa una respuesta DNS
 permitida, llena una caché FQDN con TTL y permite una conexión a la IP obtenida. Por ello, permita
-por separado el DNS de un Pod hacia CoreDNS confiable; DoH/DoT no llena esta caché y una IP directa
+por separado el DNS de un Pod hacia CoreDNS confiable; DoH/DoT no llenan esta caché y una IP directa
 no crea una asociación FQDN.
 </details>
 
@@ -872,7 +872,7 @@ orden de policy, en vez de intentar depurar todas las capas a la vez.
 
 🧪 Lab 102 (Cilium NetworkPolicy L3/L4/L7): [tasks/cks/labs/102](../../labs/102/README_ES.MD)
 
-🧪 Lab 115 (instalar Cilium desde cero: sustitución de kube-proxy, WireGuard y Mutual Authentication basada en SPIRE - nivel avanzado/producción, no forma parte del requisito formal del examen CKS Core): [tasks/cks/labs/115](../../labs/115/README_RU.MD)
+🧪 Lab 115 (instalar Cilium desde cero: sustitución de kube-proxy, WireGuard y Mutual Authentication basada en SPIRE - nivel avanzado/producción, no forma parte del requisito formal del examen CKS Core): [tasks/cks/labs/115](../../labs/115/README_ES.MD)
 
 🎮 Cilium Hubble (documentación y ejemplos interactivos):
 [Observabilidad de Hubble](https://docs.cilium.io/en/stable/observability/hubble/) ·

@@ -220,7 +220,7 @@ kubectl exec -n demo deploy/web -- sh -c '
 '
 ```
 
-No confundas el PID 1 de un contenedor con el PID 1 del host. Un PID namespace oculta procesos, pero no revoca el acceso que se te ha concedido explícitamente: `hostPath` con `/proc`, `privileged: true` o `hostPID: true` cambia el modelo de amenazas. Para diagnosticar esos campos, usa:
+No confundas el PID 1 de un contenedor con el PID 1 del host. Un PID namespace oculta procesos, pero no revoca el acceso que tú mismo has concedido explícitamente: `hostPath` con `/proc`, `privileged: true` o `hostPID: true` cambia el modelo de amenazas. Para diagnosticar esos campos, usa:
 
 ```bash
 kubectl get pod -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.metadata.name}{" hostPID="}{.spec.hostPID}{" hostNetwork="}{.spec.hostNetwork}{" hostIPC="}{.spec.hostIPC}{"\n"}{end}'
@@ -398,7 +398,7 @@ kubectl get pod -n demo capability-example \
 kubectl exec -n demo capability-example -- sh -c 'grep Cap /proc/1/status'
 ```
 
-Los valores de `CapEff` en `/proc/1/status` están codificados como una máscara hexadecimal. Para una interpretación legible, usa `capsh --decode=<value>` en el nodo o en una imagen de diagnóstico donde esta herramienta sea confiable y esté instalada:
+Los valores de `CapEff` en `/proc/1/status` están codificados como una máscara hexadecimal. Para una interpretación legible, usa `capsh --decode=<valor>` en el nodo o en una imagen de diagnóstico donde esta herramienta sea confiable y esté instalada:
 
 ```bash
 capsh --decode=0000000000000400
@@ -466,7 +466,7 @@ sudo strace -f -p "$PID" -e trace=%file,%network
 
 ## 03.6. MAC: AppArmor y SELinux complementan DAC
 
-El DAC habitual de Linux comprueba el UID, GID y mode bits de un archivo. En el modelo DAC (Discretionary Access Control), el propietario de un objeto puede cambiar los mode bits, por ejemplo mediante `chmod`, y con ello conceder o revocar acceso dentro del modelo DAC. Cambiar el propietario UID de un archivo en Linux requiere `CAP_CHOWN`; un propietario no privilegiado solo puede cambiar el grupo de un archivo a un grupo del que es miembro. Un proceso con UID/GID o capabilities suficientes puede superar u omitir parte de las comprobaciones DAC habituales.
+El DAC habitual de Linux comprueba el UID, GID y mode bits de un archivo. En el modelo DAC (Discretionary Access Control, control de acceso discrecional), el propietario de un objeto puede cambiar los mode bits, por ejemplo mediante `chmod`, y con ello conceder o revocar acceso dentro del modelo DAC. Cambiar el propietario UID de un archivo en Linux requiere `CAP_CHOWN`; un propietario no privilegiado solo puede cambiar el grupo de un archivo a un grupo del que es miembro. Un proceso con UID/GID o capabilities suficientes puede superar u omitir parte de las comprobaciones DAC habituales.
 
 **Mandatory Access Control (MAC, control de acceso obligatorio)** añade una segunda comprobación obligatoria para el kernel. El administrador carga una policy, y el kernel asocia un proceso con su profile/label y comprueba si se permite una acción concreta sobre un archivo, socket u otro objeto. Aunque DAC ya haya permitido el acceso, MAC puede denegarlo; el propio proceso no puede eliminar ni debilitar la policy. El objetivo es confinar un proceso comprometido: por ejemplo, un servidor web no debe leer claves SSH ni alterar archivos del sistema solo porque recibió un UID, capability o acceso a un archivo adicionales. Por tanto, MAC complementa DAC, capabilities y seccomp en lugar de sustituirlos.
 
@@ -497,7 +497,7 @@ Para SELinux, configura los parámetros de label mediante `securityContext.seLin
 
 > 🧠 Los contenedores comparten el kernel con el nodo; un sandboxed runtime añade aislamiento para workloads no confiables o de alto riesgo.
 
-## 03.7. Límites de aislamiento, sandbox runtimes y diagnóstico de riesgos de escape
+## 03.7. Límites de aislamiento, sandboxed runtime y diagnóstico de riesgos de escape
 
 namespaces, cgroups, capabilities, seccomp y MAC operan en un mismo kernel. Si el perfil de riesgo requiere un límite fuerte entre tenants, usa un sandboxed runtime. gVisor intercepta una parte considerable de las syscalls en user space, mientras que Kata Containers ejecuta un workload en una VM ligera. Esto reduce la posibilidad de usar directamente el kernel del nodo, a costa de compatibilidad, latencia y complejidad operativa.
 
@@ -589,7 +589,7 @@ Errores habituales:
 - **PID namespace** - aislamiento de la lista de procesos y PID.
 - **network namespace** - aislamiento de interfaces, rutas y stack de red.
 - **cgroup** - un grupo de procesos con límites y contabilidad de recursos.
-- **capability** - un privilegio Linux individual separado del conjunto tradicional de privilegios omnipotentes de root.
+- **capability** - un privilegio Linux individual separado de las atribuciones de root.
 - **CAP_SYS_ADMIN** - una capability excesivamente amplia y peligrosa para un workload normal.
 - **syscall** - una llamada al sistema mediante la que un proceso accede al kernel.
 - **seccomp** - un filtro de syscalls aplicado por el kernel a un proceso.

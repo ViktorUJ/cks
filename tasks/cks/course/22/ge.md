@@ -31,7 +31,7 @@ Container-ი იზოლირებს PID, mount, network და სხვ�
 ან ცუდად გაცემული capability-ი კოდის შესრულებას container escape-ად შეიძლება აქციოს.
 
 Single-tenant კლასტერში, გადამოწმებული image-ებით, ეს მისაღები რისკი შეიძლება იყოს.
-Multi-tenancy-ში ნდობა სხვაგვარია: ერთ command-ს, customer workload-ს, CI-job-ს ან
+Multi-tenancy-ში ნდობა სხვაგვარია: ერთ team-ს, customer workload-ს, CI-job-ს ან
 მოწოდებულ plugin-ს არ უნდა ჰქონდეს ბირთვთან ისეთივე ახლო გზა, როგორიც platform-ის
 სისტემურ კომპონენტებს. `privileged`, host namespace-ები, `hostPath`, Docker/containerd
 socket-ი და ფართო RBAC-უფლებები ამასთან **sandbox-შიც კი** საშიშია.
@@ -74,7 +74,7 @@ Runtime-ის შერჩევა workload-ის კლასის თვ�
 ## 22.2. ორი მიდგომა: gVisor და Kata Containers
 
 **gVisor** კონტეინერს `runsc`-ის მეშვეობით უშვებს. მისი userspace kernel-ი (`Sentry`)
-სისტემურ ვიზოვების უმეტესობას იჭერს და userspace-ში ახორციელებს, ამცირებს host ბირთვის
+სისტემური გამოძახებების უმეტესობას იჭერს და userspace-ში ახორციელებს, ამცირებს host ბირთვის
 პირდაპირ attack surface-ს. მხარდაჭერილი platform-ები - `systrap` (default) და `kvm`:
 `systrap` - უნივერსალური default არჩევანი, ხოლო `kvm` მისადაგებულია, როცა ხელმისაწვდომია
 hardware virtualization და თანხვედრი ინფრასტრუქტურა. `ptrace` - legacy platform-ია, არ
@@ -97,7 +97,7 @@ startup latency, memory-ის ხარჯი და ოპერაციუ�
 
 Runtime-ის შეფასება მხოლოდ ცხრილით არ ჩაატაროთ. ტესტირება ჩაუტარეთ ნამდვილ image-ებს:
 eBPF, FUSE, low-level network tools, nested container-ები, device plugin-ები, huge pages,
-GPU და host mount-ები შესაძლოა თანხვედრი არ იყოს ან ცალკე design-ს მოითხოვდეს. sandbox-იდან
+GPU და host mount-ები შესაძლოა თანხვედრი არ იყოს ან ცალკე design-ს მოითხოვდეს. Sandbox-იდან
 `runc`-ზე ჩუმად fallback დაუშვებელია: მაშინ დაპირებული საზღვარი ზუსტად იმ მომენტში
 ქრება, როცა ის საჭიროა.
 
@@ -202,7 +202,7 @@ kubectl -n tenant-b run gvisor-not-allowed \
 
 ## 22.4. Scheduling RuntimeClass-ში: `nodeSelector`, taints და tolerations
 
-gVisor ან Kata ყველა node-ზე „ყოველ შემთხვევისთვის“ არ დააყენოთ. sandbox pool-ი
+gVisor ან Kata ყველა node-ზე „ყოველ შემთხვევისთვის“ არ დააყენოთ. Sandbox pool-ი
 ცალკე გამოყავით: მასში საჭირო binary/shim, გადამოწმებული კონფიგურაცია, capacity და
 observability არსებობს. ჩვეულებრივმა workload-ებმა ეს pool-ი შემთხვევით არ უნდა
 დაისაკუთროს, ხოლო sandbox workload-ი საჭირო handler-ის არმქონე node-ზე არ უნდა მოხვდეს.
@@ -211,8 +211,8 @@ RuntimeClass-ს შესაძლოა `scheduling` ჰქონდეს. Ku
 `tolerations`-ს Pod-ს ამატებს, რომელიც ამ class-ს მიუთითებს. RuntimeClass-ის selector
 და Pod-ის selector admission-ზე ერთიანდება: კონფლიქტური მნიშვნელობები API server-ის
 მიერ Pod-ის უკუგდებამდე მიდის და არა `Pending`/`Unschedulable` მდგომარეობაში მიღებულ
-Pod-ამდე. ამიტომ ასეთი შეცდომისას admission error-ს მოეძებნეთ და არა მხოლოდ
-scheduler-ის Events-ს. Tolerations-ები ემატება, მაგრამ taint-ს არ ანაცვლებს - node
+Pod-ამდე. ამიტომ ასეთი შეცდომისას admission error-ს ეძებეთ და არა მხოლოდ
+scheduler-ის Events-ს. Tolerations ემატება, მაგრამ taint-ს არ ანაცვლებს - node
 toleration-ის არმქონე Pod-ისთვის დახურული რჩება.
 
 ```bash
@@ -265,7 +265,7 @@ spec:
 `nodeSelector`-ს და toleration-ს ყოველ Deployment-ში არ დააკოპირებთ, თუ ისინი
 RuntimeClass-ში უკვე არსებობს: ეს ჭეშმარიტების ორ წყაროს ქმნის. Pod-level explicit
 constraints მისაღებია მხოლოდ მაშინ, როცა ისინი შერჩევას ვიწროებენ, მაგალითად
-architecture-ით ან zone-ით. თავიდან შედეგი Pod-ი და Event შეამოწმეთ:
+architecture-ით ან zone-ით. თავიდან საბოლოო Pod-ი და Event შეამოწმეთ:
 
 ```bash
 kubectl -n tenant-a apply -f untrusted-web.yaml
@@ -375,7 +375,7 @@ containerd --version
 sudo sed -n '1,180p' /etc/containerd/config.toml
 ```
 
-თუ მიმდინარე header — `version = 2`, handler-ი ძველ CRI plugin path-ში დაამატეთ:
+თუ მიმდინარე header - `version = 2`, handler-ი ძველ CRI plugin path-ში დაამატეთ:
 
 ```toml
 version = 2
@@ -384,7 +384,7 @@ version = 2
   runtime_type = "io.containerd.runsc.v1"
 ```
 
-თუ მიმდინარე header — `version = 3` **ან** `version = 4`, ახალი runtime plugin
+თუ მიმდინარე header - `version = 3` **ან** `version = 4`, ახალი runtime plugin
 path-ი გამოიყენეთ (არსებულ ფაილში header-ს არ ცვლით):
 
 ```toml
@@ -393,7 +393,7 @@ path-ი გამოიყენეთ (არსებულ ფაილშ�
   runtime_type = "io.containerd.runsc.v1"
 ```
 
-containerd 2.x config v2-ის მხარდაჭერას აგრძელებს; config v4 — actual version
+containerd 2.x config v2-ის მხარდაჭერას აგრძელებს; config v4 - უახლესი version
 containerd 2.3-ში, ხოლო ძველი config-ები გაშვებისას მიგრირდება. ამიტომ header-ს
 runtime-ის დამატების მიზნით საკუთარი ინიციატივით არ ცვლით: თავიდან `version = ...`,
 effective config-ი და თქვენი containerd distribution-ის documentation-ი
@@ -405,7 +405,7 @@ sandbox-ი აშკარად უნდა აირჩიოს.
 
 TOML-ს გადაამოწმეთ და daemon-ს მხოლოდ change management-ის პროცედურის მიხედვით
 გადატვირთეთ: containerd-ის restart ახალი კონტეინერების შექმნასა და node-ის
-მუშაობას შეეხება. Production node-ზე თავიდან cordon/drain, DaemonSet-ისა და
+მუშაობას შეიძლება შეეხოს. Production node-ზე თავიდან cordon/drain, DaemonSet-ისა და
 PDB-ის გათვალისწინებით, შემდეგ გადამოწმებული კონფიგურაცია გამოიყენეთ.
 
 ```bash
@@ -425,10 +425,10 @@ sudo crictl info | jq '.config.containerd.runtimes.runsc'
 
 Kata-ს არა მხოლოდ `containerd-shim-kata-v2` სჭირდება, არამედ შერჩეული hypervisor-ი,
 kernel/rootfs და თანხვედრი host virtualization. სასურველია vendor-supported package
-ან გადამოწმებული Kata release, cloned კონფიგურაციის management-ით ცალკე pool-ზე
+ან გადამოწმებული Kata release, კონფიგურაციის management-ით ცალკე pool-ზე
 დანერგილი. Binary-ს laptop-იდან production worker-ზე არ დააკოპირებთ.
 
-### თავიდან — რას ვაწესრიგებთ ზუსტად
+### თავიდან - რას ვაწესრიგებთ ზუსტად
 
 ეს **node**-ის, არა Pod-ის კონფიგურაციაა: სანამ Kubernetes-ს Pod-ის Kata-ში გაშვება
 შესძლებოდეს, ყოველ სამიზნე node-ზე მთელი ჯაჭვი უნდა არსებობდეს:
@@ -436,15 +436,15 @@ kernel/rootfs და თანხვედრი host virtualization. სას�
 `RuntimeClass.spec.handler` → CRI handler `containerd`-ში → Kata shim → შერჩეული
 virtualization backend → guest kernel-ის მქონე lightweight VM.
 
-- **Kata runtime / shim** — node-ის კომპონენტები, რომელთა მეშვეობითაც `containerd`
+- **Kata runtime / shim** - node-ის კომპონენტები, რომელთა მეშვეობითაც `containerd`
   sandbox VM-ს ქმნის; `containerd-shim-kata-v2` service `containerd`-სთვის
   ხელმისაწვდომი უნდა იყოს.
-- **Backend (hypervisor)** — VM-ის მექანიზმი: ჩვეულებრივ QEMU/KVM, ხოლო ზოგიერთი
-  Azure/Microsoft Hypervisor კონფიგურაციისთვის — Cloud Hypervisor `mshv`-ით.
-- **CRI handler** — დასახელებული ჩანაწერი `config.toml`-ში, მაგალითად `kata` ან
+- **Backend (hypervisor)** - VM-ის მექანიზმი: ჩვეულებრივ QEMU/KVM, ხოლო ზოგიერთი
+  Azure/Microsoft Hypervisor კონფიგურაციისთვის - Cloud Hypervisor `mshv`-ით.
+- **CRI handler** - დასახელებული ჩანაწერი `config.toml`-ში, მაგალითად `kata` ან
   `kata-qemu`; ის `containerd`-ს ეუბნება, რომელი Kata runtime-ი გამოიძახოს. ეს Pod-ის
   სახელი და binary-ის სახელი არ არის.
-- **RuntimeClass** — Kubernetes ობიექტი, რომელიც შემდგომ kubelet-ს ამ handler-ის
+- **RuntimeClass** - Kubernetes ობიექტი, რომელიც შემდგომ kubelet-ს ამ handler-ის
   ზუსტ სახელს გადასცემს. ის Kata-ს არ დააყენებს და node-ის კონფიგურაციას არ გამოასწორებს.
 
 ამიტომ Pod-ის შექმნით არ დაიწყოთ. უსაფრთხო თანმიმდევრობა ასეთია:
@@ -458,7 +458,7 @@ virtualization backend → guest kernel-ის მქონე lightweight VM.
    გამოჩნდა.
 5. მხოლოდ შემდეგ შექმენით `RuntimeClass` იმავე handler-ით და გაუშვით canary Pod.
 
-შემდეგ შემოწმებაში `KATA_BACKEND` — auto-detection არ არის. მიუთითეთ მნიშვნელობა,
+შემდეგ შემოწმებაში `KATA_BACKEND` - auto-detection არ არის. მიუთითეთ მნიშვნელობა,
 რომელიც უკვე შერჩეულ RuntimeClass-ს/hypervisor-ს შეესატყვისება: `qemu-kvm`
 QEMU/KVM-ისთვის ან `clh-azure` / `clh-azure-runtime-rs` Microsoft Hypervisor-ისთვის.
 სხვა მოწყობილობის არსებობა წარმატებას არ ნიშნავს.
@@ -471,7 +471,7 @@ kata-runtime --version
 sudo kata-runtime check
 
 # მიუთითეთ ფაქტობრივად შერჩეული RuntimeClass-ის/hypervisor-ის backend:
-# qemu-kvm — QEMU/KVM; clh-azure ან clh-azure-runtime-rs — Microsoft Hypervisor.
+# qemu-kvm - QEMU/KVM; clh-azure ან clh-azure-runtime-rs - Microsoft Hypervisor.
 KATA_BACKEND="${KATA_BACKEND:?set qemu-kvm, clh-azure, or clh-azure-runtime-rs}"
 case "$KATA_BACKEND" in
   qemu-kvm)
@@ -499,7 +499,7 @@ esac
 საერთო კრიტერიუმია შერჩეული Kata RuntimeClass-ის/hypervisor-ის მიერ საჭირო
 backend-ის არსებობა და მუშაობის შესაძლებლობა. Microsoft Hypervisor-ზე `/dev/mshv`
 mshv-capable VMM-ით, მაგალითად Cloud Hypervisor `clh-azure`/`clh-azure-runtime-rs`-ისთვის,
-— მხარდაჭერილი ალტერნატივაა; ამიტომ `/dev/kvm`-ის არარსებობა თავისთავად
+- მხარდაჭერილი ალტერნატივაა; ამიტომ `/dev/kvm`-ის არარსებობა თავისთავად
 უნივერსალური FAIL არ არის. Node-ს `sandbox.runtime/kata=true`-ით არ ნიშნავთ, სანამ
 შერჩეული backend, nested virtualization (თუ საჭიროა) და instance type დადასტურებული
 არ არის.
@@ -544,7 +544,7 @@ sudo crictl info | jq '.config.containerd.runtimes.kata'
 ```
 
 ზოგიერთ distribution-ზე package handler-ს სხვა სახელით ქმნის, მაგალითად
-`kata-qemu`. ამ შემთხვევაში RuntimeClass-მა **ფაქტობრივი** handler სახელი
+`kata-qemu`. ამ შემთხვევაში RuntimeClass-მა **ფაქტობრივი** handler-ის სახელი
 გამოიყენოს და არა სტატიის მაგალითი. Rollout-ის წინ `crictl info`, config.toml
 და `RuntimeClass.spec.handler` შეამოწმეთ.
 
@@ -604,7 +604,7 @@ spec:
             drop: ["ALL"]
 ```
 
-sandbox-ის incompatibility-ის „გამოსასწორებლად“ `hostNetwork`, `hostPID`, `hostIPC`,
+Sandbox-ის incompatibility-ის „გამოსასწორებლად“ `hostNetwork`, `hostPID`, `hostIPC`,
 `privileged`, hostPath ან device mount-ებს არ დაამატებთ. ეს ან threat model-ს
 ანგრევს, ან იმას მიანიშნებს, რომ workload-ი უნდა გადამუშავდეს ან ცალკე trusted
 pool-ში, აშკარად დოკუმენტირებული exception-ით, გაშვდეს.
@@ -676,8 +676,8 @@ Pod-ის სახელით არ გამოაქვთ: მტკი�
 
 ჩვეულებრივ container-ში `uname -a` ჩვეულებრივ node-ის kernel-ს აჩვენებს. gVisor-ში
 syscall-ის შედეგები ვირტუალიზდება: `uname`, `/proc` და სხვა მონაცემები gVisor-specific
-ან შეზღუდულ სურათს შესძლებთ დაანახოთ. Kata-ში პროცესი guest kernel-ს ხედავს,
-ცალკე host-იდან. ეს ნიშნები სასარგებლოა, მაგრამ ისინი ერთადერთ security proof-ად
+ან შეზღუდულ სურათს შეიძლება აჩვენონ. Kata-ში პროცესი guest kernel-ს ხედავს,
+რომელიც host-ისგან განცალკევებულია. ეს ნიშნები სასარგებლოა, მაგრამ ისინი ერთადერთ security proof-ად
 არ ჩაითვლება: output-ი version-ებს შორის შესაძლოა შეიცვალოს და implementation-ის
 გამომზეურება მისი ვალდებულება არ არის.
 
@@ -690,7 +690,7 @@ kubectl -n "$NS" exec "$POD" -- sh -c '
   echo "=== dmesg (if permitted) ==="; dmesg 2>&1 | head -n 40 || true
 '
 
-# Host-ზე: host kernel-ი node-ის kernel-ი რჩება და არა Pod-ის guest/Sentry view.
+# Host-ზე: host kernel-ი node-ის kernel-ად რჩება და არა Pod-ის guest/Sentry view-ად.
 uname -a
 sudo journalctl -u containerd --since '15 minutes ago' --no-pager | tail -n 120
 ```
@@ -708,8 +708,8 @@ Starting gVisor
 ```
 
 `...` სხვა log-ის სტრიქონებს ნიშნავს, რომლებიც მაგალითში განზრახ არ არის ჩვენებული.
-`Starting gVisor` — სასარგებლო სასწავლო ნიშანია იმისა, რომ workload-ი gVisor
-sandbox kernel-ს ხედავს. თუ `dmesg` კრძალულია ან marker არ არსებობს, Pod-ს ამ
+`Starting gVisor` - სასარგებლო სასწავლო ნიშანია იმისა, რომ workload-ი gVisor
+sandbox kernel-ს ხედავს. თუ `dmesg` აკრძალულია ან marker არ არსებობს, Pod-ს ამ
 სტრიქონისთვის დამატებით privileges არ მისცემთ: შეამოწმეთ `runtimeClassName`,
 placement და handler.
 
@@ -726,7 +726,7 @@ application smoke test-ის კომბინაცია უფრო სა
 | `uname`/`dmesg` შიგნით | workload view host-ისგან განსხვავებულია; სასარგებლო signal | isolation boundary-ის სრულ სისწორეს |
 | `uname` და log-ები host-ზე | host-side context და runtime activity | Pod-ის guest/userspace kernel-ის შემცველობას |
 
-> 🎯 დიაგნოსტიკა ჩაატარეთ class-ს, node placement-ს, handler-სა და `FailedCreatePodSandBox`-ს; `runtimeClassName`-ს არ წაშალოთ.
+> 🎯 დიაგნოსტიკა ჩაუტარეთ class-ს, node placement-ს, handler-სა და `FailedCreatePodSandBox`-ს; `runtimeClassName`-ს არ წაშალოთ.
 
 ## 22.9. ტიპური ჩავარდნები და უსაფრთხო დიაგნოსტიკა
 
@@ -737,10 +737,10 @@ application smoke test-ის კომბინაცია უფრო სა
 | `FailedCreatePodSandBox`, unknown runtime handler | handler-ის block-ი არ არსებობს, სახელი შეცდომითია ან containerd ხელახლა არ არის წაკითხული | შეადარეთ `RuntimeClass.handler`, config.toml, `crictl info`; გამოასწორეთ და runbook-ის მიხედვით გადატვირთეთ |
 | `executable file not found` shim-ისთვის | shim დაუყენებელია ან containerd service-ის PATH-ის გარეთაა | გადაამოწმეთ `command -v`, permissions და systemd Environment |
 | gVisor Pod-ი იშვება, აპლიკაცია ტყდება | syscall, mount ან network feature მხარდაუჭერელია/სხვაგვარად ხორციელდება | minimal reproducer, runtime docs, გამოასწორეთ app ან აირჩიეთ სხვა დამტკიცებული runtime |
-| Kata არ იშვება | არ ხელმისაწვდომია შერჩეული RuntimeClass-ის backend, nested virtualization, hypervisor/kernel config ან capacity | `kata-runtime check`, QEMU/KVM-ისთვის — `/dev/kvm`, Microsoft Hypervisor-ისთვის — `/dev/mshv` და mshv-capable VMM, cloud instance capabilities, shim-ის log-ები |
-| Pod-ი ჩვეულებრივ node-ზე მოხვდა | RuntimeClass-ს `scheduling` არ აქვს, pool tainted არ არის ან სხვა class მითითებული | გადაამოწმეთ class, node name, labels/taints; ეს sandbox rollout-ად არ ჩათვალოთ |
+| Kata არ იშვება | არ ხელმისაწვდომია შერჩეული RuntimeClass-ის backend, nested virtualization, hypervisor/kernel config ან capacity | `kata-runtime check`, QEMU/KVM-ისთვის - `/dev/kvm`, Microsoft Hypervisor-ისთვის - `/dev/mshv` და mshv-capable VMM, cloud instance capabilities, shim-ის log-ები |
+| Pod-ი ჩვეულებრივ node-ზე მოხვდა | RuntimeClass-ს `scheduling` არ აქვს, pool tainted არ არის ან სხვა class არის მითითებული | გადაამოწმეთ class, node name, labels/taints; ეს sandbox rollout-ად არ ჩათვალოთ |
 
-`FailedCreatePodSandBox`-ს `runtimeClassName`-ის წაშლით არ „ცურავთ“: ეს security
+`FailedCreatePodSandBox`-ს `runtimeClassName`-ის წაშლით არ „კურნავთ“: ეს security
 failure-ს შეუმჩნეველ downgrade-ად აქცევს. Workload-ი გაჩერებული დარჩეს, სანამ
 platform team სხვა დაშვებულ RuntimeClass-ს ან ცალკე risk acceptance-ს არ
 დაადასტურებს.
@@ -755,10 +755,10 @@ platform team სხვა დაშვებულ RuntimeClass-ს ან ც�
 - **Default `runc`-ის შენარჩუნება.** მთელი platform-ის ახალ runtime-ზე გადასვლა
   compatibility matrix-ის გარეშე blast radius-ს ზრდის. Sandbox-ს class-ის მიხედვით
   და canary-ით ჩართავენ.
-- **Handler-ის ჩართვა როგორც კონტრაქტი.** Binary-ების, shim-ის, containerd config-ისა
+- **Handler-ის კონტრაქტად მიჩნევა.** Binary-ების, shim-ის, containerd config-ისა
   და RuntimeClass-ის versions ერთი reviewed change-ით იცვლება. `runsc`, `kata` და
   `kata-qemu` სახელების შემთხვევითი განსხვავება - outages-ის წყაროა.
-- **საშიში combinations-ის კრძალვა.** PSA/admission-policy-ს არ უნდა შეეშვას
+- **საშიში combinations-ის აკრძალვა.** PSA/admission-policy-ს არ უნდა შეეშვას
   `privileged`, host namespaces, hostPath/socket mounts და ფართო exemptions
   tenant namespace-ში, RuntimeClass-ისგან დამოუკიდებლად.
 - **Capacity-ის გათვალისწინება.** გაზომეთ runtime overhead, startup latency,
@@ -770,7 +770,7 @@ platform team სხვა დაშვებულ RuntimeClass-ს ან ც�
 - **Upgrade-ების დაგეგმვა.** Host kernel-ის, containerd-ის, gVisor/Kata-ისა და
   Kubernetes-ის upgrade ერთი compatibility matrix-ის სახით ტესტირდება. Drain-ის
   წინ PDB გადაამოწმეთ და node-ი scheduling-იდან გამოიტანეთ, ხოლო runtime-ს
-  აქტიური tenant Pod-ების ქვეშ ბლაინდად არ განაახლებთ.
+  აქტიური tenant Pod-ების ქვეშ ბრმად არ განაახლებთ.
 
 ## 22.11. როგორ გამოგადგება ეს: გამოცდაზე და ნამდვილ სამუშაოში
 
@@ -808,7 +808,7 @@ platform team სხვა დაშვებულ RuntimeClass-ს ან ც�
 - ჩვეულებრივი კონტეინერები node-ის kernel-ს იზიარებენ; არასანდო multi-tenant
   დატვირთვისთვის gVisor ან Kata მნიშვნელოვან დამატებით საზღვარს ამატებს, მაგრამ
   RBAC-ს, PSA-ს, `securityContext`-სა და NetworkPolicy-ს არ ანაცვლებს.
-- gVisor (`runsc`) სისტემურ ვიზოვებს userspace kernel-ის მეშვეობით იჭერს; Kata
+- gVisor (`runsc`) სისტემურ გამოძახებებს userspace kernel-ის მეშვეობით იჭერს; Kata
   lightweight VM-სა და guest kernel-ს იყენებს. არჩევანს threat model-ი,
   compatibility და SLO განსაზღვრავს.
 - `RuntimeClass.metadata.name`, `spec.handler` და `containerd runtime_type` -
@@ -843,11 +843,11 @@ gVisor `runsc` syscall-ების უმეტესობას იჭერ�
 <details>
 <summary>3. რითი განსხვავდება `RuntimeClass.metadata.name`, `handler` და containerd-ის `runtime_type`?</summary>
 
-`metadata.name`, მაგალითად `gvisor`, — Pod-ის `spec.runtimeClassName`-ისთვის მნიშვნელობაა. `handler`, მაგალითად `runsc`, node-ის CRI კონფიგურაციაში runtime-ის სახელს ზუსტად უნდა ემთხვეოდეს. `runtime_type`, მაგალითად `io.containerd.runsc.v1`, — runtime-ის implementation containerd-ის კონფიგურაციაში და RuntimeClass-ის სახელი არ არის.
+`metadata.name`, მაგალითად `gvisor`, - Pod-ის `spec.runtimeClassName`-ისთვის მნიშვნელობაა. `handler`, მაგალითად `runsc`, node-ის CRI კონფიგურაციაში runtime-ის სახელს ზუსტად უნდა ემთხვეოდეს. `runtime_type`, მაგალითად `io.containerd.runsc.v1`, - runtime-ის implementation containerd-ის კონფიგურაციაში და RuntimeClass-ის სახელი არ არის.
 </details>
 
 <details>
-<summary>4. რატომ არ შესძლია API server-ს დარწმუნება, რომ handler-ი შერჩეულ node-ზე ხელმისაწვდომია?</summary>
+<summary>4. რატომ ვერ იძლევა API server-ი გარანტიას, რომ handler-ი შერჩეულ node-ზე ხელმისაწვდომია?</summary>
 
 API server RuntimeClass-ს ინახავს, მაგრამ binary-ს, shim-სა და CRI handler-ს ყოველ node-ზე არ ამოწმებს. შეცდომა გამოვლინდება, როცა kubelet sandbox-ის შექმნას ცდილობს, მაგალითად `FailedCreatePodSandBox`-ის ან unknown runtime handler-ის სახით. ამიტომ handler-ს და თანხვედრ pool-ს workload-ის შექმნამდე ამზადებენ და ამოწმებენ.
 </details>
@@ -855,7 +855,7 @@ API server RuntimeClass-ს ინახავს, მაგრამ binary-ს
 <details>
 <summary>5. როგორ ურთიერთქმედებს `RuntimeClass.scheduling.nodeSelector` და tolerations sandbox node pool-ის labels-სა და taints-თან?</summary>
 
-RuntimeClass Pod-ს, რომელიც მას მიუთითებს, საკუთარ `nodeSelector`-სა და tolerations-ს ამატებს. Selector-ი მომზადებული sandbox node-ის label-ს უნდა ემთხვეოდეს, ხოლო toleration-ი `NoSchedule` taint-ის გავლას აძლევს; taint-ი toleration-ის არმქონე Pod-ისგან დაცვად რჩება. RuntimeClass-ის selector-ისა და Pod-ის selector-ის კონფლიქტი admission-ზე უკუიგდობა და არა Pending-ად იქცევა.
+RuntimeClass Pod-ს, რომელიც მას მიუთითებს, საკუთარ `nodeSelector`-სა და tolerations-ს ამატებს. Selector-ი მომზადებული sandbox node-ის label-ს უნდა ემთხვეოდეს, ხოლო toleration-ი `NoSchedule` taint-ის გავლას აძლევს; taint-ი toleration-ის არმქონე Pod-ისგან დაცვად რჩება. RuntimeClass-ის selector-ისა და Pod-ის selector-ის კონფლიქტი admission-ზე უკუიგდება და არა Pending-ად იქცევა.
 </details>
 
 <details>
@@ -867,7 +867,7 @@ RuntimeClass Pod-ს, რომელიც მას მიუთითებ�
 <details>
 <summary>7. gVisor-ისა და containerd-ისთვის რომელი ფაილები/binary-ები უნდა იქნეს თანხვედრი?</summary>
 
-თანხვედრი უნდა იქნეს `runsc`-ის, `containerd-shim-runsc-v1`-ისა და `gvisor-bin/` catalog-ის გადამოწმებული versions; archive install-ისას `runsc`-თან მათი ურთიერთმდებარეობა შენარჩუნებული უნდა იქნეს. Shim containerd-ის systemd service-ის `PATH`-ში უნდა იმყოფებოდეს. `config.toml`-ში handler `runsc`-მა `runtime_type = "io.containerd.runsc.v1"`-ს containerd-ის თაობის სწორი plugin path-ის მიხედვით უნდა უჩვენოს.
+თანხვედრი უნდა იქნეს `runsc`-ის, `containerd-shim-runsc-v1`-ისა და `gvisor-bin/` დირექტორიის გადამოწმებული versions; archive install-ისას `runsc`-თან მათი ურთიერთმდებარეობა შენარჩუნებული უნდა იქნეს. Shim containerd-ის systemd service-ის `PATH`-ში უნდა იმყოფებოდეს. `config.toml`-ში handler `runsc`-ისთვის უნდა იყოს მითითებული `runtime_type = "io.containerd.runsc.v1"` containerd-ის თაობის სწორი plugin path-ის მიხედვით.
 </details>
 
 <details>
@@ -885,18 +885,18 @@ RuntimeClass Pod-ს, რომელიც მას მიუთითებ�
 <details>
 <summary>10. **Flashback (10-ე თავი).** gVisor/Kata (ეს თავი) tenant-ს kernel syscall surface-ის დონეზე იზოლირებს. RBAC (10-ე თავი) tenant-ს Kubernetes API access-ის დონეზე იზოლირებს. Multi-tenant კლასტერისთვის, არასანდო namespace-ებით, მოგვიყევანეთ კონკრეტული attack scenario, რომელსაც ამ ორი დონიდან მხოლოდ ერთი აჩერებს და მეორე - არა.</summary>
 
-RBAC-ს ძალუძს tenant ServiceAccount-ს აუკრძალოს სხვა namespace-ის Secrets-ის წაკითხვა ან privileged Pod-ის შექმნა, მაგრამ ვერ შეაჩერებს syscall exploit-ს უკვე გაშვებულ, დაშვებულ container-ში; აქ sandbox-ია სასარგებლო. და პირიქით, gVisor/Kata identity-ს არ უკრძალავს დაშვებული `get secrets` API-ის მეშვეობით შესრულება ან საკუთარი Deployment-ის შეცვლა. ამიტომ API least privilege-ი და kernel isolation-ი სხვადასხვა attack path-ს ხურავს.
+RBAC-ს ძალუძს tenant ServiceAccount-ს აუკრძალოს სხვა namespace-ის Secrets-ის წაკითხვა ან privileged Pod-ის შექმნა, მაგრამ ვერ შეაჩერებს syscall exploit-ს უკვე გაშვებულ, დაშვებულ container-ში; აქ sandbox-ია სასარგებლო. და პირიქით, gVisor/Kata identity-ს არ უკრძალავს დაშვებული `get secrets` API-ის მეშვეობით შესრულებას ან საკუთარი Deployment-ის შეცვლას. ამიტომ API least privilege-ი და kernel isolation-ი სხვადასხვა attack path-ს ხურავს.
 </details>
 
 <details>
-<summary>11. რატომაა `runtimeClassName`-ის წაშლა სისწრაფის აღდგენის მიზნით security downgrade?</summary>
+<summary>11. რატომაა `runtimeClassName`-ის წაშლა სწრაფი აღდგენის მიზნით security downgrade?</summary>
 
 ველის წაშლა workload-ს დაპირებული sandbox საზღვრიდან ჩვეულებრივ runtime-ზე გადაჰყავს, ანუ დაცვას ზუსტად compatibility problem-ის დროს აშორებს. თავი პირდაპირ კრძალავს ასეთ ჩუმ fallback-ს: Pod-ი გაჩერებული უნდა დარჩეს, სანამ platform team სხვა დაშვებულ RuntimeClass-ს ან ცალკე risk acceptance-ს არ დაადასტურებს. სხვაგვარად recovery უსაფრთხოების დაცემას ჰმალავს.
 </details>
 
 ## პრაქტიკა
 
-წვრთენით RuntimeClass, `runsc`, scheduling და sandbox-ის შემოწმება
+ივარჯიშეთ RuntimeClass-ზე, `runsc`-ზე, scheduling-ზე და sandbox-ის შემოწმებაზე
 [ლაბ 110-ში - gVisor, Cilium და Istio](../../labs/110/README_GE.MD). დააყენეთ
 `runsc` მომზადებულ node-ზე, შექმენით `RuntimeClass` `gvisor` handler `runsc`-ით,
 იზოლირეთ node label/taint-ით, გადაიტანეთ workload namespace `team-purple`-ში
