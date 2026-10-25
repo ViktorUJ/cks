@@ -74,18 +74,18 @@ dependency "docker_worker" {
 }
 
 inputs = {
-  questions_list=local.vars.locals.questions_list
-  solutions_scripts=local.vars.locals.solutions_scripts
-  solutions_video=local.vars.locals.solutions_video
-  debug_output=local.vars.locals.debug_output
-  region      = local.vars.locals.region
-  aws         = local.vars.locals.aws
-  prefix      = local.vars.locals.prefix
-  tags_common = local.vars.locals.tags
-  app_name    = "worker"
-  subnets  = dependency.vpc.outputs.subnets
-  vpc_id      = dependency.vpc.outputs.vpc_id
-  ssh_password_enable =local.vars.locals.ssh_password_enable
+  questions_list        = local.vars.locals.questions_list
+  solutions_scripts     = local.vars.locals.solutions_scripts
+  solutions_video       = local.vars.locals.solutions_video
+  debug_output          = local.vars.locals.debug_output
+  region                = local.vars.locals.region
+  aws                   = local.vars.locals.aws
+  prefix                = local.vars.locals.prefix
+  tags_common           = local.vars.locals.tags
+  app_name              = "worker"
+  subnets               = dependency.vpc.outputs.subnets
+  vpc_id                = dependency.vpc.outputs.vpc_id
+  ssh_password_enable   = local.vars.locals.ssh_password_enable
   all_spot_subnet       = local.vars.locals.all_spot_subnet
   spot_additional_types = local.vars.locals.spot_additional_types
 
@@ -127,13 +127,13 @@ inputs = {
     cidrs              = local.vars.locals.access_cidrs
     subnet_number      = "0"
     user_data_template = "template/worker.sh"
-    util               = {
+    util = {
       kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "122"
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/03/worker/files/tests.bats"
     task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/03/worker/files/worker.sh"
-    ssh               = {
+    ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
