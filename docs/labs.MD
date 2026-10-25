@@ -1,35 +1,28 @@
 ## CKS labs
-- ``TASK=01 make run_cks_task`` - create cks lab number 01
-- ``TASK=01 make delete_cks_task`` - delete cks hands-on labs
-- ``TASK=01 make run_cks_task_clean`` - run cks_task with clean terragrunt cache  for  cks_task
+- ``TASK=101 make run_cks_task`` - create CKS lab number 101
+- ``TASK=101 make delete_cks_task`` - delete CKS hands-on lab
+- ``TASK=101 make run_cks_task_clean`` - run cks_task with clean terragrunt cache for the CKS lab
 - ``make output_cks_task `` - show **outputs** from   **cks_task**
 
 
 
-| Task   | Description                                                                                        | Solution                                                                                                            |
-|--------|----------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| **01** | [kubectl contexts](..%2Ftasks%2Fcks%2Flabs%2F01%2FREADME.MD)                                       | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F01%2FSOLUTION.MD)                                                              |
-| **02** | [Falco, sysdig](..%2Ftasks%2Fcks%2Flabs%2F02%2FREADME.MD)                                          | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F02%2FSOLUTION.MD)                                                              |
-| **03** | [Kube-api. disable access via nodePort](..%2Ftasks%2Fcks%2Flabs%2F03%2FREADME.MD)                  | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F03%2FSOLUTION.MD)                                                              |
-| **04** | [Pod Security Standard](..%2Ftasks%2Fcks%2Flabs%2F04%2FREADME.MD)                                  | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F04%2FSOLUTION.MD)                                                              |
-| **05** | [CIS Benchmark](..%2Ftasks%2Fcks%2Flabs%2F05%2FREADME.MD)                                          | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F05%2FSOLUTION.MD)                                                              |
-| **07** | [Open Policy Agent - Blacklist Images](..%2Ftasks%2Fcks%2Flabs%2F07%2FREADME.MD)                   | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F07%2FSOLUTION.MD)                                                              |
-| **09** | [AppArmor](..%2Ftasks%2Fcks%2Flabs%2F09%2FREADME.MD)                                               | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F09%2FSOLUTION.MD)                                                              |
-| **10** | [Container Runtime Sandbox gVisor](..%2Ftasks%2Fcks%2Flabs%2F10%2FREADME.MD)                       | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F10%2FSOLUTION.MD)                                                              |
-| **11** | [Read the complete Secret content directly from ETCD](..%2Ftasks%2Fcks%2Flabs%2F11%2FREADME.MD)    | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F11%2FSOLUTION.MD)                                                              |
-| **17** | [Enable audit log](..%2Ftasks%2Fcks%2Flabs%2F17%2FREADME.MD)                                       | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F17%2FSOLUTION.MD)                                                              |
-| **19** | [Fix Dockerfile](..%2Ftasks%2Fcks%2Flabs%2F19%2FREADME.MD)                                         | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F19%2FSOLUTION.MD)                                                              |
-| **20** | [Update Kubernetes cluster](..%2Ftasks%2Fcks%2Flabs%2F20%2FREADME.MD)                              | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F20%2FSOLUTION.MD)                                                              |
-| **21** | [Image Vulnerability Scanning](..%2Ftasks%2Fcks%2Flabs%2F21%2FREADME.MD)                           | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F21%2FSOLUTION.MD)                                                              |
-| **22** | [Network policy](..%2Ftasks%2Fcks%2Flabs%2F22%2FREADME.MD)                                         | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F22%2FSOLUTION.MD)                                                              |
-| **23** | [Set tls version and allowed ciphers for etcd, kube-api](..%2Ftasks%2Fcks%2Flabs%2F23%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F23%2FSOLUTION.MD)                                                              |
-| **24** | [Encrypt secrets in ETCD](..%2Ftasks%2Fcks%2Flabs%2F24%2FREADME.MD)                                | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F24%2FSOLUTION.MD)                                                              |
-| **25** | [Image policy webhook](..%2Ftasks%2Fcks%2Flabs%2F25%2FREADME.MD)                                   | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F25%2FSOLUTION.MD)                                                              |
-| **26** | [Install Cilium with WireGuard](..%2Ftasks%2Fcks%2Flabs%2F26%2FREADME.MD)                          | [SOLUTION](../tasks/cks/labs/26/worker/files/solutions/1.MD)  <br/>  [VIDEO SOLUTION](https://youtu.be/lVrkuX6CriQ) |
-| **27** | [Cilium network policy with mTLS](..%2Ftasks%2Fcks%2Flabs%2F27%2FREADME.MD)                        | [SOLUTION](../tasks/cks/labs/27/worker/files/solutions/1.MD)  <br/>  [VIDEO SOLUTION](https://youtu.be/IScbc12Nj2A) |
-| **28** | [Detect and stop unauthorized access with Falco](..%2Ftasks%2Fcks%2Flabs%2F28%2FREADME.MD)         | [SOLUTION](../tasks/cks/labs/28/worker/files/solutions/1.MD)  <br/>  [VIDEO SOLUTION](https://youtu.be/HsQlGC52bRM) |
-| **29** | [Perform Docker security configutaion](..%2Ftasks%2Fcks%2Flabs%2F29%2FREADME.MD)                   | [SOLUTION](../tasks/cks/labs/29/worker/files/solutions/1.MD)  <br/>  [VIDEO SOLUTION](https://youtu.be/-uEHbkI3wcs) |
-| **30** | [Create istio network policy](..%2Ftasks%2Fcks%2Flabs%2F30%2FREADME.MD)                            | [SOLUTION](../tasks/cks/labs/30/worker/files/solutions/1.MD)                                                        |
+| Task | Description | Solution |
+|------|-------------|----------|
+| **101** | [NetworkPolicy: default-deny, isolation, and EC2 IMDS](../tasks/cks/labs/101/README.MD) | [SOLUTION](../tasks/cks/labs/101/worker/files/solutions/1.MD) |
+| **102** | [CiliumNetworkPolicy: L3/L4/L7, DNS-aware egress, and Hubble](../tasks/cks/labs/102/README.MD) | [SOLUTION](../tasks/cks/labs/102/worker/files/solutions/1.MD) |
+| **103** | [CIS/kube-bench, Secure Ingress TLS, and binary verification](../tasks/cks/labs/103/README.MD) | [SOLUTION](../tasks/cks/labs/103/worker/files/solutions/1.MD) |
+| **104** | [Restricting access to the Kubernetes API: RBAC, ServiceAccount, and anonymous-auth](../tasks/cks/labs/104/README.MD) | [SOLUTION](../tasks/cks/labs/104/worker/files/solutions/1.MD) |
+| **105** | [System Hardening of the OS and Docker daemon security](../tasks/cks/labs/105/README.MD) | [SOLUTION](../tasks/cks/labs/105/worker/files/solutions/1.MD) |
+| **106** | [AppArmor and seccomp: node-local policy and verifiable denials](../tasks/cks/labs/106/README.MD) | [SOLUTION](../tasks/cks/labs/106/worker/files/solutions/1.MD) |
+| **107** | [Pod Security Admission: restricted, audit/warn, and a read-only root filesystem](../tasks/cks/labs/107/README.MD) | [SOLUTION](../tasks/cks/labs/107/worker/files/solutions/1.MD) |
+| **108** | [Admission policies with Kyverno](../tasks/cks/labs/108/README.MD) | [SOLUTION](../tasks/cks/labs/108/worker/files/solutions/1.MD) |
+| **109** | [Encrypting Secrets in etcd and minimal access](../tasks/cks/labs/109/README.MD) | [SOLUTION](../tasks/cks/labs/109/worker/files/solutions/1.MD) |
+| **110** | [gVisor RuntimeClass, Cilium WireGuard, and Istio mTLS](../tasks/cks/labs/110/README.MD) | [SOLUTION](../tasks/cks/labs/110/worker/files/solutions/1.MD) |
+| **111** | [Image analysis, static fixes, and supply-chain evidence](../tasks/cks/labs/111/README.MD) | [SOLUTION](../tasks/cks/labs/111/worker/files/solutions/1.MD) |
+| **112** | [Runtime: Falco, audit logs, and an immutable root filesystem](../tasks/cks/labs/112/README.MD) | [SOLUTION](../tasks/cks/labs/112/worker/files/solutions/1.MD) |
+| **113** | [Upgrading a Kubernetes Cluster with kubeadm (minor upgrade)](../tasks/cks/labs/113/README.MD) | [SOLUTION](../tasks/cks/labs/113/worker/files/solutions/1.MD) |
+| **114** | [Kubeconfig contexts, client certificates, and API exposure](../tasks/cks/labs/114/README.MD) | [SOLUTION](../tasks/cks/labs/114/worker/files/solutions/1.MD) |
+| **115** | [Cilium bootstrap, kube-proxy replacement, and Mutual Authentication](../tasks/cks/labs/115/README.MD) | [SOLUTION](../tasks/cks/labs/115/worker/files/solutions/1.MD) |
 
 
 
