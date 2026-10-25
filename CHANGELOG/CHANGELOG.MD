@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.37.1 (27.10.2026)
+
+### Features
+* CKS [self-study course](../tasks/cks/course/README.md) is added: 33 chapters (Part 0 - an optional foundation on Kubernetes and Linux security; Parts 1-7 - the CKS exam program and preparation) tied to the hands-on labs. Available in 8 languages: Russian (source), English, Spanish, French, German, Georgian, Traditional Chinese and Japanese.
+* CKS labs [101-115](../docs/labs.MD#cks-labs) are added: 15 composite labs in the exam style with automatic `check_result` validation and reference solutions, in the same 8 languages.
+
 ## 0.36.1 (30.09.2026)
 ### Features
 * KCSA  [self-study course](../tasks/kcsa/course/README.md) is added. Available in 8 languages: Russian (source), English, Spanish, French, German, Georgian, Traditional Chinese and Japanese.
