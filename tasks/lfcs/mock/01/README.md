@@ -1,4 +1,86 @@
-# Allowed resources
+# LFCS Mock Exam 01
+
+## Deployment
+
+Prepare AWS access, Terraform state storage, and the required tools using the [Docker quick start](../../../../docs/run_from_docker.MD). Run all `make` commands below from the **repository root on the controlling machine**. Check this mock's [env.hcl](env.hcl), including its region and instance settings, before deployment.
+
+```bash
+TASK=01 make run_lfcs_mock
+```
+
+To display the Terraform connection details again:
+
+```bash
+TASK=01 make output_lfcs_mock
+```
+
+## Connect and start working
+
+Use the `worker_pc_ssh` value from the **worker-01** module (`node01`), the main task machine. The **worker-02** module is the secondary machine (`node02`) used by tasks that explicitly name it. A password-enabled environment prints a value in this form:
+
+```text
+worker_pc_ssh = "ssh ubuntu@<IP> password=<PASSWORD>"
+```
+
+Use only the address in the SSH command:
+
+```bash
+ssh ubuntu@<IP>
+```
+
+Enter the printed password when prompted; `password=...` is output metadata, not part of the SSH command. If password authentication is disabled, use the SSH key configured for the environment, for example `ssh ubuntu@<IP> -i <key_path>`.
+
+After connecting, wait for initialization to finish and reload the shell settings:
+
+```bash
+sudo cloud-init status --wait
+source ~/.bashrc
+```
+
+Start on `node01`. For tasks that require the second machine, connect from `node01` with `ssh node02`; the inter-node SSH key is prepared by the environment. Run the timer and checker on `node01`, not on `node02`. Check the remaining time with:
+
+```bash
+time_left
+```
+
+Follow the questions below. If initialization reports an error, inspect `/var/log/cloud-init-output.log` before starting the tasks.
+
+## Check the result
+
+Run on `node01`:
+
+```bash
+check_result
+```
+
+After your attempt, review the [reference solutions](worker-01/files/solutions) and [automated checks](worker-01/files/tests.bats).
+
+## Delete the environment
+
+AWS resources are billed to your account. After practice, return to the **controlling machine and repository root**, then run:
+
+```bash
+TASK=01 make delete_lfcs_mock
+```
+
+<details>
+<summary>Independent environments for multiple users or attempts</summary>
+
+Use the same identifiers for launch, output, and deletion:
+
+```bash
+USER_ID='user1' ENV_ID='01' TASK=01 make run_lfcs_mock
+USER_ID='user1' ENV_ID='01' TASK=01 make output_lfcs_mock
+USER_ID='user1' ENV_ID='01' TASK=01 make delete_lfcs_mock
+```
+
+[More about independent environments and CMDB](../../../../docs/environments.md).
+
+</details>
+
+---
+
+## Allowed resources
 
 ## **Linux Foundation Certified System Administrator (LFCS) :**
 

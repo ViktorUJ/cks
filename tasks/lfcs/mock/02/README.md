@@ -1,4 +1,19 @@
-# Allowed resources
+# LFCS Mock Exam 02
+
+## Practice environment
+
+This mock currently contains a **task list only**. Its directory has no `env.hcl`, Terragrunt modules, provisioning scripts, or automated checker, so it cannot currently be deployed with the platform's `run_lfcs_mock` command.
+
+1. Use an isolated Linux practice environment that you manage yourself.
+2. Prepare the files, users, services, storage, and network prerequisites described by each task before attempting it. These fixtures are not provisioned for this mock.
+3. Complete the tasks below and verify their acceptance criteria manually. The platform does not install `time_left` or `check_result` for this question set.
+4. Remove your practice resources using the procedure for your own environment.
+
+For a preconfigured AWS environment with automatic validation, use [LFCS Mock Exam 01](../01/README.md) and follow its deployment instructions. Its fixtures and checker apply to mock 01, not to the tasks in mock 02.
+
+---
+
+## Allowed resources
 
 ## **Linux Foundation Certified System Administrator (LFCS) :**
 

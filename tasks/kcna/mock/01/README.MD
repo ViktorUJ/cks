@@ -1,5 +1,16 @@
 # KCNA Mock Exam 01
 
+## How to take this mock exam
+
+This is a Markdown multiple-choice exam. Open this file in GitHub or a Markdown viewer; no AWS account, Terraform deployment, or `make` command is needed.
+
+1. For a timed attempt, choose a time limit before starting and record your answers separately.
+2. Answer the questions without expanding the **Answer** sections.
+3. When finished, reveal the answers, count your correct responses, and review the explanations where provided.
+
+---
+
+
 
 **What native runtime is Open Container Initiative (OCI) compliant?**
 - A. runC

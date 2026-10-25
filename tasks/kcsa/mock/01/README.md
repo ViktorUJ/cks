@@ -1,5 +1,18 @@
 # KCSA Mock Exam 01
 
+## How to take this mock exam
+
+This is a Markdown multiple-choice exam. Open this file in GitHub or a Markdown viewer; no AWS account, Terraform deployment, or `make` command is needed.
+
+1. Use the time limit and closed-book instructions stated below.
+2. Answer the questions without expanding the **Answer** sections.
+3. When finished, reveal the answers, count your correct responses, and review the explanations where provided.
+
+Use the [KCSA course](../../course/README.md) to revisit topics you missed.
+
+---
+
+
 > **Training simulation.** This is an original practice mock of approximately 60 questions, not an official Linux Foundation contract or a reproduction of the real exam.
 
 Allow **90 minutes** to complete it. As of 2026-09-01, the LF Multiple Choice FAQ lists a passing score of **75% or above**; before registering, confirm the KCSA conditions on the official Linux Foundation page. Practice in a closed-book setting: do not use documentation, search, notes, tools, or external websites. There are no hands-on tasks: choose one most accurate answer for every question.
