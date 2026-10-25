@@ -258,7 +258,7 @@ Hier endet die Einrichtung von Cilium transport encryption. Istio wird unmittelb
 
 > 🎯 Istio mTLS bindet ein certificate an Workload Identity; unterscheiden Sie `PeerAuthentication: STRICT` von `DestinationRule` mit `ISTIO_MUTUAL` und prüfen Sie proxy/injection.
 
-> 🔬 **Upstream Identity Primitive.** Kubernetes v1.37 stabilisierte Pod Certificates und ClusterTrustBundles. Sie bieten X.509 primitives auf Kubernetes-Ebene, machen eine Istio/SPIFFE Identity Plane jedoch nicht automatisch überflüssig: Signer, Trust Model und mesh enforcement sind getrennte Architekturentscheidungen. Siehe [Kubernetes v1.37 Security Delta (nur auf Russisch)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🔬 **Upstream Identity Primitive.** Kubernetes v1.37 stabilisierte Pod Certificates und ClusterTrustBundles. Sie bieten X.509 primitives auf Kubernetes-Ebene, machen eine Istio/SPIFFE Identity Plane jedoch nicht automatisch überflüssig: Signer, Trust Model und mesh enforcement sind getrennte Architekturentscheidungen. Siehe [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_DE.md).
 
 ## 23.6. Istio: sidecar, SPIFFE Workload Identity und `PeerAuthentication`
 

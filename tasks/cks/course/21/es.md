@@ -455,7 +455,7 @@ basta comprender el orden de los providers y la reescritura forzada de objetos; 
 ruta sencilla para el examen, mientras que Storage Version Migration requiere un despliegue operativo independiente,
 observabilidad y un proceso de rollback/recuperación probado.
 
-> 🏭 **Upstream v1.37.** En Kubernetes v1.37, la API/controller integrada de `StorageVersionMigration` pasó a GA y se habilitó por defecto. Esto cambia el estado actual de production, pero no el flujo CKS Core de este capítulo, que permanece ligado al contexto del examen/formación. Consulte [Delta de seguridad de Kubernetes v1.37 (solo en ruso)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🏭 **Upstream v1.37.** En Kubernetes v1.37, la API/controller integrada de `StorageVersionMigration` pasó a GA y se habilitó por defecto. Esto cambia el estado actual de production, pero no el flujo CKS Core de este capítulo, que permanece ligado al contexto del examen/formación. Consulte [Delta de seguridad de Kubernetes v1.37](../APPENDIX_K8S_137_SECURITY_DELTA_ES.md).
 
 `kubectl replace` requiere un `resourceVersion` actual; una alta contención puede causar conflictos.
 En production, ejecute un script controlado con reintentos, observación de latencia de API y una ventana coordinada,
@@ -658,7 +658,7 @@ la identidad del Pod y el backend externo. Elija un patrón después de un model
 | Una escritura de API se bloquea/falla | el plugin KMS o KMS externo no está disponible/es lento | compruebe socket, TLS, salud de KMS, timeout y HA; no debilite la seguridad a ciegas |
 | Se encuentra un Secret en Git/log | el cifrado en reposo no puede ayudar | rote inmediatamente la credencial original, restrinja el acceso y elimine el artefacto siguiendo el procedimiento de IR |
 
-> 🏭 **Caso límite de recuperación de Kubernetes v1.37.** Existe una ruta Beta insegura de force-delete (`AllowUnsafeMalformedObjectDeletion`) para un objeto de API ilegible/corrupto. Es una operación con potencial de romper el clúster y un último mecanismo de recuperación, no una forma normal de corregir la rotación de cifrado. Para detalles y limitaciones, consulte [Delta de seguridad de Kubernetes v1.37 (solo en ruso)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🏭 **Caso límite de recuperación de Kubernetes v1.37.** Existe una ruta Beta insegura de force-delete (`AllowUnsafeMalformedObjectDeletion`) para un objeto de API ilegible/corrupto. Es una operación con potencial de romper el clúster y un último mecanismo de recuperación, no una forma normal de corregir la rotación de cifrado. Para detalles y limitaciones, consulte [Delta de seguridad de Kubernetes v1.37](../APPENDIX_K8S_137_SECURITY_DELTA_ES.md).
 
 En el examen, identifique primero el tipo de clúster. Para kubeadm, busque el manifest del API server y las rutas TLS de etcd.
 Para un control plane gestionado, los ajustes pueden no estar disponibles: no intente editar

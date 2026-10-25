@@ -634,7 +634,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
 - **Continuous verification.** CIS scanning from [chapter 07](../07/README.md), file-integrity
   monitoring, searches for world-writable paths, and control of open ports run regularly,
   not only before an audit.
-- For Kubernetes v1.37, separately evaluate rootless node architecture (`KubeletInUserNamespace`) as an additional least-privilege boundary; this is not the same as Pod user namespaces. See [Kubernetes v1.37 Security Delta (Russian original)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+- For Kubernetes v1.37, separately evaluate rootless node architecture (`KubeletInUserNamespace`) as an additional least-privilege boundary; this is not the same as Pod user namespaces. See [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA.md).
 
 ## 15.8. Mini-glossary
 

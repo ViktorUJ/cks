@@ -35,7 +35,7 @@ Dans les chapitres, quatre marqueurs visuels répartissent la matière selon son
 - 🔬 **Deep Dive** - approfondissement, cas limite, alternative ou contexte legacy.
 - 🏭 **Production** - comment cela s'applique en exploitation réelle.
 
-Les termes seront regroupés dans le [glossaire (RU)](GLOSSARY_RU.md). Les extraits YAML/CLI prêts à l'emploi, sans théorie, se trouvent dans l'[aide-mémoire (RU)](CHEATSHEET_RU.md), et les causes fréquentes de `[FAIL]` dans les labs dans l'[index de dépannage (RU)](TROUBLESHOOTING_INDEX_RU.md). Les changements de sécurité actuels en production, qui ne se rattachent pas à un seul domaine CKS, sont regroupés dans des annexes propres à une version : [Kubernetes v1.36 Security Delta (RU)](APPENDIX_K8S_136_SECURITY_DELTA_RU.md) - training baseline ; [Kubernetes v1.37 Security Delta (RU)](APPENDIX_K8S_137_SECURITY_DELTA_RU.md) - current upstream, pas automatiquement du CKS Core.
+Les termes seront regroupés dans le [glossaire](GLOSSARY_FR.md). Les extraits YAML/CLI prêts à l'emploi, sans théorie, se trouvent dans l'[aide-mémoire](CHEATSHEET_FR.md), et les causes fréquentes de `[FAIL]` dans les labs dans l'[index de dépannage (RU)](TROUBLESHOOTING_INDEX_RU.md). Les changements de sécurité actuels en production, qui ne se rattachent pas à un seul domaine CKS, sont regroupés dans des annexes propres à une version : [Kubernetes v1.36 Security Delta](APPENDIX_K8S_136_SECURITY_DELTA_FR.md) - training baseline ; [Kubernetes v1.37 Security Delta](APPENDIX_K8S_137_SECURITY_DELTA_FR.md) - current upstream, pas automatiquement du CKS Core.
 
 ## Format de l'examen
 

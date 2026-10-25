@@ -1,3 +1,5 @@
+[Eng version](CHEATSHEET.md) · [Versión en español](CHEATSHEET_ES.md) · [Version française](CHEATSHEET_FR.md) · [Deutsche Version](CHEATSHEET_DE.md) · [ქართული ვერსია](CHEATSHEET_GE.md) · [繁體中文版](CHEATSHEET_TW.md) · [日本語版](CHEATSHEET_JP.md)
+
 [← Оглавление курса](README_RU.md) · [Глоссарий](GLOSSARY_RU.md) · [Справочник ошибок](TROUBLESHOOTING_INDEX_RU.md)
 
 # Шпаргалка CKS: готовые YAML и CLI-команды

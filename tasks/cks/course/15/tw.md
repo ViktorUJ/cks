@@ -489,7 +489,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
 - **依 node roles 設定 firewall。** Control-plane、worker、bastion 及 monitoring 使用不同 allowlists。依真實 traffic matrix（包括 CNI 與 health checks）建立 rules，並在 rollout 前於 staging 驗證。
 - **無繞過的 SSH。** 使用 short-lived SSH certificates 或透過 bastion/VPN、MFA 與 audit 的 centralized access。Password login 與 root login 維持關閉，而 break-glass access 有 owner 與 review procedure。
 - **持續驗證。** 定期執行 [第 07 章](../07/tw.md) 的 CIS scanning、file-integrity monitoring、搜尋 world-writable paths 與檢查開放 ports，而非僅在 audit 前執行。
-- Kubernetes v1.37 請另行評估 rootless node architecture（`KubeletInUserNamespace`）作為額外 least-privilege boundary；這與 Pod user namespaces 不同。請見 [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
+- Kubernetes v1.37 請另行評估 rootless node architecture（`KubeletInUserNamespace`）作為額外 least-privilege boundary；這與 Pod user namespaces 不同。請見 [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_TW.md)。
 
 ## 15.8. 迷你詞彙表
 

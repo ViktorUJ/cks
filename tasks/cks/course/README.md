@@ -35,7 +35,7 @@ Inside the chapters you will meet four visual markers that separate the material
 - 🔬 **Deep Dive** - a deeper look, an edge case, an alternative, or legacy context.
 - 🏭 **Production** - how this is applied in real operations.
 
-Terms will be collected in the [glossary (RU)](GLOSSARY_RU.md). Ready-made YAML/CLI snippets without theory are in the [cheat sheet (RU)](CHEATSHEET_RU.md), and common causes of `[FAIL]` in the labs are in the [error reference (RU)](TROUBLESHOOTING_INDEX_RU.md). Production-current security changes that do not belong to a single CKS domain are placed in version-specific appendices: [Kubernetes v1.36 Security Delta (RU)](APPENDIX_K8S_136_SECURITY_DELTA_RU.md) - the training baseline; [Kubernetes v1.37 Security Delta (RU)](APPENDIX_K8S_137_SECURITY_DELTA_RU.md) - current upstream, not automatically CKS Core.
+Terms will be collected in the [glossary](GLOSSARY.md). Ready-made YAML/CLI snippets without theory are in the [cheat sheet](CHEATSHEET.md), and common causes of `[FAIL]` in the labs are in the [error reference (RU)](TROUBLESHOOTING_INDEX_RU.md). Production-current security changes that do not belong to a single CKS domain are placed in version-specific appendices: [Kubernetes v1.36 Security Delta](APPENDIX_K8S_136_SECURITY_DELTA.md) - the training baseline; [Kubernetes v1.37 Security Delta](APPENDIX_K8S_137_SECURITY_DELTA.md) - current upstream, not automatically CKS Core.
 
 ## Exam format
 

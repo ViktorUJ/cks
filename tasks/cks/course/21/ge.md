@@ -470,7 +470,7 @@ Version Migration**. Kubernetes 1.36-ში მას აქვს beta სტ�
 replace` რჩება მარტივ გამოცდის გზად, ხოლო Storage Version Migration საჭიროებს ცალკე operational
 rollout-ს, დაკვირვებას და შემოწმებულ rollback/recovery-პროცესს.
 
-> 🏭 **Upstream v1.37.** Kubernetes v1.37-ში ჩაშენებული `StorageVersionMigration` API/controller გახდა GA და enabled by default. ეს ცვლის production-ის მიმდინარე სტატუსს, მაგრამ არ ცვლის ამ თავის CKS Core workflow-ს, რომელიც რჩება მიბმული exam/training context-ზე. იხილეთ [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🏭 **Upstream v1.37.** Kubernetes v1.37-ში ჩაშენებული `StorageVersionMigration` API/controller გახდა GA და enabled by default. ეს ცვლის production-ის მიმდინარე სტატუსს, მაგრამ არ ცვლის ამ თავის CKS Core workflow-ს, რომელიც რჩება მიბმული exam/training context-ზე. იხილეთ [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_GE.md).
 
 `kubectl replace` საჭიროებს მიმდინარე `resourceVersion`-ს; მაღალი კონკურენციისას შესაძლებელია
 კონფლიქტები. Production-ში ჩაატარეთ controlled script retry-ით, API latency-ის დაკვირვებით და
@@ -685,7 +685,7 @@ pattern threat model-ის შემდეგ, არა მხოლოდ ი
 | API-ის ჩანაწერი ჩერდება/ვარდება | KMS plugin ან გარე KMS მიუწვდომელია/ნელია | შეამოწმეთ socket, TLS, KMS health, timeout და HA; არ დაასუსტოთ security გაუაზრებლად |
 | Secret ნაპოვნია Git/log-ში | encryption at rest არ დაეხმარება | დაუყოვნებლივ rotate-ი გაუკეთეთ საწყის credential-ს, შეზღუდეთ წვდომა და წაშალეთ artifact IR-პროცედურის მიხედვით |
 
-> 🏭 **Kubernetes v1.37 recovery edge case.** წაუკითხავი/დაზიანებული API-ობიექტისთვის არსებობს Beta unsafe force-delete path (`AllowUnsafeMalformedObjectDeletion`). ეს ოპერაცია cluster-breaking პოტენციალით ხასიათდება და წარმოადგენს ბოლო recovery mechanism-ს, არა ჩვეულ გზას encryption rotation-ის გამოსასწორებლად. დეტალები და შეზღუდვები: [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🏭 **Kubernetes v1.37 recovery edge case.** წაუკითხავი/დაზიანებული API-ობიექტისთვის არსებობს Beta unsafe force-delete path (`AllowUnsafeMalformedObjectDeletion`). ეს ოპერაცია cluster-breaking პოტენციალით ხასიათდება და წარმოადგენს ბოლო recovery mechanism-ს, არა ჩვეულ გზას encryption rotation-ის გამოსასწორებლად. დეტალები და შეზღუდვები: [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_GE.md).
 
 გამოცდაზე ჯერ განსაზღვრეთ კლასტერის ტიპი. kubeadm-ისთვის მოძებნეთ API server-ის manifest და etcd
 TLS paths. managed control plane-ისთვის პარამეტრები შეიძლება დახურული იყოს: არ ცადოთ არარსებული

@@ -264,7 +264,7 @@ gate `SELinuxMount` (ის ნაგულისხმევად გამო
 რეკურსიულ relabel-ს. ნუ შეცვლით label-ს ან policy-ს სისწრაფის გულისთვის კონკრეტული
 CSI-ისა/ფაილური სისტემის იზოლაციისა და თავსებადობის ტესტის გარეშე.
 
-> 🔬 **Upstream v1.37.** Kubernetes v1.37-ში `SELinuxMount` გახდა GA და ჩართულია ნაგულისხმევად. SELinux-ჩართული კლასტერის upgrade-მდე შეამოწმეთ volume-label-ის კონფლიქტები; საჭიროების შემთხვევაში workload-ს შეუძლია ცხადად შეინარჩუნოს რეკურსიული ქცევა `spec.securityContext.seLinuxChangePolicy: Recursive`-ის მეშვეობით. დეტალები: [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🔬 **Upstream v1.37.** Kubernetes v1.37-ში `SELinuxMount` გახდა GA და ჩართულია ნაგულისხმევად. SELinux-ჩართული კლასტერის upgrade-მდე შეამოწმეთ volume-label-ის კონფლიქტები; საჭიროების შემთხვევაში workload-ს შეუძლია ცხადად შეინარჩუნოს რეკურსიული ქცევა `spec.securityContext.seLinuxChangePolicy: Recursive`-ის მეშვეობით. დეტალები: [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_GE.md).
 
 `procMount` - მხოლოდ container-დონის Linux-ოფციაა: უსაფრთხო default `Default` ტოვებს
 `/proc`-ის მგრძნობიარე ნაწილებს დაფარულს; `Unmasked` აფართოებს პროცესის ხედვას და

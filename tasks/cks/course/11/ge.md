@@ -296,7 +296,7 @@ TokenRequest-ს, OIDC-ს ან federation-ს. თუ კონკრეტ�
 ხერხად: ის არ იღებს ავტომატურ მოკლე როტაციას და გაჟონვისას ზიანს
 უფრო აძლიერებს.
 
-> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount token რჩება ამ თავის ძირითად JWT-identity-მოდელად. Kubernetes v1.37-მა ასევე დაასტაბილურა Pod Certificates და ClusterTrustBundles - built-in primitives X.509 workload credentials-ის გასაცემად და როტირებისთვის. ეს არის production-current გაფართოება და არა CKS Core-ის ჩანაცვლება: იხილეთ [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount token რჩება ამ თავის ძირითად JWT-identity-მოდელად. Kubernetes v1.37-მა ასევე დაასტაბილურა Pod Certificates და ClusterTrustBundles - built-in primitives X.509 workload credentials-ის გასაცემად და როტირებისთვის. ეს არის production-current გაფართოება და არა CKS Core-ის ჩანაცვლება: იხილეთ [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_GE.md).
 
 ## 11.4. გამოყოფილი ServiceAccount და მინიმალური RBAC
 

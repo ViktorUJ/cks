@@ -185,7 +185,7 @@ spec:
 
 這些 fields 也屬於 `SecurityContext`，但並非上方通用的 Linux baseline。Pod 或 container 的 `seLinuxOptions` 設定 process SELinux label；container-level 值會覆蓋 Pod-level 值。一般 recursive SELinux relabel 時，會在 container 使用 volume 前由 **container runtime** 變更 volume contents inode label，而不是 kubelet。Pod-level `seLinuxChangePolicy: MountOption` 請求透過 mount option `-o context=` relabel，但其本身不保證會生效。對 access mode 非 `ReadWriteOncePod` 的 PVC，在 Kubernetes v1.36 中需要啟用 `SELinuxMount` feature gate（預設為停用），且 CSI driver 的 `CSIDriver.spec.seLinuxMount: true`；否則 Kubernetes 使用一般 recursive relabel。不要為了速度變更 label 或 policy，而未測試特定 CSI/filesystem 的 isolation 與 compatibility。
 
-> 🔬 **Upstream v1.37。** Kubernetes v1.37 中，`SELinuxMount` 成為 GA 且預設啟用。升級 SELinux-enabled cluster 前，請檢查 volume-label conflicts；必要時 workload 可藉由 `spec.securityContext.seLinuxChangePolicy: Recursive` 明確保留 recursive behavior。詳細資訊請見 [Kubernetes v1.37 Security Delta (僅有俄文版)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)。
+> 🔬 **Upstream v1.37。** Kubernetes v1.37 中，`SELinuxMount` 成為 GA 且預設啟用。升級 SELinux-enabled cluster 前，請檢查 volume-label conflicts；必要時 workload 可藉由 `spec.securityContext.seLinuxChangePolicy: Recursive` 明確保留 recursive behavior。詳細資訊請見 [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_TW.md)。
 
 `procMount` 是僅限 container-level 的 Linux option：安全 default `Default` 保留 `/proc` 的 sensitive parts masking；`Unmasked` 擴大 process 視野，不適合 restricted workload。從 Kubernetes v1.30 起，`Unmasked` 僅允許在 user namespace 中的 Pod，也就是使用 `spec.hostUsers: false`。Pod-level `securityContext.sysctls` 設定 Pod network/IPC namespace 的 sysctls。僅使用 Kubernetes documentation 中的 safe sysctls；unsafe sysctls 需要 kubelet allowlist，且可能與 host namespaces 衝突，因此是刻意的 node-level exception，而非 application setting。
 

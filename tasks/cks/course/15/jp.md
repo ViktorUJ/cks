@@ -469,7 +469,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
 - **Node-role firewall.** control plane、worker、bastion、monitoringには異なるallowlistsを用意し、CNIとhealth checksを含むactual flow matrixからrulesを作りstagingでtestします。
 - **BypassのないSSH.** short-lived SSH certificatesまたはbastion/VPN経由のcentral access、MFA、auditを使います。password/root loginは無効のままとし、break-glass accessにはownerとreview procedureを持たせます。
 - **Continuous verification.** [第07章](../07/jp.md)のCIS scanning、file-integrity monitoring、world-writable pathsのsearch、open ports controlをaudit前だけでなく定期実行します。
-- Kubernetes v1.37では、rootless node architecture（`KubeletInUserNamespace`）をadditional least-privilege boundaryとして個別に評価します。これはPod user namespacesとは別です。[Kubernetes v1.37 Security Delta (ロシア語版のみ)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)を参照してください。
+- Kubernetes v1.37では、rootless node architecture（`KubeletInUserNamespace`）をadditional least-privilege boundaryとして個別に評価します。これはPod user namespacesとは別です。[Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_JP.md)を参照してください。
 
 ## 15.8. ミニ用語集
 

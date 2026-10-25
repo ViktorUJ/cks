@@ -657,7 +657,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 
 ## 14.9. production での適用方法
 
-- **Kubernetes v1.37 rootless node path。** `KubeletInUserNamespace` は Beta になり、kubelet と関連 node components が user namespace を通じて host-root なしに動く node stack を構築できます。Pod を isolate する `spec.hostUsers: false` と混同しないでください。[Kubernetes v1.37 Security Delta (ロシア語版のみ)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md)を参照してください。
+- **Kubernetes v1.37 rootless node path。** `KubeletInUserNamespace` は Beta になり、kubelet と関連 node components が user namespace を通じて host-root なしに動く node stack を構築できます。Pod を isolate する `spec.hostUsers: false` と混同しないでください。[Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_JP.md)を参照してください。
 - **baseline を code で設定する。** packages、enabled services、systemd drop-ins、firewall、socket checks の一覧を immutable image、Ansible/Cloud-Init、またはほかの IaC に含めます。手作業の emergency fix は後で source of truth に移します。
 - **nodes を role で分ける。** control-plane、worker、build-host、Docker-host に同じ packages と ports を与えません。特に、CRI が containerd の場合、interactive `docker ps` だけのために Docker daemon を worker に install しません。
 - **runtime access を privileged access として review する。** group members、containerd/NRI/Docker socket permissions、systemd overrides の変更は、`sudo` の付与と同じ review を通します。allowed system groups に通常 users はいません。

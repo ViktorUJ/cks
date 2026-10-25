@@ -35,7 +35,7 @@ Dentro de los capítulos aparecen cuatro marcadores visuales que separan el mate
 - 🔬 **Deep Dive**: profundización, edge case, alternativa o contexto legacy.
 - 🏭 **Production**: cómo se aplica en la operación real.
 
-Los términos se recogerán en el [glosario (RU)](GLOSSARY_RU.md). Los snippets de YAML/CLI listos para usar, sin teoría, están en la [chuleta (RU)](CHEATSHEET_RU.md), y las causas frecuentes de `[FAIL]` en los laboratorios, en la [guía de errores (RU)](TROUBLESHOOTING_INDEX_RU.md). Los cambios de seguridad vigentes en production que no están ligados a un único dominio de CKS se han reunido en apéndices específicos de cada versión: [Kubernetes v1.36 Security Delta (RU)](APPENDIX_K8S_136_SECURITY_DELTA_RU.md): training baseline; [Kubernetes v1.37 Security Delta (RU)](APPENDIX_K8S_137_SECURITY_DELTA_RU.md): current upstream, no es automáticamente CKS Core.
+Los términos se recogerán en el [glosario](GLOSSARY_ES.md). Los snippets de YAML/CLI listos para usar, sin teoría, están en la [chuleta](CHEATSHEET_ES.md), y las causas frecuentes de `[FAIL]` en los laboratorios, en la [guía de errores (RU)](TROUBLESHOOTING_INDEX_RU.md). Los cambios de seguridad vigentes en production que no están ligados a un único dominio de CKS se han reunido en apéndices específicos de cada versión: [Kubernetes v1.36 Security Delta](APPENDIX_K8S_136_SECURITY_DELTA_ES.md): training baseline; [Kubernetes v1.37 Security Delta](APPENDIX_K8S_137_SECURITY_DELTA_ES.md): current upstream, no es automáticamente CKS Core.
 
 ## Formato del examen
 

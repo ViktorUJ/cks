@@ -653,7 +653,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
   regularmente, no solo antes de una auditoría.
 - Para Kubernetes v1.37, evalúa aparte la arquitectura rootless del nodo
   (`KubeletInUserNamespace`) como límite adicional de least privilege; no es lo mismo que Pod
-  user namespaces. Consulta [Kubernetes v1.37 Security Delta (solo en ruso)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+  user namespaces. Consulta [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_ES.md).
 
 ## 15.8. Miniglosario
 

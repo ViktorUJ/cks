@@ -35,7 +35,7 @@ maintainers-ის, ტექნიკური რევიუსა და კ
 - 🔬 **Deep Dive** - გაღრმავება, edge case, ალტერნატივა ან legacy-კონტექსტი.
 - 🏭 **Production** - როგორ გამოიყენება რეალურ ექსპლუატაციაში.
 
-ტერმინები შეგროვდება [გლოსარიუმში (RU)](GLOSSARY_RU.md). თეორიის გარეშე მზა YAML/CLI-სნიპეტები - [ცხრილ-მინიშნებაში (RU)](CHEATSHEET_RU.md), ხოლო ლაბებში `[FAIL]`-ის ხშირი მიზეზები - [შეცდომების ცნობარში (RU)](TROUBLESHOOTING_INDEX_RU.md). Production-current security changes, რომლებიც ერთ CKS domain-ს არ ეკუთვნის, გატანილია version-specific დანართებში: [Kubernetes v1.36 Security Delta (RU)](APPENDIX_K8S_136_SECURITY_DELTA_RU.md) - training baseline; [Kubernetes v1.37 Security Delta (RU)](APPENDIX_K8S_137_SECURITY_DELTA_RU.md) - current upstream, ავტომატურად CKS Core არ არის.
+ტერმინები შეგროვდება [გლოსარიუმში](GLOSSARY_GE.md). თეორიის გარეშე მზა YAML/CLI-სნიპეტები - [ცხრილ-მინიშნებაში](CHEATSHEET_GE.md), ხოლო ლაბებში `[FAIL]`-ის ხშირი მიზეზები - [შეცდომების ცნობარში (RU)](TROUBLESHOOTING_INDEX_RU.md). Production-current security changes, რომლებიც ერთ CKS domain-ს არ ეკუთვნის, გატანილია version-specific დანართებში: [Kubernetes v1.36 Security Delta](APPENDIX_K8S_136_SECURITY_DELTA_GE.md) - training baseline; [Kubernetes v1.37 Security Delta](APPENDIX_K8S_137_SECURITY_DELTA_GE.md) - current upstream, ავტომატურად CKS Core არ არის.
 
 ## გამოცდის ფორმატი
 

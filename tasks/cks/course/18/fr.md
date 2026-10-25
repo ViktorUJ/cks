@@ -254,7 +254,7 @@ désactivé par défaut) et `CSIDriver.spec.seLinuxMount: true` dans le driver C
 utilise le relabeling récursif normal. Ne changez pas un label ou une policy pour gagner en vitesse sans tester
 l'isolation et la compatibilité avec le CSI/filesystem concerné.
 
-> 🔬 **Upstream v1.37.** Dans Kubernetes v1.37, `SELinuxMount` est devenu GA et est activé par défaut. Avant de mettre à niveau un cluster SELinux-enabled, vérifiez les conflits de labels de volume ; si nécessaire, un workload peut conserver explicitement le comportement récursif avec `spec.securityContext.seLinuxChangePolicy: Recursive`. Détails : [Kubernetes v1.37 Security Delta (uniquement en russe)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🔬 **Upstream v1.37.** Dans Kubernetes v1.37, `SELinuxMount` est devenu GA et est activé par défaut. Avant de mettre à niveau un cluster SELinux-enabled, vérifiez les conflits de labels de volume ; si nécessaire, un workload peut conserver explicitement le comportement récursif avec `spec.securityContext.seLinuxChangePolicy: Recursive`. Détails : [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_FR.md).
 
 `procMount` est une option Linux au seul niveau container : le `Default` sûr conserve masquées les parties sensibles de
 `/proc` ; `Unmasked` étend la visibilité du processus et ne convient pas aux workloads restreints.

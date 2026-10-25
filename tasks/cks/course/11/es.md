@@ -183,7 +183,7 @@ Un Secret manual de tipo `kubernetes.io/service-account-token` crea una bearer c
 
 Para el curso, considere tal Secret una excepción, no el modo normal de emitir credential: primero prefiera TokenRequest short-lived, OIDC o federation. Si una integración concreta no puede trabajar con lifetime limitado, documente el motivo de la excepción, el RBAC mínimo, la protección del Secret y el procedimiento de rotación/revocación. No cree tal Secret como forma ordinaria de dar a un Pod acceso a API: no recibe rotación corta automática y aumenta más el daño si se filtra.
 
-> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount token sigue siendo el modelo principal de JWT identity de este capítulo. Kubernetes v1.37 también estabilizó Pod Certificates y ClusterTrustBundles - built-in primitives para emisión y rotación de X.509 workload credentials. Es una production-current extension, no un reemplazo de CKS Core: consulte [Kubernetes v1.37 Security Delta (solo en ruso)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount token sigue siendo el modelo principal de JWT identity de este capítulo. Kubernetes v1.37 también estabilizó Pod Certificates y ClusterTrustBundles - built-in primitives para emisión y rotación de X.509 workload credentials. Es una production-current extension, no un reemplazo de CKS Core: consulte [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_ES.md).
 
 ## 11.4. ServiceAccount dedicado y RBAC mínimo
 

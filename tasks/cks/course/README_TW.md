@@ -35,7 +35,7 @@
 - 🔬 **Deep Dive** - 深入內容、edge case、替代方案或 legacy 背景。
 - 🏭 **Production** - 真實營運環境中如何應用。
 
-術語將彙整於[詞彙表 (RU)](GLOSSARY_RU.md)。不含理論的現成 YAML/CLI 片段見[速查表 (RU)](CHEATSHEET_RU.md)，實驗中常見的 `[FAIL]` 原因見[錯誤索引 (RU)](TROUBLESHOOTING_INDEX_RU.md)。不屬於單一 CKS domain 的 production-current 安全變更，放在依版本劃分的附錄中：[Kubernetes v1.36 Security Delta (RU)](APPENDIX_K8S_136_SECURITY_DELTA_RU.md) - training baseline；[Kubernetes v1.37 Security Delta (RU)](APPENDIX_K8S_137_SECURITY_DELTA_RU.md) - current upstream，不會自動成為 CKS Core。
+術語將彙整於[詞彙表](GLOSSARY_TW.md)。不含理論的現成 YAML/CLI 片段見[速查表](CHEATSHEET_TW.md)，實驗中常見的 `[FAIL]` 原因見[錯誤索引 (RU)](TROUBLESHOOTING_INDEX_RU.md)。不屬於單一 CKS domain 的 production-current 安全變更，放在依版本劃分的附錄中：[Kubernetes v1.36 Security Delta](APPENDIX_K8S_136_SECURITY_DELTA_TW.md) - training baseline；[Kubernetes v1.37 Security Delta](APPENDIX_K8S_137_SECURITY_DELTA_TW.md) - current upstream，不會自動成為 CKS Core。
 
 ## 考試格式
 

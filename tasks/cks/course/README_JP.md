@@ -35,7 +35,7 @@
 - 🔬 **Deep Dive** - 掘り下げ、edge case、代替手段、legacy のコンテキストです。
 - 🏭 **Production** - 実際の運用での使われ方です。
 
-用語は[用語集 (RU)](GLOSSARY_RU.md)にまとめる予定です。理論なしの YAML/CLI スニペットは[チートシート (RU)](CHEATSHEET_RU.md)に、ラボでよくある `[FAIL]` の原因は[エラー索引 (RU)](TROUBLESHOOTING_INDEX_RU.md)にあります。単一の CKS ドメインに属さない production の最新セキュリティ変更は、バージョン別の付録にまとめています：[Kubernetes v1.36 Security Delta (RU)](APPENDIX_K8S_136_SECURITY_DELTA_RU.md) は training baseline、[Kubernetes v1.37 Security Delta (RU)](APPENDIX_K8S_137_SECURITY_DELTA_RU.md) は current upstream で、自動的に CKS Core になるわけではありません。
+用語は[用語集](GLOSSARY_JP.md)にまとめる予定です。理論なしの YAML/CLI スニペットは[チートシート](CHEATSHEET_JP.md)に、ラボでよくある `[FAIL]` の原因は[エラー索引 (RU)](TROUBLESHOOTING_INDEX_RU.md)にあります。単一の CKS ドメインに属さない production の最新セキュリティ変更は、バージョン別の付録にまとめています：[Kubernetes v1.36 Security Delta](APPENDIX_K8S_136_SECURITY_DELTA_JP.md) は training baseline、[Kubernetes v1.37 Security Delta](APPENDIX_K8S_137_SECURITY_DELTA_JP.md) は current upstream で、自動的に CKS Core になるわけではありません。
 
 ## 試験の形式
 

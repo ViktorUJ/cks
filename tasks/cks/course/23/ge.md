@@ -425,7 +425,7 @@ interval, audit და blast radius შეიძლება სხვადა�
 
 > 🎯 Istio mTLS აკავშირებს certificate-ს workload identity-სთან; გაარჩიეთ `PeerAuthentication: STRICT` `DestinationRule`-ისგან `ISTIO_MUTUAL`-ით და შემოწმეთ proxy/injection.
 
-> 🔬 **Upstream identity primitive.** Kubernetes v1.37-მა სტაბილიზაცია გაუკეთა Pod Certificates-სა და ClusterTrustBundles-ს. ისინი იძლევა X.509 primitives-ს Kubernetes-ის დონეზე, მაგრამ არ ხდის Istio/SPIFFE identity plane-ს ავტომატურად ზედმეტად: signer, trust model და mesh enforcement - ცალკეული architecture-გადაწყვეტილებებია. იხილეთ [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🔬 **Upstream identity primitive.** Kubernetes v1.37-მა სტაბილიზაცია გაუკეთა Pod Certificates-სა და ClusterTrustBundles-ს. ისინი იძლევა X.509 primitives-ს Kubernetes-ის დონეზე, მაგრამ არ ხდის Istio/SPIFFE identity plane-ს ავტომატურად ზედმეტად: signer, trust model და mesh enforcement - ცალკეული architecture-გადაწყვეტილებებია. იხილეთ [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_GE.md).
 
 ## 23.6. Istio: sidecar, SPIFFE workload identity და `PeerAuthentication`
 

@@ -672,7 +672,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
   არა მხოლოდ აუდიტის წინ.
 - Kubernetes v1.37-ისთვის ცალკე შეაფასეთ rootless node architecture
   (`KubeletInUserNamespace`), როგორც დამატებითი least-privilege საზღვარი; ეს არ არის
-  იგივე, რაც Pod user namespaces. იხილეთ [Kubernetes v1.37 Security Delta (მხოლოდ რუსულად)](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+  იგივე, რაც Pod user namespaces. იხილეთ [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_GE.md).
 
 ## 15.8. მინი-გლოსარიუმი
 
