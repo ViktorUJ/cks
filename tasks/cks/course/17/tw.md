@@ -35,8 +35,8 @@ userspace notifier。Kubernetes 透過 `securityContext.seccompProfile` 為 cont
 
 ```mermaid
 flowchart TB
-    process["container process"] --> call["syscall: mount, clone, openat ..."]
-    call --> filter["seccomp BPF filter"]
+    process["container process"] --> syscall_node["syscall: mount, clone, openat ..."]
+    syscall_node --> filter["seccomp BPF filter"]
     filter -->|"ALLOW"| kernel["kernel 執行 syscall"]
     filter -->|"ERRNO / KILL"| blocked["EPERM、ENOSYS 或 termination"]
     filter -->|"LOG"| audit["kernel audit / journal"]

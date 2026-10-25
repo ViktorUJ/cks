@@ -346,7 +346,7 @@ sequenceDiagram
     alt allowed
         A->>E: persistir Pod
     else denied o backend no disponible
-        A-->>C: admission error; Pod no creado
+        A-->>C: admission error, Pod no creado
     end
 ```
 

@@ -362,7 +362,7 @@ sequenceDiagram
     alt allowed
         A->>E: Pod を保存
     else 拒否、または backend 利用不可
-        A-->>C: admission エラー; Pod は作成されない
+        A-->>C: admission エラー, Pod は作成されない
     end
 ```
 

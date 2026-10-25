@@ -18,8 +18,8 @@ seccomp (secure computing mode) ist ein Mechanismus des Linux Kernel, der jeden 
 
 ```mermaid
 flowchart TB
-    process["Prozess im Container"] --> call["syscall: mount, clone, openat ..."]
-    call --> filter["seccomp-BPF-Filter"]
+    process["Prozess im Container"] --> syscall_node["syscall: mount, clone, openat ..."]
+    syscall_node --> filter["seccomp-BPF-Filter"]
     filter -->|"ALLOW"| kernel["Kernel führt syscall aus"]
     filter -->|"ERRNO / KILL"| blocked["EPERM, ENOSYS oder Beendigung"]
     filter -->|"LOG"| audit["Kernel-Audit / Journal"]

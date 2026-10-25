@@ -1,4 +1,4 @@
-<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 17. seccomp: минимальный набор системных вызовов
 
@@ -39,8 +39,8 @@ seccomp (secure computing mode) - механизм Linux kernel, который 
 
 ```mermaid
 flowchart TB
-    process["Процесс контейнера"] --> call["syscall: mount, clone, openat ..."]
-    call --> filter["seccomp BPF filter"]
+    process["Процесс контейнера"] --> syscall_node["syscall: mount, clone, openat ..."]
+    syscall_node --> filter["seccomp BPF filter"]
     filter -->|"ALLOW"| kernel["Ядро выполняет syscall"]
     filter -->|"ERRNO / KILL"| blocked["EPERM, ENOSYS или завершение"]
     filter -->|"LOG"| audit["kernel audit / journal"]

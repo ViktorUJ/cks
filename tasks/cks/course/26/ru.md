@@ -1,4 +1,4 @@
-<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 26. Защита supply chain: реестры, подпись и валидация артефактов
 
@@ -346,7 +346,7 @@ sequenceDiagram
     alt allowed
         A->>E: сохранить Pod
     else denied или backend недоступен
-        A-->>C: admission error; Pod не создан
+        A-->>C: admission error, Pod не создан
     end
 ```
 

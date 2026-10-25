@@ -42,8 +42,8 @@ userspace-notifier-ს. Kubernetes ასეთ ფილტრს კონტ�
 
 ```mermaid
 flowchart TB
-    process["კონტეინერის პროცესი"] --> call["syscall: mount, clone, openat ..."]
-    call --> filter["seccomp BPF filter"]
+    process["კონტეინერის პროცესი"] --> syscall_node["syscall: mount, clone, openat ..."]
+    syscall_node --> filter["seccomp BPF filter"]
     filter -->|"ALLOW"| kernel["ბირთვი ასრულებს syscall-ს"]
     filter -->|"ERRNO / KILL"| blocked["EPERM, ENOSYS ან დასრულება"]
     filter -->|"LOG"| audit["kernel audit / journal"]

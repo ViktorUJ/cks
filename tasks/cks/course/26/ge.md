@@ -357,7 +357,7 @@ sequenceDiagram
     alt allowed
         A->>E: Pod-ის შენახვა
     else denied ან backend მიუწვდომელია
-        A-->>C: admission error; Pod არ შექმნილა
+        A-->>C: admission error, Pod არ შექმნილა
     end
 ```
 
