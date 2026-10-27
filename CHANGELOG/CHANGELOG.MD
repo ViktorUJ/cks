@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.37.1 (27.10.2026)
+
+### Features
+* CKS [self-study course](../tasks/cks/course/README.md) is added: 33 chapters (Part 0 - an optional foundation on Kubernetes and Linux security; Parts 1-7 - the CKS exam program and preparation) tied to the hands-on labs. Available in 8 languages: Russian (source), English, Spanish, French, German, Georgian, Traditional Chinese and Japanese.
+* CKS labs [101-115](../docs/labs.MD#cks-labs) are added: 15 composite labs in the exam style with automatic `check_result` validation and reference solutions, in the same 8 languages.
+
 ## 0.36.1 (30.09.2026)
 ### Features
 * KCSA  [self-study course](../tasks/kcsa/course/README.md) is added. Available in 8 languages: Russian (source), English, Spanish, French, German, Georgian, Traditional Chinese and Japanese.
@@ -126,14 +132,14 @@
 
 ## 0.23.1 (12.08.2025)
 ### Features
-* [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/README.MD) is updated.
+* [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/mock/01/README.MD) is updated.
 * [a service for synchronizing EKS(Kubernetes) services](../docker/k8s-svc-sync/README.MD) is added.
 * Unit tests for [k8s-svc-sync](../docker/k8s-svc-sync/README.MD) are added.
 * CKAD mock exam 02 tests are fixed.
 
 ## 0.22.1 (11.07.2025)
 ### Features
-* [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/README.MD) is added. 
+* [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/mock/01/README.MD) is added.
 * [CKS Lab 30. Create istio network policy](..%2Ftasks%2Fcks%2Flabs%2F30%2FREADME.MD) is added.
 * [CKS Lab 30. solutions ](../tasks/cks/labs/30/worker/files/solutions/1.MD) is added.
 

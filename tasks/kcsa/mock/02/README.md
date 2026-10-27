@@ -1,5 +1,18 @@
 # KCSA Mock Exam 02
 
+## How to take this mock exam
+
+This is a Markdown multiple-choice exam. Open this file in GitHub or a Markdown viewer; no AWS account, Terraform deployment, or `make` command is needed.
+
+1. Use the time limit and closed-book instructions stated below.
+2. Answer the questions without expanding the **Answer** sections.
+3. When finished, reveal the answers, count your correct responses, and review the explanations where provided.
+
+Use the [KCSA course](../../course/README.md) to revisit topics you missed.
+
+---
+
+
 > **Training simulation.** An original 60-question KCSA practice exam, not an official Linux Foundation exam.
 
 Allow **90 minutes**. Work **closed-book**: do not use documentation, search, notes, tools, or external websites. Choose one best answer. Distribution: Overview 8, Cluster Component Security 13, Security Fundamentals 13, Threat Model 10, Platform Security 10, Compliance and Security Frameworks 6.

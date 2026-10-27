@@ -1,5 +1,87 @@
+# CKS Mock Exam 02
 
-# Allowed resources
+## Deployment
+
+Prepare AWS access, Terraform state storage, and the required tools using the [Docker quick start](../../../../docs/run_from_docker.MD). Run all `make` commands below from the **repository root on the controlling machine**. Check this mock's [env.hcl](env.hcl), including its region and instance settings, before deployment.
+
+```bash
+TASK=02 make run_cks_mock
+```
+
+To display the Terraform connection details again:
+
+```bash
+TASK=02 make output_cks_mock
+```
+
+## Connect and start working
+
+Use the `worker_pc_ssh` value from the **worker** module, the workstation prepared for this mock exam. A password-enabled environment prints a value in this form:
+
+```text
+worker_pc_ssh = "ssh ubuntu@<IP> password=<PASSWORD>"
+```
+
+Use only the address in the SSH command:
+
+```bash
+ssh ubuntu@<IP>
+```
+
+Enter the printed password when prompted; `password=...` is output metadata, not part of the SSH command. If password authentication is disabled, use the SSH key configured for the environment, for example `ssh ubuntu@<IP> -i <key_path>`.
+
+After connecting, wait for initialization to finish and reload the shell settings:
+
+```bash
+sudo cloud-init status --wait
+source ~/.bashrc
+```
+
+Work from the workstation. Select the Kubernetes context named in each task; use `ssh <node_name>` from the workstation when a task requires access to a cluster node. Check the remaining time with:
+
+```bash
+time_left
+```
+
+Follow the questions below. If initialization reports an error, inspect `/var/log/cloud-init-output.log` before starting the tasks.
+
+## Check the result
+
+Run on the workstation:
+
+```bash
+check_result
+```
+
+After your attempt, review the [reference solutions](worker/files/solutions) and [automated checks](worker/files/tests.bats).
+
+## Delete the environment
+
+AWS resources are billed to your account. After practice, return to the **controlling machine and repository root**, then run:
+
+```bash
+TASK=02 make delete_cks_mock
+```
+
+<details>
+<summary>Independent environments for multiple users or attempts</summary>
+
+Use the same identifiers for launch, output, and deletion:
+
+```bash
+USER_ID='user1' ENV_ID='01' TASK=02 make run_cks_mock
+USER_ID='user1' ENV_ID='01' TASK=02 make output_cks_mock
+USER_ID='user1' ENV_ID='01' TASK=02 make delete_cks_mock
+```
+
+[More about independent environments and CMDB](../../../../docs/environments.md).
+
+</details>
+
+---
+
+
+## Allowed resources
 **Kubernetes Documentation:**
 
 https://kubernetes.io/docs/ and their subdomains
